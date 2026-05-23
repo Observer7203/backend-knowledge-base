@@ -1,9 +1,3 @@
-<style>
-.markdown-body img {
-    border-radius: 20px;
-}
-</style>
-
 # Backend Knowledge Base
 
 База знаний по backend-разработке: PHP, Laravel, SQL, безопасность, архитектура, тестирование, DevOps. Уровень middle/senior. Построена как Laravel-приложение с навигируемыми страницами.
@@ -11,13 +5,13 @@
 ## Main Page
 
 <p align="center">
-  <img src="docs/assets/hub.png" alt="Главная страница: список KB-модулей и Advanced" width="800" style="border-radius:20px;border:1px solid #E4E6EF;box-shadow:0 4px 16px rgba(24,28,50,0.08);">
+  <img src="docs/assets/hub.png" alt="Главная страница: список KB-модулей и Advanced" width="800">
 </p>
 
 ## UI панель
 
 <p align="center">
-  <img src="docs/assets/page.png" alt="Внутренняя страница KB с боковым меню" width="800" style="border-radius:20px;border:1px solid #E4E6EF;box-shadow:0 4px 16px rgba(24,28,50,0.08);">
+  <img src="docs/assets/page.png" alt="Внутренняя страница KB с боковым меню" width="800">
 </p>
 
 ## Содержание
