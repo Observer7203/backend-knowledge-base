@@ -59,7 +59,8 @@ Homestead.yaml
 /database/database.sqlite-journal
 /database/*.sqlite
 
-# Private KB sections — NOT for public repo (work-related, NDA)
+# Private KB sections — NOT for public repo (work-related, NDA, personal career notes)
 /resources/views/kb/KB_7_SSO.blade.php
 /resources/views/kb/KB_8_MegaRega.blade.php
+/resources/views/kb/KB_15_Career_Paths.blade.php
 /database/seeders/KbPagesSeederPrivate.php
