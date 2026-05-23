@@ -15,6 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->api(prepend: [
             \Illuminate\Http\Middleware\HandleCors::class,
         ]);
+        // Авто-проверка верстки KB-страниц (только local/dev/testing)
+        $middleware->web(append: [
+            \App\Http\Middleware\KbLayoutChecker::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
