@@ -412,6 +412,10 @@
                         <strong>Правило:</strong> для надёжности сравнения используйте <code>===</code> и <code>!==</code> &mdash; они проверяют и тип, и значение. Это особенно критично при работе с данными из форм, JSON, БД, где тип может приходить неожиданным.
                     </div>
 
+                    <div class="content-block">
+                        <strong>Синтаксис оператора приведения типа.</strong> Конструкция <code>(int)</code>, <code>(float)</code>, <code>(bool)</code> — это <em>встроенный оператор</em> языка, не функция. Общая форма: <code>(тип) выражение</code>. Скобки обязательны: они отделяют имя типа от остального кода. PHP вычисляет выражение справа и приводит результат к указанному типу. В отличие от функции, оператор не имеет вызывающих скобок вокруг аргумента: <code>(int)$x</code> работает, <code>(int)($x)</code> — тоже, но скобки вокруг x — это просто группировка выражения, не часть синтаксиса оператора. Доступные операторы: <code>(int)</code>/<code>(integer)</code>, <code>(float)</code>/<code>(double)</code>, <code>(string)</code>, <code>(bool)</code>/<code>(boolean)</code>, <code>(array)</code>, <code>(object)</code>, <code>(unset)</code> (deprecated с PHP 7.2).
+                    </div>
+
                     <div class="example-label">Type Casting — явное приведение</div>
                     <pre><code><span class="comment">// (int) — отбрасывает дробную часть, не округляет</span>
 <span class="variable">$int</span> = (<span class="keyword">int</span>)<span class="string">"42.99"</span>;     <span class="comment">// 42</span>
@@ -443,6 +447,64 @@
 <span class="comment">// (object)</span>
 <span class="variable">$obj</span> = (<span class="keyword">object</span>)[<span class="string">"a"</span> =&gt; <span class="number">1</span>, <span class="string">"b"</span> =&gt; <span class="number">2</span>];
 <span class="comment">// stdClass с $obj-&gt;a = 1, $obj-&gt;b = 2</span></code></pre>
+
+                    <div class="content-block">
+                        <strong>Объект → массив: правила видимости свойств.</strong> При <code>(array)$object</code> ключами становятся имена свойств, значениями — их значения. Но видимость (public/protected/private) меняет формат ключа: PHP добавляет служебные null-байты для скрытия инкапсуляции.
+                    </div>
+
+                    <div class="example-label">(array)$object с разной видимостью</div>
+                    <pre><code><span class="comment">// 1. Public — обычные ключи</span>
+<span class="variable">$obj</span> = <span class="keyword">new</span> <span class="keyword">stdClass</span>();
+<span class="variable">$obj</span>-&gt;<span class="variable">name</span> = <span class="string">"Alice"</span>;
+<span class="variable">$obj</span>-&gt;<span class="variable">age</span>  = <span class="number">30</span>;
+<span class="variable">$array</span> = (<span class="keyword">array</span>)<span class="variable">$obj</span>;
+<span class="comment">// [ "name" =&gt; "Alice", "age" =&gt; 30 ]</span>
+
+
+<span class="comment">// 2. Protected — ключ "\0*\0имя"  (null-байт + звёздочка + null-байт)</span>
+<span class="keyword">class</span> <span class="keyword">User</span> {
+    <span class="keyword">protected</span> <span class="variable">$id</span>   = <span class="number">123</span>;
+    <span class="keyword">public</span>    <span class="variable">$name</span> = <span class="string">"Bob"</span>;
+}
+<span class="variable">$array</span> = (<span class="keyword">array</span>)<span class="keyword">new</span> <span class="keyword">User</span>();
+<span class="comment">// [ "\0*\0id" =&gt; 123, "name" =&gt; "Bob" ]</span>
+
+
+<span class="comment">// 3. Private — ключ "\0ИмяКласса\0имя"  (null-байт + имя класса + null-байт)</span>
+<span class="keyword">class</span> <span class="keyword">Person</span> {
+    <span class="keyword">private</span> <span class="variable">$ssn</span>  = <span class="string">"123-45-6789"</span>;
+    <span class="keyword">public</span>  <span class="variable">$city</span> = <span class="string">"London"</span>;
+}
+<span class="variable">$array</span> = (<span class="keyword">array</span>)<span class="keyword">new</span> <span class="keyword">Person</span>();
+<span class="comment">// [ "\0Person\0ssn" =&gt; "123-45-6789", "city" =&gt; "London" ]
+
+
+// 4. Пустой объект → пустой массив</span>
+<span class="variable">$array</span> = (<span class="keyword">array</span>)<span class="keyword">new</span> <span class="keyword">stdClass</span>(); <span class="comment">// []
+
+
+// 5. Что НЕ попадает:
+//   - методы объекта (только данные)
+//   - статические свойства (принадлежат классу, не экземпляру)
+//   - константы класса</span></code></pre>
+
+                    <div class="example-label">Сводная таблица форматирования ключей</div>
+                    <pre><code><span class="comment">+------------------+-------------------------+
+| Видимость        | Формат ключа в массиве  |
++------------------+-------------------------+
+| public           | "имя"                   |
+| protected        | "\0*\0имя"              |
+| private          | "\0ИмяКласса\0имя"      |
++------------------+-------------------------+
+
+// \0 — это NULL-байт (ASCII 0), непечатный символ.
+// var_dump покажет его как \0, print_r — как пустоту.
+// Обращение через $array["\0*\0id"] технически работает,
+// но нарушает инкапсуляцию — не используйте в нормальном коде.</span></code></pre>
+
+                    <div class="remember-box">
+                        Для безопасной сериализации объектов в массив используйте <strong>геттеры</strong>, <strong>Reflection API</strong>, либо <strong><code>get_object_vars()</code></strong> (вернёт только видимые из текущей области свойства, без null-байтов). Прямое <code>(array)</code> подходит только для <code>stdClass</code> или внутри тех же классов.
+                    </div>
 
                     <div class="example-label">__toString для объектов</div>
                     <pre><code><span class="comment">// (string) на объект сработает только если в классе есть __toString()</span>
@@ -525,6 +587,110 @@
                         4. Для парсинга чисел из строк используйте <code>filter_var($v, FILTER_VALIDATE_INT)</code>.<br>
                         5. Включите <code>declare(strict_types=1);</code> в начале каждого файла (см. следующую подсекцию).<br>
                         6. Помните про <code>__toString()</code>: <code>(string)$object</code> упадёт, если метод не определён.
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Операторы сравнения и присваивания (=, ==, ===, !=, !==)</h3>
+                    <div class="content-block">
+                        Пять операторов, которые часто путают и которые &mdash; источник скрытых багов в PHP. Один из них (<code>=</code>) вообще не сравнение, остальные различаются в том, приводит ли PHP типы перед сравнением. Правильный выбор между ними определяет, сработает ли ваше условие так, как вы думаете.
+                    </div>
+
+                    <div class="example-label">1. <code>=</code> — присваивание (assignment)</div>
+                    <pre><code><span class="comment">// Действие, не сравнение: кладёт значение справа в переменную слева</span>
+<span class="variable">$x</span> = <span class="number">5</span>;             <span class="comment">// $x теперь равно 5</span>
+
+<span class="comment">// Возвращаемое значение присваивания = присвоенное значение</span>
+<span class="keyword">if</span> (<span class="variable">$x</span> = <span class="number">10</span>) {     <span class="comment">// ОПАСНО! Присваивает 10, не сравнивает.</span>
+                    <span class="comment">// Условие всегда true (10 — truthy).</span>
+                    <span class="comment">// Большинство IDE/линтеров подсветят это как warning.</span>
+}</code></pre>
+
+                    <div class="content-block">
+                        Использовать <code>=</code> внутри условий допустимо только осознанно (например, для inline-присваивания: <code>while (($row = $stmt-&gt;fetch()) !== false) { ... }</code>). Обычная ошибка &mdash; написать <code>=</code> вместо <code>==</code>/<code>===</code>.
+                    </div>
+
+                    <div class="example-label">2. <code>==</code> — нестрогое равенство</div>
+                    <pre><code><span class="comment">// Сравнивает значения после приведения типов (type juggling)</span>
+<span class="function">var_dump</span>(<span class="number">5</span>   == <span class="string">"5"</span>);          <span class="comment">// true  (строка "5" → число 5)</span>
+<span class="function">var_dump</span>(<span class="number">5</span>   == <span class="string">"6"</span>);          <span class="comment">// false ("6" → 6, 5 != 6)</span>
+<span class="function">var_dump</span>(<span class="number">0</span>   == <span class="keyword">false</span>);        <span class="comment">// true  (false → 0)</span>
+<span class="function">var_dump</span>(<span class="string">""</span>  == <span class="number">0</span>);            <span class="comment">// true  (пустая строка → 0)</span>
+<span class="function">var_dump</span>(<span class="string">"abc"</span> == <span class="number">0</span>);         <span class="comment">// до PHP 8.0: true; с 8.0+: false</span>
+<span class="function">var_dump</span>(<span class="number">42</span>  == <span class="string">"42 apples"</span>);   <span class="comment">// true  ("42 apples" → 42)</span></code></pre>
+
+                    <div class="example-label">3. <code>===</code> — строгое равенство (рекомендуется по умолчанию)</div>
+                    <pre><code><span class="comment">// Сравнивает И значение, И тип — без приведения</span>
+<span class="function">var_dump</span>(<span class="number">5</span>    === <span class="string">"5"</span>);          <span class="comment">// false (int vs string)</span>
+<span class="function">var_dump</span>(<span class="number">5</span>    === <span class="number">5</span>);            <span class="comment">// true</span>
+<span class="function">var_dump</span>(<span class="number">0</span>    === <span class="keyword">false</span>);        <span class="comment">// false (int vs bool)</span>
+<span class="function">var_dump</span>(<span class="keyword">null</span> === <span class="keyword">null</span>);         <span class="comment">// true</span>
+<span class="function">var_dump</span>(<span class="keyword">null</span> === <span class="keyword">false</span>);        <span class="comment">// false (null vs bool)</span></code></pre>
+
+                    <div class="example-label">4. <code>!=</code> и <code>&lt;&gt;</code> — нестрогое неравенство</div>
+                    <pre><code><span class="comment">// Противоположность == — true, если значения НЕ равны после приведения</span>
+<span class="function">var_dump</span>(<span class="number">5</span> != <span class="string">"5"</span>);              <span class="comment">// false (равны после juggling)</span>
+<span class="function">var_dump</span>(<span class="number">5</span> != <span class="string">"6"</span>);              <span class="comment">// true</span>
+<span class="function">var_dump</span>(<span class="number">0</span> != <span class="keyword">false</span>);            <span class="comment">// false (равны)</span>
+<span class="function">var_dump</span>(<span class="number">0</span> != <span class="string">"abc"</span>);            <span class="comment">// до PHP 8.0: false; с 8.0+: true</span>
+
+<span class="comment">// &lt;&gt; — синоним != (тот же оператор)</span>
+<span class="function">var_dump</span>(<span class="number">5</span> &lt;&gt; <span class="string">"5"</span>);              <span class="comment">// false</span></code></pre>
+
+                    <div class="example-label">5. <code>!==</code> — строгое неравенство</div>
+                    <pre><code><span class="comment">// Противоположность === — true, если значения ИЛИ типы различаются</span>
+<span class="function">var_dump</span>(<span class="number">5</span>    !== <span class="string">"5"</span>);          <span class="comment">// true  (разные типы)</span>
+<span class="function">var_dump</span>(<span class="number">5</span>    !== <span class="number">5</span>);            <span class="comment">// false</span>
+<span class="function">var_dump</span>(<span class="number">0</span>    !== <span class="keyword">false</span>);        <span class="comment">// true  (int vs bool)</span>
+<span class="function">var_dump</span>(<span class="keyword">null</span> !== <span class="keyword">null</span>);         <span class="comment">// false</span></code></pre>
+
+                    <div class="example-label">Сводная таблица</div>
+                    <pre><code><span class="comment">+-----------+---------------------+------------------+--------------------+
+| Оператор  | Название            | Приводит типы?   | Пример: 5 op "5"   |
++-----------+---------------------+------------------+--------------------+
+| =         | Присваивание        | N/A (не сравн.)  | присвоит "5"       |
+| ==        | Нестрогое равенство | да (juggling)    | true               |
+| ===       | Строгое равенство   | нет              | false              |
+| != / &lt;&gt;   | Нестрогое неравен.  | да (juggling)    | false              |
+| !==       | Строгое неравенство | нет              | true               |
++-----------+---------------------+------------------+--------------------+</span></code></pre>
+
+                    <div class="example-label">Частые ловушки</div>
+                    <pre><code><span class="comment">// 1. Пропущенный знак в условии</span>
+<span class="keyword">if</span> (<span class="variable">$x</span> = <span class="number">5</span>) { ... }       <span class="comment">// присваивание (всегда true)</span>
+<span class="keyword">if</span> (<span class="variable">$x</span> == <span class="number">5</span>) { ... }      <span class="comment">// нестрогое сравнение</span>
+<span class="keyword">if</span> (<span class="variable">$x</span> === <span class="number">5</span>) { ... }     <span class="comment">// строгое (правильно)</span>
+
+<span class="comment">// 2. Сравнение со строкой через ==</span>
+<span class="keyword">if</span> (<span class="variable">$str</span> == <span class="number">0</span>) { ... }
+<span class="comment">// сработает для "", "abc", "0" и null — почти наверняка не то, что нужно</span>
+<span class="keyword">if</span> (<span class="variable">$str</span> === <span class="string">"0"</span>) { ... }
+<span class="comment">// только для конкретной строки "0"</span>
+
+<span class="comment">// 3. Возврат функции false vs 0 vs ""</span>
+<span class="variable">$result</span> = <span class="function">strpos</span>(<span class="string">"hello"</span>, <span class="string">"h"</span>); <span class="comment">// 0 (позиция первого символа)</span>
+<span class="keyword">if</span> (!<span class="variable">$result</span>) { ... }      <span class="comment">// СРАБОТАЕТ: 0 → false. Баг!</span>
+<span class="keyword">if</span> (<span class="variable">$result</span> === <span class="keyword">false</span>) {  <span class="comment">// правильно — strpos вернёт false если не найдено</span>
+}
+
+<span class="comment">// 4. in_array без strict mode</span>
+<span class="function">in_array</span>(<span class="number">0</span>, [<span class="string">"a"</span>, <span class="string">"b"</span>, <span class="string">"c"</span>]);          <span class="comment">// true в PHP &lt; 8.0 ("a" → 0)</span>
+<span class="function">in_array</span>(<span class="number">0</span>, [<span class="string">"a"</span>, <span class="string">"b"</span>, <span class="string">"c"</span>], <span class="keyword">true</span>);    <span class="comment">// false (строгий режим)</span>
+
+<span class="comment">// 5. NULL и пустые значения</span>
+<span class="function">var_dump</span>(<span class="keyword">null</span> == <span class="keyword">false</span>);    <span class="comment">// true</span>
+<span class="function">var_dump</span>(<span class="keyword">null</span> == <span class="number">0</span>);        <span class="comment">// true</span>
+<span class="function">var_dump</span>(<span class="keyword">null</span> == <span class="string">""</span>);       <span class="comment">// true</span>
+<span class="function">var_dump</span>(<span class="keyword">null</span> == <span class="string">"0"</span>);      <span class="comment">// false  (важно: "0" != null)</span></code></pre>
+
+                    <div class="remember-box">
+                        <strong>Короткое запоминание:</strong><br>
+                        <code>=</code> &mdash; положить (присвоить).<br>
+                        <code>==</code> &mdash; «похожи» после приведения типов.<br>
+                        <code>===</code> &mdash; абсолютно идентичны (тип + значение).<br>
+                        <code>!=</code> &mdash; «не похожи» после приведения.<br>
+                        <code>!==</code> &mdash; не идентичны (либо тип, либо значение, либо оба).<br><br>
+                        <strong>По умолчанию используйте <code>===</code> и <code>!==</code></strong>. Нестрогое сравнение оправдано только когда осознанно нужно приведение типов (например, сравнение пользовательского ввода с числом) &mdash; и даже тогда лучше явно: <code>(int)$input === 5</code>.
                     </div>
                 </div>
 
