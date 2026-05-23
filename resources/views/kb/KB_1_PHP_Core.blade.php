@@ -828,6 +828,158 @@ EOT;</code></pre>
                 </div>
 
                 <div class="subsection">
+                    <h3 class="subsection-title">Heredoc и Nowdoc — многострочные строки</h3>
+                    <div class="content-block">
+                        Два способа создавать многострочные строки в PHP. Удобны, когда нужно написать большой текст с кавычками или переменными без конкатенации и экранирования. Различаются только одним: <strong>Heredoc интерпретирует переменные</strong> (ведёт себя как двойные кавычки), <strong>Nowdoc &mdash; нет</strong> (ведёт себя как одинарные).
+                    </div>
+
+                    <div class="example-label">Heredoc — с интерпретацией</div>
+                    <pre><code><span class="comment">// Синтаксис: &lt;&lt;&lt;ИДЕНТИФИКАТОР (без пробелов после &lt;&lt;&lt;)</span>
+<span class="variable">$name</span> = <span class="string">"Анна"</span>;
+<span class="variable">$text</span> = &lt;&lt;&lt;EOT
+Привет, <span class="variable">$name</span>!
+Это многострочный текст.
+Поддерживает переносы и "кавычки" без экранирования.
+EOT;
+
+<span class="keyword">echo</span> <span class="variable">$text</span>;
+<span class="comment">// Вывод:
+// Привет, Анна!
+// Это многострочный текст.
+// Поддерживает переносы и "кавычки" без экранирования.</span></code></pre>
+
+                    <div class="example-label">Nowdoc — без интерпретации (литерально)</div>
+                    <pre><code><span class="comment">// Синтаксис: &lt;&lt;&lt;'ИДЕНТИФИКАТОР' (в одинарных кавычках)</span>
+<span class="variable">$name</span> = <span class="string">"Анна"</span>;
+<span class="variable">$text</span> = &lt;&lt;&lt;<span class="string">'EOT'</span>
+Привет, <span class="variable">$name</span>!
+Здесь <span class="variable">$name</span> не заменится на "Анна".
+\n и \t останутся как текст.
+EOT;
+
+<span class="keyword">echo</span> <span class="variable">$text</span>;
+<span class="comment">// Вывод:
+// Привет, $name!
+// Здесь $name не заменится на "Анна".
+// \n и \t останутся как текст.</span></code></pre>
+
+                    <div class="example-label">Правила синтаксиса</div>
+                    <pre><code><span class="comment">// ✓ Идентификатор: любой (EOT, HTML, SQL, JSON), любые буквы/цифры/подчёркивания,
+//   не должен начинаться с цифры. Принято — UPPERCASE.
+
+// ✓ Heredoc: без кавычек вокруг идентификатора</span>
+<span class="variable">$x</span> = &lt;&lt;&lt;HTML
+&lt;<span class="keyword">div</span>&gt;<span class="variable">$content</span>&lt;/<span class="keyword">div</span>&gt;
+HTML;
+
+<span class="comment">// ✓ Nowdoc: с одинарными кавычками</span>
+<span class="variable">$x</span> = &lt;&lt;&lt;<span class="string">'HTML'</span>
+&lt;<span class="keyword">div</span>&gt;<span class="variable">$content</span>&lt;/<span class="keyword">div</span>&gt;
+HTML;
+
+<span class="comment">// ❌ Распространённая ошибка — пробелы и переменная после &lt;&lt;&lt;</span>
+<span class="variable">$x</span> = &lt;&lt; <span class="variable">$name</span>     <span class="comment">// SYNTAX ERROR — нужен идентификатор без пробела</span>
+text
+EOT;
+
+<span class="comment">// PHP 7.3+ — закрывающий идентификатор может иметь отступ
+// (отступ автоматически удалится из всех строк):</span>
+<span class="variable">$x</span> = &lt;&lt;&lt;EOT
+    Первая строка
+    Вторая строка
+    EOT;
+<span class="comment">// Содержимое будет "Первая строка\nВторая строка" — без ведущих пробелов</span></code></pre>
+
+                    <div class="example-label">Сравнительная таблица</div>
+                    <pre><code><span class="comment">+--------------------------------+--------------+--------------+
+| Особенность                    | Heredoc      | Nowdoc       |
++--------------------------------+--------------+--------------+
+| Синтаксис открытия             | &lt;&lt;&lt;EOT       | &lt;&lt;&lt;'EOT'     |
+| Интерпретация переменных       | да           | нет          |
+| Escape-последовательности      | да (\n, \t)  | нет          |
+| Аналог в обычных строках       | " "          | ' '          |
+| Когда использовать             | шаблоны с    | литеральный  |
+|                                | подстановкой | код, SQL,    |
+|                                |              | regex        |
++--------------------------------+--------------+--------------+</span></code></pre>
+
+                    <div class="example-label">Когда что использовать</div>
+                    <pre><code><span class="comment">// 1. Heredoc для шаблонов с переменными — HTML, SQL с параметрами, письма</span>
+<span class="variable">$body</span> = &lt;&lt;&lt;HTML
+&lt;<span class="keyword">h1</span>&gt;Привет, <span class="variable">$userName</span>!&lt;/<span class="keyword">h1</span>&gt;
+&lt;<span class="keyword">p</span>&gt;Ваш заказ #<span class="variable">$orderId</span> на сумму <span class="variable">$total</span> руб.&lt;/<span class="keyword">p</span>&gt;
+HTML;
+
+<span class="comment">// 2. Nowdoc для литерального текста — примеры кода, regex, тексты с $</span>
+<span class="variable">$exampleCode</span> = &lt;&lt;&lt;<span class="string">'PHP'</span>
+&lt;?php
+<span class="variable">$user</span> = User::find(1);
+<span class="keyword">echo</span> <span class="string">"Hello, <span class="variable">$user</span>->name!"</span>;
+PHP;
+<span class="comment">// Все $ останутся как есть, для документации/туториалов — идеально</span>
+
+<span class="comment">// 3. SQL — обычно Heredoc с параметрами или Nowdoc для статичного запроса</span>
+<span class="variable">$query</span> = &lt;&lt;&lt;<span class="string">'SQL'</span>
+SELECT u.id, u.email
+FROM users u
+WHERE u.status = 'active'
+  AND u.created_at &gt; '2024-01-01'
+SQL;
+<span class="comment">// Не нужно экранировать одинарные кавычки строки SQL!</span>
+
+<span class="comment">// 4. JSON-шаблон</span>
+<span class="variable">$json</span> = &lt;&lt;&lt;<span class="string">'JSON'</span>
+{
+  "name": "value",
+  "nested": {"key": 123}
+}
+JSON;</code></pre>
+
+                    <div class="example-label">Подводные камни</div>
+                    <pre><code><span class="comment">// 1. Закрывающий идентификатор в начале строки (до PHP 7.3)
+//    Любые пробелы или табы перед ним — Parse error
+//    С 7.3+ — отступ разрешён, но автоматически удаляется</span>
+<span class="variable">$x</span> = &lt;&lt;&lt;EOT
+text
+    EOT;   <span class="comment">// 7.2: SYNTAX ERROR; 7.3+: OK</span>
+
+<span class="comment">// 2. После закрывающего идентификатора — только ; или ничего</span>
+<span class="variable">$x</span> = &lt;&lt;&lt;EOT
+text
+EOT . <span class="string">"more"</span>;  <span class="comment">// ❌ SYNTAX ERROR в PHP &lt; 7.3</span>
+
+<span class="variable">$x</span> = &lt;&lt;&lt;EOT
+text
+EOT;
+<span class="variable">$x</span> .= <span class="string">"more"</span>;       <span class="comment">// ✓ — конкатенация после</span>
+
+<span class="comment">// 3. Идентификатор содержится в тексте — закроется раньше времени</span>
+<span class="variable">$x</span> = &lt;&lt;&lt;EOT
+Сообщение содержит слово EOT внутри текста
+EOT;
+<span class="comment">// Текст оборвётся на первом EOT в начале строки.
+// Решение: использовать уникальный идентификатор, не встречающийся в тексте.</span>
+
+<span class="comment">// 4. Heredoc внутри функции/массива до PHP 7.3 требовал ; в конце</span>
+<span class="variable">$arr</span> = [&lt;&lt;&lt;EOT
+text
+EOT
+];  <span class="comment">// 7.2: SYNTAX ERROR; 7.3+: OK (трейлинг ; можно опустить)</span>
+
+<span class="comment">// 5. $ в Nowdoc — не нужно экранировать (в отличие от Heredoc)</span>
+<span class="variable">$h</span> = &lt;&lt;&lt;EOT
+Цена: \<span class="variable">$100</span>   <span class="comment">// нужно экранировать $, иначе PHP попытается найти $100</span>
+EOT;
+<span class="variable">$n</span> = &lt;&lt;&lt;<span class="string">'EOT'</span>
+Цена: <span class="variable">$100</span>     <span class="comment">// в Nowdoc — экранировать не нужно</span>
+EOT;</code></pre>
+
+                    <div class="remember-box">
+                        <strong>Правило выбора:</strong> если в тексте <strong>есть переменные</strong> &mdash; <code>&lt;&lt;&lt;EOT</code> (Heredoc). Если текст &mdash; <strong>литеральный код, regex, пример с $</strong> &mdash; <code>&lt;&lt;&lt;'EOT'</code> (Nowdoc). Идентификатор &mdash; UPPERCASE, уникальный для содержимого (HTML, SQL, JSON, EOT). С PHP 7.3+ закрывающий маркер можно делать с отступом &mdash; используйте это для читаемости в методах классов.
+                    </div>
+                </div>
+
+                <div class="subsection">
                     <h3 class="subsection-title">PHP 8+ Функции строк</h3>
                     <div class="content-block">
                         PHP 8 добавил удобные функции для работы со строками вместо preg_match.
