@@ -184,6 +184,7 @@
     font-family: 'JetBrains Mono','Fira Code','Monaco','Courier New',monospace;
   }
   code { font-family: 'JetBrains Mono','Fira Code','Monaco',monospace; }
+  pre code { color: #ABB2BF; }  /* дефолтный цвет для операторов, скобок, ;, → */
   .keyword  { color: #82AAFF; font-weight:600; }
   .string   { color: #C3E88D; }
   .comment  { color: #637777; font-style:italic; }
@@ -380,23 +381,150 @@
                 <div class="subsection">
                     <h3 class="subsection-title">Type Juggling и Type Casting</h3>
                     <div class="content-block">
-                        PHP автоматически преобразует типы в некоторых ситуациях. Это может привести к неожиданным результатам!
+                        PHP &mdash; язык с динамической типизацией: тип переменной определяется значением, а не объявлением. Преобразования типов происходят двумя путями. <strong>Type Juggling</strong> &mdash; PHP сам конвертирует типы &laquo;на лету&raquo; (при арифметике, сравнении, логических операциях). <strong>Type Casting</strong> &mdash; разработчик явно указывает целевой тип через <code>(тип)$value</code>. Различие в инициаторе и контроле: juggling непредсказуем в сложных выражениях, casting даёт полный контроль.
                     </div>
-                    <div class="example-label">Примеры Type Juggling</div>
-                    <pre><code><span class="comment">// Type juggling (автоматическое преобразование)</span>
-<span class="variable">$result</span> = <span class="string">"5"</span> + <span class="number">3</span>;  <span class="comment">// 8 (string преобразуется в int)</span>
-<span class="variable">$result</span> = <span class="string">"10 apples"</span> + <span class="number">5</span>;  <span class="comment">// 15 (ведущая часть числа)</span>
-<span class="variable">$result</span> = <span class="string">"hello"</span> + <span class="number">5</span>;  <span class="comment">// 5 (нечисловая строка = 0)</span>
 
-<span class="comment">// Type casting (явное преобразование)</span>
-<span class="variable">$int</span> = (<span class="keyword">int</span>)<span class="string">"42.99"</span>;  <span class="comment">// 42</span>
+                    <div class="example-label">Type Juggling в арифметике</div>
+                    <pre><code><span class="comment">// Строка + число — строка превращается в число</span>
+<span class="keyword">echo</span> <span class="string">"5"</span> + <span class="number">3</span>;          <span class="comment">// 8 (string "5" → int 5)</span>
+
+<span class="comment">// Ведущие цифры строки превращаются в число, остальное отбрасывается</span>
+<span class="keyword">echo</span> <span class="string">"10 apples"</span> + <span class="number">5</span>;  <span class="comment">// 15</span>
+
+<span class="comment">// Нечисловая строка превращается в 0</span>
+<span class="keyword">echo</span> <span class="string">"hello"</span> + <span class="number">5</span>;      <span class="comment">// 5 ("hello" → 0)</span>
+
+<span class="comment">// Оператор конкатенации (точка) — наоборот, число становится строкой</span>
+<span class="keyword">echo</span> <span class="number">5</span> . <span class="string">" apples"</span>;     <span class="comment">// "5 apples"</span></code></pre>
+
+                    <div class="example-label">Type Juggling в сравнениях (скрытые баги)</div>
+                    <pre><code><span class="function">var_dump</span>(<span class="string">"10"</span> == <span class="number">10</span>);    <span class="comment">// true  (juggling: строка → число)</span>
+<span class="function">var_dump</span>(<span class="string">"10"</span> === <span class="number">10</span>);   <span class="comment">// false (строгое сравнение, типы разные)</span>
+
+<span class="function">var_dump</span>(<span class="string">""</span> == <span class="number">0</span>);        <span class="comment">// true  (пустая строка → 0)</span>
+<span class="function">var_dump</span>(<span class="string">"abc"</span> == <span class="number">0</span>);     <span class="comment">// true  (нечисловая строка → 0) — до PHP 8.0</span>
+<span class="function">var_dump</span>(<span class="string">"1abc"</span> == <span class="number">1</span>);    <span class="comment">// true  ("1abc" → 1)</span>
+
+<span class="comment">// PHP 8.0+ изменил поведение для строк, не содержащих чисел:</span>
+<span class="comment">// "abc" == 0 теперь false (сравнение идёт как строки)</span></code></pre>
+
+                    <div class="content-block">
+                        <strong>Правило:</strong> для надёжности сравнения используйте <code>===</code> и <code>!==</code> &mdash; они проверяют и тип, и значение. Это особенно критично при работе с данными из форм, JSON, БД, где тип может приходить неожиданным.
+                    </div>
+
+                    <div class="example-label">Type Casting — явное приведение</div>
+                    <pre><code><span class="comment">// (int) — отбрасывает дробную часть, не округляет</span>
+<span class="variable">$int</span> = (<span class="keyword">int</span>)<span class="string">"42.99"</span>;     <span class="comment">// 42</span>
+<span class="variable">$int</span> = (<span class="keyword">int</span>)<span class="string">"123hello"</span>;   <span class="comment">// 123</span>
+<span class="variable">$int</span> = (<span class="keyword">int</span>)<span class="keyword">true</span>;          <span class="comment">// 1</span>
+
+<span class="comment">// (float) — целое становится дробью</span>
 <span class="variable">$float</span> = (<span class="keyword">float</span>)<span class="string">"3.14"</span>;  <span class="comment">// 3.14</span>
-<span class="variable">$bool</span> = (<span class="keyword">bool</span>)<span class="number">0</span>;  <span class="comment">// false</span>
-<span class="variable">$array</span> = (<span class="keyword">array</span>)<span class="variable">$object</span>;  <span class="comment">// Преобразует объект в массив</span>
-<span class="variable">$string</span> = (<span class="keyword">string</span>)<span class="variable">$value</span>;  <span class="comment">// __toString() если есть</span></code></pre>
+<span class="variable">$float</span> = (<span class="keyword">float</span>)<span class="string">"5"</span>;     <span class="comment">// 5.0</span>
+
+<span class="comment">// (bool) — falsy значения: 0, "", "0", [], null</span>
+<span class="variable">$bool</span> = (<span class="keyword">bool</span>)<span class="number">0</span>;          <span class="comment">// false</span>
+<span class="variable">$bool</span> = (<span class="keyword">bool</span>)<span class="string">""</span>;         <span class="comment">// false</span>
+<span class="variable">$bool</span> = (<span class="keyword">bool</span>)<span class="string">"0"</span>;        <span class="comment">// false (важная ловушка!)</span>
+<span class="variable">$bool</span> = (<span class="keyword">bool</span>)[];          <span class="comment">// false</span>
+<span class="variable">$bool</span> = (<span class="keyword">bool</span>)<span class="string">"hello"</span>;    <span class="comment">// true</span>
+<span class="variable">$bool</span> = (<span class="keyword">bool</span>)<span class="string">"false"</span>;    <span class="comment">// true (любая непустая строка кроме "0")</span>
+
+<span class="comment">// (string)</span>
+<span class="variable">$string</span> = (<span class="keyword">string</span>)<span class="number">123</span>;     <span class="comment">// "123"</span>
+<span class="variable">$string</span> = (<span class="keyword">string</span>)<span class="keyword">true</span>;    <span class="comment">// "1"</span>
+<span class="variable">$string</span> = (<span class="keyword">string</span>)<span class="keyword">false</span>;   <span class="comment">// ""  (пустая строка, не "false"!)</span>
+<span class="variable">$string</span> = (<span class="keyword">string</span>)<span class="keyword">null</span>;    <span class="comment">// ""</span>
+
+<span class="comment">// (array)</span>
+<span class="variable">$array</span> = (<span class="keyword">array</span>)<span class="number">42</span>;        <span class="comment">// [42] — скаляр становится массивом с одним элементом</span>
+<span class="variable">$array</span> = (<span class="keyword">array</span>)<span class="variable">$object</span>;   <span class="comment">// свойства объекта → элементы массива</span>
+
+<span class="comment">// (object)</span>
+<span class="variable">$obj</span> = (<span class="keyword">object</span>)[<span class="string">"a"</span> =&gt; <span class="number">1</span>, <span class="string">"b"</span> =&gt; <span class="number">2</span>];
+<span class="comment">// stdClass с $obj-&gt;a = 1, $obj-&gt;b = 2</span></code></pre>
+
+                    <div class="example-label">__toString для объектов</div>
+                    <pre><code><span class="comment">// (string) на объект сработает только если в классе есть __toString()</span>
+<span class="keyword">class</span> <span class="keyword">User</span> {
+    <span class="keyword">public string</span> <span class="variable">$name</span> = <span class="string">'unknown'</span>;
+
+    <span class="keyword">public function</span> <span class="function">__toString</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="variable">$this</span>-&gt;<span class="variable">name</span>;
+    }
+}
+
+<span class="variable">$user</span> = <span class="keyword">new</span> <span class="keyword">User</span>();
+<span class="keyword">echo</span> (<span class="keyword">string</span>)<span class="variable">$user</span>;     <span class="comment">// "unknown"</span>
+<span class="keyword">echo</span> <span class="string">"Hello, {$user}"</span>; <span class="comment">// "Hello, unknown" — тоже использует __toString</span>
+
+<span class="comment">// Без __toString — Error: Object of class User could not be converted to string</span></code></pre>
+
+                    <div class="example-label">Сравнение подходов</div>
+                    <pre><code><span class="comment">+----------------+--------------------------+--------------------------+</span>
+<span class="comment">| Характеристика | Type Juggling            | Type Casting             |</span>
+<span class="comment">+----------------+--------------------------+--------------------------+</span>
+<span class="comment">| Инициатор      | PHP автоматически        | Разработчик явно         |</span>
+<span class="comment">| Контроль       | Низкий, скрытые правила  | Полный                   |</span>
+<span class="comment">| Безопасность   | Маскирует ошибки         | Видно что происходит     |</span>
+<span class="comment">|                | "abc" + 2 → 2            |                          |</span>
+<span class="comment">| Применимость   | Простые скрипты, формы   | Валидация, бизнес-логика |</span>
+<span class="comment">| Рекомендация   | Избегать в продакшене    | Использовать всегда      |</span>
+<span class="comment">+----------------+--------------------------+--------------------------+</span></code></pre>
+
+                    <div class="example-label">Подводные камни</div>
+                    <pre><code><span class="comment">// 1. Числовая строка с "мусором" — PHP молча берёт цифры</span>
+<span class="variable">$value</span> = <span class="string">"12.34 руб."</span>;
+<span class="keyword">echo</span> <span class="variable">$value</span> + <span class="number">10</span>;  <span class="comment">// 22.34 — работает, но непредсказуемо для других строк</span>
+
+<span class="comment">// 2. Строка "0" — единственная непустая falsy-строка</span>
+<span class="keyword">if</span> (<span class="string">"0"</span>) { <span class="comment">/* НЕ выполнится */</span> }
+<span class="keyword">if</span> (<span class="string">"false"</span>) { <span class="comment">/* выполнится (любая другая строка — truthy) */</span> }
+
+<span class="comment">// 3. Логические операции с небулевыми значениями</span>
+<span class="function">var_dump</span>(<span class="string">"a"</span> &amp;&amp; <span class="string">"b"</span>);  <span class="comment">// true (обе truthy)</span>
+<span class="function">var_dump</span>(<span class="string">"0"</span> &amp;&amp; <span class="string">"b"</span>);  <span class="comment">// false ("0" → false)</span>
+
+<span class="comment">// 4. (int) от float с погрешностью</span>
+<span class="keyword">echo</span> (<span class="keyword">int</span>)((<span class="number">0.1</span> + <span class="number">0.7</span>) * <span class="number">10</span>);  <span class="comment">// 7, а не 8! (0.1 + 0.7 = 0.7999...)</span>
+
+<span class="comment">// 5. Массив в bool — пустой массив false, любой непустой true</span>
+<span class="function">var_dump</span>((<span class="keyword">bool</span>)[<span class="number">0</span>]);  <span class="comment">// true (массив непуст, хотя элемент 0)</span>
+
+<span class="comment">// 6. NULL в сравнениях</span>
+<span class="function">var_dump</span>(<span class="keyword">null</span> == <span class="keyword">false</span>);  <span class="comment">// true</span>
+<span class="function">var_dump</span>(<span class="keyword">null</span> === <span class="keyword">false</span>); <span class="comment">// false</span>
+<span class="function">var_dump</span>(<span class="keyword">null</span> == <span class="number">0</span>);      <span class="comment">// true</span>
+<span class="function">var_dump</span>(<span class="keyword">null</span> == <span class="string">""</span>);     <span class="comment">// true</span></code></pre>
+
+                    <div class="example-label">Безопасные альтернативы автопреобразованию</div>
+                    <pre><code><span class="comment">// ❌ Опасно — полагаемся на juggling</span>
+<span class="keyword">function</span> <span class="function">calculate</span>(<span class="variable">$amount</span>, <span class="variable">$quantity</span>) {
+    <span class="keyword">return</span> <span class="variable">$amount</span> * <span class="variable">$quantity</span>;  <span class="comment">// "abc" * "2" = 0</span>
+}
+
+<span class="comment">// ✓ Безопасно — явная проверка типов</span>
+<span class="keyword">function</span> <span class="function">calculate</span>(<span class="variable">$amount</span>, <span class="variable">$quantity</span>): <span class="keyword">float</span> {
+    <span class="keyword">if</span> (!<span class="function">is_numeric</span>(<span class="variable">$amount</span>) || !<span class="function">is_numeric</span>(<span class="variable">$quantity</span>)) {
+        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="keyword">InvalidArgumentException</span>(<span class="string">'Numeric expected'</span>);
+    }
+    <span class="keyword">return</span> (<span class="keyword">float</span>)<span class="variable">$amount</span> * (<span class="keyword">int</span>)<span class="variable">$quantity</span>;
+}
+
+<span class="comment">// ✓ Безопасные парсеры строк → числа</span>
+<span class="variable">$int</span>   = <span class="function">intval</span>(<span class="variable">$str</span>, <span class="number">10</span>);   <span class="comment">// явное основание 10 — защита от "077" → 7 (octal)</span>
+<span class="variable">$float</span> = <span class="function">floatval</span>(<span class="variable">$str</span>);
+<span class="variable">$value</span> = <span class="function">filter_var</span>(<span class="variable">$str</span>, <span class="keyword">FILTER_VALIDATE_INT</span>);   <span class="comment">// вернёт false если не int</span>
+<span class="variable">$value</span> = <span class="function">filter_var</span>(<span class="variable">$str</span>, <span class="keyword">FILTER_VALIDATE_FLOAT</span>); <span class="comment">// вернёт false если не float</span></code></pre>
 
                     <div class="remember-box">
-                        "5" + "10" = 15, но "5" . "10" = "510". Оператор . всегда работает со строками!
+                        <strong>Шесть правил безопасной работы с типами:</strong><br>
+                        1. Используйте <code>===</code> / <code>!==</code> вместо <code>==</code> / <code>!=</code> &mdash; всегда.<br>
+                        2. Приводите типы явно через <code>(int)</code>, <code>(float)</code>, не надейтесь на juggling.<br>
+                        3. Проверяйте тип перед операцией: <code>is_numeric()</code>, <code>is_string()</code>, <code>is_array()</code>.<br>
+                        4. Для парсинга чисел из строк используйте <code>filter_var($v, FILTER_VALIDATE_INT)</code>.<br>
+                        5. Включите <code>declare(strict_types=1);</code> в начале каждого файла (см. следующую подсекцию).<br>
+                        6. Помните про <code>__toString()</code>: <code>(string)$object</code> упадёт, если метод не определён.
                     </div>
                 </div>
 
