@@ -1,0 +1,2300 @@
+@verbatim
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHP Core Knowledge Base - Interview Guide</title>
+    <style>
+  :root {
+    --bg:           #F5F8FA;
+    --surface:      #FFFFFF;
+    --surface-light:#F5F8FA;
+    --border:       #E4E6EF;
+    --text:         #181C32;
+    --text2:        #7E8299;
+    --text3:        #A1A5B7;
+    --primary:      #404357;
+    --primary-light:#EFF2F5;
+    --purple:       #7239EA;
+    --purple-light: #F8F5FF;
+    --success:      #50CD89;
+    --success-light:#E8FFF3;
+    --warning:      #FFC700;
+    --warning-light:#FFF8DD;
+    --danger:       #F1416C;
+    --danger-light: #FFF5F8;
+    --shadow:       0 2px 10px rgba(24,28,50,0.07);
+    --code-bg:      #1E1E2D;
+    --code-border:  #2D3347;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    line-height: 1.6;
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    padding: 24px 14px;
+    position: fixed;
+    width: 260px;
+    height: 100vh;
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+    box-shadow: 2px 0 8px rgba(24,28,50,0.04);
+  }
+  .sidebar-back {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 10px;
+    margin-bottom: 14px;
+    color: var(--primary);
+    text-decoration: none;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    transition: background 0.2s;
+  }
+  .sidebar-back:hover { background: var(--primary-light); }
+  .sidebar-back svg { width: 14px; height: 14px; }
+  .sidebar-title {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    margin-bottom: 10px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-item {
+    display: block;
+    padding: 9px 12px;
+    margin-bottom: 3px;
+    color: var(--text2);
+    text-decoration: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.18s;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid transparent;
+  }
+  .nav-item:hover {
+    background: var(--bg);
+    color: var(--primary);
+    border-color: var(--border);
+  }
+  .nav-item.active {
+    background: var(--primary-light);
+    color: var(--primary);
+    font-weight: 600;
+    border-color: rgba(64,67,87,0.25);
+  }
+
+  /* ── Main ── */
+  .main {
+    margin-left: 260px;
+    padding: 40px 48px;
+    min-width: 0;
+    width: calc(100vw - 260px);
+  }
+  .header {
+    margin-bottom: 36px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    font-size: 26px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: var(--text);
+    letter-spacing: -0.3px;
+    background: none;
+    -webkit-text-fill-color: unset;
+  }
+  .header p { color: var(--text2); font-size: 14px; }
+
+  .section { display: none; animation: fadeIn 0.25s ease; }
+  .section.active { display: block; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+
+  .section-title {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 22px;
+    color: var(--text);
+    padding-bottom: 14px;
+    border-bottom: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::before {
+    content: '';
+    width: 4px; height: 22px;
+    background: var(--primary);
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  .subsection { margin-bottom: 34px; }
+  .subsection-title {
+    font-size: 15px;
+    margin-bottom: 12px;
+    color: var(--text);
+    font-weight: 700;
+  }
+  .content-block {
+    margin-bottom: 16px;
+    color: var(--text2);
+    line-height: 1.75;
+    font-size: 14px;
+  }
+  .content-block strong { color: var(--text); }
+
+  /* Code — dark for readability */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--code-border);
+    border-radius: 10px;
+    padding: 20px;
+    overflow-x: auto;
+    margin: 16px 0;
+    line-height: 1.55;
+    font-size: 13px;
+    font-family: 'JetBrains Mono','Fira Code','Monaco','Courier New',monospace;
+  }
+  code { font-family: 'JetBrains Mono','Fira Code','Monaco',monospace; }
+  .keyword  { color: #82AAFF; font-weight:600; }
+  .string   { color: #C3E88D; }
+  .comment  { color: #637777; font-style:italic; }
+  .variable { color: #F78C6C; }
+  .function { color: #82AAFF; }
+  .number   { color: #F78C6C; }
+
+  /* Remember box */
+  .remember-box {
+    background: var(--primary-light);
+    border-left: 4px solid var(--primary);
+    padding: 14px 18px;
+    margin: 20px 0;
+    border-radius: 0 8px 8px 0;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: var(--text);
+  }
+  .remember-box::before {
+    content: '✎ Запомни:';
+    font-weight: 700;
+    color: #B45309;
+    display: block;
+    margin-bottom: 6px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+
+  /* Collapsible */
+  .collapsible {
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    padding: 12px 16px;
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-align: left;
+    outline: none;
+    font-size: 13.5px;
+    font-weight: 600;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.18s;
+    margin-bottom: 8px;
+    font-family: 'Inter',-apple-system,sans-serif;
+  }
+  .collapsible:hover { background: var(--bg); border-color: var(--primary); color: var(--primary); }
+  .collapsible.active { background: var(--primary-light); border-color: var(--primary); color: var(--primary); }
+  .toggle-icon { transition: transform 0.3s; font-size: 11px; }
+  .collapsible.active .toggle-icon { transform: rotate(180deg); }
+  .collapse-content {
+    display: none;
+    padding: 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    margin-bottom: 12px;
+    color: var(--text2);
+    font-size: 13.5px;
+    line-height: 1.7;
+  }
+  .collapse-content.active { display: block; }
+
+  /* Tables */
+  table { width:100%; border-collapse:collapse; margin:16px 0; font-size:13px; }
+  th, td { padding:11px 14px; text-align:left; border-bottom:1px solid var(--border); }
+  th { background: var(--bg); color: var(--text); font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:0.5px; }
+  tr:hover td { background: var(--bg); }
+
+  /* Lists */
+  ul { margin-left:20px; margin-top:10px; margin-bottom:14px; }
+  li { margin-bottom:7px; color: var(--text2); font-size:13.5px; line-height:1.65; }
+  li strong { color: var(--text); }
+
+  .example-label {
+    display:inline-block;
+    background: var(--primary);
+    color:#fff;
+    padding:3px 10px;
+    border-radius:5px;
+    font-size:11px;
+    font-weight:700;
+    margin-bottom:10px;
+  }
+  .type-badge {
+    display:inline-block;
+    background: var(--primary-light);
+    color: var(--primary);
+    padding:2px 8px;
+    border-radius:4px;
+    font-size:11px;
+    font-weight:700;
+    margin-right:4px;
+  }
+
+  @media (max-width:768px) {
+    .container { grid-template-columns:1fr; }
+    .sidebar { position:static; width:100%; height:auto; border-right:none; border-bottom:1px solid var(--border); }
+    .main { margin-left:0; padding:24px 18px; }
+    .header h1 { font-size:20px; }
+    .section-title { font-size:17px; }
+  }
+</style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <a class="sidebar-back" href="/"><i data-lucide="arrow-left"></i> На главную</a>
+            <div class="sidebar-title">PHP Core</div>
+            <a class="nav-item active" onclick="showSection('types')">Типы данных</a>
+            <a class="nav-item" onclick="showSection('strings')">Строки</a>
+            <a class="nav-item" onclick="showSection('arrays')">Массивы</a>
+            <a class="nav-item" onclick="showSection('oop-basics')">ООП: Основы</a>
+            <a class="nav-item" onclick="showSection('oop-abstract')">ООП: Абстрактные</a>
+            <a class="nav-item" onclick="showSection('traits')">Traits</a>
+            <a class="nav-item" onclick="showSection('magic')">Магические методы</a>
+            <a class="nav-item" onclick="showSection('namespaces')">Namespaces</a>
+            <a class="nav-item" onclick="showSection('errors')">Обработка ошибок</a>
+            <a class="nav-item" onclick="showSection('php8')">PHP 8+ фичи</a>
+            <a class="nav-item" onclick="showSection('generators')">Генераторы</a>
+            <a class="nav-item" onclick="showSection('closures')">Closures</a>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main">
+            <div class="header">
+                <h1>PHP Core Knowledge Base</h1>
+                <p>Comprehensive study guide for PHP backend developers preparing for interviews</p>
+            </div>
+
+            <!-- SECTION 1: ТИПЫ ДАННЫХ -->
+            <div id="types" class="section active">
+                <h2 class="section-title">1. Типы данных PHP</h2>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Основные типы (Basic Types)</h3>
+                    <div class="content-block">
+                        В PHP существует 8 основных типов данных. Каждый тип имеет свои особенности и правила преобразования.
+                    </div>
+                    <table>
+                        <tr>
+                            <th>Тип</th>
+                            <th>Описание</th>
+                            <th>Примеры</th>
+                        </tr>
+                        <tr>
+                            <td><span class="type-badge">int</span></td>
+                            <td>Целое число (64-bit на современных системах)</td>
+                            <td>42, -100, 0x1A</td>
+                        </tr>
+                        <tr>
+                            <td><span class="type-badge">float</span></td>
+                            <td>Число с плавающей точкой (double)</td>
+                            <td>3.14, 1.2e-3</td>
+                        </tr>
+                        <tr>
+                            <td><span class="type-badge">string</span></td>
+                            <td>Строка символов</td>
+                            <td>"Hello", 'World'</td>
+                        </tr>
+                        <tr>
+                            <td><span class="type-badge">bool</span></td>
+                            <td>true или false</td>
+                            <td>true, false</td>
+                        </tr>
+                        <tr>
+                            <td><span class="type-badge">array</span></td>
+                            <td>Коллекция элементов с ключами</td>
+                            <td>[1, 2, 3], ['a' => 1]</td>
+                        </tr>
+                        <tr>
+                            <td><span class="type-badge">object</span></td>
+                            <td>Экземпляр класса</td>
+                            <td>new User()</td>
+                        </tr>
+                        <tr>
+                            <td><span class="type-badge">null</span></td>
+                            <td>Отсутствие значения</td>
+                            <td>null</td>
+                        </tr>
+                        <tr>
+                            <td><span class="type-badge">resource</span></td>
+                            <td>Ссылка на внешний ресурс</td>
+                            <td>файлы, БД соединения</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Type Juggling и Type Casting</h3>
+                    <div class="content-block">
+                        PHP автоматически преобразует типы в некоторых ситуациях. Это может привести к неожиданным результатам!
+                    </div>
+                    <div class="example-label">Примеры Type Juggling</div>
+                    <pre><code><span class="comment">// Type juggling (автоматическое преобразование)</span>
+<span class="variable">$result</span> = <span class="string">"5"</span> + <span class="number">3</span>;  <span class="comment">// 8 (string преобразуется в int)</span>
+<span class="variable">$result</span> = <span class="string">"10 apples"</span> + <span class="number">5</span>;  <span class="comment">// 15 (ведущая часть числа)</span>
+<span class="variable">$result</span> = <span class="string">"hello"</span> + <span class="number">5</span>;  <span class="comment">// 5 (нечисловая строка = 0)</span>
+
+<span class="comment">// Type casting (явное преобразование)</span>
+<span class="variable">$int</span> = (<span class="keyword">int</span>)<span class="string">"42.99"</span>;  <span class="comment">// 42</span>
+<span class="variable">$float</span> = (<span class="keyword">float</span>)<span class="string">"3.14"</span>;  <span class="comment">// 3.14</span>
+<span class="variable">$bool</span> = (<span class="keyword">bool</span>)<span class="number">0</span>;  <span class="comment">// false</span>
+<span class="variable">$array</span> = (<span class="keyword">array</span>)<span class="variable">$object</span>;  <span class="comment">// Преобразует объект в массив</span>
+<span class="variable">$string</span> = (<span class="keyword">string</span>)<span class="variable">$value</span>;  <span class="comment">// __toString() если есть</span></code></pre>
+
+                    <div class="remember-box">
+                        "5" + "10" = 15, но "5" . "10" = "510". Оператор . всегда работает со строками!
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">strict_types Декларация</h3>
+                    <div class="content-block">
+                        <strong>strict_types=1</strong> требует точное совпадение типов при передаче аргументов. Это должно быть первым оператором в файле!
+                    </div>
+                    <div class="example-label">Strict Types</div>
+                    <pre><code><span class="keyword">declare</span>(<span class="string">strict_types</span>=<span class="number">1</span>);
+
+<span class="keyword">function</span> <span class="function">processAge</span>(<span class="keyword">int</span> <span class="variable">$age</span>): <span class="keyword">string</span> {
+    <span class="keyword">return</span> <span class="string">"Age: "</span> . <span class="variable">$age</span>;
+}
+
+<span class="comment">// С strict_types=1 это выбросит TypeError</span>
+<span class="function">processAge</span>(<span class="string">"25"</span>);  <span class="comment">// ERROR! Требуется int, не string</span>
+
+<span class="comment">// Нужно явно преобразовать</span>
+<span class="function">processAge</span>((<span class="keyword">int</span>)<span class="string">"25"</span>);  <span class="comment">// OK</span></code></pre>
+
+                    <div class="remember-box">
+                        В Laravel и современных проектах ВСЕГДА используй declare(strict_types=1) для типобезопасности!
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Union Types и Nullable (PHP 8+)</h3>
+                    <div class="content-block">
+                        PHP 8+ позволяет указывать несколько возможных типов и явно маркировать nullable значения.
+                    </div>
+                    <div class="example-label">Union Types</div>
+                    <pre><code><span class="keyword">declare</span>(<span class="string">strict_types</span>=<span class="number">1</span>);
+
+<span class="comment">// Union Types - функция может принять int или string</span>
+<span class="keyword">function</span> <span class="function">getUserId</span>(<span class="keyword">int</span>|<span class="keyword">string</span> <span class="variable">$id</span>): <span class="keyword">int</span> {
+    <span class="keyword">if</span> (<span class="keyword">is_string</span>(<span class="variable">$id</span>)) {
+        <span class="variable">$id</span> = (<span class="keyword">int</span>)<span class="variable">$id</span>;
+    }
+    <span class="keyword">return</span> <span class="variable">$id</span>;
+}
+
+<span class="comment">// Nullable типы</span>
+<span class="keyword">function</span> <span class="function">findUser</span>(<span class="keyword">int</span> <span class="variable">$id</span>): ?<span class="keyword">User</span> {
+    <span class="comment">// Может вернуть User или null</span>
+    <span class="keyword">return</span> <span class="variable">$user</span> ?? <span class="keyword">null</span>;
+}
+
+<span class="comment">// Эквивалентно: User|null</span></code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Intersection Types (PHP 8.1+)</h3>
+                    <div class="content-block">
+                        Intersection типы требуют чтобы объект реализовал ВСЕ указанные интерфейсы.
+                    </div>
+                    <div class="example-label">Intersection Types</div>
+                    <pre><code><span class="keyword">interface</span> <span class="function">Serializable</span> {}
+<span class="keyword">interface</span> <span class="function">Countable</span> {}
+
+<span class="comment">// Параметр должен реализовать ОБА интерфейса</span>
+<span class="keyword">function</span> <span class="function">processCollection</span>(<span class="keyword">Serializable</span>&<span class="keyword">Countable</span> <span class="variable">$data</span>): <span class="keyword">void</span> {
+    <span class="keyword">echo</span> <span class="function">count</span>(<span class="variable">$data</span>);
+}</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Проверка типов</h3>
+                    <div class="example-label">Функции проверки типов</div>
+                    <pre><code><span class="function">is_int</span>(<span class="variable">$var</span>);        <span class="comment">// Целое число?</span>
+<span class="function">is_float</span>(<span class="variable">$var</span>);      <span class="comment">// Число с плавающей точкой?</span>
+<span class="function">is_string</span>(<span class="variable">$var</span>);     <span class="comment">// Строка?</span>
+<span class="function">is_bool</span>(<span class="variable">$var</span>);      <span class="comment">// Boolean?</span>
+<span class="function">is_array</span>(<span class="variable">$var</span>);     <span class="comment">// Массив?</span>
+<span class="function">is_object</span>(<span class="variable">$var</span>);    <span class="comment">// Объект?</span>
+<span class="function">is_null</span>(<span class="variable">$var</span>);     <span class="comment">// null?</span>
+<span class="function">is_numeric</span>(<span class="variable">$var</span>);   <span class="comment">// Числовое значение или строка с числом?</span>
+<span class="function">is_callable</span>(<span class="variable">$var</span>);  <span class="comment">// Можно вызвать как функцию?</span>
+<span class="function">isset</span>(<span class="variable">$var</span>);      <span class="comment">// Переменная установлена и не null?</span>
+<span class="function">empty</span>(<span class="variable">$var</span>);     <span class="comment">// Переменная пуста? (0, "", false, null)</span>
+<span class="function">gettype</span>(<span class="variable">$var</span>);   <span class="comment">// Возвращает строку с типом</span></code></pre>
+
+                    <div class="remember-box">
+                        isset() возвращает false если переменной нет или она null. empty() также возвращает true для 0, "", false, null. Используй !isset() или ?? оператор для более точных проверок.
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2: СТРОКИ -->
+            <div id="strings" class="section">
+                <h2 class="section-title">2. Строки</h2>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Синтаксис строк: Double vs Single Quote</h3>
+                    <div class="example-label">Различия</div>
+                    <pre><code><span class="comment">// Single quotes - буквальные строки, никакой интерпретации</span>
+<span class="string">'Hello $name'</span>  <span class="comment">// Выведет: Hello $name</span>
+
+<span class="comment">// Double quotes - интерпретирует переменные и экранирующие символы</span>
+<span class="string">"Hello $name"</span>  <span class="comment">// Выведет: Hello John (если $name = 'John')</span>
+<span class="string">"Line1\nLine2"</span>  <span class="comment">// Новая строка работает</span>
+
+<span class="comment">// Heredoc - многострочная строка с интерпретацией</span>
+<span class="variable">$text</span> = <<<EOT
+Hello <span class="variable">$name</span>,
+This is a multiline string.
+EOT;
+
+<span class="comment">// Nowdoc - многострочная строка БЕЗ интерпретации (как single quotes)</span>
+<span class="variable">$text</span> = <<<'EOT'
+Hello <span class="variable">$name</span>,
+This is literal.
+EOT;</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Строковая интерполяция (String Interpolation)</h3>
+                    <div class="example-label">Способы интерполяции</div>
+                    <pre><code><span class="variable">$name</span> = <span class="string">"Alice"</span>;
+<span class="variable">$data</span> = [<span class="string">'age'</span> => <span class="number">30</span>];
+
+<span class="comment">// Простая переменная</span>
+<span class="string">"Hello $name"</span>
+
+<span class="comment">// Через фигурные скобки для сложных выражений</span>
+<span class="string">"Age: {$data['age']}"</span>  <span class="comment">// Правильно</span>
+<span class="string">"Age: $data['age']"</span>    <span class="comment">// ОШИБКА - неправильная интерпретация</span>
+
+<span class="comment">// Использование {} для явности</span>
+<span class="string">"{$name}'s age is {$data['age']}"</span></code></pre>
+
+                    <div class="remember-box">
+                        Для доступа к элементам массива в строке используй {$array['key']}, иначе PHP не поймёт синтаксис!
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">PHP 8+ Функции строк</h3>
+                    <div class="content-block">
+                        PHP 8 добавил удобные функции для работы со строками вместо preg_match.
+                    </div>
+                    <div class="example-label">str_contains, str_starts_with, str_ends_with</div>
+                    <pre><code><span class="comment">// Проверить содержит ли строка подстроку</span>
+<span class="function">str_contains</span>(<span class="string">"Hello World"</span>, <span class="string">"World"</span>);  <span class="comment">// true</span>
+
+<span class="comment">// Проверить начало строки</span>
+<span class="function">str_starts_with</span>(<span class="string">"https://example.com"</span>, <span class="string">"https"</span>);  <span class="comment">// true</span>
+
+<span class="comment">// Проверить конец строки</span>
+<span class="function">str_ends_with</span>(<span class="string">"file.pdf"</span>, <span class="string">".pdf"</span>);  <span class="comment">// true</span>
+
+<span class="comment">// Практический пример - валидация URL в Laravel контроллере</span>
+<span class="keyword">if</span> (!<span class="function">str_starts_with</span>(<span class="variable">$url</span>, <span class="string">"https://"</span>)) {
+    <span class="keyword">return</span> <span class="function">response</span>()-><span class="function">json</span>([<span class="string">'error'</span> => <span class="string">'Invalid URL'</span>]);
+}</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Многобайтовые строки (mb_string)</h3>
+                    <div class="content-block">
+                        Для работы с Unicode и не-ASCII символами используй mb_string функции вместо обычных str функций.
+                    </div>
+                    <div class="example-label">mb_string функции</div>
+                    <pre><code><span class="variable">$text</span> = <span class="string">"Привет мир"</span>;
+
+<span class="comment">// Обычные функции работают с БАЙТАМИ, не с символами!</span>
+<span class="function">strlen</span>(<span class="string">"Привет"</span>);      <span class="comment">// 12 (3 байта на каждый кириллический символ)</span>
+
+<span class="comment">// mb функции работают с СИМВОЛАМИ</span>
+<span class="function">mb_strlen</span>(<span class="string">"Привет"</span>);     <span class="comment">// 6 (6 символов, UTF-8)</span>
+<span class="function">mb_substr</span>(<span class="variable">$text</span>, <span class="number">0</span>, <span class="number">3</span>);   <span class="comment">// "При" (3 символа, не байта)</span>
+<span class="function">mb_strtoupper</span>(<span class="variable">$text</span>);     <span class="comment">// "ПРИВЕТ МИР"</span>
+<span class="function">mb_strtolower</span>(<span class="variable">$text</span>);     <span class="comment">// "привет мир"</span>
+<span class="function">mb_convert_case</span>(<span class="variable">$text</span>, <span class="keyword">MB_CASE_TITLE</span>);  <span class="comment">// Первая буква заглавная</span></code></pre>
+
+                    <div class="remember-box">
+                        ВСЕГДА используй mb_* функции при работе с пользовательским вводом, особенно если это может быть не-ASCII! Это критично для интернациональных приложений.
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Регулярные выражения (Regex)</h3>
+                    <div class="example-label">preg_match и preg_replace</div>
+                    <pre><code><span class="comment">// preg_match - найти первое совпадение</span>
+<span class="keyword">if</span> (<span class="function">preg_match</span>(<span class="string">'/<span class="function">^\d</span>{3}-<span class="function">\d</span>{3}-<span class="function">\d</span>{4}$/'</span>, <span class="variable">$phone</span>)) {
+    <span class="comment">// Телефон в формате XXX-XXX-XXXX</span>
+}
+
+<span class="comment">// preg_match с захватывающими группами</span>
+<span class="function">preg_match</span>(<span class="string">'/(\w+)@(\w+\.\w+)/'</span>, <span class="string">"test@example.com"</span>, <span class="variable">$matches</span>);
+<span class="comment">// $matches[0] = "test@example.com" (полное совпадение)</span>
+<span class="comment">// $matches[1] = "test" (первая группа)</span>
+<span class="comment">// $matches[2] = "example.com" (вторая группа)</span>
+
+<span class="comment">// preg_match_all - найти ВСЕ совпадения</span>
+<span class="function">preg_match_all</span>(<span class="string">'/\d+/'</span>, <span class="string">"1 2 3 4 5"</span>, <span class="variable">$numbers</span>);
+<span class="comment">// $numbers[0] = ["1", "2", "3", "4", "5"]</span>
+
+<span class="comment">// preg_replace - замена по паттерну</span>
+<span class="variable">$clean</span> = <span class="function">preg_replace</span>(<span class="string">'/[^a-zA-Z0-9]/'</span>, <span class="string">''</span>, <span class="variable">$input</span>);
+<span class="comment">// Удаляет все символы кроме букв и цифр</span>
+
+<span class="comment">// Практический пример - валидация email в Laravel</span>
+<span class="keyword">if</span> (!<span class="function">preg_match</span>(<span class="string">'/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/'</span>, <span class="variable">$email</span>)) {
+    <span class="comment">// Некорректный email</span>
+}</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">sprintf и форматирование строк</h3>
+                    <div class="example-label">sprintf</div>
+                    <pre><code><span class="comment">// sprintf возвращает отформатированную строку</span>
+<span class="variable">$formatted</span> = <span class="function">sprintf</span>(<span class="string">"Hello %s, you are %d years old"</span>, <span class="string">"Alice"</span>, <span class="number">30</span>);
+<span class="comment">// "Hello Alice, you are 30 years old"</span>
+
+<span class="comment">// printf выводит прямо</span>
+<span class="function">printf</span>(<span class="string">"Price: $%.2f"</span>, <span class="number">19.5</span>);  <span class="comment">// "Price: $19.50"</span>
+
+<span class="comment">// Форматы:</span>
+<span class="comment">// %s - string</span>
+<span class="comment">// %d - integer</span>
+<span class="comment">// %f - float (по умолчанию 6 знаков после запятой)</span>
+<span class="comment">// %.2f - float с 2 знаками после запятой</span>
+<span class="comment">// %x - hex</span>
+<span class="comment">// %b - binary</span>
+
+<span class="comment">// Практический пример - форматирование цены</span>
+<span class="variable">$price</span> = <span class="function">sprintf</span>(<span class="string">"$%.2f"</span>, <span class="number">99.5</span>);  <span class="comment">// "$99.50"</span></code></pre>
+                </div>
+            </div>
+
+            <!-- SECTION 3: МАССИВЫ -->
+            <div id="arrays" class="section">
+                <h2 class="section-title">3. Массивы углублённо</h2>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">array_map - Преобразование элементов</h3>
+                    <div class="example-label">array_map примеры</div>
+                    <pre><code><span class="comment">// Применить функцию к каждому элементу</span>
+<span class="variable">$numbers</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>];
+<span class="variable">$squared</span> = <span class="function">array_map</span>(<span class="keyword">fn</span>(<span class="variable">$n</span>) => <span class="variable">$n</span> * <span class="variable">$n</span>, <span class="variable">$numbers</span>);
+<span class="comment">// [1, 4, 9, 16]</span>
+
+<span class="comment">// Преобразование пользователей в массив ID</span>
+<span class="variable">$users</span> = [
+    [<span class="string">'id'</span> => <span class="number">1</span>, <span class="string">'name'</span> => <span class="string">'Alice'</span>],
+    [<span class="string">'id'</span> => <span class="number">2</span>, <span class="string">'name'</span> => <span class="string">'Bob'</span>]
+];
+<span class="variable">$ids</span> = <span class="function">array_map</span>(<span class="keyword">fn</span>(<span class="variable">$u</span>) => <span class="variable">$u</span>[<span class="string">'id'</span>], <span class="variable">$users</span>);
+<span class="comment">// [1, 2]</span>
+
+<span class="comment">// С объектами</span>
+<span class="variable">$users</span> = <span class="function">User</span>::<span class="function">all</span>();  <span class="comment">// Laravel Collection</span>
+<span class="variable">$names</span> = <span class="function">array_map</span>(<span class="keyword">fn</span>(<span class="variable">$user</span>) => <span class="variable">$user</span>-><span class="function">name</span>, <span class="variable">$users</span>-><span class="function">toArray</span>());
+
+<span class="comment">// Применить функцию к нескольким массивам одновременно</span>
+<span class="variable">$a</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
+<span class="variable">$b</span> = [<span class="number">10</span>, <span class="number">20</span>, <span class="number">30</span>];
+<span class="variable">$result</span> = <span class="function">array_map</span>(<span class="keyword">fn</span>(<span class="variable">$x</span>, <span class="variable">$y</span>) => <span class="variable">$x</span> + <span class="variable">$y</span>, <span class="variable">$a</span>, <span class="variable">$b</span>);
+<span class="comment">// [11, 22, 33]</span></code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">array_filter - Фильтрация элементов</h3>
+                    <div class="example-label">array_filter примеры</div>
+                    <pre><code><span class="comment">// Фильтровать массив по условию</span>
+<span class="variable">$numbers</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>];
+<span class="variable">$evens</span> = <span class="function">array_filter</span>(<span class="variable">$numbers</span>, <span class="keyword">fn</span>(<span class="variable">$n</span>) => <span class="variable">$n</span> % <span class="number">2</span> == <span class="number">0</span>);
+<span class="comment">// [2, 4] (ключи сохранены!)</span>
+
+<span class="comment">// Удалить null и пустые значения</span>
+<span class="variable">$data</span> = [<span class="string">'name'</span> => <span class="string">'Alice'</span>, <span class="string">'age'</span> => <span class="keyword">null</span>, <span class="string">'city'</span> => <span class="string">'NYC'</span>];
+<span class="variable">$filtered</span> = <span class="function">array_filter</span>(<span class="variable">$data</span>);
+<span class="comment">// ['name' => 'Alice', 'city' => 'NYC']</span>
+
+<span class="comment">// Фильтровать только ключи</span>
+<span class="variable">$data</span> = [<span class="string">'user_id'</span> => <span class="number">1</span>, <span class="string">'admin_id'</span> => <span class="number">2</span>, <span class="string">'name'</span> => <span class="string">'Test'</span>];
+<span class="variable">$ids</span> = <span class="function">array_filter</span>(<span class="variable">$data</span>, <span class="keyword">fn</span>(<span class="variable">$k</span>) => <span class="function">str_ends_with</span>(<span class="variable">$k</span>, <span class="string">'_id'</span>), <span class="keyword">ARRAY_FILTER_USE_KEY</span>);
+<span class="comment">// ['user_id' => 1, 'admin_id' => 2]</span>
+
+<span class="comment">// Практический пример - получить активных пользователей из БД</span>
+<span class="variable">$users</span> = <span class="function">User</span>::<span class="function">all</span>();
+<span class="variable">$active</span> = <span class="function">array_filter</span>(
+    <span class="variable">$users</span>-><span class="function">toArray</span>(),
+    <span class="keyword">fn</span>(<span class="variable">$user</span>) => <span class="variable">$user</span>[<span class="string">'is_active'</span>] === <span class="keyword">true</span>
+);</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">array_reduce - Свёртка массива</h3>
+                    <div class="example-label">array_reduce примеры</div>
+                    <pre><code><span class="comment">// Свернуть массив в одно значение (сумма)</span>
+<span class="variable">$numbers</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>];
+<span class="variable">$sum</span> = <span class="function">array_reduce</span>(<span class="variable">$numbers</span>, <span class="keyword">fn</span>(<span class="variable">$carry</span>, <span class="variable">$item</span>) => <span class="variable">$carry</span> + <span class="variable">$item</span>, <span class="number">0</span>);
+<span class="comment">// 10</span>
+
+<span class="comment">// Построить ассоциативный массив из списка</span>
+<span class="variable">$users</span> = [
+    [<span class="string">'id'</span> => <span class="number">1</span>, <span class="string">'name'</span> => <span class="string">'Alice'</span>],
+    [<span class="string">'id'</span> => <span class="number">2</span>, <span class="string">'name'</span> => <span class="string">'Bob'</span>]
+];
+<span class="variable">$indexed</span> = <span class="function">array_reduce</span>(<span class="variable">$users</span>, <span class="keyword">function</span>(<span class="variable">$carry</span>, <span class="variable">$user</span>) {
+    <span class="variable">$carry</span>[<span class="variable">$user</span>[<span class="string">'id'</span>]] = <span class="variable">$user</span>[<span class="string">'name'</span>];
+    <span class="keyword">return</span> <span class="variable">$carry</span>;
+}, []);
+<span class="comment">// [1 => 'Alice', 2 => 'Bob']</span>
+
+<span class="comment">// Вычислить статистику</span>
+<span class="variable">$orders</span> = [
+    [<span class="string">'id'</span> => <span class="number">1</span>, <span class="string">'amount'</span> => <span class="number">100</span>],
+    [<span class="string">'id'</span> => <span class="number">2</span>, <span class="string">'amount'</span> => <span class="number">200</span>],
+    [<span class="string">'id'</span> => <span class="number">3</span>, <span class="string">'amount'</span> => <span class="number">150</span>]
+];
+<span class="variable">$stats</span> = <span class="function">array_reduce</span>(<span class="variable">$orders</span>, <span class="keyword">function</span>(<span class="variable">$carry</span>, <span class="variable">$order</span>) {
+    <span class="variable">$carry</span>[<span class="string">'total'</span>] += <span class="variable">$order</span>[<span class="string">'amount'</span>];
+    <span class="variable">$carry</span>[<span class="string">'count'</span>]++;
+    <span class="variable">$carry</span>[<span class="string">'avg'</span>] = <span class="variable">$carry</span>[<span class="string">'total'</span>] / <span class="variable">$carry</span>[<span class="string">'count'</span>];
+    <span class="keyword">return</span> <span class="variable">$carry</span>;
+}, [<span class="string">'total'</span> => <span class="number">0</span>, <span class="string">'count'</span> => <span class="number">0</span>, <span class="string">'avg'</span> => <span class="number">0</span>]);</code></pre>
+
+                    <div class="remember-box">
+                        array_reduce() очень мощен для свёртки, но может быть менее понятен. Убедись что первый параметр callback ($carry) - это аккумулятор, второй ($item) - текущий элемент.
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">array_walk - Изменение элементов с побочными эффектами</h3>
+                    <div class="example-label">array_walk примеры</div>
+                    <pre><code><span class="comment">// array_walk изменяет массив IN-PLACE (по ссылке!)</span>
+<span class="variable">$data</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
+<span class="function">array_walk</span>(<span class="variable">$data</span>, <span class="keyword">function</span>(&<span class="variable">$item</span>) {
+    <span class="variable">$item</span> *= <span class="number">2</span>;
+});
+<span class="comment">// $data = [2, 4, 6]</span>
+
+<span class="comment">// С дополнительным параметром (userdata)</span>
+<span class="variable">$prices</span> = [<span class="number">10</span>, <span class="number">20</span>, <span class="number">30</span>];
+<span class="variable">$tax</span> = <span class="number">0.1</span>;
+<span class="function">array_walk</span>(<span class="variable">$prices</span>, <span class="keyword">function</span>(&<span class="variable">$price</span>, <span class="variable">$key</span>, <span class="variable">$taxRate</span>) {
+    <span class="variable">$price</span> = <span class="variable">$price</span> * (<span class="number">1</span> + <span class="variable">$taxRate</span>);
+}, <span class="variable">$tax</span>);
+<span class="comment">// $prices = [11, 22, 33]</span>
+
+<span class="comment">// Отправить письма всем пользователям</span>
+<span class="variable">$users</span> = [
+    [<span class="string">'name'</span> => <span class="string">'Alice'</span>, <span class="string">'email'</span> => <span class="string">'alice@ex.com'</span>],
+    [<span class="string">'name'</span> => <span class="string">'Bob'</span>, <span class="string">'email'</span> => <span class="string">'bob@ex.com'</span>]
+];
+<span class="function">array_walk</span>(<span class="variable">$users</span>, <span class="keyword">function</span>(<span class="variable">$user</span>) {
+    <span class="function">Mail</span>::<span class="function">to</span>(<span class="variable">$user</span>[<span class="string">'email'</span>])-><span class="function">send</span>(<span class="keyword">new</span> <span class="function">WelcomeMail</span>(<span class="variable">$user</span>[<span class="string">'name'</span>]));
+});</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">usort и сортировка массивов</h3>
+                    <div class="example-label">usort примеры</div>
+                    <pre><code><span class="comment">// usort - сортирует массив с пользовательским компаратором</span>
+<span class="variable">$users</span> = [
+    [<span class="string">'name'</span> => <span class="string">'Charlie'</span>, <span class="string">'age'</span> => <span class="number">25</span>],
+    [<span class="string">'name'</span> => <span class="string">'Alice'</span>, <span class="string">'age'</span> => <span class="number">30</span>],
+    [<span class="string">'name'</span> => <span class="string">'Bob'</span>, <span class="string">'age'</span> => <span class="number">28</span>]
+];
+
+<span class="comment">// Сортировать по возрасту (возрастающе)</span>
+<span class="function">usort</span>(<span class="variable">$users</span>, <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) => <span class="variable">$a</span>[<span class="string">'age'</span>] <=> <span class="variable">$b</span>[<span class="string">'age'</span>]);
+<span class="comment">// [Charlie, Bob, Alice] (25, 28, 30)</span>
+
+<span class="comment">// Сортировать по возрасту (убывающе)</span>
+<span class="function">usort</span>(<span class="variable">$users</span>, <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) => <span class="variable">$b</span>[<span class="string">'age'</span>] <=> <span class="variable">$a</span>[<span class="string">'age'</span>]);
+
+<span class="comment">// Сортировать по нескольким параметрам (сначала возраст, потом имя)</span>
+<span class="function">usort</span>(<span class="variable">$users</span>, <span class="keyword">function</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) {
+    <span class="variable">$ageCompare</span> = <span class="variable">$a</span>[<span class="string">'age'</span>] <=> <span class="variable">$b</span>[<span class="string">'age'</span>];
+    <span class="keyword">if</span> (<span class="variable">$ageCompare</span> !== <span class="number">0</span>) {
+        <span class="keyword">return</span> <span class="variable">$ageCompare</span>;
+    }
+    <span class="keyword">return</span> <span class="variable">$a</span>[<span class="string">'name'</span>] <=> <span class="variable">$b</span>[<span class="string">'name'</span>];
+});
+
+<span class="comment">// Сортировать объекты (Laravel Model)</span>
+<span class="variable">$users</span> = <span class="function">User</span>::<span class="function">all</span>();
+<span class="function">usort</span>(<span class="variable">$users</span>-><span class="function">toArray</span>(), <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) => <span class="variable">$a</span>[<span class="string">'created_at'</span>] <=> <span class="variable">$b</span>[<span class="string">'created_at'</span>]);</code></pre>
+
+                    <div class="remember-box">
+                        Оператор <=> (spaceship) сравнивает: возвращает -1 если левая часть меньше, 0 если равны, 1 если больше. Это идеально для компараторов!
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">array_column, array_combine и другие</h3>
+                    <div class="example-label">Полезные функции</div>
+                    <pre><code><span class="comment">// array_column - извлечь столбец из многомерного массива</span>
+<span class="variable">$users</span> = [
+    [<span class="string">'id'</span> => <span class="number">1</span>, <span class="string">'name'</span> => <span class="string">'Alice'</span>, <span class="string">'age'</span> => <span class="number">30</span>],
+    [<span class="string">'id'</span> => <span class="number">2</span>, <span class="string">'name'</span> => <span class="string">'Bob'</span>, <span class="string">'age'</span> => <span class="number">28</span>]
+];
+<span class="variable">$names</span> = <span class="function">array_column</span>(<span class="variable">$users</span>, <span class="string">'name'</span>);
+<span class="comment">// ['Alice', 'Bob']</span>
+
+<span class="variable">$indexed</span> = <span class="function">array_column</span>(<span class="variable">$users</span>, <span class="string">'name'</span>, <span class="string">'id'</span>);
+<span class="comment">// [1 => 'Alice', 2 => 'Bob']</span>
+
+<span class="comment">// array_combine - создать массив с ключами и значениями</span>
+<span class="variable">$keys</span> = [<span class="string">'a'</span>, <span class="string">'b'</span>, <span class="string">'c'</span>];
+<span class="variable">$values</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
+<span class="variable">$result</span> = <span class="function">array_combine</span>(<span class="variable">$keys</span>, <span class="variable">$values</span>);
+<span class="comment">// ['a' => 1, 'b' => 2, 'c' => 3]</span>
+
+<span class="comment">// array_merge - объединить массивы</span>
+<span class="variable">$arr1</span> = [<span class="string">'a'</span> => <span class="number">1</span>];
+<span class="variable">$arr2</span> = [<span class="string">'b'</span> => <span class="number">2</span>];
+<span class="variable">$merged</span> = <span class="function">array_merge</span>(<span class="variable">$arr1</span>, <span class="variable">$arr2</span>);
+<span class="comment">// ['a' => 1, 'b' => 2]</span>
+
+<span class="comment">// array_values и array_keys</span>
+<span class="variable">$data</span> = [<span class="string">'name'</span> => <span class="string">'Alice'</span>, <span class="string">'age'</span> => <span class="number">30</span>];
+<span class="variable">$values</span> = <span class="function">array_values</span>(<span class="variable">$data</span>);  <span class="comment">// ['Alice', 30]</span>
+<span class="variable">$keys</span> = <span class="function">array_keys</span>(<span class="variable">$data</span>);    <span class="comment">// ['name', 'age']</span></code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Spread Operator и Destructuring</h3>
+                    <div class="example-label">Spread Operator и распаковка</div>
+                    <pre><code><span class="comment">// Spread operator ... для распаковки массива</span>
+<span class="variable">$arr1</span> = [<span class="number">1</span>, <span class="number">2</span>];
+<span class="variable">$arr2</span> = [<span class="number">3</span>, <span class="number">4</span>];
+<span class="variable">$merged</span> = [...<span class="variable">$arr1</span>, ...<span class="variable">$arr2</span>];
+<span class="comment">// [1, 2, 3, 4]</span>
+
+<span class="comment">// Распаковка в функцию</span>
+<span class="keyword">function</span> <span class="function">sum</span>(<span class="variable">$a</span>, <span class="variable">$b</span>, <span class="variable">$c</span>) {
+    <span class="keyword">return</span> <span class="variable">$a</span> + <span class="variable">$b</span> + <span class="variable">$c</span>;
+}
+<span class="variable">$numbers</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
+<span class="keyword">echo</span> <span class="function">sum</span>(...<span class="variable">$numbers</span>);  <span class="comment">// 6</span>
+
+<span class="comment">// Array destructuring (распаковка в переменные)</span>
+[<span class="variable">$first</span>, <span class="variable">$second</span>] = [<span class="number">10</span>, <span class="number">20</span>];
+<span class="comment">// $first = 10, $second = 20</span>
+
+<span class="comment">// С ассоциативными массивами</span>
+[<span class="string">'name'</span> => <span class="variable">$name</span>, <span class="string">'age'</span> => <span class="variable">$age</span>] = [<span class="string">'name'</span> => <span class="string">'Alice'</span>, <span class="string">'age'</span> => <span class="number">30</span>];
+<span class="comment">// $name = 'Alice', $age = 30</span>
+
+<span class="comment">// Пропустить элементы</span>
+[<span class="variable">$first</span>, , <span class="variable">$third</span>] = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
+<span class="comment">// $first = 1, $third = 3 (второй элемент пропущен)</span>
+
+<span class="comment">// Практический пример - распаковать функцию в параметры</span>
+<span class="variable">$userIds</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
+<span class="function">User</span>::<span class="function">whereIn</span>(<span class="string">'id'</span>, <span class="variable">$userIds</span>)-><span class="function">get</span>();</code></pre>
+                </div>
+            </div>
+
+            <!-- SECTION 4: ООП BASICS -->
+            <div id="oop-basics" class="section">
+                <h2 class="section-title">4. ООП: Классы, Наследование, Полиморфизм</h2>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Видимость: public, protected, private</h3>
+                    <div class="example-label">Access Modifiers</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">User</span> {
+    <span class="comment">// public - доступно отовсюду (из класса, подклассов, и снаружи)</span>
+    <span class="keyword">public</span> <span class="variable">$name</span>;
+
+    <span class="comment">// protected - доступно в классе и подклассах, но НЕ снаружи</span>
+    <span class="keyword">protected</span> <span class="variable">$email</span>;
+
+    <span class="comment">// private - доступно ТОЛЬКО в этом классе</span>
+    <span class="keyword">private</span> <span class="variable">$password</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="variable">$name</span>, <span class="variable">$email</span>, <span class="variable">$password</span>) {
+        <span class="variable">$this</span>-><span class="variable">name</span> = <span class="variable">$name</span>;
+        <span class="variable">$this</span>-><span class="variable">email</span> = <span class="variable">$email</span>;
+        <span class="variable">$this</span>-><span class="variable">password</span> = <span class="variable">$password</span>;
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">getEmail</span>() {
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">email</span>;  <span class="comment">// OK - внутри класса</span>
+    }
+
+    <span class="keyword">protected</span> <span class="keyword">function</span> <span class="function">verifyPassword</span>(<span class="variable">$pwd</span>) {
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">password</span> === <span class="variable">$pwd</span>;  <span class="comment">// OK</span>
+    }
+}
+
+<span class="variable">$user</span> = <span class="keyword">new</span> <span class="function">User</span>(<span class="string">"Alice"</span>, <span class="string">"alice@ex.com"</span>, <span class="string">"secret"</span>);
+<span class="keyword">echo</span> <span class="variable">$user</span>-><span class="variable">name</span>;  <span class="comment">// OK - public</span>
+<span class="keyword">echo</span> <span class="variable">$user</span>-><span class="variable">email</span>;  <span class="comment">// ERROR - protected</span>
+<span class="keyword">echo</span> <span class="variable">$user</span>-><span class="variable">password</span>;  <span class="comment">// ERROR - private</span></code></pre>
+
+                    <div class="remember-box">
+                        Используй protected для данных которые должны быть доступны подклассам. Используй private для внутреннего состояния класса. Это важно для инкапсуляции и безопасности!
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Constructor Promotion (PHP 8)</h3>
+                    <div class="example-label">Сокращенный синтаксис конструктора</div>
+                    <pre><code><span class="comment">// Старый способ (PHP 7)</span>
+<span class="keyword">class</span> <span class="function">User</span> {
+    <span class="keyword">private</span> <span class="variable">$id</span>;
+    <span class="keyword">private</span> <span class="variable">$name</span>;
+    <span class="keyword">private</span> <span class="variable">$email</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">int</span> <span class="variable">$id</span>, <span class="keyword">string</span> <span class="variable">$name</span>, <span class="keyword">string</span> <span class="variable">$email</span>) {
+        <span class="variable">$this</span>-><span class="variable">id</span> = <span class="variable">$id</span>;
+        <span class="variable">$this</span>-><span class="variable">name</span> = <span class="variable">$name</span>;
+        <span class="variable">$this</span>-><span class="variable">email</span> = <span class="variable">$email</span>;
+    }
+}
+
+<span class="comment">// Новый способ (PHP 8 - Constructor Promotion)</span>
+<span class="keyword">class</span> <span class="function">User</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(
+        <span class="keyword">private</span> <span class="keyword">int</span> <span class="variable">$id</span>,
+        <span class="keyword">private</span> <span class="keyword">string</span> <span class="variable">$name</span>,
+        <span class="keyword">private</span> <span class="keyword">string</span> <span class="variable">$email</span>
+    ) {}
+}
+
+<span class="comment">// Автоматически создает private свойства и присваивает их!</span>
+<span class="variable">$user</span> = <span class="keyword">new</span> <span class="function">User</span>(<span class="number">1</span>, <span class="string">"Alice"</span>, <span class="string">"alice@ex.com"</span>);</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Static методы и свойства</h3>
+                    <div class="example-label">Static в классах</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Counter</span> {
+    <span class="keyword">public</span> <span class="keyword">static</span> <span class="variable">$count</span> = <span class="number">0</span>;
+
+    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">function</span> <span class="function">increment</span>() {
+        <span class="keyword">self</span>::<span class="variable">$count</span>++;
+    }
+
+    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">function</span> <span class="function">getCount</span>() {
+        <span class="keyword">return</span> <span class="keyword">self</span>::<span class="variable">$count</span>;
+    }
+}
+
+<span class="comment">// Вызывается через :: оператор, БЕЗ new</span>
+<span class="function">Counter</span>::<span class="function">increment</span>();
+<span class="function">Counter</span>::<span class="function">increment</span>();
+<span class="keyword">echo</span> <span class="function">Counter</span>::<span class="function">getCount</span>();  <span class="comment">// 2</span>
+
+<span class="comment">// Практический пример - Factory method в Laravel</span>
+<span class="keyword">class</span> <span class="function">User</span> <span class="keyword">extends</span> <span class="function">Model</span> {
+    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">function</span> <span class="function">findById</span>(<span class="keyword">int</span> <span class="variable">$id</span>) {
+        <span class="keyword">return</span> <span class="variable">static</span>::<span class="function">find</span>(<span class="variable">$id</span>);
+    }
+}
+
+<span class="comment">// Вызов</span>
+<span class="variable">$user</span> = <span class="function">User</span>::<span class="function">findById</span>(<span class="number">1</span>);</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Late Static Binding: static:: vs self::</h3>
+                    <div class="example-label">static:: и self::</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">BaseModel</span> {
+    <span class="keyword">public</span> <span class="keyword">static</span> <span class="variable">$table</span> = <span class="string">'base'</span>;
+
+    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">function</span> <span class="function">getTable</span>() {
+        <span class="keyword">return</span> <span class="keyword">self</span>::<span class="variable">$table</span>;  <span class="comment">// ВСЕГДА вернет 'base'</span>
+    }
+
+    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">function</span> <span class="function">getTableLate</span>() {
+        <span class="keyword">return</span> <span class="variable">static</span>::<span class="variable">$table</span>;  <span class="comment">// Полиморфно! Вернет значение вызывающего класса</span>
+    }
+}
+
+<span class="keyword">class</span> <span class="function">User</span> <span class="keyword">extends</span> <span class="function">BaseModel</span> {
+    <span class="keyword">public</span> <span class="keyword">static</span> <span class="variable">$table</span> = <span class="string">'users'</span>;
+}
+
+<span class="keyword">class</span> <span class="function">Post</span> <span class="keyword">extends</span> <span class="function">BaseModel</span> {
+    <span class="keyword">public</span> <span class="keyword">static</span> <span class="variable">$table</span> = <span class="string">'posts'</span>;
+}
+
+<span class="function">User</span>::<span class="function">getTable</span>();      <span class="comment">// 'base' (self:: всегда указывает на BaseModel)</span>
+<span class="function">User</span>::<span class="function">getTableLate</span>();  <span class="comment">// 'users' (static:: указывает на User)</span>
+
+<span class="function">Post</span>::<span class="function">getTableLate</span>();  <span class="comment">// 'posts' (static:: указывает на Post)</span></code></pre>
+
+                    <div class="remember-box">
+                        Используй static:: для полиморфного поведения в подклассах, self:: когда нужно явно указать текущий класс. Это особенно важно в laravel Models и Factory паттернах!
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">final и readonly (PHP 8.1+)</h3>
+                    <div class="example-label">final и readonly</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">BaseEntity</span> {
+    <span class="comment">// final метод НЕ МОЖЕТ быть переопределен подклассом</span>
+    <span class="keyword">final</span> <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">getId</span>() {
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">id</span>;
+    }
+}
+
+<span class="keyword">class</span> <span class="function">User</span> <span class="keyword">extends</span> <span class="function">BaseEntity</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">getId</span>() {  <span class="comment">// ERROR!</span>
+    }
+}
+
+<span class="comment">// readonly свойства могут быть установлены ТОЛЬКО в конструкторе</span>
+<span class="keyword">class</span> <span class="function">Product</span> {
+    <span class="keyword">public</span> <span class="keyword">readonly</span> <span class="keyword">string</span> <span class="variable">$sku</span>;
+    <span class="keyword">public</span> <span class="keyword">readonly</span> <span class="keyword">float</span> <span class="variable">$price</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">string</span> <span class="variable">$sku</span>, <span class="keyword">float</span> <span class="variable">$price</span>) {
+        <span class="variable">$this</span>-><span class="variable">sku</span> = <span class="variable">$sku</span>;
+        <span class="variable">$this</span>-><span class="variable">price</span> = <span class="variable">$price</span>;
+    }
+}
+
+<span class="variable">$product</span> = <span class="keyword">new</span> <span class="function">Product</span>(<span class="string">"SKU123"</span>, <span class="number">99.99</span>);
+<span class="variable">$product</span>-><span class="variable">price</span> = <span class="number">50</span>;  <span class="comment">// ERROR! readonly свойство</span></code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Наследование и полиморфизм</h3>
+                    <div class="example-label">Наследование и переопределение методов</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Animal</span> {
+    <span class="keyword">protected</span> <span class="variable">$name</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">string</span> <span class="variable">$name</span>) {
+        <span class="variable">$this</span>-><span class="variable">name</span> = <span class="variable">$name</span>;
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">sound</span>() {
+        <span class="keyword">return</span> <span class="string">"Some sound"</span>;
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">introduce</span>() {
+        <span class="keyword">return</span> <span class="string">"I am "</span> . <span class="variable">$this</span>-><span class="variable">name</span>;
+    }
+}
+
+<span class="keyword">class</span> <span class="function">Dog</span> <span class="keyword">extends</span> <span class="function">Animal</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">sound</span>() {
+        <span class="keyword">return</span> <span class="string">"Woof!"</span>;  <span class="comment">// Переопределение</span>
+    }
+}
+
+<span class="keyword">class</span> <span class="function">Cat</span> <span class="keyword">extends</span> <span class="function">Animal</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">sound</span>() {
+        <span class="keyword">return</span> <span class="string">"Meow!"</span>;  <span class="comment">// Переопределение</span>
+    }
+}
+
+<span class="comment">// Полиморфизм - один интерфейс, разные поведения</span>
+<span class="function">makeSound</span>(<span class="keyword">new</span> <span class="function">Dog</span>(<span class="string">"Rex"</span>));  <span class="comment">// "Woof!"</span>
+<span class="function">makeSound</span>(<span class="keyword">new</span> <span class="function">Cat</span>(<span class="string">"Whiskers"</span>));  <span class="comment">// "Meow!"</span>
+
+<span class="keyword">function</span> <span class="function">makeSound</span>(<span class="function">Animal</span> <span class="variable">$animal</span>) {
+    <span class="keyword">echo</span> <span class="variable">$animal</span>-><span class="function">sound</span>();
+}
+
+<span class="comment">// Вызов родительского метода через parent::</span>
+<span class="keyword">class</span> <span class="function">Dog</span> <span class="keyword">extends</span> <span class="function">Animal</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">introduce</span>() {
+        <span class="keyword">return</span> <span class="keyword">parent</span>::<span class="function">introduce</span>() . <span class="string">" and I'm a dog!"</span>;
+    }
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- SECTION 5: OOP ABSTRACT & INTERFACES -->
+            <div id="oop-abstract" class="section">
+                <h2 class="section-title">5. ООП: Абстрактные классы vs Интерфейсы</h2>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Абстрактные классы</h3>
+                    <div class="content-block">
+                        <strong>Абстрактный класс</strong> не может быть инстанцирован. Служит базисом для подклассов. Может содержать реализованные и абстрактные методы.
+                    </div>
+                    <div class="example-label">Абстрактные классы</div>
+                    <pre><code><span class="keyword">abstract</span> <span class="keyword">class</span> <span class="function">Repository</span> {
+    <span class="keyword">protected</span> <span class="variable">$db</span>;
+
+    <span class="comment">// Конкретный метод - имеет реализацию</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">setDb</span>(<span class="variable">$db</span>) {
+        <span class="variable">$this</span>-><span class="variable">db</span> = <span class="variable">$db</span>;
+    }
+
+    <span class="comment">// Абстрактный метод - должен быть реализован подклассом</span>
+    <span class="keyword">abstract</span> <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">findById</span>(<span class="keyword">int</span> <span class="variable">$id</span>);
+
+    <span class="comment">// Абстрактный метод</span>
+    <span class="keyword">abstract</span> <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">getAll</span>();
+}
+
+<span class="keyword">class</span> <span class="function">UserRepository</span> <span class="keyword">extends</span> <span class="function">Repository</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">findById</span>(<span class="keyword">int</span> <span class="variable">$id</span>) {
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">$db</span>-><span class="function">query</span>(<span class="string">"SELECT * FROM users WHERE id = ?"</span>, [<span class="variable">$id</span>]);
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">getAll</span>() {
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">$db</span>-><span class="function">query</span>(<span class="string">"SELECT * FROM users"</span>);
+    }
+}
+
+<span class="variable">$repo</span> = <span class="keyword">new</span> <span class="function">Repository</span>();  <span class="comment">// ERROR! Cannot instantiate abstract class</span>
+<span class="variable">$repo</span> = <span class="keyword">new</span> <span class="function">UserRepository</span>();  <span class="comment">// OK</span></code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Интерфейсы (Interfaces)</h3>
+                    <div class="content-block">
+                        <strong>Интерфейс</strong> - контракт (договор). Определяет методы, но НЕ реализацию. Класс может имплементировать НЕСКОЛЬКО интерфейсов.
+                    </div>
+                    <div class="example-label">Интерфейсы</div>
+                    <pre><code><span class="keyword">interface</span> <span class="function">Loggable</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">log</span>(<span class="keyword">string</span> <span class="variable">$message</span>);
+}
+
+<span class="keyword">interface</span> <span class="function">Cacheable</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">cache</span>(<span class="keyword">string</span> <span class="variable">$key</span>, <span class="variable">$value</span>);
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">getCache</span>(<span class="keyword">string</span> <span class="variable">$key</span>);
+}
+
+<span class="comment">// Класс может имплементировать несколько интерфейсов</span>
+<span class="keyword">class</span> <span class="function">UserService</span> <span class="keyword">implements</span> <span class="function">Loggable</span>, <span class="function">Cacheable</span> {
+    <span class="keyword">private</span> <span class="variable">$cache</span> = [];
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">log</span>(<span class="keyword">string</span> <span class="variable">$message</span>) {
+        <span class="keyword">echo</span> <span class="string">"LOG: "</span> . <span class="variable">$message</span>;
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">cache</span>(<span class="keyword">string</span> <span class="variable">$key</span>, <span class="variable">$value</span>) {
+        <span class="variable">$this</span>-><span class="variable">$cache</span>[<span class="variable">$key</span>] = <span class="variable">$value</span>;
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">getCache</span>(<span class="keyword">string</span> <span class="variable">$key</span>) {
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">$cache</span>[<span class="variable">$key</span>] ?? <span class="keyword">null</span>;
+    }
+}
+
+<span class="variable">$service</span> = <span class="keyword">new</span> <span class="function">UserService</span>();
+<span class="variable">$service</span>-><span class="function">log</span>(<span class="string">"User created"</span>);
+<span class="variable">$service</span>-><span class="function">cache</span>(<span class="string">"user:1"</span>, <span class="string">"John"</span>);</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Когда использовать Абстрактные классы vs Интерфейсы</h3>
+                    <table>
+                        <tr>
+                            <th>Абстрактный класс</th>
+                            <th>Интерфейс</th>
+                        </tr>
+                        <tr>
+                            <td>Общая функциональность для подклассов</td>
+                            <td>Контракт для несвязанных классов</td>
+                        </tr>
+                        <tr>
+                            <td>Может иметь свойства и приватные методы</td>
+                            <td>Только публичные методы (PHP 8.1+)</td>
+                        </tr>
+                        <tr>
+                            <td>Один класс может наследовать только один</td>
+                            <td>Класс может имплементировать много</td>
+                        </tr>
+                        <tr>
+                            <td>"IS-A" отношение (Dog IS-A Animal)</td>
+                            <td>"CAN-DO" отношение (User CAN-DO Loggable)</td>
+                        </tr>
+                        <tr>
+                            <td>Иерархия классов (специализация)</td>
+                            <td>Набор способностей (миксины функциональности)</td>
+                        </tr>
+                    </table>
+
+                    <div class="example-label">Практический пример</div>
+                    <pre><code><span class="comment">// Абстрактный класс для иерархии: Animal -> Dog -> GoldenRetriever</span>
+<span class="keyword">abstract</span> <span class="keyword">class</span> <span class="function">Animal</span> {}
+<span class="keyword">class</span> <span class="function">Dog</span> <span class="keyword">extends</span> <span class="function">Animal</span> {}
+<span class="keyword">class</span> <span class="function">GoldenRetriever</span> <span class="keyword">extends</span> <span class="function">Dog</span> {}
+
+<span class="comment">// Интерфейсы для способностей</span>
+<span class="keyword">interface</span> <span class="function">Trainable</span> {}
+<span class="keyword">interface</span> <span class="function">Loveable</span> {}
+
+<span class="comment">// Dog может быть Trainable И Loveable</span>
+<span class="keyword">class</span> <span class="function">Dog</span> <span class="keyword">extends</span> <span class="function">Animal</span> <span class="keyword">implements</span> <span class="function">Trainable</span>, <span class="function">Loveable</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">train</span>() {}
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">love</span>() {}
+}</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Default Methods в интерфейсах (PHP 8.1+)</h3>
+                    <div class="example-label">Default методы</div>
+                    <pre><code><span class="keyword">interface</span> <span class="function">Repository</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">findById</span>(<span class="keyword">int</span> <span class="variable">$id</span>);
+
+    <span class="comment">// Default реализация метода в интерфейсе</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">count</span>() {
+        <span class="keyword">return</span> <span class="function">count</span>(<span class="variable">$this</span>-><span class="function">getAll</span>());
+    }
+}
+
+<span class="keyword">class</span> <span class="function">UserRepository</span> <span class="keyword">implements</span> <span class="function">Repository</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">findById</span>(<span class="keyword">int</span> <span class="variable">$id</span>) {
+        <span class="comment">// реализация</span>
+    }
+
+    <span class="comment">// count() унаследуется с default реализацией</span>
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- SECTION 6: TRAITS -->
+            <div id="traits" class="section">
+                <h2 class="section-title">6. ООП: Traits</h2>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Основы Traits</h3>
+                    <div class="content-block">
+                        <strong>Trait</strong> - способ повторного использования кода в классах. Это как "горизонтальное наследование". Класс может использовать несколько traits, но может наследовать только один класс.
+                    </div>
+                    <div class="example-label">Базовые Traits</div>
+                    <pre><code><span class="keyword">trait</span> <span class="function">Timestamp</span> {
+    <span class="keyword">public</span> <span class="variable">$createdAt</span>;
+    <span class="keyword">public</span> <span class="variable">$updatedAt</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">setTimestamps</span>() {
+        <span class="variable">$this</span>-><span class="variable">createdAt</span> = <span class="keyword">new</span> <span class="function">DateTime</span>();
+        <span class="variable">$this</span>-><span class="variable">updatedAt</span> = <span class="keyword">new</span> <span class="function">DateTime</span>();
+    }
+}
+
+<span class="keyword">trait</span> <span class="function">SoftDelete</span> {
+    <span class="keyword">public</span> <span class="variable">$deletedAt</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">softDelete</span>() {
+        <span class="variable">$this</span>-><span class="variable">deletedAt</span> = <span class="keyword">new</span> <span class="function">DateTime</span>();
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">restore</span>() {
+        <span class="variable">$this</span>-><span class="variable">deletedAt</span> = <span class="keyword">null</span>;
+    }
+}
+
+<span class="keyword">class</span> <span class="function">Post</span> {
+    <span class="keyword">use</span> <span class="function">Timestamp</span>, <span class="function">SoftDelete</span>;
+
+    <span class="keyword">private</span> <span class="variable">$title</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">string</span> <span class="variable">$title</span>) {
+        <span class="variable">$this</span>-><span class="variable">title</span> = <span class="variable">$title</span>;
+        <span class="variable">$this</span>-><span class="function">setTimestamps</span>();  <span class="comment">// From Timestamp trait</span>
+    }
+}
+
+<span class="variable">$post</span> = <span class="keyword">new</span> <span class="function">Post</span>(<span class="string">"Hello"</span>);
+<span class="variable">$post</span>-><span class="function">softDelete</span>();  <span class="comment">// From SoftDelete trait</span></code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Разрешение конфликтов: insteadof и as</h3>
+                    <div class="content-block">
+                        Если несколько traits имеют методы с одинаковым именем, нужно явно указать какой использовать.
+                    </div>
+                    <div class="example-label">Конфликты методов</div>
+                    <pre><code><span class="keyword">trait</span> <span class="function">A</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">handle</span>() {
+        <span class="keyword">echo</span> <span class="string">"Trait A"</span>;
+    }
+}
+
+<span class="keyword">trait</span> <span class="function">B</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">handle</span>() {
+        <span class="keyword">echo</span> <span class="string">"Trait B"</span>;
+    }
+}
+
+<span class="keyword">class</span> <span class="function">MyClass</span> {
+    <span class="keyword">use</span> <span class="function">A</span>, <span class="function">B</span> {
+        <span class="comment">// insteadof - выбрать один метод, другой игнорировать</span>
+        <span class="function">B</span>::<span class="function">handle</span> <span class="keyword">insteadof</span> <span class="function">A</span>;
+        <span class="comment">// as - создать алиас для метода A (переименовать)</span>
+        <span class="function">A</span>::<span class="function">handle</span> <span class="keyword">as</span> <span class="function">handleA</span>;
+    }
+}
+
+<span class="variable">$obj</span> = <span class="keyword">new</span> <span class="function">MyClass</span>();
+<span class="variable">$obj</span>-><span class="function">handle</span>();   <span class="comment">// "Trait B"</span>
+<span class="variable">$obj</span>-><span class="function">handleA</span>();  <span class="comment">// "Trait A"</span></code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Абстрактные методы в Traits</h3>
+                    <div class="example-label">Traits с абстрактными методами</div>
+                    <pre><code><span class="keyword">trait</span> <span class="function">Validatable</span> {
+    <span class="comment">// Абстрактный метод - подклассы ДОЛЖНЫ реализовать</span>
+    <span class="keyword">abstract</span> <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">rules</span>();
+
+    <span class="comment">// Конкретный метод, который использует абстрактный</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">validate</span>(<span class="variable">$data</span>) {
+        <span class="variable">$rules</span> = <span class="variable">$this</span>-><span class="function">rules</span>();
+        <span class="comment">// Валидировать $data против $rules</span>
+    }
+}
+
+<span class="keyword">class</span> <span class="function">UserForm</span> {
+    <span class="keyword">use</span> <span class="function">Validatable</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">rules</span>() {
+        <span class="keyword">return</span> [
+            <span class="string">'email'</span> => <span class="string">'required|email'</span>,
+            <span class="string">'password'</span> => <span class="string">'required|min:8'</span>
+        ];
+    }
+}</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Реальные use cases Traits</h3>
+                    <div class="example-label">Практические примеры</div>
+                    <pre><code><span class="comment">// 1. Логирование для разных классов</span>
+<span class="keyword">trait</span> <span class="function">Loggable</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">log</span>(<span class="variable">$msg</span>) {
+        <span class="keyword">echo</span> <span class="function">date</span>(<span class="string">'Y-m-d H:i:s'</span>) . <span class="string">": "</span> . <span class="variable">$msg</span>;
+    }
+}
+
+<span class="keyword">class</span> <span class="function">UserService</span> { <span class="keyword">use</span> <span class="function">Loggable</span>; }
+<span class="keyword">class</span> <span class="function">OrderService</span> { <span class="keyword">use</span> <span class="function">Loggable</span>; }
+
+<span class="comment">// 2. Кэширование для модели</span>
+<span class="keyword">trait</span> <span class="function">Cacheable</span> {
+    <span class="keyword">private</span> <span class="variable">$cache</span> = [];
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">remember</span>(<span class="variable">$key</span>, <span class="keyword">callable</span> <span class="variable">$callback</span>) {
+        <span class="keyword">if</span> (<span class="function">isset</span>(<span class="variable">$this</span>-><span class="variable">cache</span>[<span class="variable">$key</span>])) {
+            <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">cache</span>[<span class="variable">$key</span>];
+        }
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">cache</span>[<span class="variable">$key</span>] = <span class="variable">$callback</span>();
+    }
+}
+
+<span class="comment">// 3. JSON сериализация</span>
+<span class="keyword">trait</span> <span class="function">JsonSerializable</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">toJson</span>() {
+        <span class="keyword">return</span> <span class="function">json_encode</span>(<span class="variable">$this</span>-><span class="function">toArray</span>());
+    }
+
+    <span class="keyword">abstract</span> <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">toArray</span>();
+}</code></pre>
+
+                    <div class="remember-box">
+                        Traits отлично подходят для кроссэффективности, которая НЕ является частью иерархии. Используй их для логирования, кэширования, валидации и других "горизонтальных" обязанностей!
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 7: MAGIC METHODS -->
+            <div id="magic" class="section">
+                <h2 class="section-title">7. Магические методы</h2>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">__construct и __destruct</h3>
+                    <div class="example-label">Конструктор и деструктор</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Database</span> {
+    <span class="keyword">private</span> <span class="variable">$connection</span>;
+
+    <span class="comment">// __construct вызывается при создании объекта</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">string</span> <span class="variable">$host</span>, <span class="keyword">string</span> <span class="variable">$user</span>) {
+        <span class="variable">$this</span>-><span class="variable">$connection</span> = <span class="function">mysqli_connect</span>(<span class="variable">$host</span>, <span class="variable">$user</span>);
+        <span class="keyword">echo</span> <span class="string">"Connected"</span>;
+    }
+
+    <span class="comment">// __destruct вызывается при удалении объекта</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__destruct</span>() {
+        <span class="function">mysqli_close</span>(<span class="variable">$this</span>-><span class="variable">$connection</span>);
+        <span class="keyword">echo</span> <span class="string">"Disconnected"</span>;
+    }
+}
+
+<span class="variable">$db</span> = <span class="keyword">new</span> <span class="function">Database</span>(<span class="string">"localhost"</span>, <span class="string">"root"</span>);
+<span class="comment">// Output: "Connected"</span>
+<span class="variable">$db</span> = <span class="keyword">null</span>;  <span class="comment">// или выход из области видимости</span>
+<span class="comment">// Output: "Disconnected"</span></code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">__get, __set, __isset, __unset</h3>
+                    <div class="example-label">Динамический доступ к свойствам</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">User</span> {
+    <span class="keyword">private</span> <span class="variable">$data</span> = [];
+
+    <span class="comment">// Вызывается при доступе к приватному/несуществующему свойству</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__get</span>(<span class="keyword">string</span> <span class="variable">$name</span>) {
+        <span class="keyword">echo</span> <span class="string">"Getting $name"</span>;
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">data</span>[<span class="variable">$name</span>] ?? <span class="keyword">null</span>;
+    }
+
+    <span class="comment">// Вызывается при установке приватного/несуществующего свойства</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__set</span>(<span class="keyword">string</span> <span class="variable">$name</span>, <span class="variable">$value</span>) {
+        <span class="keyword">echo</span> <span class="string">"Setting $name to $value"</span>;
+        <span class="variable">$this</span>-><span class="variable">data</span>[<span class="variable">$name</span>] = <span class="variable">$value</span>;
+    }
+
+    <span class="comment">// Вызывается при isset() на приватном свойстве</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__isset</span>(<span class="keyword">string</span> <span class="variable">$name</span>) {
+        <span class="keyword">return</span> <span class="function">isset</span>(<span class="variable">$this</span>-><span class="variable">data</span>[<span class="variable">$name</span>]);
+    }
+
+    <span class="comment">// Вызывается при unset() на приватном свойстве</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__unset</span>(<span class="keyword">string</span> <span class="variable">$name</span>) {
+        <span class="function">unset</span>(<span class="variable">$this</span>-><span class="variable">data</span>[<span class="variable">$name</span>]);
+    }
+}
+
+<span class="variable">$user</span> = <span class="keyword">new</span> <span class="function">User</span>();
+<span class="variable">$user</span>-><span class="variable">name</span> = <span class="string">"Alice"</span>;      <span class="comment">// Вызовет __set</span>
+<span class="keyword">echo</span> <span class="variable">$user</span>-><span class="variable">name</span>;          <span class="comment">// Вызовет __get</span>
+<span class="keyword">isset</span>(<span class="variable">$user</span>-><span class="variable">name</span>);        <span class="comment">// Вызовет __isset</span></code></pre>
+
+                    <div class="remember-box">
+                        __get/__set отлично подходят для ленивой загрузки данных, валидации, или логирования доступа к свойствам. Это использует Laravel Models!
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">__call и __callStatic</h3>
+                    <div class="example-label">Динамические методы</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Builder</span> {
+    <span class="keyword">private</span> <span class="variable">$query</span> = [];
+
+    <span class="comment">// __call - вызывается для приватных/несуществующих методов</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__call</span>(<span class="keyword">string</span> <span class="variable">$name</span>, <span class="variable">$args</span>) {
+        <span class="variable">$this</span>-><span class="variable">query</span>[<span class="variable">$name</span>] = <span class="variable">$args</span>[<span class="number">0</span>] ?? <span class="keyword">null</span>;
+        <span class="keyword">return</span> <span class="variable">$this</span>;  <span class="comment">// Fluent interface</span>
+    }
+
+    <span class="comment">// __callStatic - статический вызов несуществующего метода</span>
+    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">function</span> <span class="function">__callStatic</span>(<span class="keyword">string</span> <span class="variable">$name</span>, <span class="variable">$args</span>) {
+        <span class="keyword">return</span> <span class="new">new</span> <span class="keyword">self</span>()-><span class="function">__call</span>(<span class="variable">$name</span>, <span class="variable">$args</span>);
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">get</span>() {
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">query</span>;
+    }
+}
+
+<span class="comment">// Создается dynamic методы: select, where, orderBy</span>
+<span class="variable">$builder</span> = <span class="keyword">new</span> <span class="function">Builder</span>();
+<span class="variable">$builder</span>-><span class="function">select</span>(<span class="string">'*'</span>)-><span class="function">where</span>(<span class="string">'id = 1'</span>)-><span class="function">orderBy</span>(<span class="string">'name'</span>);
+<span class="keyword">print_r</span>(<span class="variable">$builder</span>-><span class="function">get</span>());
+<span class="comment">// ['select' => '*', 'where' => 'id = 1', 'orderBy' => 'name']</span></code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">__toString, __invoke, __clone</h3>
+                    <div class="example-label">Прочие магические методы</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Price</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">float</span> <span class="variable">$amount</span>) {
+        <span class="variable">$this</span>-><span class="variable">amount</span> = <span class="variable">$amount</span>;
+    }
+
+    <span class="comment">// __toString - преобразование объекта в строку</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__toString</span>() {
+        <span class="keyword">return</span> <span class="function">sprintf</span>(<span class="string">'$%.2f'</span>, <span class="variable">$this</span>-><span class="variable">amount</span>);
+    }
+
+    <span class="comment">// __invoke - позволяет вызвать объект как функцию</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__invoke</span>(<span class="keyword">float</span> <span class="variable">$percent</span>) {
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">amount</span> * (<span class="number">1</span> + <span class="variable">$percent</span> / <span class="number">100</span>);
+    }
+
+    <span class="comment">// __clone - вызывается при клонировании объекта</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__clone</span>() {
+        <span class="keyword">echo</span> <span class="string">"Cloning price object"</span>;
+    }
+}
+
+<span class="variable">$price</span> = <span class="keyword">new</span> <span class="function">Price</span>(<span class="number">99.99</span>);
+<span class="keyword">echo</span> <span class="variable">$price</span>;  <span class="comment">// "$99.99" (вызовет __toString)</span>
+<span class="keyword">echo</span> <span class="variable">$price</span>(<span class="number">10</span>);  <span class="comment">// 109.989 (вызовет __invoke с 10% скидка)</span>
+<span class="variable">$copy</span> = <span class="keyword">clone</span> <span class="variable">$price</span>;  <span class="comment">// Вызовет __clone</span></code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">__debugInfo и __serialize</h3>
+                    <div class="example-label">Отладка и сериализация</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">User</span> {
+    <span class="keyword">private</span> <span class="variable">$id</span> = <span class="number">1</span>;
+    <span class="keyword">private</span> <span class="variable">$password</span> = <span class="string">'secret'</span>;
+    <span class="keyword">public</span> <span class="variable">$name</span> = <span class="string">'Alice'</span>;
+
+    <span class="comment">// __debugInfo - контролирует что показывается в var_dump/print_r</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__debugInfo</span>() {
+        <span class="keyword">return</span> [
+            <span class="string">'id'</span> => <span class="variable">$this</span>-><span class="variable">id</span>,
+            <span class="string">'name'</span> => <span class="variable">$this</span>-><span class="variable">name</span>,
+            <span class="comment">// password скрыт!</span>
+        ];
+    }
+
+    <span class="comment">// __serialize - контролирует сериализацию (PHP 7.4+)</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__serialize</span>() {
+        <span class="keyword">return</span> [
+            <span class="string">'id'</span> => <span class="variable">$this</span>-><span class="variable">id</span>,
+            <span class="string">'name'</span> => <span class="variable">$this</span>-><span class="variable">name</span>
+            <span class="comment">// password НЕ сериализуется</span>
+        ];
+    }
+
+    <span class="comment">// __unserialize - восстановление из сериализации</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__unserialize</span>(<span class="variable">$data</span>) {
+        <span class="variable">$this</span>-><span class="variable">id</span> = <span class="variable">$data</span>[<span class="string">'id'</span>];
+        <span class="variable">$this</span>-><span class="variable">name</span> = <span class="variable">$data</span>[<span class="string">'name'</span>];
+    }
+}</code></pre>
+
+                    <div class="remember-box">
+                        __debugInfo и __serialize очень полезны для безопасности - скрывают чувствительные данные от отладки и сохранения. Используй их для password, API tokens, и прочих secrets!
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 8: NAMESPACES -->
+            <div id="namespaces" class="section">
+                <h2 class="section-title">8. Namespaces & PSR-4 Autoloading</h2>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Синтаксис Namespaces</h3>
+                    <div class="content-block">
+                        Namespaces избегают конфликты имен и организуют код логически. Объявление должно быть первым оператором в файле!
+                    </div>
+                    <div class="example-label">Базовые namespaces</div>
+                    <pre><code><span class="comment">// app/Models/User.php</span>
+<span class="keyword">namespace</span> <span class="variable">App\Models</span>;
+
+<span class="keyword">class</span> <span class="function">User</span> {
+    <span class="keyword">public</span> <span class="variable">$name</span> = <span class="string">'Alice'</span>;
+}
+
+<span class="comment">// app/Services/UserService.php</span>
+<span class="keyword">namespace</span> <span class="variable">App\Services</span>;
+
+<span class="keyword">use</span> <span class="variable">App\Models\User</span>;  <span class="comment">// Import</span>
+
+<span class="keyword">class</span> <span class="function">UserService</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">getUser</span>() {
+        <span class="keyword">return</span> <span class="keyword">new</span> <span class="function">User</span>();  <span class="comment">// Используем импортированный User</span>
+    }
+}
+
+<span class="comment">// index.php или другой файл</span>
+<span class="keyword">use</span> <span class="variable">App\Services\UserService</span>;
+<span class="keyword">use</span> <span class="variable">App\Models\User</span> <span class="keyword">as</span> <span class="variable">UserModel</span>;  <span class="comment">// Alias</span>
+
+<span class="variable">$service</span> = <span class="keyword">new</span> <span class="function">UserService</span>();</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">PSR-4 Autoloading с Composer</h3>
+                    <div class="content-block">
+                        PSR-4 - стандарт для автозагрузки классов. Composer автоматически генерирует автолоадер на основе конфигурации.
+                    </div>
+                    <div class="example-label">composer.json пример</div>
+                    <pre><code>{
+    <span class="string">"name"</span>: <span class="string">"myapp/core"</span>,
+    <span class="string">"autoload"</span>: {
+        <span class="string">"psr-4"</span>: {
+            <span class="string">"App\\"</span>: <span class="string">"app/"</span>,
+            <span class="string">"App\\Models\\"</span>: <span class="string">"app/models/"</span>,
+            <span class="string">"App\\Services\\"</span>: <span class="string">"app/services/"</span>,
+            <span class="string">"App\\Http\\Controllers\\"</span>: <span class="string">"app/http/controllers/"</span>,
+            <span class="string">"Tests\\"</span>: <span class="string">"tests/"</span>
+        }
+    },
+    <span class="string">"require"</span>: {
+        <span class="string">"php"</span>: <span class="string">">=8.0"</span>
+    }
+}</code></pre>
+
+                    <div class="content-block" style="margin-top: 20px;">
+                        <strong>PSR-4 правило:</strong> Namespace должна соответствовать директории. Например:
+                    </div>
+                    <pre><code><span class="comment">// Файл: app/Models/User.php</span>
+<span class="keyword">namespace</span> <span class="variable">App\Models</span>;  <span class="comment">// Namespace соответствует пути</span>
+
+<span class="comment">// Файл: app/Http/Controllers/UserController.php</span>
+<span class="keyword">namespace</span> <span class="variable">App\Http\Controllers</span>;  <span class="comment">// Полный путь в namespace</span></code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Использование Namespaces</h3>
+                    <div class="example-label">Различные способы использования</div>
+                    <pre><code><span class="comment">// Полное имя (fully qualified)</span>
+<span class="variable">$user</span> = <span class="keyword">new</span> <span class="variable">App\Models\User</span>();
+
+<span class="comment">// С use - более читаемо</span>
+<span class="keyword">use</span> <span class="variable">App\Models\User</span>;
+<span class="variable">$user</span> = <span class="keyword">new</span> <span class="function">User</span>();
+
+<span class="comment">// Alias (as)</span>
+<span class="keyword">use</span> <span class="variable">App\Models\User</span> <span class="keyword">as</span> <span class="variable">UserModel</span>;
+<span class="variable">$user</span> = <span class="keyword">new</span> <span class="function">UserModel</span>();
+
+<span class="comment">// Множественные import</span>
+<span class="keyword">use</span> <span class="variable">App\Models\User</span>;
+<span class="keyword">use</span> <span class="variable">App\Models\Post</span>;
+<span class="keyword">use</span> <span class="variable">App\Services\UserService</span>;
+
+<span class="comment">// Или с группировкой (PHP 7.1+)</span>
+<span class="keyword">use</span> <span class="variable">App\Models\{User, Post}</span>;
+<span class="keyword">use</span> <span class="variable">App\Services\{UserService, PostService</span> <span class="keyword">as</span> <span class="variable">PostHandler}</span>;
+
+<span class="comment">// Относительное использование (для классов в текущей namespace)</span>
+<span class="keyword">namespace</span> <span class="variable">App\Models</span>;
+
+<span class="keyword">class</span> <span class="function">User</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">getPosts</span>() {
+        <span class="keyword">return</span> <span class="keyword">new</span> <span class="function">Post</span>();  <span class="comment">// App\Models\Post автоматически</span>
+    }
+}</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Автоматическая загрузка классов</h3>
+                    <div class="example-label">Как работает autoloader</div>
+                    <pre><code><span class="comment">// После composer install, подключи автолоадер</span>
+<span class="keyword">require</span> <span class="string">'vendor/autoload.php'</span>;  <span class="comment">// Composer автолоадер</span>
+
+<span class="comment">// Теперь можешь использовать любой класс из конфигурации</span>
+<span class="keyword">use</span> <span class="variable">App\Models\User</span>;
+<span class="keyword">use</span> <span class="variable">App\Services\UserService</span>;
+
+<span class="variable">$user</span> = <span class="keyword">new</span> <span class="function">User</span>();  <span class="comment">// Автолоадер загружает app/Models/User.php</span>
+<span class="variable">$service</span> = <span class="keyword">new</span> <span class="function">UserService</span>();  <span class="comment">// Загружает app/Services/UserService.php</span></code></pre>
+
+                    <div class="remember-box">
+                        Когда создаешь новый класс, убедись что его namespace соответствует директории. Composer автоматически найдет и загрузит класс по имени!
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 9: ERROR HANDLING -->
+            <div id="errors" class="section">
+                <h2 class="section-title">9. Обработка ошибок</h2>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Exception Hierarchy</h3>
+                    <div class="content-block">
+                        PHP имеет иерархию исключений. Все исключения наследуют от Throwable (PHP 7+).
+                    </div>
+                    <table>
+                        <tr>
+                            <th>Тип</th>
+                            <th>Описание</th>
+                            <th>Примеры</th>
+                        </tr>
+                        <tr>
+                            <td><strong>Throwable</strong></td>
+                            <td>Базовый интерфейс для всех</td>
+                            <td>-</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Exception</strong></td>
+                            <td>Обычные исключения (код ошибка)</td>
+                            <td>InvalidArgumentException</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Error</strong></td>
+                            <td>Ошибки PHP (не всегда ловятся)</td>
+                            <td>TypeError, DivisionByZeroError</td>
+                        </tr>
+                        <tr>
+                            <td><strong>ParseError</strong></td>
+                            <td>Синтаксическая ошибка</td>
+                            <td>eval() с плохим синтаксисом</td>
+                        </tr>
+                    </table>
+
+                    <div class="example-label">Try-Catch-Finally</div>
+                    <pre><code><span class="keyword">try</span> {
+    <span class="variable">$file</span> = <span class="function">fopen</span>(<span class="string">'/nonexistent/file.txt'</span>, <span class="string">'r'</span>);
+    <span class="keyword">if</span> (!<span class="variable">$file</span>) {
+        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="function">Exception</span>(<span class="string">'File not found'</span>);
+    }
+} <span class="keyword">catch</span> (<span class="function">Exception</span> <span class="variable">$e</span>) {
+    <span class="keyword">echo</span> <span class="string">"Error: "</span> . <span class="variable">$e</span>-><span class="function">getMessage</span>();
+} <span class="keyword">finally</span> {
+    <span class="comment">// Выполняется ВСЕГДА, даже если есть исключение</span>
+    <span class="keyword">if</span> (<span class="function">isset</span>(<span class="variable">$file</span>)) {
+        <span class="function">fclose</span>(<span class="variable">$file</span>);
+    }
+}</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Множественные catch блоки</h3>
+                    <div class="example-label">Обработка разных исключений</div>
+                    <pre><code><span class="keyword">try</span> {
+    <span class="variable">$user</span> = <span class="function">getUserById</span>(<span class="number">1</span>);
+    <span class="variable">$age</span> = <span class="function">processAge</span>(<span class="variable">$user</span>[<span class="string">'age'</span>]);
+} <span class="keyword">catch</span> (<span class="function">UserNotFoundException</span> <span class="variable">$e</span>) {
+    <span class="keyword">echo</span> <span class="string">"User not found"</span>;
+    <span class="function">log</span>(<span class="variable">$e</span>);
+} <span class="keyword">catch</span> (<span class="function">InvalidAgeException</span> <span class="variable">$e</span>) {
+    <span class="keyword">echo</span> <span class="string">"Invalid age"</span>;
+} <span class="keyword">catch</span> (<span class="function">Exception</span> <span class="variable">$e</span>) {
+    <span class="comment">// Ловим все остальные Exception-ы</span>
+    <span class="keyword">echo</span> <span class="string">"Something went wrong"</span>;
+} <span class="keyword">catch</span> (<span class="function">Throwable</span> <span class="variable">$e</span>) {
+    <span class="comment">// Ловим и Exception и Error</span>
+    <span class="keyword">echo</span> <span class="string">"Critical error"</span>;
+}</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Пользовательские исключения</h3>
+                    <div class="example-label">Custom exceptions</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">InvalidEmailException</span> <span class="keyword">extends</span> <span class="function">Exception</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">string</span> <span class="variable">$email</span>) {
+        <span class="variable">$message</span> = <span class="string">"Invalid email: $email"</span>;
+        <span class="keyword">parent</span>::<span class="function">__construct</span>(<span class="variable">$message</span>);
+    }
+}
+
+<span class="keyword">class</span> <span class="function">ValidationException</span> <span class="keyword">extends</span> <span class="function">Exception</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">array</span> <span class="variable">$errors</span>) {
+        <span class="variable">$this</span>-><span class="variable">errors</span> = <span class="variable">$errors</span>;
+        <span class="keyword">parent</span>::<span class="function">__construct</span>(<span class="function">json_encode</span>(<span class="variable">$errors</span>));
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">getErrors</span>() {
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">errors</span>;
+    }
+}
+
+<span class="keyword">function</span> <span class="function">validateEmail</span>(<span class="keyword">string</span> <span class="variable">$email</span>) {
+    <span class="keyword">if</span> (!<span class="function">filter_var</span>(<span class="variable">$email</span>, <span class="keyword">FILTER_VALIDATE_EMAIL</span>)) {
+        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="function">InvalidEmailException</span>(<span class="variable">$email</span>);
+    }
+}
+
+<span class="keyword">try</span> {
+    <span class="function">validateEmail</span>(<span class="string">"invalid"</span>);
+} <span class="keyword">catch</span> (<span class="function">InvalidEmailException</span> <span class="variable">$e</span>) {
+    <span class="keyword">echo</span> <span class="variable">$e</span>-><span class="function">getMessage</span>();
+}</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Error Reporting и set_exception_handler</h3>
+                    <div class="example-label">Глобальная обработка ошибок</div>
+                    <pre><code><span class="comment">// Установить уровень ошибок</span>
+<span class="function">error_reporting</span>(<span class="keyword">E_ALL</span>);  <span class="comment">// Все ошибки</span>
+<span class="function">ini_set</span>(<span class="string">'display_errors'</span>, <span class="number">1</span>);  <span class="comment">// Показывать ошибки (development)</span>
+<span class="function">ini_set</span>(<span class="string">'log_errors'</span>, <span class="number">1</span>);  <span class="comment">// Логировать ошибки</span>
+<span class="function">ini_set</span>(<span class="string">'error_log'</span>, <span class="string">'/var/log/php-errors.log'</span>);
+
+<span class="comment">// Глобальный обработчик исключений</span>
+<span class="function">set_exception_handler</span>(<span class="keyword">function</span>(<span class="variable">$e</span>) {
+    <span class="keyword">echo</span> <span class="string">"Exception caught: "</span> . <span class="variable">$e</span>-><span class="function">getMessage</span>();
+    <span class="function">log_error</span>(<span class="variable">$e</span>);
+    <span class="function">http_response_code</span>(<span class="number">500</span>);
+});
+
+<span class="comment">// Глобальный обработчик ошибок</span>
+<span class="function">set_error_handler</span>(<span class="keyword">function</span>(<span class="variable">$errno</span>, <span class="variable">$errstr</span>, <span class="variable">$errfile</span>, <span class="variable">$errline</span>) {
+    <span class="keyword">if</span> (<span class="variable">$errno</span> === <span class="keyword">E_USER_ERROR</span>) {
+        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="function">Exception</span>(<span class="variable">$errstr</span>);
+    }
+    <span class="keyword">return</span> <span class="keyword">false</span>;  <span class="comment">// Позволить стандартному обработчику работать</span>
+});
+
+<span class="comment">// Вызови пользовательскую ошибку</span>
+<span class="function">trigger_error</span>(<span class="string">"Something bad"</span>, <span class="keyword">E_USER_WARNING</span>);</code></pre>
+
+                    <div class="remember-box">
+                        Используй try/catch для предсказуемых ошибок. Используй set_exception_handler для ловли всех необработанных исключений. В production, логируй все ошибки в файл, не показывай пользователю!
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 10: PHP 8+ FEATURES -->
+            <div id="php8" class="section">
+                <h2 class="section-title">10. PHP 8.x Новые фичи</h2>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Named Arguments</h3>
+                    <div class="example-label">Именованные аргументы</div>
+                    <pre><code><span class="keyword">function</span> <span class="function">createUser</span>(<span class="keyword">string</span> <span class="variable">$name</span>, <span class="keyword">string</span> <span class="variable">$email</span>, <span class="keyword">int</span> <span class="variable">$age</span>, <span class="keyword">bool</span> <span class="variable">$active</span> = <span class="keyword">true</span>) {
+    <span class="keyword">return</span> [<span class="string">'name'</span> => <span class="variable">$name</span>, <span class="string">'email'</span> => <span class="variable">$email</span>, <span class="string">'age'</span> => <span class="variable">$age</span>, <span class="string">'active'</span> => <span class="variable">$active</span>];
+}
+
+<span class="comment">// Позиционные аргументы (старый способ)</span>
+<span class="function">createUser</span>(<span class="string">"Alice"</span>, <span class="string">"alice@ex.com"</span>, <span class="number">30</span>, <span class="keyword">false</span>);
+
+<span class="comment">// Именованные аргументы (PHP 8)</span>
+<span class="function">createUser</span>(
+    <span class="string">name:</span> <span class="string">"Alice"</span>,
+    <span class="string">email:</span> <span class="string">"alice@ex.com"</span>,
+    <span class="string">age:</span> <span class="number">30</span>,
+    <span class="string">active:</span> <span class="keyword">false</span>
+);
+
+<span class="comment">// Можно менять порядок!</span>
+<span class="function">createUser</span>(
+    <span class="string">email:</span> <span class="string">"alice@ex.com"</span>,
+    <span class="string">age:</span> <span class="number">30</span>,
+    <span class="string">name:</span> <span class="string">"Alice"</span>
+);
+
+<span class="comment">// Смешивать позиционные и именованные</span>
+<span class="function">createUser</span>(<span class="string">"Alice"</span>, <span class="string">"alice@ex.com"</span>, <span class="string">age:</span> <span class="number">30</span>);</code></pre>
+
+                    <div class="remember-box">
+                        Named arguments делают код более читаемым и защищают от ошибок при изменении порядка параметров. Отлично подходят для конфигурационных функций!
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Match Expression</h3>
+                    <div class="example-label">Match выражение вместо switch</div>
+                    <pre><code><span class="comment">// Старый способ (switch)</span>
+<span class="variable">$status</span> = <span class="string">"pending"</span>;
+<span class="keyword">switch</span> (<span class="variable">$status</span>) {
+    <span class="keyword">case</span> <span class="string">"pending"</span>:
+        <span class="variable">$label</span> = <span class="string">"Pending Review"</span>;
+        <span class="keyword">break</span>;
+    <span class="keyword">case</span> <span class="string">"approved"</span>:
+        <span class="variable">$label</span> = <span class="string">"Approved"</span>;
+        <span class="keyword">break</span>;
+    <span class="keyword">default</span>:
+        <span class="variable">$label</span> = <span class="string">"Unknown"</span>;
+}
+
+<span class="comment">// Новый способ (match - PHP 8)</span>
+<span class="variable">$label</span> = <span class="keyword">match</span>(<span class="variable">$status</span>) {
+    <span class="string">"pending"</span> => <span class="string">"Pending Review"</span>,
+    <span class="string">"approved"</span> => <span class="string">"Approved"</span>,
+    <span class="string">"rejected"</span> => <span class="string">"Rejected"</span>,
+    <span class="keyword">default</span> => <span class="string">"Unknown"</span>
+};
+
+<span class="comment">// Match с несколькими условиями</span>
+<span class="variable">$message</span> = <span class="keyword">match</span>(<span class="variable">$statusCode</span>) {
+    <span class="number">200</span>, <span class="number">201</span> => <span class="string">"Success"</span>,
+    <span class="number">400</span>, <span class="number">401</span>, <span class="number">403</span> => <span class="string">"Client error"</span>,
+    <span class="number">500</span>, <span class="number">502</span>, <span class="number">503</span> => <span class="string">"Server error"</span>,
+    <span class="keyword">default</span> => <span class="string">"Unknown"</span>
+};
+
+<span class="comment">// Match обычно приносит условие</span>
+<span class="variable">$price</span> = <span class="keyword">match</span>(<span class="keyword">true</span>) {
+    <span class="variable">$quantity</span> > <span class="number">100</span> => <span class="number">50</span>,
+    <span class="variable">$quantity</span> > <span class="number">50</span> => <span class="number">75</span>,
+    <span class="keyword">default</span> => <span class="number">100</span>
+};</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Enums (PHP 8.1+)</h3>
+                    <div class="example-label">Перечисления</div>
+                    <pre><code><span class="comment">// Pure Enum (без значений)</span>
+<span class="keyword">enum</span> <span class="function">Status</span> {
+    <span class="keyword">case</span> <span class="variable">PENDING</span>;
+    <span class="keyword">case</span> <span class="variable">APPROVED</span>;
+    <span class="keyword">case</span> <span class="variable">REJECTED</span>;
+}
+
+<span class="comment">// Backed Enum (с значениями)</span>
+<span class="keyword">enum</span> <span class="function">HttpStatus</span>: <span class="keyword">int</span> {
+    <span class="keyword">case</span> <span class="variable">OK</span> = <span class="number">200</span>;
+    <span class="keyword">case</span> <span class="variable">CREATED</span> = <span class="number">201</span>;
+    <span class="keyword">case</span> <span class="variable">BAD_REQUEST</span> = <span class="number">400</span>;
+    <span class="keyword">case</span> <span class="variable">NOT_FOUND</span> = <span class="number">404</span>;
+    <span class="keyword">case</span> <span class="variable">SERVER_ERROR</span> = <span class="number">500</span>;
+}
+
+<span class="comment">// Enum с методами</span>
+<span class="keyword">enum</span> <span class="function">Role</span>: <span class="keyword">string</span> {
+    <span class="keyword">case</span> <span class="variable">ADMIN</span> = <span class="string">'admin'</span>;
+    <span class="keyword">case</span> <span class="variable">USER</span> = <span class="string">'user'</span>;
+    <span class="keyword">case</span> <span class="variable">GUEST</span> = <span class="string">'guest'</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">label</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="keyword">match</span>(<span class="variable">$this</span>) {
+            <span class="keyword">self</span>::<span class="variable">ADMIN</span> => <span class="string">'Administrator'</span>,
+            <span class="keyword">self</span>::<span class="variable">USER</span> => <span class="string">'Regular User'</span>,
+            <span class="keyword">self</span>::<span class="variable">GUEST</span> => <span class="string">'Guest User'</span>,
+        };
+    }
+}
+
+<span class="comment">// Использование</span>
+<span class="variable">$role</span> = <span class="function">Role</span>::<span class="variable">ADMIN</span>;
+<span class="keyword">echo</span> <span class="variable">$role</span>-><span class="function">value</span>;   <span class="comment">// "admin"</span>
+<span class="keyword">echo</span> <span class="variable">$role</span>-><span class="function">label</span>();  <span class="comment">// "Administrator"</span>
+
+<span class="comment">// Получить enum по значению</span>
+<span class="variable">$status</span> = <span class="function">HttpStatus</span>::<span class="function">tryFrom</span>(<span class="number">404</span>);  <span class="comment">// HttpStatus::NOT_FOUND</span></code></pre>
+
+                    <div class="remember-box">
+                        Enums обеспечивают type-safe способ работать с ограниченным набором значений. Используй их вместо констант или строк для лучшей типобезопасности!
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Nullsafe Operator</h3>
+                    <div class="example-label">?-> оператор</div>
+                    <pre><code><span class="comment">// Старый способ (много проверок)</span>
+<span class="variable">$name</span> = <span class="keyword">null</span>;
+<span class="keyword">if</span> (<span class="variable">$user</span> !== <span class="keyword">null</span> && <span class="variable">$user</span>-><span class="variable">profile</span> !== <span class="keyword">null</span>) {
+    <span class="variable">$name</span> = <span class="variable">$user</span>-><span class="variable">profile</span>-><span class="variable">name</span>;
+}
+
+<span class="comment">// Новый способ (PHP 8 nullsafe)</span>
+<span class="variable">$name</span> = <span class="variable">$user</span>?-><span class="variable">profile</span>?-><span class="variable">name</span>;
+
+<span class="comment">// Если $user null, весь результат null</span>
+<span class="keyword">echo</span> <span class="variable">$name</span> ?? <span class="string">"No name"</span>;
+
+<span class="comment">// С методами</span>
+<span class="variable">$result</span> = <span class="variable">$user</span>?-><span class="variable">profile</span>?-><span class="function">getName</span>();</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">First-class Callable Syntax (PHP 8.1+)</h3>
+                    <div class="example-label">Функции как значения</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Math</span> {
+    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">function</span> <span class="function">add</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) {
+        <span class="keyword">return</span> <span class="variable">$a</span> + <span class="variable">$b</span>;
+    }
+}
+
+<span class="comment">// Старый способ</span>
+<span class="variable">$adder</span> = [<span class="function">Math</span>::<span class="keyword">class</span>, <span class="string">'add'</span>];
+<span class="keyword">echo</span> <span class="variable">$adder</span>(<span class="number">5</span>, <span class="number">3</span>);
+
+<span class="comment">// Новый способ (PHP 8.1)</span>
+<span class="variable">$adder</span> = <span class="function">Math</span>::<span class="function">add</span>(...);  <span class="comment">// Синтаксис ...() делает функцию объектом</span>
+<span class="keyword">echo</span> <span class="variable">$adder</span>(<span class="number">5</span>, <span class="number">3</span>);
+
+<span class="comment">// С методами</span>
+<span class="variable">$user</span> = <span class="keyword">new</span> <span class="function">User</span>();
+<span class="variable">$getName</span> = <span class="variable">$user</span>-><span class="function">getName</span>(...);
+<span class="keyword">echo</span> <span class="variable">$getName</span>();
+
+<span class="comment">// Передать в функцию высшего порядка</span>
+<span class="variable">$numbers</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
+<span class="variable">$result</span> = <span class="function">array_map</span>(<span class="function">intval</span>(...), <span class="variable">$numbers</span>);</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Readonly Properties и Classes (PHP 8.1+)</h3>
+                    <div class="example-label">Неизменяемые свойства</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">ImmutableUser</span> {
+    <span class="keyword">public</span> <span class="keyword">readonly</span> <span class="keyword">int</span> <span class="variable">$id</span>;
+    <span class="keyword">public</span> <span class="keyword">readonly</span> <span class="keyword">string</span> <span class="variable">$email</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">int</span> <span class="variable">$id</span>, <span class="keyword">string</span> <span class="variable">$email</span>) {
+        <span class="variable">$this</span>-><span class="variable">id</span> = <span class="variable">$id</span>;
+        <span class="variable">$this</span>-><span class="variable">email</span> = <span class="variable">$email</span>;
+    }
+}
+
+<span class="variable">$user</span> = <span class="keyword">new</span> <span class="function">ImmutableUser</span>(<span class="number">1</span>, <span class="string">"test@ex.com"</span>);
+<span class="variable">$user</span>-><span class="variable">email</span> = <span class="string">"new@ex.com"</span>;  <span class="comment">// ERROR! readonly свойство</span>
+
+<span class="comment">// Readonly класс (PHP 8.2) - все свойства readonly</span>
+<span class="keyword">readonly</span> <span class="keyword">class</span> <span class="function">Point</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(
+        <span class="keyword">public</span> <span class="keyword">int</span> <span class="variable">$x</span>,
+        <span class="keyword">public</span> <span class="keyword">int</span> <span class="variable">$y</span>
+    ) {}
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- SECTION 11: GENERATORS -->
+            <div id="generators" class="section">
+                <h2 class="section-title">11. Генераторы (Generators)</h2>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">yield ключевое слово</h3>
+                    <div class="example-label">Основы генераторов</div>
+                    <pre><code><span class="comment">// Обычная функция (загружает все в память)</span>
+<span class="keyword">function</span> <span class="function">getNumbers</span>(<span class="variable">$start</span>, <span class="variable">$end</span>) {
+    <span class="variable">$result</span> = [];
+    <span class="keyword">for</span> (<span class="variable">$i</span> = <span class="variable">$start</span>; <span class="variable">$i</span> <= <span class="variable">$end</span>; <span class="variable">$i</span>++) {
+        <span class="variable">$result</span>[] = <span class="variable">$i</span> * <span class="variable">$i</span>;
+    }
+    <span class="keyword">return</span> <span class="variable">$result</span>;
+}
+
+<span class="variable">$numbers</span> = <span class="function">getNumbers</span>(<span class="number">1</span>, <span class="number">1000000</span>);  <span class="comment">// Создает массив из 1M элементов в памяти!</span>
+
+<span class="comment">// Генератор (ленивое вычисление, по одному элементу за раз)</span>
+<span class="keyword">function</span> <span class="function">yieldNumbers</span>(<span class="variable">$start</span>, <span class="variable">$end</span>) {
+    <span class="keyword">for</span> (<span class="variable">$i</span> = <span class="variable">$start</span>; <span class="variable">$i</span> <= <span class="variable">$end</span>; <span class="variable">$i</span>++) {
+        <span class="keyword">yield</span> <span class="variable">$i</span> * <span class="variable">$i</span>;  <span class="comment">// Возвращает значение, сохраняет состояние</span>
+    }
+}
+
+<span class="comment">// Использование генератора</span>
+<span class="keyword">foreach</span> (<span class="function">yieldNumbers</span>(<span class="number">1</span>, <span class="number">1000000</span>) <span class="keyword">as</span> <span class="variable">$number</span>) {
+    <span class="keyword">echo</span> <span class="variable">$number</span> . <span class="string">"\n"</span>;  <span class="comment">// Обрабатывает по одному элементу, минимум памяти</span>
+}</code></pre>
+
+                    <div class="remember-box">
+                        Генераторы экономят память! Используй их для больших наборов данных, чтения файлов, результатов БД. Они возвращают по одному элементу за раз вместо загрузки всего в массив.
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Ключи и yield с массивами</h3>
+                    <div class="example-label">yield с ключами</div>
+                    <pre><code><span class="comment">// yield с ключами (для ассоциативных данных)</span>
+<span class="keyword">function</span> <span class="function">readCsvFile</span>(<span class="keyword">string</span> <span class="variable">$file</span>) {
+    <span class="variable">$fp</span> = <span class="function">fopen</span>(<span class="variable">$file</span>, <span class="string">'r'</span>);
+    <span class="variable">$header</span> = <span class="function">fgetcsv</span>(<span class="variable">$fp</span>);
+    <span class="variable">$line</span> = <span class="number">1</span>;
+
+    <span class="keyword">while</span> ((<span class="variable">$row</span> = <span class="function">fgetcsv</span>(<span class="variable">$fp</span>)) !== <span class="keyword">false</span>) {
+        <span class="variable">$data</span> = <span class="function">array_combine</span>(<span class="variable">$header</span>, <span class="variable">$row</span>);
+        <span class="keyword">yield</span> <span class="variable">$line</span> => <span class="variable">$data</span>;  <span class="comment">// yield с ключом</span>
+        <span class="variable">$line</span>++;
+    }
+    <span class="function">fclose</span>(<span class="variable">$fp</span>);
+}
+
+<span class="comment">// Использование - читает файл построчно</span>
+<span class="keyword">foreach</span> (<span class="function">readCsvFile</span>(<span class="string">'data.csv'</span>) <span class="keyword">as</span> <span class="variable">$lineNum</span> => <span class="variable">$row</span>) {
+    <span class="keyword">echo</span> <span class="string">"Line $lineNum: "</span> . <span class="variable">$row</span>[<span class="string">'email'</span>];
+}</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">yield from (делегирование)</h3>
+                    <div class="example-label">yield from для генераторов</div>
+                    <pre><code><span class="keyword">function</span> <span class="function">innerGenerator</span>() {
+    <span class="keyword">yield</span> <span class="number">1</span>;
+    <span class="keyword">yield</span> <span class="number">2</span>;
+    <span class="keyword">yield</span> <span class="number">3</span>;
+}
+
+<span class="keyword">function</span> <span class="function">outerGenerator</span>() {
+    <span class="keyword">yield</span> <span class="number">0</span>;
+    <span class="keyword">yield from</span> <span class="function">innerGenerator</span>();  <span class="comment">// Делегирует всем значениям</span>
+    <span class="keyword">yield</span> <span class="number">4</span>;
+}
+
+<span class="keyword">foreach</span> (<span class="function">outerGenerator</span>() <span class="keyword">as</span> <span class="variable">$value</span>) {
+    <span class="keyword">echo</span> <span class="variable">$value</span>;  <span class="comment">// 0 1 2 3 4</span>
+}</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Практический пример: Пагинация</h3>
+                    <div class="example-label">Генератор для пагинации</div>
+                    <pre><code><span class="comment">// Получить пользователей в батчах (для пагинации в БД)</span>
+<span class="keyword">function</span> <span class="function">getUsersInBatches</span>(<span class="keyword">int</span> <span class="variable">$batchSize</span> = <span class="number">100</span>) {
+    <span class="variable">$page</span> = <span class="number">1</span>;
+
+    <span class="keyword">while</span> (<span class="keyword">true</span>) {
+        <span class="variable">$users</span> = <span class="function">User</span>::<span class="function">paginate</span>(<span class="variable">$batchSize</span>, <span class="variable">$page</span>);
+
+        <span class="keyword">if</span> (<span class="variable">$users</span>-><span class="function">isEmpty</span>()) {
+            <span class="keyword">break</span>;
+        }
+
+        <span class="keyword">foreach</span> (<span class="variable">$users</span> <span class="keyword">as</span> <span class="variable">$user</span>) {
+            <span class="keyword">yield</span> <span class="variable">$user</span>;
+        }
+
+        <span class="variable">$page</span>++;
+    }
+}
+
+<span class="comment">// Обрабатывать всех пользователей БЕЗ загрузки всех в памяти</span>
+<span class="keyword">foreach</span> (<span class="function">getUsersInBatches</span>(<span class="number">1000</span>) <span class="keyword">as</span> <span class="variable">$user</span>) {
+    <span class="variable">$user</span>-><span class="function">sendNotification</span>();
+}</code></pre>
+                </div>
+            </div>
+
+            <!-- SECTION 12: CLOSURES -->
+            <div id="closures" class="section">
+                <h2 class="section-title">12. Closures и Anonymous Functions</h2>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Базовые Closures</h3>
+                    <div class="example-label">Анонимные функции</div>
+                    <pre><code><span class="comment">// Анонимная функция (Closure)</span>
+<span class="variable">$greeting</span> = <span class="keyword">function</span>(<span class="variable">$name</span>) {
+    <span class="keyword">return</span> <span class="string">"Hello, $name!"</span>;
+};
+
+<span class="keyword">echo</span> <span class="variable">$greeting</span>(<span class="string">"Alice"</span>);  <span class="comment">// "Hello, Alice!"</span>
+
+<span class="comment">// Передать closure как параметр</span>
+<span class="keyword">function</span> <span class="function">processUsers</span>(<span class="keyword">array</span> <span class="variable">$users</span>, <span class="keyword">callable</span> <span class="variable">$callback</span>) {
+    <span class="keyword">foreach</span> (<span class="variable">$users</span> <span class="keyword">as</span> <span class="variable">$user</span>) {
+        <span class="variable">$callback</span>(<span class="variable">$user</span>);
+    }
+}
+
+<span class="variable">$users</span> = [
+    [<span class="string">'name'</span> => <span class="string">'Alice'</span>],
+    [<span class="string">'name'</span> => <span class="string">'Bob'</span>]
+];
+
+<span class="function">processUsers</span>(<span class="variable">$users</span>, <span class="keyword">function</span>(<span class="variable">$user</span>) {
+    <span class="keyword">echo</span> <span class="string">"Processing "</span> . <span class="variable">$user</span>[<span class="string">'name'</span>];
+});</code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">use Keyword - Захват переменных</h3>
+                    <div class="example-label">Closure и область видимости</div>
+                    <pre><code><span class="variable">$multiplier</span> = <span class="number">3</span>;
+
+<span class="comment">// Closure по умолчанию НЕ имеет доступа к переменным снаружи</span>
+<span class="variable">$multiply</span> = <span class="keyword">function</span>(<span class="variable">$x</span>) {
+    <span class="keyword">return</span> <span class="variable">$x</span> * <span class="variable">$multiplier</span>;  <span class="comment">// ERROR! $multiplier не доступна</span>
+};
+
+<span class="comment">// use - захватить переменную из внешней области</span>
+<span class="variable">$multiply</span> = <span class="keyword">function</span>(<span class="variable">$x</span>) <span class="keyword">use</span> (<span class="variable">$multiplier</span>) {
+    <span class="keyword">return</span> <span class="variable">$x</span> * <span class="variable">$multiplier</span>;
+};
+<span class="keyword">echo</span> <span class="variable">$multiply</span>(<span class="number">5</span>);  <span class="comment">// 15</span>
+
+<span class="comment">// use по ссылке (&) - захватить переменную и позволить изменять</span>
+<span class="variable">$counter</span> = <span class="number">0</span>;
+<span class="variable">$increment</span> = <span class="keyword">function</span>() <span class="keyword">use</span> (&<span class="variable">$counter</span>) {
+    <span class="variable">$counter</span>++;
+};
+
+<span class="variable">$increment</span>();
+<span class="variable">$increment</span>();
+<span class="keyword">echo</span> <span class="variable">$counter</span>;  <span class="comment">// 2</span>
+
+<span class="comment">// Несколько переменных в use</span>
+<span class="variable">$tax</span> = <span class="number">0.1</span>;
+<span class="variable">$discount</span> = <span class="number">0.05</span>;
+<span class="variable">$calculatePrice</span> = <span class="keyword">function</span>(<span class="variable">$price</span>) <span class="keyword">use</span> (<span class="variable">$tax</span>, <span class="variable">$discount</span>) {
+    <span class="keyword">return</span> <span class="variable">$price</span> * (<span class="number">1</span> + <span class="variable">$tax</span>) * (<span class="number">1</span> - <span class="variable">$discount</span>);
+};</code></pre>
+
+                    <div class="remember-box">
+                        use() захватывает значение в момент определения функции. Используй use(&$var) для захвата по ссылке, если нужны изменения!
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Arrow Functions (PHP 7.4+)</h3>
+                    <div class="example-label">Краткий синтаксис fn =></div>
+                    <pre><code><span class="comment">// Старый способ (анонимная функция)</span>
+<span class="variable">$numbers</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
+<span class="variable">$squared</span> = <span class="function">array_map</span>(<span class="keyword">function</span>(<span class="variable">$n</span>) {
+    <span class="keyword">return</span> <span class="variable">$n</span> * <span class="variable">$n</span>;
+}, <span class="variable">$numbers</span>);
+
+<span class="comment">// Новый способ (arrow function)</span>
+<span class="variable">$squared</span> = <span class="function">array_map</span>(<span class="keyword">fn</span>(<span class="variable">$n</span>) => <span class="variable">$n</span> * <span class="variable">$n</span>, <span class="variable">$numbers</span>);
+
+<span class="comment">// Arrow functions автоматически захватывают переменные!</span>
+<span class="variable">$multiplier</span> = <span class="number">5</span>;
+<span class="variable">$multiply</span> = <span class="keyword">fn</span>(<span class="variable">$x</span>) => <span class="variable">$x</span> * <span class="variable">$multiplier</span>;  <span class="comment">// $multiplier захвачена автоматически</span>
+<span class="keyword">echo</span> <span class="variable">$multiply</span>(<span class="number">3</span>);  <span class="comment">// 15</span>
+
+<span class="comment">// Arrow functions - один выражение, автоматически возвращает</span>
+<span class="variable">$getFullName</span> = <span class="keyword">fn</span>(<span class="variable">$user</span>) => <span class="variable">$user</span>[<span class="string">'first'</span>] . <span class="string">" "</span> . <span class="variable">$user</span>[<span class="string">'last'</span>];
+
+<span class="comment">// С несколькими параметрами</span>
+<span class="variable">$sum</span> = <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) => <span class="variable">$a</span> + <span class="variable">$b</span>;
+<span class="keyword">echo</span> <span class="variable">$sum</span>(<span class="number">5</span>, <span class="number">3</span>);  <span class="comment">// 8</span></code></pre>
+
+                    <div class="remember-box">
+                        Arrow functions идеальны для простых операций! Они автоматически захватывают переменные, поэтому не нужно use(). Но они могут содержать только ОДНО выражение!
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Binding и $this в Closures</h3>
+                    <div class="example-label">Closure и объекты</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Calculator</span> {
+    <span class="keyword">private</span> <span class="variable">$value</span> = <span class="number">10</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">getAdder</span>() {
+        <span class="comment">// Closure может использовать $this если определена в методе класса</span>
+        <span class="keyword">return</span> <span class="keyword">function</span>(<span class="variable">$x</span>) {
+            <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">value</span> + <span class="variable">$x</span>;  <span class="comment">// Доступ к $this</span>
+        };
+    }
+}
+
+<span class="variable">$calc</span> = <span class="keyword">new</span> <span class="function">Calculator</span>();
+<span class="variable">$adder</span> = <span class="variable">$calc</span>-><span class="function">getAdder</span>();
+<span class="keyword">echo</span> <span class="variable">$adder</span>(<span class="number">5</span>);  <span class="comment">// 15</span>
+
+<span class="comment">// bindTo - привязать closure к другому объекту</span>
+<span class="keyword">class</span> <span class="function">Price</span> {
+    <span class="keyword">private</span> <span class="variable">$amount</span> = <span class="number">100</span>;
+}
+
+<span class="variable">$getClosure</span> = <span class="keyword">function</span>() {
+    <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">amount</span>;
+};
+
+<span class="variable">$price</span> = <span class="keyword">new</span> <span class="function">Price</span>();
+<span class="variable">$bound</span> = <span class="variable">$getClosure</span>-><span class="function">bindTo</span>(<span class="variable">$price</span>, <span class="function">Price</span>::<span class="keyword">class</span>);
+<span class="keyword">echo</span> <span class="variable">$bound</span>();  <span class="comment">// 100</span></code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Практический пример: Middleware</h3>
+                    <div class="example-label">Closure для middleware</div>
+                    <pre><code><span class="comment">// Middleware как closures</span>
+<span class="variable">$request</span> = [<span class="string">'method'</span> => <span class="string">'POST'</span>, <span class="string">'path'</span> => <span class="string">'/api/users'</span>];
+<span class="variable">$response</span> = [<span class="string">'status'</span> => <span class="number">200</span>];
+
+<span class="comment">// Middleware для логирования</span>
+<span class="variable">$logger</span> = <span class="keyword">function</span>(<span class="variable">$next</span>) {
+    <span class="keyword">return</span> <span class="keyword">function</span>(<span class="variable">$req</span>) <span class="keyword">use</span> (<span class="variable">$next</span>) {
+        <span class="keyword">echo</span> <span class="string">"Request: "</span> . <span class="variable">$req</span>[<span class="string">'method'</span>] . <span class="string">" "</span> . <span class="variable">$req</span>[<span class="string">'path'</span>];
+        <span class="variable">$response</span> = <span class="variable">$next</span>(<span class="variable">$req</span>);
+        <span class="keyword">echo</span> <span class="string">"Response: "</span> . <span class="variable">$response</span>[<span class="string">'status'</span>];
+        <span class="keyword">return</span> <span class="variable">$response</span>;
+    };
+};
+
+<span class="comment">// Middleware для авторизации</span>
+<span class="variable">$auth</span> = <span class="keyword">function</span>(<span class="variable">$next</span>) {
+    <span class="keyword">return</span> <span class="keyword">function</span>(<span class="variable">$req</span>) <span class="keyword">use</span> (<span class="variable">$next</span>) {
+        <span class="keyword">if</span> (!<span class="function">isset</span>(<span class="variable">$req</span>[<span class="string">'token'</span>])) {
+            <span class="keyword">return</span> [<span class="string">'status'</span> => <span class="number">401</span>];
+        }
+        <span class="keyword">return</span> <span class="variable">$next</span>(<span class="variable">$req</span>);
+    };
+};
+
+<span class="comment">// Основной обработчик</span>
+<span class="variable">$handler</span> = <span class="keyword">function</span>(<span class="variable">$req</span>) {
+    <span class="keyword">return</span> [<span class="string">'status'</span> => <span class="number">200</span>, <span class="string">'body'</span> => <span class="string">'Success'</span>];
+};
+
+<span class="comment">// Compose middleware</span>
+<span class="variable">$pipeline</span> = <span class="variable">$logger</span>(<span class="variable">$auth</span>(<span class="variable">$handler</span>));
+<span class="variable">$result</span> = <span class="variable">$pipeline</span>(<span class="variable">$request</span>);</code></pre>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+
+            // Update nav items
+            document.querySelectorAll('.nav-item').forEach(el => {
+                el.classList.remove('active');
+            });
+            event.target.classList.add('active');
+        }
+
+        // Collapsible functionality
+        document.querySelectorAll('.collapsible').forEach(button => {
+            button.addEventListener('click', function() {
+                this.classList.toggle('active');
+                const content = this.nextElementSibling;
+                if (content && content.classList.contains('collapse-content')) {
+                    content.classList.toggle('active');
+                }
+            });
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + number to navigate sections
+            if ((e.ctrlKey || e.metaKey) && !isNaN(e.key)) {
+                const navItems = document.querySelectorAll('.nav-item');
+                const index = parseInt(e.key) - 1;
+                if (index >= 0 && index < navItems.length) {
+                    navItems[index].click();
+                }
+            }
+        });
+    </script>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script>lucide.createIcons();</script>
+</body>
+</html>
+@endverbatim

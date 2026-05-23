@@ -1,0 +1,65 @@
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Editor / IDE
+.idea/
+.vscode/
+.cursor/
+.nova/
+.zed/
+.codex/
+.phpactor.json
+_ide_helper.php
+*.swp
+*.swo
+
+# Composer / PHP
+/vendor/
+composer.phar
+
+# Node / NPM
+/node_modules/
+npm-debug.log
+yarn-error.log
+
+# Laravel runtime
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+/.phpunit.cache
+/auth.json
+/public/hot
+/public/build/
+/public/storage
+/storage/*.key
+/storage/pail/
+/storage/logs/*.log
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/testing/*
+/storage/framework/views/*
+!/storage/framework/cache/.gitignore
+!/storage/framework/sessions/.gitignore
+!/storage/framework/testing/.gitignore
+!/storage/framework/views/.gitignore
+/storage/app/public/*
+!/storage/app/public/.gitignore
+/storage/app/private/*
+!/storage/app/private/.gitignore
+
+# Homestead
+Homestead.json
+Homestead.yaml
+
+# Local DB
+/database/database.sqlite
+/database/database.sqlite-journal
+/database/*.sqlite
+
+# Private KB sections — NOT for public repo (work-related, NDA)
+/resources/views/kb/KB_7_SSO.blade.php
+/resources/views/kb/KB_8_MegaRega.blade.php
+/database/seeders/KbPagesSeederPrivate.php
