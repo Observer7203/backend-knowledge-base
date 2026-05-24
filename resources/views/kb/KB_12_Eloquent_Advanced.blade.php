@@ -80,6 +80,47 @@ ul.bullets strong{color:var(--text);}
 .task-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:18px;box-shadow:var(--shadow);border-left:4px solid var(--primary);}
 .task-card h3{font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px;}
 .task-card .criteria{font-size:12.5px;color:var(--primary);background:var(--primary-light);padding:8px 12px;border-radius:6px;margin-top:10px;}
+
+/* ── Mobile / tablet adaptation ────────────────────────────── */
+@media (max-width: 900px) {
+  .container { display: block; grid-template-columns: 1fr; }
+  .sidebar {
+    position: static; width: 100%; height: auto;
+    max-height: 280px; overflow-y: auto;
+    border-right: none; border-bottom: 1px solid var(--border);
+    padding: 14px; box-shadow: none;
+  }
+  .sidebar-title { margin-bottom: 6px; padding-bottom: 8px; }
+  .nav-item { padding: 6px 10px; font-size: 12.5px; }
+  .nav-group-label { padding: 6px 10px 2px; }
+  .main { margin-left: 0; width: 100%; padding: 20px 16px; }
+  .page-header { margin-bottom: 18px; padding-bottom: 16px; }
+  .page-header h1 { font-size: 22px; letter-spacing: -0.2px; }
+  .page-header p { font-size: 13px; }
+  .section-title { font-size: 17px; margin-bottom: 18px; padding-bottom: 10px; }
+  .subsection { margin-bottom: 26px; }
+  .subsection-title { font-size: 14px; margin-bottom: 10px; }
+  p.text { font-size: 13.5px; line-height: 1.7; }
+  .card { padding: 14px 16px; }
+  .card h3 { font-size: 13.5px; }
+  .pitfall { padding: 10px 12px; font-size: 12.5px; }
+  .info-box { padding: 12px 14px; font-size: 12.5px; }
+  pre { padding: 12px 14px; font-size: 11.5px; }
+  .data-table { font-size: 12px; }
+  .data-table th, .data-table td { padding: 7px 9px; }
+  .badge-row { gap: 6px; }
+  .badge { font-size: 10px; padding: 3px 8px; }
+}
+
+@media (max-width: 500px) {
+  .sidebar { max-height: 220px; }
+  .main { padding: 16px 12px; }
+  .page-header h1 { font-size: 18px; }
+  .section-title { font-size: 15px; }
+  pre { padding: 10px 12px; font-size: 10.5px; overflow-x: auto; }
+  .data-table { display: block; overflow-x: auto; white-space: nowrap; }
+}
+
 </style>
 </head>
 <body>
