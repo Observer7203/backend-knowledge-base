@@ -1090,6 +1090,122 @@ EOT;</code></pre>
 <span class="keyword">if</span> (!<span class="function">preg_match</span>(<span class="string">'/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/'</span>, <span class="variable">$email</span>)) {
     <span class="comment">// Некорректный email</span>
 }</code></pre>
+
+                    <div class="content-block">
+                        <strong>Разбор регулярки для email по символам.</strong> Регулярное выражение <code>/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/</code> проверяет, похож ли текст в переменной <code>$email</code> на стандартный email-адрес вида <code>username@domain.zone</code>. Проверяет только формат, не существование ящика на сервере.
+                    </div>
+
+                    <div class="example-label">Что значит каждая часть</div>
+                    <pre><code><span class="comment">/                  — начало и конец регулярки (разделитель)
+^                  — начало строки: проверка с первого символа
+[a-zA-Z0-9._%+-]+  — локальная часть (то, что ДО @):
+                     любые буквы, цифры, точки, подчёркивания, плюс, процент, дефис
+                     + означает «один или более раз»
+                     примеры: ivan, i.van, ivan+spam, ivan_123
+@                  — символ @ (ровно один)
+[a-zA-Z0-9.-]+     — имя домена (после @ до точки): gmail, yandex, my-site
+\.                 — ЭКРАНИРОВАННАЯ точка — буквальный символ "."
+[a-zA-Z]{2,}       — доменная зона: только буквы, минимум 2 (com, ru, org)
+$                  — конец строки: после доменной зоны ничего быть не должно
+/                  — закрытие регулярки</span></code></pre>
+
+                    <div class="content-block">
+                        <strong>Что такое экранированная точка.</strong> В регулярках символ <code>.</code> особый &mdash; он означает «любой символ» (кроме перевода строки). Чтобы искать настоящую точку (как между <code>example</code> и <code>com</code>), её экранируют обратным слешем: <code>\.</code>
+                        <br><br>
+                        <strong>Разница:</strong>
+                        <ul class="bullets" style="margin-top:6px;">
+                          <li><code>\.</code> &mdash; ищет именно символ <code>.</code></li>
+                          <li><code>.</code> &mdash; ищет любой символ: букву, цифру, запятую и т.д.</li>
+                        </ul>
+                    </div>
+
+                    <div class="example-label">Как работает выражение на примере</div>
+                    <pre><code><span class="variable">$email</span> = <span class="string">"john.doe@example.com"</span>;
+
+<span class="comment">// Пошаговое сопоставление:
+// ^                     → начинаем с первого символа: j
+// [a-zA-Z0-9._%+-]+     → берёт "john.doe" (точка внутри локальной части разрешена)
+// @                     → находит символ @
+// [a-zA-Z0-9.-]+        → берёт "example"
+// \.                    → находит буквальную точку
+// [a-zA-Z]{2,}          → берёт "com" (3 буквы, минимум 2)
+// $                     → строка закончилась → match
+// → preg_match вернёт 1 (true)</span></code></pre>
+
+                    <div class="example-label">Почему if (!preg_match(...))</div>
+                    <pre><code><span class="comment">// preg_match() возвращает:
+//   1     — строка соответствует шаблону
+//   0     — НЕ соответствует
+//   false — ошибка в самом шаблоне
+
+// ! инвертирует результат:</span>
+<span class="keyword">if</span> (!<span class="function">preg_match</span>(<span class="string">'/.../'</span>, <span class="variable">$email</span>)) {
+    <span class="comment">// сюда попадаем, когда email НЕ соответствует формату
+    // → можно бросить ValidationException</span>
+}</code></pre>
+
+                    <div class="example-label">Что НЕ пройдёт валидацию</div>
+                    <pre><code><span class="comment">// ivan@example       — нет точки и доменной зоны (\. не найден)
+// ivan@.com          — домен пустой (между @ и точкой ничего нет)
+// ivan@example.c     — доменная зона "c" короче 2 символов
+// ivan@example.com.  — лишняя точка в конце (нарушает $)
+// ivan#example.com   — нет символа @</span></code></pre>
+
+                    <div class="remember-box">
+                        Эта regex покрывает 99% случаев, но <strong>не валидирует email на 100% по RFC 5321/5322</strong>. Для боевой валидации в Laravel используйте <code>'email' =&gt; 'required|email:rfc,dns'</code> &mdash; правило <code>email:rfc</code> проверяет полную спецификацию, <code>dns</code> ещё и резолвит домен.
+                    </div>
+
+                    <div class="example-label">preg_match_all — найти ВСЕ совпадения</div>
+                    <pre><code><span class="function">preg_match_all</span>(<span class="string">'/\d+/'</span>, <span class="string">"1 2 3 4 5"</span>, <span class="variable">$numbers</span>);
+
+<span class="comment">// Разбор паттерна:
+// \d  — один любой цифровой символ (0-9)
+// +   — один или более раз подряд
+// \d+ — последовательность из одной или нескольких цифр
+
+// Функция идёт по строке слева направо и берёт куски, подходящие под \d+:
+//   "1" — пробел — стоп → совпадение
+//   "2" — пробел — стоп → совпадение
+//   "3", "4", "5" — то же
+
+// Результат в $numbers (двумерный массив):</span>
+<span class="variable">$numbers</span>[<span class="number">0</span>] === [<span class="string">"1"</span>, <span class="string">"2"</span>, <span class="string">"3"</span>, <span class="string">"4"</span>, <span class="string">"5"</span>];
+
+<span class="comment">// Функция возвращает количество совпадений (целое число):</span>
+<span class="variable">$count</span> = <span class="function">preg_match_all</span>(<span class="string">'/\d+/'</span>, <span class="string">"1 2 3 4 5"</span>, <span class="variable">$numbers</span>);
+<span class="keyword">echo</span> <span class="variable">$count</span>;  <span class="comment">// 5</span></code></pre>
+
+                    <div class="content-block">
+                        <strong>Структура массива результата.</strong>
+                        <ul class="bullets" style="margin-top:6px;">
+                          <li><code>$numbers[0]</code> &mdash; массив всех полных совпадений</li>
+                          <li><code>$numbers[1]</code>, <code>$numbers[2]</code>... &mdash; подсовпадения захватывающих групп (скобок) <code>(...)</code>. Если групп в паттерне нет &mdash; этих индексов тоже нет.</li>
+                        </ul>
+                    </div>
+
+                    <div class="example-label">Пример со смешанным текстом</div>
+                    <pre><code><span class="function">preg_match_all</span>(<span class="string">'/\d+/'</span>, <span class="string">"abc 123 def 45 6"</span>, <span class="variable">$numbers</span>);
+<span class="comment">// $numbers[0] = ["123", "45", "6"]
+// Пробелы и буквы проигнорированы; "123" — три цифры подряд считаются одним совпадением.</span></code></pre>
+
+                    <div class="example-label">С захватывающими группами</div>
+                    <pre><code><span class="function">preg_match_all</span>(<span class="string">'/(\w+)@(\w+\.\w+)/'</span>, <span class="string">"a@x.com b@y.org"</span>, <span class="variable">$m</span>);
+<span class="comment">// $m[0] = ["a@x.com", "b@y.org"]     — полные совпадения
+// $m[1] = ["a", "b"]                  — первая группа (то, что в первых скобках)
+// $m[2] = ["x.com", "y.org"]          — вторая группа</span></code></pre>
+
+                    <div class="remember-box">
+                        <strong>Шпаргалка спецсимволов regex:</strong><br>
+                        <code>\d</code> &mdash; цифра, <code>\D</code> &mdash; не цифра<br>
+                        <code>\w</code> &mdash; буква/цифра/подчёркивание, <code>\W</code> &mdash; всё остальное<br>
+                        <code>\s</code> &mdash; пробельный символ (пробел/таб/перевод), <code>\S</code> &mdash; не пробельный<br>
+                        <code>.</code> &mdash; любой символ, <code>\.</code> &mdash; буквальная точка<br>
+                        <code>+</code> &mdash; 1 или больше, <code>*</code> &mdash; 0 или больше, <code>?</code> &mdash; 0 или 1<br>
+                        <code>{n}</code> &mdash; ровно n раз, <code>{n,m}</code> &mdash; от n до m, <code>{n,}</code> &mdash; n или больше<br>
+                        <code>^</code> &mdash; начало строки, <code>$</code> &mdash; конец строки<br>
+                        <code>[...]</code> &mdash; набор символов, <code>[^...]</code> &mdash; кроме набора<br>
+                        <code>(...)</code> &mdash; захватывающая группа, <code>(?:...)</code> &mdash; группа без захвата
+                    </div>
                 </div>
 
                 <div class="subsection">
