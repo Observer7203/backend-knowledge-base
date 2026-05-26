@@ -1236,6 +1236,113 @@ $                  — конец строки: после доменной зо
                 <h2 class="section-title">3. Массивы углублённо</h2>
 
                 <div class="subsection">
+                    <h3 class="subsection-title">Оператор => — все 6 контекстов использования</h3>
+                    <div class="content-block">
+                        В PHP оператор <code>=&gt;</code> (его внутреннее имя &mdash; <code>T_DOUBLE_ARROW</code>) встречается в шести разных контекстах. Это <strong>не оператор сравнения</strong> (для этого <code>==</code>, <code>===</code>) и не общая «стрелка» как в JavaScript. Семантика в каждом контексте разная, но синтаксис один.
+                    </div>
+
+                    <div class="example-label">1. Массивы — пара «ключ =&gt; значение»</div>
+                    <pre><code><span class="variable">$arr</span> = [
+    <span class="string">'name'</span> =&gt; <span class="string">'Иван'</span>,
+    <span class="string">'age'</span>  =&gt; <span class="number">30</span>,
+    <span class="number">5</span>      =&gt; <span class="string">'пятый'</span>,   <span class="comment">// ключ может быть числом</span>
+];</code></pre>
+
+                    <div class="example-label">2. foreach — перебор с ключами</div>
+                    <pre><code><span class="keyword">foreach</span> (<span class="variable">$arr</span> <span class="keyword">as</span> <span class="variable">$key</span> =&gt; <span class="variable">$value</span>) {
+    <span class="keyword">echo</span> <span class="string">"<span class="variable">$key</span> => <span class="variable">$value</span>"</span>;
+}
+<span class="comment">// Без => получили бы только значения:
+// foreach ($arr as $value) { ... }</span></code></pre>
+
+                    <div class="example-label">3. Стрелочные функции (fn) — PHP 7.4+</div>
+                    <pre><code><span class="comment">// fn($x) => выражение  — короткая запись анонимной функции.
+// => здесь заменяет return и фигурные скобки.</span>
+
+<span class="comment">// Длинная форма:</span>
+<span class="variable">$squared</span> = <span class="function">array_map</span>(<span class="keyword">function</span>(<span class="variable">$n</span>) {
+    <span class="keyword">return</span> <span class="variable">$n</span> * <span class="variable">$n</span>;
+}, <span class="variable">$numbers</span>);
+
+<span class="comment">// Стрелочная (короткая):</span>
+<span class="variable">$squared</span> = <span class="function">array_map</span>(<span class="keyword">fn</span>(<span class="variable">$n</span>) =&gt; <span class="variable">$n</span> * <span class="variable">$n</span>, <span class="variable">$numbers</span>);
+
+<span class="comment">// Особенности стрелочных функций:
+// — тело только ОДНО выражение (не несколько строк, не {})
+// — автоматически захватывают внешние переменные (без use)</span>
+<span class="variable">$multiplier</span> = <span class="number">3</span>;
+<span class="variable">$tripled</span> = <span class="function">array_map</span>(<span class="keyword">fn</span>(<span class="variable">$n</span>) =&gt; <span class="variable">$n</span> * <span class="variable">$multiplier</span>, <span class="variable">$numbers</span>);
+<span class="comment">// $multiplier "пойман" автоматически — в обычной function требовался бы use ($multiplier)</span></code></pre>
+
+                    <div class="example-label">4. match-выражение — PHP 8.0+</div>
+                    <pre><code><span class="comment">// => разделяет проверяемое значение и возвращаемый результат</span>
+<span class="variable">$result</span> = <span class="keyword">match</span>(<span class="variable">$status</span>) {
+    <span class="number">200</span>           =&gt; <span class="string">'OK'</span>,
+    <span class="number">404</span>           =&gt; <span class="string">'Not Found'</span>,
+    <span class="number">500</span>, <span class="number">502</span>, <span class="number">503</span> =&gt; <span class="string">'Server Error'</span>,
+    <span class="keyword">default</span>       =&gt; <span class="string">'Unknown'</span>,
+};
+
+<span class="comment">// В отличие от switch:
+//   — строгое сравнение (===), не нестрогое
+//   — возвращает значение (можно присвоить в переменную)
+//   — обязателен default или match попадание (иначе UnhandledMatchError)</span></code></pre>
+
+                    <div class="example-label">5. Генераторы (yield) — выдача пар ключ-значение</div>
+                    <pre><code><span class="keyword">function</span> <span class="function">gen</span>(): <span class="keyword">Generator</span> {
+    <span class="keyword">yield</span> <span class="string">'a'</span> =&gt; <span class="number">1</span>;
+    <span class="keyword">yield</span> <span class="string">'b'</span> =&gt; <span class="number">2</span>;
+    <span class="keyword">yield</span> <span class="string">'c'</span> =&gt; <span class="number">3</span>;
+}
+
+<span class="keyword">foreach</span> (<span class="function">gen</span>() <span class="keyword">as</span> <span class="variable">$k</span> =&gt; <span class="variable">$v</span>) {
+    <span class="keyword">echo</span> <span class="string">"<span class="variable">$k</span>: <span class="variable">$v</span>\n"</span>;
+}
+<span class="comment">// Без => в yield генератор выдаёт автоматические числовые ключи 0, 1, 2...</span></code></pre>
+
+                    <div class="example-label">6. Симметричная деструктуризация массива — PHP 7.1+</div>
+                    <pre><code><span class="comment">// Распаковка ассоциативного массива в переменные с указанием ключей</span>
+<span class="variable">$user</span> = [<span class="string">'name'</span> =&gt; <span class="string">'Анна'</span>, <span class="string">'age'</span> =&gt; <span class="number">25</span>, <span class="string">'role'</span> =&gt; <span class="string">'admin'</span>];
+
+[<span class="string">'name'</span> =&gt; <span class="variable">$name</span>, <span class="string">'age'</span> =&gt; <span class="variable">$age</span>] = <span class="variable">$user</span>;
+<span class="comment">// $name = 'Анна', $age = 25 (role игнорируется)
+
+// До PHP 7.1 — только позиционная (без ключей):
+// [$first, $second, $third] = $array;</span></code></pre>
+
+                    <div class="example-label">Что => НЕ значит в PHP</div>
+                    <pre><code><span class="comment">// ❌ Не оператор сравнения — для этого == или ===
+$a => $b   <span class="comment">// SYNTAX ERROR</span>
+
+<span class="comment">// ❌ Не стрелочный метод классов (в PHP такого синтаксиса нет)
+class User {
+    public name => "default";   <span class="comment">// SYNTAX ERROR</span>
+}
+
+<span class="comment">// ❌ Не используется в enum для задания значения — там просто =
+enum Status: string {
+    case DRAFT = 'черновик';     <span class="comment">// = (одно равно), не =></span>
+    case DRAFT => 'черновик';    <span class="comment">// SYNTAX ERROR</span>
+}</span></code></pre>
+
+                    <div class="example-label">Краткая памятка</div>
+                    <pre><code><span class="comment">+--------------------------+------------------------------------+
+| Контекст                 | Пример                             |
++--------------------------+------------------------------------+
+| Массив                   | ['key' => 'value']                 |
+| foreach                  | foreach ($arr as $k => $v)         |
+| Стрелочная функция       | fn($x) => $x * 2                   |
+| match (PHP 8+)           | match($x) { 1 => 'one' }           |
+| yield в генераторе       | yield $key => $value               |
+| Деструктуризация (7.1+)  | ['key' => $var] = $arr             |
++--------------------------+------------------------------------+</span></code></pre>
+
+                    <div class="remember-box">
+                        <strong>Мнемоника:</strong> <code>=&gt;</code> всегда обозначает <strong>связь между двумя сторонами</strong>: «ключ ↔ значение» (в массивах, foreach, yield, деструктуризации) либо «вход ↔ выход» (в стрелочных функциях и match). Левая часть &mdash; что подаём, правая &mdash; что получаем или какое значение хранится.
+                    </div>
+                </div>
+
+                <div class="subsection">
                     <h3 class="subsection-title">array_map - Преобразование элементов</h3>
                     <div class="example-label">array_map примеры</div>
                     <pre><code><span class="comment">// Применить функцию к каждому элементу</span>
