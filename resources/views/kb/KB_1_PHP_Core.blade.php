@@ -736,6 +736,93 @@
                 </div>
 
                 <div class="subsection">
+                    <h3 class="subsection-title">Compound операторы (+=, -=, *=, /=, %=, .=)</h3>
+                    <div class="content-block">
+                        Это <strong>составные операторы присваивания</strong> (compound assignment operators): сокращённая запись для «применить операцию и записать результат обратно в ту же переменную». Стандартный синтаксис в PHP, C, JavaScript, Python и большинстве С-подобных языков.
+                    </div>
+
+                    <div class="example-label">Все compound операторы PHP</div>
+                    <pre><code><span class="comment">// Каждая пара эквивалентна:
+
+// += (сложение / конкатенация чисел)</span>
+<span class="variable">$x</span> = <span class="number">5</span>;
+<span class="variable">$x</span> += <span class="number">3</span>;          <span class="comment">// эквивалент: $x = $x + 3 → $x теперь 8</span>
+
+<span class="comment">// -= (вычитание)</span>
+<span class="variable">$x</span> -= <span class="number">2</span>;          <span class="comment">// $x = $x - 2 → 6</span>
+
+<span class="comment">// *= (умножение)</span>
+<span class="variable">$x</span> *= <span class="number">10</span>;         <span class="comment">// $x = $x * 10 → 60</span>
+
+<span class="comment">// /= (деление)</span>
+<span class="variable">$x</span> /= <span class="number">4</span>;          <span class="comment">// $x = $x / 4 → 15</span>
+
+<span class="comment">// %= (остаток от деления)</span>
+<span class="variable">$x</span> %= <span class="number">7</span>;          <span class="comment">// $x = $x % 7 → 1  (15 % 7 = 1)</span>
+
+<span class="comment">// **= (возведение в степень, PHP 5.6+)</span>
+<span class="variable">$y</span> = <span class="number">2</span>;
+<span class="variable">$y</span> **= <span class="number">3</span>;         <span class="comment">// $y = $y ** 3 → 8</span>
+
+<span class="comment">// .= (конкатенация строк)</span>
+<span class="variable">$s</span> = <span class="string">"Hello"</span>;
+<span class="variable">$s</span> .= <span class="string">", World"</span>;  <span class="comment">// $s = $s . ", World" → "Hello, World"</span>
+
+<span class="comment">// Битовые: &amp;=, |=, ^=, &lt;&lt;=, &gt;&gt;= — используются реже, в бизнес-логике почти не встречаются</span>
+<span class="variable">$flags</span> = <span class="number">0b1010</span>;
+<span class="variable">$flags</span> |= <span class="number">0b0001</span>;   <span class="comment">// побитовое ИЛИ → 0b1011</span>
+<span class="variable">$flags</span> &amp;= <span class="number">0b1100</span>;   <span class="comment">// побитовое И → 0b1000</span></code></pre>
+
+                    <div class="example-label">Где встречается чаще всего</div>
+                    <pre><code><span class="comment">// 1. Аккумуляция суммы / счётчика</span>
+<span class="variable">$total</span> = <span class="number">0</span>;
+<span class="keyword">foreach</span> (<span class="variable">$orders</span> <span class="keyword">as</span> <span class="variable">$order</span>) {
+    <span class="variable">$total</span> += <span class="variable">$order</span>[<span class="string">'amount'</span>];      <span class="comment">// прирост total на сумму заказа</span>
+}
+
+<span class="comment">// 2. Внутри array_reduce — изменение полей аккумулятора</span>
+<span class="function">array_reduce</span>(<span class="variable">$items</span>, <span class="keyword">function</span>(<span class="variable">$carry</span>, <span class="variable">$item</span>) {
+    <span class="variable">$carry</span>[<span class="string">'sum'</span>] += <span class="variable">$item</span>;
+    <span class="variable">$carry</span>[<span class="string">'count'</span>]++;          <span class="comment">// ++ — это +=1 для целых</span>
+    <span class="keyword">return</span> <span class="variable">$carry</span>;
+}, [<span class="string">'sum'</span> => <span class="number">0</span>, <span class="string">'count'</span> => <span class="number">0</span>]);
+
+<span class="comment">// 3. Построение строки по частям</span>
+<span class="variable">$html</span> = <span class="string">''</span>;
+<span class="keyword">foreach</span> (<span class="variable">$rows</span> <span class="keyword">as</span> <span class="variable">$row</span>) {
+    <span class="variable">$html</span> .= <span class="string">"&lt;tr&gt;&lt;td&gt;{<span class="variable">$row</span>[<span class="string">'name'</span>]}&lt;/td&gt;&lt;/tr&gt;"</span>;
+}
+
+<span class="comment">// 4. Декремент через -=1 (то же что --)</span>
+<span class="variable">$retries</span> = <span class="number">3</span>;
+<span class="keyword">while</span> (<span class="variable">$retries</span> > <span class="number">0</span>) {
+    <span class="comment">// ... попытка ...</span>
+    <span class="variable">$retries</span> -= <span class="number">1</span>;        <span class="comment">// эквивалент: $retries-- или --$retries</span>
+}</code></pre>
+
+                    <div class="example-label">Сводная таблица</div>
+                    <pre><code><span class="comment">+----------+---------------------------+-----------------------+
+| Оператор | Эквивалент                | Применение            |
++----------+---------------------------+-----------------------+
+| +=       | $a = $a + $b              | сумма, счётчик        |
+| -=       | $a = $a - $b              | вычитание, декремент  |
+| *=       | $a = $a * $b              | умножение             |
+| /=       | $a = $a / $b              | деление               |
+| %=       | $a = $a % $b              | остаток               |
+| **=      | $a = $a ** $b             | степень (PHP 5.6+)    |
+| .=       | $a = $a . $b              | конкатенация строк    |
+| &amp;=       | $a = $a &amp; $b              | битовое И             |
+| |=       | $a = $a | $b              | битовое ИЛИ           |
+| ^=       | $a = $a ^ $b              | битовое XOR           |
+| ??=      | $a = $a ?? $b             | null-coalescing (PHP 7.4+) |
++----------+---------------------------+-----------------------+</span></code></pre>
+
+                    <div class="remember-box">
+                        <strong>Особый случай: <code>??=</code></strong> (PHP 7.4+) &mdash; присваивает значение только если переменная сейчас null или не определена. Удобно для дефолтов: <code>$config['timeout'] ??= 30;</code> положит 30, только если ключ ещё не задан. Полезно при работе с массивами настроек.
+                    </div>
+                </div>
+
+                <div class="subsection">
                     <h3 class="subsection-title">strict_types Декларация</h3>
                     <div class="content-block">
                         <strong>strict_types=1</strong> требует точное совпадение типов при передаче аргументов. Это должно быть первым оператором в файле!
@@ -1481,6 +1568,49 @@ enum Status: string {
     <span class="variable">$carry</span>[<span class="string">'avg'</span>] = <span class="variable">$carry</span>[<span class="string">'total'</span>] / <span class="variable">$carry</span>[<span class="string">'count'</span>];
     <span class="keyword">return</span> <span class="variable">$carry</span>;
 }, [<span class="string">'total'</span> => <span class="number">0</span>, <span class="string">'count'</span> => <span class="number">0</span>, <span class="string">'avg'</span> => <span class="number">0</span>]);</code></pre>
+
+                    <div class="content-block">
+                        <strong>Разбор примера со статистикой.</strong> Здесь аккумулятор &mdash; не одно число, а <strong>ассоциативный массив с тремя полями</strong> (<code>total</code>, <code>count</code>, <code>avg</code>). Начальное значение задано сразу со всеми ключами и нулями, чтобы при первом обращении (<code>$carry['total'] += ...</code>, <code>$carry['count']++</code>) PHP не выдал warning «Undefined index».
+                    </div>
+
+                    <div class="example-label">Пошаговая трассировка для $orders = [100, 200, 150]</div>
+                    <pre><code><span class="comment">+------+---------+-------------+------------------------------------------+
+| Шаг  | $order  | До $carry   | После $carry                              |
++------+---------+-------------+------------------------------------------+
+| init | —       | —           | total=0, count=0, avg=0                  |
+| 1    | 100     | t=0, c=0    | t=0+100=100, c=1, avg=100/1=100          |
+| 2    | 200     | t=100, c=1  | t=100+200=300, c=2, avg=300/2=150        |
+| 3    | 150     | t=300, c=2  | t=300+150=450, c=3, avg=450/3=150        |
++------+---------+-------------+------------------------------------------+
+
+Результат $stats:
+[
+    'total' => 450,
+    'count' => 3,
+    'avg'   => 150,
+]</span></code></pre>
+
+                    <div class="content-block">
+                        <strong>Почему `avg` пересчитывается на каждой итерации?</strong> Технически &mdash; излишне: достаточно посчитать его один раз после цикла (<code>$total / $count</code>). В коде выше он пересчитывается каждый шаг, чтобы <strong>после любой итерации в <code>$carry['avg']</code> было актуальное текущее среднее</strong>. Полезно, если callback вызывается не только array_reduce'ом, или если нужна промежуточная статистика для логирования.
+                    </div>
+
+                    <div class="example-label">Эквивалент с обычным циклом</div>
+                    <pre><code><span class="variable">$total</span> = <span class="number">0</span>;
+<span class="variable">$count</span> = <span class="number">0</span>;
+<span class="keyword">foreach</span> (<span class="variable">$orders</span> <span class="keyword">as</span> <span class="variable">$order</span>) {
+    <span class="variable">$total</span> += <span class="variable">$order</span>[<span class="string">'amount'</span>];
+    <span class="variable">$count</span>++;
+}
+<span class="variable">$avg</span> = <span class="variable">$count</span> > <span class="number">0</span> ? <span class="variable">$total</span> / <span class="variable">$count</span> : <span class="number">0</span>;  <span class="comment">// защита от деления на ноль</span>
+<span class="variable">$stats</span> = [<span class="string">'total'</span> => <span class="variable">$total</span>, <span class="string">'count'</span> => <span class="variable">$count</span>, <span class="string">'avg'</span> => <span class="variable">$avg</span>];
+
+<span class="comment">// Результат идентичен. Разница только в стиле:
+// array_reduce — функциональный, всё внутри одного выражения
+// foreach — императивный, легче дебажить</span></code></pre>
+
+                    <div class="remember-box">
+                        <strong>Защита от деления на 0:</strong> в array_reduce варианте, если массив <code>$orders</code> пустой, цикл не пройдёт, callback не вызовется &mdash; <code>$stats['avg']</code> останется <code>0</code> из начального значения. В foreach-варианте без проверки <code>$count &gt; 0</code> произошло бы <code>DivisionByZeroError</code>. Это редкий случай, когда array_reduce «бесплатно» защищает от пограничного бага.
+                    </div>
 
                     <div class="content-block">
                         <strong>Пошаговый разбор `$sum = array_reduce($numbers, fn($carry, $item) =&gt; $carry + $item, 0)`</strong> для <code>[1, 2, 3, 4]</code>:
