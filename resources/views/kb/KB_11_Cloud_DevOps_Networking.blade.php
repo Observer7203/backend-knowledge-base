@@ -157,6 +157,9 @@ ul.bullets strong{color:var(--text);}
   <div class="nav-group-label">VLAN</div>
   <a class="nav-item" onclick="showSection('vlan',this)"><i data-lucide="git-fork"></i> VLAN &amp; 802.1Q</a>
 
+  <div class="nav-group-label">Сетевые сервисы</div>
+  <a class="nav-item" onclick="showSection('dhcp',this)"><i data-lucide="wifi"></i> DHCP (IPv4 + IPv6)</a>
+
   <div class="nav-group-label">Сводка</div>
   <a class="nav-item" onclick="showSection('cheatsheet',this)"><i data-lucide="bookmark"></i> Шпаргалка</a>
 </div>
@@ -1778,6 +1781,220 @@ VLAN 10  ─┘
 <!-- ════════════════════════════════════════════════════════════════
      CHEAT SHEET
      ════════════════════════════════════════════════════════════════ -->
+<div id="sec-dhcp" class="section">
+  <div class="section-title">DHCP — Dynamic Host Configuration Protocol</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="book-open"></i> Назначение</div>
+    <p class="text">DHCP &mdash; сетевой сервис, который позволяет устройствам в сети <strong>динамически получать IP-адрес, маску подсети, шлюз по умолчанию, адреса DNS-серверов</strong> и десятки других сетевых параметров без ручной настройки на каждом устройстве. Работает по клиент-серверной модели: на сервере настраивается <em>пул</em> доступных адресов, клиент при подключении запрашивает один из них &laquo;в аренду&raquo; на определённое время.</p>
+
+    <p class="text"><strong>Где применяется:</strong> end-user устройства (ноутбуки, смартфоны, IoT) &mdash; всегда через DHCP. <strong>Где НЕ применяется:</strong> сетевая инфраструктура (роутеры, свитчи, серверы, принтеры) &mdash; обычно со статическими адресами, чтобы их IP не менялся при перезагрузке.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="list"></i> Три метода назначения адресов</div>
+    <table class="data-table">
+      <tr><th>Метод</th><th>Как работает</th><th>Где применяется</th></tr>
+      <tr><td><strong>Manual Allocation</strong></td><td>Администратор заранее задаёт соответствие MAC → IP в таблице сервера. DHCP только передаёт назначенный адрес устройству.</td><td>Когда нужен фиксированный IP по железу (принтер с фиксированным адресом)</td></tr>
+      <tr><td><strong>Automatic Allocation</strong></td><td>DHCP-сервер назначает IP из пула <strong>постоянно</strong> (без срока аренды). Адрес остаётся за устройством навсегда.</td><td>Редко &mdash; жёсткое присваивание без удобства lease</td></tr>
+      <tr><td><strong>Dynamic Allocation</strong> ⭐</td><td>DHCP <em>арендует</em> IP из пула на ограниченное время (lease). По окончании lease адрес возвращается в пул, если клиент не продлил.</td><td>Самый частый случай &mdash; стандарт для домашних и корпоративных сетей</td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-pull-request"></i> Процесс получения адреса — DORA</div>
+    <p class="text">Аббревиатура для четырёх шагов lease origination process: <strong>D</strong>iscover &rarr; <strong>O</strong>ffer &rarr; <strong>R</strong>equest &rarr; <strong>A</strong>cknowledge. Использует UDP, порт <strong>67</strong> на сервере, <strong>68</strong> на клиенте.</p>
+
+<pre><code><span class="c-comment">Шаг 1: DHCPDISCOVER  (broadcast от клиента)
+  Клиент: «Мне нужен IP! Есть кто из DHCP-серверов?»
+  Ethernet:  src=MAC_клиент, dst=FF:FF:FF:FF:FF:FF (broadcast)
+  IP:        src=0.0.0.0,    dst=255.255.255.255  (broadcast)
+  UDP:       src=68,          dst=67
+  DHCP:      CIADDR=0.0.0.0, CHADDR=MAC_клиент
+
+Шаг 2: DHCPOFFER  (unicast от сервера)
+  Сервер: «Я DHCP-сервер. Предлагаю тебе адрес 192.168.1.10/24»
+  IP:        src=192.168.1.254 (сервер), dst=192.168.1.10 (предлагаемый)
+  UDP:       src=67, dst=68
+  DHCP:      YIADDR=192.168.1.10, mask=255.255.255.0
+
+Шаг 3: DHCPREQUEST  (broadcast от клиента)
+  Клиент: «Беру адрес 192.168.1.10 от сервера X»
+  → Снова broadcast! Это чтобы ДРУГИЕ DHCP-серверы узнали,
+    что их предложение не выбрано — и вернули свои адреса в пул.
+
+Шаг 4: DHCPACK  (unicast от сервера)
+  Сервер: «Подтверждаю, адрес твой на 24 часа (lease time)»</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="refresh-cw"></i> Lease Renewal и дополнительные сообщения</div>
+    <p class="text">После получения адреса клиент использует его до конца lease. Когда проходит <strong>половина lease time</strong>, клиент шлёт <code>DHCPREQUEST</code> напрямую (unicast) серверу, чтобы продлить аренду. Сервер отвечает <code>DHCPACK</code> &mdash; lease обновляется.</p>
+
+    <table class="data-table">
+      <tr><th>Сообщение</th><th>Кто шлёт</th><th>Зачем</th></tr>
+      <tr><td><code>DHCPDISCOVER</code></td><td>Клиент (broadcast)</td><td>«Ищу DHCP-сервер»</td></tr>
+      <tr><td><code>DHCPOFFER</code></td><td>Сервер</td><td>«Предлагаю IP»</td></tr>
+      <tr><td><code>DHCPREQUEST</code></td><td>Клиент</td><td>«Беру этот IP» (или продлеваю аренду)</td></tr>
+      <tr><td><code>DHCPACK</code></td><td>Сервер</td><td>«Подтверждаю, владей»</td></tr>
+      <tr><td><code>DHCPNAK</code></td><td>Сервер</td><td>«Не могу выдать (адрес занят/неподходящий)»</td></tr>
+      <tr><td><code>DHCPRELEASE</code></td><td>Клиент</td><td>«Возвращаю адрес досрочно» (при shutdown)</td></tr>
+      <tr><td><code>DHCPINFORM</code></td><td>Клиент</td><td>«Уже имею IP, но прошу другие настройки (DNS и т.п.)»</td></tr>
+      <tr><td><code>DHCPDECLINE</code></td><td>Клиент</td><td>«Полученный IP уже занят в сети (по ARP-проверке)»</td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="settings"></i> Configuration elements: pool и options</div>
+    <p class="text"><strong>Address pool</strong> &mdash; диапазон IP, которые сервер может выдавать. Задаётся одним из трёх способов:</p>
+    <ul class="bullets">
+      <li>Range <em>start &rarr; end</em>: <code>192.168.0.100 — 192.168.0.149</code>;</li>
+      <li>Start + max users: <code>start=192.168.0.100, max=50</code>;</li>
+      <li>Network/mask + excluded: <code>192.168.0.0/24</code> минус список исключений (для шлюза, серверов).</li>
+    </ul>
+
+    <p class="text"><strong>DHCP Options</strong> &mdash; дополнительные параметры, передаваемые клиенту вместе с IP. Полный список &mdash; <a href="http://ecanet.ir/dhcp-option-list/" style="color:var(--primary);">ecanet.ir/dhcp-option-list</a>. Самые частые:</p>
+    <table class="data-table">
+      <tr><th>Option</th><th>Что передаёт</th></tr>
+      <tr><td><strong>1</strong></td><td>Subnet Mask (маска подсети)</td></tr>
+      <tr><td><strong>3</strong></td><td>Default Gateway (шлюз)</td></tr>
+      <tr><td><strong>6</strong></td><td>DNS Servers (адреса DNS, обычно 1-3 штуки)</td></tr>
+      <tr><td><strong>15</strong></td><td>Domain Name (домен по умолчанию для коротких имён)</td></tr>
+      <tr><td><strong>51</strong></td><td>IP Address Lease Time (срок аренды в секундах)</td></tr>
+      <tr><td><strong>66</strong></td><td>TFTP Server (для PXE-загрузки)</td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layers"></i> DHCPv4 Message Format — структура пакета</div>
+<pre><code><span class="c-comment">+-------------+-------------+----------------+-------------+
+| OP Code (1) | HW Type (1) | HW Addr Len(1) | Hops (1)    |
++-------------+-------------+----------------+-------------+
+|              Transaction Identifier (XID, 4 bytes)        |
++-------------------------------+---------------------------+
+|         Seconds (2 bytes)     |       Flags (2 bytes)     |
++-------------------------------+---------------------------+
+|         Client IP Address (CIADDR, 4 bytes)               |
+|         Your IP Address   (YIADDR, 4 bytes) ← назначаемый |
+|         Server IP Address (SIADDR, 4 bytes)               |
+|         Gateway IP        (GIADDR, 4 bytes) ← для relay   |
+|         Client HW Address (CHADDR, 16 bytes) ← MAC        |
+|         Server Name       (SNAME, 64 bytes)               |
+|         Boot Filename     (BOOT, 128 bytes)               |
++-----------------------------------------------------------+
+|         DHCP Options (variable) — здесь options 1, 3, 6...|
++-----------------------------------------------------------+</span></code></pre>
+
+    <table class="data-table">
+      <tr><th>Поле</th><th>Назначение</th></tr>
+      <tr><td><code>OP Code</code></td><td>1 = запрос (BOOTREQUEST), 2 = ответ (BOOTREPLY)</td></tr>
+      <tr><td><code>HW Type</code></td><td>Тип сетевого железа: 1 = Ethernet, 15 = frame relay, 20 = serial</td></tr>
+      <tr><td><code>HW Addr Length</code></td><td>Длина MAC: для Ethernet = 6 байт</td></tr>
+      <tr><td><code>Hops</code></td><td>Счётчик пересылок через DHCP-relay (для multi-subnet)</td></tr>
+      <tr><td><code>Transaction ID (XID)</code></td><td>Случайный ID, чтобы клиент мог сматчить ответ со своим запросом</td></tr>
+      <tr><td><code>Flags</code></td><td>Один бит — broadcast flag (клиент просит ответ broadcast'ом)</td></tr>
+      <tr><td><code>CIADDR</code></td><td>Текущий IP клиента (заполнен только при renewal, иначе 0.0.0.0)</td></tr>
+      <tr><td><code>YIADDR</code></td><td>«Your» IP — адрес, который сервер предлагает/подтверждает клиенту</td></tr>
+      <tr><td><code>SIADDR</code></td><td>IP следующего сервера в bootstrap-цепочке (для PXE)</td></tr>
+      <tr><td><code>GIADDR</code></td><td>IP DHCP-relay-агента &mdash; для маршрутизации между подсетями</td></tr>
+      <tr><td><code>CHADDR</code></td><td>MAC клиента &mdash; ключ для матчинга и manual-allocation</td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-triangle"></i> DHCP Spoofing Attack — Rogue DHCP Server</div>
+    <p class="text"><strong>Суть атаки:</strong> злоумышленник подключается к локальной сети и запускает <em>свой</em> DHCP-сервер. Когда жертва шлёт <code>DHCPDISCOVER</code> (broadcast), оба сервера (легитимный и rogue) отправляют <code>DHCPOFFER</code>. Клиент выбирает первый пришедший ответ &mdash; если rogue быстрее, побеждает он.</p>
+
+    <p class="text"><strong>Что атакующий может подменить:</strong></p>
+    <ul class="bullets">
+      <li><strong>Wrong Default Gateway</strong> &mdash; указать свой компьютер как шлюз &rarr; весь трафик пойдёт через атакующего (Man-in-the-Middle), он читает/модифицирует данные;</li>
+      <li><strong>Wrong DNS Server</strong> &mdash; направить DNS-запросы на фальшивый сервер &rarr; пользователь видит подменные сайты (phishing);</li>
+      <li><strong>Wrong IP / mask</strong> &mdash; выдать невалидные параметры &rarr; DoS, клиент не может работать в сети.</li>
+    </ul>
+
+    <p class="text"><strong>Защита:</strong> на свитчах включается <em>DHCP Snooping</em> &mdash; функция, которая разрешает <code>DHCPOFFER</code> только с заранее доверенных портов (где подключён настоящий DHCP-сервер). Любой ответ с недоверенного порта дропается.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> DHCP Starvation Attack — Pool Exhaustion</div>
+    <p class="text"><strong>Суть атаки:</strong> злоумышленник заваливает легитимный DHCP-сервер тысячами фейковых <code>DHCPDISCOVER</code>, каждый раз с новым (поддельным) MAC-адресом. Сервер выдаёт каждому запросу адрес из пула, пока пул не исчерпан &mdash; легитимные клиенты не могут получить IP.</p>
+
+    <p class="text"><strong>Часто это первая фаза двойной атаки:</strong> сначала starvation истощает легитимный сервер, потом запускается rogue server (см. выше) &mdash; и все новые клиенты получают конфиг от атакующего.</p>
+
+    <p class="text"><strong>Защита:</strong> на свитчах включается <em>Port Security</em> &mdash; ограничение количества MAC-адресов на порт. Атакующий не сможет генерировать неограниченное число фейковых MAC с одного физического порта.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="globe"></i> DHCPv6 — три метода для IPv6</div>
+    <p class="text">В IPv6 нет broadcast'ов (заменены multicast'ом), поэтому DHCP работает по-другому. Существует <strong>три метода</strong> динамической конфигурации IPv6-адресов:</p>
+
+    <div class="card">
+      <h3>1. DHCPv6 Only (Stateful DHCPv6)</h3>
+      <p class="text">Аналогично DHCPv4: сервер выдаёт IP + параметры, поддерживает state (помнит какому клиенту что выдано). Клиент шлёт запрос на multicast-адрес <code>FF02::1:2</code> (все DHCPv6-серверы) вместо broadcast.</p>
+    </div>
+
+    <div class="card">
+      <h3>2. SLAAC (Stateless Address Autoconfiguration)</h3>
+      <p class="text"><strong>Без DHCP-сервера вообще!</strong> Клиент сам конструирует свой IPv6-адрес. Источник prefix-информации &mdash; <em>любой роутер</em> в той же сети.</p>
+      <pre><code><span class="c-comment">Шаг 1: Router Solicitation (RS) — multicast ff02::2 (all routers)
+        Клиент: «Нужна информация об адресе!»
+
+Шаг 2: Router Advertisement (RA) — multicast ff02::1 (all nodes)
+        Роутер: «Вот префикс сети и его длина: 2001:db8::/64»
+
+Шаг 3: Клиент строит полный адрес сам:
+        - префикс (64 бита) от роутера +
+        - host-ID (64 бита) — генерирует сам</span></code></pre>
+
+      <p class="text"><strong>Два способа сгенерировать host-ID (IID):</strong></p>
+      <ul class="bullets">
+        <li><strong>EUI-64</strong>: из 48-битного MAC расширяют до 64 бит, вставляя <code>FF:FE</code> в середину и инвертируя 7-й бит. Гарантирует уникальность по физике, но раскрывает MAC.</li>
+        <li><strong>Randomly generated</strong>: случайное 64-битное число от ОС. Privacy extensions (RFC 4941) — стандарт в современных Windows/macOS/Linux.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>3. SLAAC + DHCPv6 (Stateless DHCPv6)</h3>
+      <p class="text">Гибрид: <strong>IP-адрес</strong> клиент получает через SLAAC, а <strong>остальные параметры</strong> (DNS, NTP, домен) &mdash; через DHCPv6. Часто применяется когда роутер сам не умеет отдавать DNS через RA.</p>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="hammer"></i> Практика: настройка DHCP сервера на Linux (isc-dhcp-server)</div>
+<pre><code><span class="c-comment"># /etc/dhcp/dhcpd.conf</span>
+
+<span class="c-key">default-lease-time</span> <span class="c-num">600</span>;        <span class="c-comment"># 10 минут по умолчанию</span>
+<span class="c-key">max-lease-time</span>     <span class="c-num">7200</span>;       <span class="c-comment"># до 2 часов максимум</span>
+<span class="c-key">authoritative</span>;                <span class="c-comment"># отвечать NAK на чужие renewal</span>
+
+<span class="c-key">subnet</span> <span class="c-num">192.168.1.0</span> <span class="c-key">netmask</span> <span class="c-num">255.255.255.0</span> {
+    <span class="c-key">range</span> <span class="c-num">192.168.1.100 192.168.1.200</span>;     <span class="c-comment"># pool (100 адресов)</span>
+    <span class="c-key">option routers</span> <span class="c-num">192.168.1.1</span>;              <span class="c-comment"># option 3: default gateway</span>
+    <span class="c-key">option subnet-mask</span> <span class="c-num">255.255.255.0</span>;          <span class="c-comment"># option 1</span>
+    <span class="c-key">option domain-name-servers</span> <span class="c-num">8.8.8.8</span>, <span class="c-num">1.1.1.1</span>;  <span class="c-comment"># option 6</span>
+    <span class="c-key">option domain-name</span> <span class="c-str">"corp.example.com"</span>;     <span class="c-comment"># option 15</span>
+}
+
+<span class="c-comment"># Manual allocation — фиксированный IP для конкретного MAC:</span>
+<span class="c-key">host</span> <span class="c-var">office-printer</span> {
+    <span class="c-key">hardware ethernet</span> <span class="c-num">00:1A:2B:3C:4D:5E</span>;
+    <span class="c-key">fixed-address</span> <span class="c-num">192.168.1.50</span>;
+}</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
+    <div class="pitfall"><strong>1. Два DHCP-сервера в одной подсети.</strong> Возможен либо специально (для high availability — failover-режим), либо случайно (домашний роутер + admin случайно поднял ещё один). Без координации клиенты получают случайные адреса от обоих, возникают конфликты IP.</div>
+    <div class="pitfall"><strong>2. Lease time слишком короткий.</strong> Lease=60 секунд — каждую минуту renewal, нагрузка на сервер. Стандарт: 8-24 часа для офисов, 1-7 дней для домашних сетей.</div>
+    <div class="pitfall"><strong>3. Lease time слишком длинный.</strong> Lease=7 дней в гостевой WiFi — пул исчерпывается быстро (мобильные устройства подключаются и уходят, адреса висят). Для guest-сетей: 1-2 часа.</div>
+    <div class="pitfall"><strong>4. DHCP не работает через роутер (между подсетями).</strong> DHCPDISCOVER — broadcast, роутеры его не пропускают. Решение: <strong>DHCP Relay Agent</strong> (RFC 1542) — IP-helper-address на роутере: ловит broadcast и unicast'ом пересылает в другую подсеть, где живёт сервер.</div>
+    <div class="pitfall"><strong>5. Конфликт IP (DHCPDECLINE).</strong> Клиент получил адрес, но при ARP-проверке обнаружил, что IP уже в сети (другой статически-настроенный хост). Шлёт DHCPDECLINE, сервер метит адрес как «bad» и выдаёт другой. Лечится правильной настройкой excluded-list в DHCP-конфиге.</div>
+    <div class="pitfall"><strong>6. Утечка приватных IP через rogue DHCP в публичной сети.</strong> В кафе/аэропорту атакующий может поднять rogue DHCP. Защита на клиенте — VPN с момента подключения.</div>
+    <div class="pitfall"><strong>7. DHCP option overload.</strong> SNAME и Boot Filename поля могут переиспользоваться для дополнительных options, если основное option-поле переполнено. Редкость, но возможна — некоторые old-school PXE-серверы так делают.</div>
+    <div class="pitfall"><strong>8. EUI-64 раскрывает MAC.</strong> SLAAC с EUI-64 включает MAC адрес сетевой карты прямо в IPv6-адрес &mdash; позволяет трекать устройство через смену сетей. Все современные ОС используют privacy extensions (random IID), но в IoT-устройствах часто EUI-64 ещё активен.</div>
+  </div>
+</div>
+
 <div id="sec-cheatsheet" class="section">
   <div class="section-title">Шпаргалка — всё на одной странице</div>
 
