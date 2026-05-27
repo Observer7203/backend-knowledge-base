@@ -1679,7 +1679,29 @@ enum Status: string {
 }, <span class="variable">$tax</span>);
 <span class="comment">// $prices = [11, 22, 33]</span>
 
-<span class="comment">// Отправить письма всем пользователям</span>
+<span class="comment">// ВАЖНО: & влияет ТОЛЬКО на тот параметр, перед которым стоит.
+// В этом примере:
+//   &$price  — изменение мутирует значение в исходном массиве
+//   $key     — копия ключа; изменить его внутри функции невозможно
+//   $taxRate — копия userdata; присвоение внутри не повлияет на $tax снаружи
+
+// Что меняется в исходном $prices:
+//   ✓ значения элементов (11, 22, 33)
+//   ✗ ключи остаются прежними (0, 1, 2) — их вообще нельзя поменять через array_walk
+//   ✗ структура массива (количество элементов, порядок) не меняется</span></code></pre>
+                    <pre><code><span class="comment">// Сигнатура callback для array_walk:
+//   function(&$value, $key, $userdata)
+//   позиция 1: значение (можно с & для мутации)
+//   позиция 2: ключ (всегда копия)
+//   позиция 3+: $userdata из 3-го аргумента array_walk (опционально)
+
+// Если поставить & перед $key — будет WARNING, потому что array_walk
+// передаёт ключ всегда по значению:</span>
+<span class="function">array_walk</span>(<span class="variable">$arr</span>, <span class="keyword">function</span>(<span class="variable">$value</span>, &<span class="variable">$key</span>) {
+    <span class="variable">$key</span> = <span class="string">"new_key"</span>;   <span class="comment">// бесполезно, ключи не меняются</span>
+});
+<span class="comment">// Чтобы изменить ключи — используйте array_combine + array_map или явный foreach.</span></code></pre>
+                    <pre><code><span class="comment">// Отправить письма всем пользователям</span>
 <span class="variable">$users</span> = [
     [<span class="string">'name'</span> => <span class="string">'Alice'</span>, <span class="string">'email'</span> => <span class="string">'alice@ex.com'</span>],
     [<span class="string">'name'</span> => <span class="string">'Bob'</span>, <span class="string">'email'</span> => <span class="string">'bob@ex.com'</span>]
