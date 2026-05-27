@@ -1687,6 +1687,91 @@ enum Status: string {
 <span class="function">array_walk</span>(<span class="variable">$users</span>, <span class="keyword">function</span>(<span class="variable">$user</span>) {
     <span class="function">Mail</span>::<span class="function">to</span>(<span class="variable">$user</span>[<span class="string">'email'</span>])-><span class="function">send</span>(<span class="keyword">new</span> <span class="function">WelcomeMail</span>(<span class="variable">$user</span>[<span class="string">'name'</span>]));
 });</code></pre>
+
+                    <div class="content-block">
+                        <strong>Что значит <code>&amp;</code> перед параметром (как в <code>&amp;$item</code>).</strong> Символ <code>&amp;</code> называется <strong>амперсанд</strong>, в PHP он означает <strong>передачу по ссылке</strong> (by reference). Без него параметр &mdash; это копия значения; изменения внутри функции не затронут оригинал. Со <code>&amp;</code> &mdash; параметр становится псевдонимом самого исходного элемента; всё, что делается с переменной внутри функции, изменяет исходные данные.
+                    </div>
+
+                    <div class="example-label">Разница: с & vs без &</div>
+                    <pre><code><span class="comment">// ❌ Без & — копия, оригинал не меняется</span>
+<span class="variable">$data</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
+<span class="function">array_walk</span>(<span class="variable">$data</span>, <span class="keyword">function</span>(<span class="variable">$item</span>) {
+    <span class="variable">$item</span> *= <span class="number">10</span>;            <span class="comment">// меняем КОПИЮ — бесполезно</span>
+});
+<span class="function">print_r</span>(<span class="variable">$data</span>);              <span class="comment">// [1, 2, 3] — без изменений</span>
+
+<span class="comment">// ✓ С & — ссылка, оригинал изменяется</span>
+<span class="variable">$data</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
+<span class="function">array_walk</span>(<span class="variable">$data</span>, <span class="keyword">function</span>(&<span class="variable">$item</span>) {
+    <span class="variable">$item</span> *= <span class="number">10</span>;            <span class="comment">// меняем САМ элемент массива</span>
+});
+<span class="function">print_r</span>(<span class="variable">$data</span>);              <span class="comment">// [10, 20, 30] — массив реально изменился</span></code></pre>
+
+                    <div class="example-label">& работает в любой функции, не только array_walk</div>
+                    <pre><code><span class="comment">// Без & — без эффекта</span>
+<span class="keyword">function</span> <span class="function">addOneCopy</span>(<span class="variable">$num</span>) {
+    <span class="variable">$num</span>++;
+}
+<span class="variable">$x</span> = <span class="number">5</span>;
+<span class="function">addOneCopy</span>(<span class="variable">$x</span>);
+<span class="keyword">echo</span> <span class="variable">$x</span>;    <span class="comment">// 5 — $x не изменился</span>
+
+<span class="comment">// С & — функция мутирует переданную переменную</span>
+<span class="keyword">function</span> <span class="function">addOneRef</span>(&<span class="variable">$num</span>) {
+    <span class="variable">$num</span>++;
+}
+<span class="variable">$x</span> = <span class="number">5</span>;
+<span class="function">addOneRef</span>(<span class="variable">$x</span>);
+<span class="keyword">echo</span> <span class="variable">$x</span>;    <span class="comment">// 6 — $x изменился, потому что передан по ссылке</span></code></pre>
+
+                    <div class="example-label">Где ещё встречается & в PHP</div>
+                    <pre><code><span class="comment">// 1. Параметр функции по ссылке (как выше)</span>
+<span class="keyword">function</span> <span class="function">f</span>(&<span class="variable">$arg</span>) { ... }
+
+<span class="comment">// 2. Возврат по ссылке (редко используется)</span>
+<span class="keyword">function</span> &<span class="function">getRef</span>() { <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">data</span>; }
+
+<span class="comment">// 3. Присваивание по ссылке — создание псевдонима</span>
+<span class="variable">$a</span> = <span class="number">10</span>;
+<span class="variable">$b</span> = &<span class="variable">$a</span>;                     <span class="comment">// $b — это другое имя для $a</span>
+<span class="variable">$b</span> = <span class="number">20</span>;
+<span class="keyword">echo</span> <span class="variable">$a</span>;                      <span class="comment">// 20 — изменилось через $b</span>
+
+<span class="comment">// 4. foreach по ссылке — изменение массива во время перебора</span>
+<span class="variable">$arr</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
+<span class="keyword">foreach</span> (<span class="variable">$arr</span> <span class="keyword">as</span> &<span class="variable">$val</span>) {
+    <span class="variable">$val</span> *= <span class="number">10</span>;
+}
+<span class="comment">// $arr = [10, 20, 30]</span>
+
+<span class="comment">// 5. Битовое И (другой контекст — оператор &amp; между значениями, не префикс)</span>
+<span class="variable">$flags</span> = <span class="number">0b1010</span> & <span class="number">0b1100</span>;   <span class="comment">// 0b1000</span></code></pre>
+
+                    <div class="example-label">Классический pitfall — забытая ссылка после foreach</div>
+                    <pre><code><span class="variable">$arr</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
+
+<span class="comment">// Первый foreach по ссылке — изменяем массив</span>
+<span class="keyword">foreach</span> (<span class="variable">$arr</span> <span class="keyword">as</span> &<span class="variable">$val</span>) {
+    <span class="variable">$val</span> *= <span class="number">10</span>;
+}
+<span class="comment">// После цикла $val ОСТАЁТСЯ ссылкой на последний элемент массива!</span>
+
+<span class="comment">// Второй foreach — без &, но переиспользует ту же $val</span>
+<span class="keyword">foreach</span> (<span class="variable">$arr</span> <span class="keyword">as</span> <span class="variable">$val</span>) {
+    <span class="comment">// каждая итерация ПЕРЕЗАПИСЫВАЕТ $arr[2] (последний элемент!)</span>
+    <span class="comment">// в результате: $arr = [10, 20, &$val=10], затем [10, 20, 20], затем [10, 20, 20]</span>
+}
+<span class="function">print_r</span>(<span class="variable">$arr</span>);    <span class="comment">// [10, 20, 20] вместо ожидаемого [10, 20, 30]</span>
+
+<span class="comment">// ✓ Решение: после foreach по ссылке всегда unset:</span>
+<span class="keyword">foreach</span> (<span class="variable">$arr</span> <span class="keyword">as</span> &<span class="variable">$val</span>) { <span class="variable">$val</span> *= <span class="number">10</span>; }
+<span class="keyword">unset</span>(<span class="variable">$val</span>);    <span class="comment">// разорвать ссылку</span></code></pre>
+
+                    <div class="remember-box">
+                        <strong>Когда использовать <code>&amp;</code>:</strong> когда явно нужно мутировать оригинал (array_walk, реализация Stack/Queue, оптимизация для огромных строк/массивов чтобы не копировать).<br>
+                        <strong>Когда НЕ использовать:</strong> в чистых функциях (вход → выход, без побочек), в API-границах вашего модуля, при работе с объектами (объекты в PHP и так передаются «по handle» — ссылка не нужна), и всегда когда читателю кода будет неочевидно что переменная мутируется.<br>
+                        <strong>Правило большого пальца:</strong> явные мутации через возврат значения (<code>$arr = array_map(...)</code>) почти всегда читаются лучше, чем неявные через <code>&amp;</code>. Ссылку оставляйте для тех случаев, где return неудобен.
+                    </div>
                 </div>
 
                 <div class="subsection">
