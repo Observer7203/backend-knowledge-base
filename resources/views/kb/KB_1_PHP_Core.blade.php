@@ -2886,6 +2886,148 @@ readonly НЕ влияет на методы (нельзя сделать "не�
                         ✗ Когда лучше композиция: вместо <code>extends</code> &mdash; инжектировать зависимость с другой реализацией интерфейса (Strategy pattern, см. KB_5).
                     </div>
 
+                    <div class="content-block">
+                        <strong>Когда переопределение невозможно — 6 ситуаций.</strong> Override работает только когда метод родителя <em>виден</em> подклассу и <em>разрешён</em> к изменению. Любое из условий ниже блокирует override.
+                    </div>
+
+                    <div class="example-label">1. Метод объявлен как final</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Database</span> {
+    <span class="keyword">final public function</span> <span class="function">connect</span>(): <span class="keyword">void</span> { ... }
+}
+
+<span class="keyword">class</span> <span class="function">MysqlDatabase</span> <span class="keyword">extends</span> <span class="function">Database</span> {
+    <span class="keyword">public function</span> <span class="function">connect</span>(): <span class="keyword">void</span> { }    <span class="comment">// Fatal error: Cannot override final method</span>
+}
+<span class="comment">// final — явное запрещение от автора базового класса.</span></code></pre>
+
+                    <div class="example-label">2. Класс родителя объявлен как final</div>
+                    <pre><code><span class="keyword">final class</span> <span class="function">Money</span> { ... }
+
+<span class="keyword">class</span> <span class="function">SpecialMoney</span> <span class="keyword">extends</span> <span class="function">Money</span> { }
+<span class="comment">// Fatal: Class SpecialMoney cannot extend final class Money
+
+// Невозможно даже создать подкласс — значит и override невозможен.
+// Часто применяется для Value Object: Money, Email, UserId.</span></code></pre>
+
+                    <div class="example-label">3. private метод — это НЕ override, это новый метод</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Base</span> {
+    <span class="keyword">private function</span> <span class="function">hidden</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="string">"base"</span>; }
+
+    <span class="keyword">public function</span> <span class="function">callHidden</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="variable">$this</span>-&gt;<span class="function">hidden</span>();   <span class="comment">// всегда вызовет Base::hidden(), не Child!</span>
+    }
+}
+
+<span class="keyword">class</span> <span class="function">Child</span> <span class="keyword">extends</span> <span class="function">Base</span> {
+    <span class="keyword">private function</span> <span class="function">hidden</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="string">"child"</span>; }
+    <span class="comment">// Синтаксически разрешено, но это ОТДЕЛЬНЫЙ метод в Child.
+    // Base::callHidden() о нём не знает.</span>
+}
+
+<span class="keyword">echo</span> (<span class="keyword">new</span> <span class="function">Child</span>())-&gt;<span class="function">callHidden</span>();   <span class="comment">// "base" — не "child"!
+
+// Это частая ловушка: private методы НЕ наследуются по-настоящему.
+// Они "приватны для класса", где объявлены. Подкласс может только
+// СОЗДАТЬ свой private-метод с тем же именем — но это не override.
+// Решение: используйте protected, если хотите чтобы наследники могли подменить.</span></code></pre>
+
+                    <div class="example-label">4. Несовместимые сигнатуры — Liskov violations</div>
+                    <pre><code><span class="comment">// Даже если метод не final и не private, PHP проверяет совместимость сигнатуры.
+// Правила (часть LSP — Liskov Substitution Principle):
+//   — visibility можно РАСШИРИТЬ (protected → public), но НЕ СУЗИТЬ
+//   — параметры: contravariant (тот же или шире/менее строгий тип)
+//   — return type: covariant (тот же или уже/более строгий тип)
+//   — нельзя поменять static/non-static</span>
+
+<span class="keyword">class</span> <span class="function">Animal</span> {
+    <span class="keyword">public function</span> <span class="function">eat</span>(<span class="function">Food</span> <span class="variable">$f</span>): <span class="function">Food</span> { ... }
+}
+
+<span class="keyword">class</span> <span class="function">Dog</span> <span class="keyword">extends</span> <span class="function">Animal</span> {
+    <span class="comment">// ❌ Сужение видимости — Fatal Error</span>
+    <span class="keyword">protected function</span> <span class="function">eat</span>(<span class="function">Food</span> <span class="variable">$f</span>): <span class="function">Food</span> { ... }
+
+    <span class="comment">// ❌ Несовместимый тип параметра (более узкий, не contravariant)</span>
+    <span class="keyword">public function</span> <span class="function">eat</span>(<span class="function">DogFood</span> <span class="variable">$f</span>): <span class="function">Food</span> { ... }
+
+    <span class="comment">// ❌ Меняем static на не-static</span>
+    <span class="keyword">public static function</span> <span class="function">eat</span>(<span class="function">Food</span> <span class="variable">$f</span>): <span class="function">Food</span> { ... }
+
+    <span class="comment">// ✓ Уточнение return type (covariant) — разрешено</span>
+    <span class="keyword">public function</span> <span class="function">eat</span>(<span class="function">Food</span> <span class="variable">$f</span>): <span class="function">DogFood</span> { ... }
+
+    <span class="comment">// ✓ Расширение visibility — разрешено</span>
+    <span class="keyword">public function</span> <span class="function">eat</span>(<span class="function">Food</span> <span class="variable">$f</span>): <span class="function">Food</span> { ... }  <span class="comment">// если в Animal был protected</span>
+}</code></pre>
+
+                    <div class="example-label">5. static методы — переопределить можно, но это другое</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">A</span> {
+    <span class="keyword">public static function</span> <span class="function">test</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="string">"A"</span>; }
+}
+
+<span class="keyword">class</span> <span class="function">B</span> <span class="keyword">extends</span> <span class="function">A</span> {
+    <span class="keyword">public static function</span> <span class="function">test</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="string">"B"</span>; }   <span class="comment">// разрешено</span>
+}
+
+<span class="function">B</span>::<span class="function">test</span>();   <span class="comment">// "B"
+
+// Технически разрешено. НО это не классический полиморфизм — нет $this,
+// связывание ранее (через self::) идёт к классу, где метод написан.
+// Для полиморфизма со static-методами используйте static:: (Late Static Binding,
+// см. предыдущую подсекцию про self/static).
+
+// ❌ А вот final static — переопределить нельзя:</span>
+<span class="keyword">class</span> <span class="function">A</span> {
+    <span class="keyword">final public static function</span> <span class="function">test</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="string">"A"</span>; }
+}
+<span class="keyword">class</span> <span class="function">B</span> <span class="keyword">extends</span> <span class="function">A</span> {
+    <span class="keyword">public static function</span> <span class="function">test</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="string">"B"</span>; }   <span class="comment">// Fatal</span>
+}</code></pre>
+
+                    <div class="example-label">6. Метод НЕ существует в родителе — это просто добавление, не override</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">User</span> { }
+
+<span class="keyword">class</span> <span class="function">Admin</span> <span class="keyword">extends</span> <span class="function">User</span> {
+    <span class="keyword">public function</span> <span class="function">banUser</span>(): <span class="keyword">void</span> { ... }   <span class="comment">// в User такого метода нет — это новый метод, не override</span>
+}
+
+<span class="comment">// PHP не выдаёт ошибки, но семантически — это extension, не overriding.
+// Иногда в IDE/линтерах настраивают атрибут #[\Override] (PHP 8.3+):</span>
+
+<span class="keyword">class</span> <span class="function">Cat</span> <span class="keyword">extends</span> <span class="function">Animal</span> {
+    <span class="comment">#[\Override]</span>
+    <span class="keyword">public function</span> <span class="function">makeSound</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="string">"Мяу"</span>; }   <span class="comment">// ✓ если в Animal есть makeSound</span>
+
+    <span class="comment">#[\Override]
+    public function makesSound(): string { ... }   ⚠ опечатка!
+    // PHP кинет Fatal — метода makesSound нет в родителе.
+    // Атрибут #[\Override] защищает от случайных опечаток и от ситуаций,
+    // когда родитель переименовал метод, а наследник остался со старым именем.</span>
+}</code></pre>
+
+                    <div class="example-label">Сводная таблица — что блокирует override</div>
+                    <pre><code><span class="comment">+-----------------------------------+----------------------+--------------------+
+| Условие                           | Можно ли override?   | Что произойдёт     |
++-----------------------------------+----------------------+--------------------+
+| Метод final в родителе            | ❌ нет                | Fatal Error        |
+| Класс final                       | ❌ нельзя наследовать | Fatal Error        |
+| Метод private                     | ⚠ синтаксически да,  | НЕ override —      |
+|                                   |   но это не override | новый метод в      |
+|                                   |                      | дочернем           |
+| Сужение visibility                | ❌ нет                | Fatal Error        |
+| Несовместимый тип параметра       | ❌ нет                | Fatal Error        |
+| Несовместимый return type         | ❌ нет (без covariance)| Fatal Error       |
+| Меняем static/non-static          | ❌ нет                | Fatal Error        |
+| Метод protected/public, не final  | ✓ да                  | работает           |
+| static (не final)                 | ✓ да, но не полиморф | работает           |
+| Метода нет в родителе             | ✓ да, но это новый,  | предупреждение     |
+|                                   |   не override        | если #[\Override]  |
++-----------------------------------+----------------------+--------------------+</span></code></pre>
+
+                    <div class="remember-box">
+                        <strong>Главное правило:</strong> override работает когда метод в родителе <code>protected</code> или <code>public</code>, не помечен <code>final</code>, и сигнатура совместима по LSP (visibility не сужается, параметры contravariant, return type covariant). Используйте <code>#[\Override]</code> (PHP 8.3+) на методах-наследниках, чтобы PHP проверял что override реально происходит &mdash; это спасёт от опечаток и refactor-разногласий.
+                    </div>
+
                     <div class="example-label">Наследование и переопределение методов</div>
                     <pre><code><span class="keyword">class</span> <span class="function">Animal</span> {
     <span class="keyword">protected</span> <span class="variable">$name</span>;
