@@ -1987,6 +1987,150 @@ enum Status: string {
                 <h2 class="section-title">4. ООП: Классы, Наследование, Полиморфизм</h2>
 
                 <div class="subsection">
+                    <h3 class="subsection-title">$this — ссылка на текущий объект</h3>
+                    <div class="content-block">
+                        <code>$this</code> &mdash; <strong>псевдо-переменная</strong>, доступная внутри любого нестатического метода класса. Она ссылается на <strong>тот объект, у которого сейчас вызывается метод</strong>. Через <code>$this-&gt;имя</code> читаются и записываются свойства, через <code>$this-&gt;метод()</code> вызываются другие методы того же объекта.
+                    </div>
+
+                    <div class="example-label">Простой пример с конструктором</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">User</span> {
+    <span class="keyword">public</span> <span class="variable">$name</span>;
+    <span class="keyword">public</span> <span class="variable">$email</span>;
+
+    <span class="keyword">public function</span> <span class="function">__construct</span>(<span class="variable">$name</span>, <span class="variable">$email</span>) {
+        <span class="variable">$this</span>-><span class="variable">name</span>  = <span class="variable">$name</span>;     <span class="comment">// свойство объекта = аргумент</span>
+        <span class="variable">$this</span>-><span class="variable">email</span> = <span class="variable">$email</span>;
+    }
+}
+
+<span class="variable">$user</span> = <span class="keyword">new</span> <span class="function">User</span>(<span class="string">"Alice"</span>, <span class="string">"alice@ex.com"</span>);
+<span class="comment">// Внутри __construct $this === $user (тот объект, который создаётся)</span></code></pre>
+
+                    <div class="content-block">
+                        <strong>Зачем нужен $this</strong>: без него PHP не различит локальную переменную метода и свойство объекта. <code>$name</code> &mdash; локальная переменная (аргумент или просто объявленная в методе). <code>$this-&gt;name</code> &mdash; свойство объекта. Это разные сущности с одинаковым именем.
+                    </div>
+
+                    <div class="example-label">$name vs $this->name — разные вещи</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Greeter</span> {
+    <span class="keyword">public</span> <span class="variable">$name</span> = <span class="string">"Default"</span>;
+
+    <span class="keyword">public function</span> <span class="function">test</span>(<span class="variable">$name</span>) {
+        <span class="keyword">echo</span> <span class="variable">$name</span>;          <span class="comment">// локальная переменная-аргумент</span>
+        <span class="keyword">echo</span> <span class="variable">$this</span>-><span class="variable">name</span>;    <span class="comment">// свойство объекта ("Default")</span>
+
+        <span class="variable">$this</span>-><span class="variable">name</span> = <span class="variable">$name</span>;  <span class="comment">// присвоить аргумент в свойство</span>
+    }
+}
+
+<span class="variable">$g</span> = <span class="keyword">new</span> <span class="function">Greeter</span>();
+<span class="variable">$g</span>-><span class="function">test</span>(<span class="string">"Alice"</span>);   <span class="comment">// выведет "AliceDefault", потом установит свойство</span></code></pre>
+
+                    <div class="example-label">$this для вызова других методов того же объекта</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Order</span> {
+    <span class="keyword">private</span> <span class="keyword">array</span> <span class="variable">$items</span> = [];
+
+    <span class="keyword">public function</span> <span class="function">addItem</span>(<span class="variable">$item</span>): <span class="keyword">void</span> {
+        <span class="variable">$this</span>-><span class="variable">items</span>[] = <span class="variable">$item</span>;
+    }
+
+    <span class="keyword">public function</span> <span class="function">total</span>(): <span class="keyword">int</span> {
+        <span class="keyword">return</span> <span class="function">array_sum</span>(<span class="variable">$this</span>-><span class="variable">items</span>);
+    }
+
+    <span class="keyword">public function</span> <span class="function">summary</span>(): <span class="keyword">string</span> {
+        <span class="comment">// $this-&gt;total() — вызов другого метода ЭТОГО ЖЕ объекта</span>
+        <span class="keyword">return</span> <span class="string">"Items: "</span> . <span class="function">count</span>(<span class="variable">$this</span>-><span class="variable">items</span>) . <span class="string">", total: "</span> . <span class="variable">$this</span>-><span class="function">total</span>();
+    }
+}</code></pre>
+
+                    <div class="example-label">return $this — fluent interface (method chaining)</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">QueryBuilder</span> {
+    <span class="keyword">private array</span> <span class="variable">$where</span> = [];
+    <span class="keyword">private</span> <span class="keyword">?int</span> <span class="variable">$limit</span> = <span class="keyword">null</span>;
+
+    <span class="keyword">public function</span> <span class="function">where</span>(<span class="keyword">string</span> <span class="variable">$col</span>, <span class="variable">$value</span>): <span class="keyword">self</span> {
+        <span class="variable">$this</span>-><span class="variable">where</span>[<span class="variable">$col</span>] = <span class="variable">$value</span>;
+        <span class="keyword">return</span> <span class="variable">$this</span>;          <span class="comment">// ← возвращаем сам объект</span>
+    }
+
+    <span class="keyword">public function</span> <span class="function">limit</span>(<span class="keyword">int</span> <span class="variable">$n</span>): <span class="keyword">self</span> {
+        <span class="variable">$this</span>-><span class="variable">limit</span> = <span class="variable">$n</span>;
+        <span class="keyword">return</span> <span class="variable">$this</span>;
+    }
+}
+
+<span class="comment">// Благодаря return $this — можно цепочкой:</span>
+<span class="variable">$users</span> = (<span class="keyword">new</span> <span class="function">QueryBuilder</span>())
+    -><span class="function">where</span>(<span class="string">'status'</span>, <span class="string">'active'</span>)
+    -><span class="function">where</span>(<span class="string">'age'</span>, <span class="number">18</span>)
+    -><span class="function">limit</span>(<span class="number">10</span>);
+
+<span class="comment">// Так работают Laravel Query Builder, Eloquent, Collection, и пр.:
+// User::where('id', 1)->with('orders')->first() — каждый метод возвращает $this</span></code></pre>
+
+                    <div class="example-label">Где $this НЕ доступен</div>
+                    <pre><code><span class="comment">// 1. В static-методах — нет «текущего объекта», метод принадлежит классу</span>
+<span class="keyword">class</span> <span class="function">Calculator</span> {
+    <span class="keyword">public static function</span> <span class="function">add</span>(<span class="keyword">int</span> <span class="variable">$a</span>, <span class="keyword">int</span> <span class="variable">$b</span>): <span class="keyword">int</span> {
+        <span class="keyword">return</span> <span class="variable">$a</span> + <span class="variable">$b</span>;
+        <span class="comment">// $this здесь — fatal error "Using $this when not in object context"</span>
+    }
+}
+<span class="function">Calculator</span>::<span class="function">add</span>(<span class="number">2</span>, <span class="number">3</span>);   <span class="comment">// вызов без объекта</span>
+
+<span class="comment">// 2. В обычных функциях вне класса</span>
+<span class="keyword">function</span> <span class="function">helper</span>() {
+    <span class="keyword">echo</span> <span class="variable">$this</span>;        <span class="comment">// fatal error</span>
+}
+
+<span class="comment">// 3. В замыканиях по умолчанию — но можно через Closure::bind</span>
+<span class="variable">$closure</span> = <span class="keyword">function</span>() { <span class="keyword">echo</span> <span class="variable">$this</span>-><span class="variable">name</span>; };
+<span class="variable">$closure</span>();   <span class="comment">// undefined $this
+
+// Решение — bind замыкания к объекту:</span>
+<span class="variable">$bound</span> = <span class="type">Closure</span>::<span class="function">bind</span>(<span class="variable">$closure</span>, <span class="variable">$user</span>, <span class="function">User</span>::<span class="keyword">class</span>);
+<span class="variable">$bound</span>();    <span class="comment">// "Alice"</span></code></pre>
+
+                    <div class="example-label">Альтернатива в современном PHP — constructor property promotion (8.0+)</div>
+                    <pre><code><span class="comment">// До PHP 8.0 — boilerplate с $this в конструкторе:</span>
+<span class="keyword">class</span> <span class="function">User</span> {
+    <span class="keyword">public</span> <span class="variable">$name</span>;
+    <span class="keyword">public</span> <span class="variable">$email</span>;
+
+    <span class="keyword">public function</span> <span class="function">__construct</span>(<span class="variable">$name</span>, <span class="variable">$email</span>) {
+        <span class="variable">$this</span>-><span class="variable">name</span>  = <span class="variable">$name</span>;     <span class="comment">// повторение 3 раза:</span>
+        <span class="variable">$this</span>-><span class="variable">email</span> = <span class="variable">$email</span>;   <span class="comment">// объявление, аргумент, присвоение</span>
+    }
+}
+
+<span class="comment">// С PHP 8.0+ — promoted properties (объявление + присвоение в одной строке):</span>
+<span class="keyword">class</span> <span class="function">User</span> {
+    <span class="keyword">public function</span> <span class="function">__construct</span>(
+        <span class="keyword">public string</span> <span class="variable">$name</span>,
+        <span class="keyword">public string</span> <span class="variable">$email</span>,
+    ) {}    <span class="comment">// тело пустое — PHP сам делает $this-&gt;name = $name</span>
+}
+
+<span class="comment">// Можно совмещать с readonly (PHP 8.1+) — иммутабельные DTO:</span>
+<span class="keyword">final class</span> <span class="function">UserDto</span> {
+    <span class="keyword">public function</span> <span class="function">__construct</span>(
+        <span class="keyword">public readonly string</span> <span class="variable">$name</span>,
+        <span class="keyword">public readonly string</span> <span class="variable">$email</span>,
+    ) {}
+}</code></pre>
+
+                    <div class="remember-box">
+                        <strong>Чек-лист по $this:</strong><br>
+                        ✓ Внутри нестатических методов класса &mdash; обращайтесь к свойствам и методам через <code>$this-&gt;</code>.<br>
+                        ✓ В конструкторе &mdash; <code>$this-&gt;поле = $аргумент</code> присваивает значение свойству объекта.<br>
+                        ✓ <code>return $this</code> в setter'ах &mdash; даёт fluent interface (method chaining).<br>
+                        ✗ В static-методах <code>$this</code> отсутствует &mdash; используйте <code>self::</code> или <code>static::</code> для доступа к классу.<br>
+                        ✗ В замыканиях по умолчанию нет &mdash; используйте <code>Closure::bind</code> или стрелочные функции (<code>fn() =&gt; $this-&gt;x</code> внутри метода захватят <code>$this</code> автоматически).<br>
+                        💡 С PHP 8.0+ для конструкторов используйте <strong>promoted properties</strong> &mdash; короче и без повторов.
+                    </div>
+                </div>
+
+                <div class="subsection">
                     <h3 class="subsection-title">Видимость: public, protected, private</h3>
                     <div class="example-label">Access Modifiers</div>
                     <pre><code><span class="keyword">class</span> <span class="function">User</span> {
