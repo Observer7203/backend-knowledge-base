@@ -2213,6 +2213,68 @@ enum Status: string {
 //   Если вызвано через ChildClass:: — найдёт ChildClass::who().
 // Это и есть Late Static Binding (LSB), появился в PHP 5.3.</span></code></pre>
 
+                    <div class="content-block">
+                        <strong>Пошаговый трейс &mdash; что именно происходит при <code>ChildClass::testSelf()</code>.</strong> Метод <code>testSelf()</code> определён <em>только</em> в <code>ParentClass</code>. Внутри него &mdash; вызов <code>self::who()</code>. <code>self</code> &mdash; это «класс, в котором физически написан этот код», то есть <code>ParentClass</code>. Поэтому PHP идёт в <code>ParentClass</code> и берёт <code>who()</code> именно оттуда (возвращает <code>'Parent'</code>), <strong>игнорируя</strong> переопределённый <code>who()</code> в <code>ChildClass</code>.
+                    </div>
+
+                    <div class="example-label">Шаги выполнения ChildClass::testSelf()</div>
+                    <pre><code><span class="comment">┌─────────────────────────────────────────────────────────────┐
+│ 1. PHP видит вызов: ChildClass::testSelf()                  │
+│ 2. Ищет метод testSelf() в ChildClass — НЕТ                 │
+│ 3. Поднимается к родителю ParentClass — НАШЁЛ               │
+│ 4. Выполняет код тела: return self::who();                  │
+│ 5. self → ParentClass (класс ГДЕ ЭТОТ КОД написан)          │
+│ 6. Вызывает ParentClass::who() → возвращает 'Parent'        │
+│ 7. Итог: echo выводит "Parent"                              │
+└─────────────────────────────────────────────────────────────┘
+
+Ключевая мысль: self смотрит на ТЕКСТ кода (где написано),
+              а не на КЛАСС, через который сделан вызов.
+
+Метод "переехал" в ChildClass через наследование, но self
+по-прежнему указывает на ParentClass — потому что строчка
+self::who() физически находится в файле ParentClass.</span></code></pre>
+
+                    <div class="example-label">Для контраста — шаги ChildClass::testStatic()</div>
+                    <pre><code><span class="comment">┌─────────────────────────────────────────────────────────────┐
+│ 1. Вызов: ChildClass::testStatic()                          │
+│ 2. testStatic() найден в ParentClass (унаследован)          │
+│ 3. Выполняется: return static::who();                       │
+│ 4. static → ЧТО было слева от :: при вызове = ChildClass    │
+│ 5. Ищет who() в ChildClass — НАШЁЛ (переопределён)          │
+│ 6. Вызывает ChildClass::who() → возвращает 'Child'          │
+│ 7. Итог: echo выводит "Child"                               │
+└─────────────────────────────────────────────────────────────┘
+
+Ключевая разница: static — это «класс, через который начался вызов»,
+                  а не класс, где написан код.
+                  PHP запоминает ChildClass с шага 1
+                  и подставляет его в static:: на шаге 4.</span></code></pre>
+
+                    <div class="content-block">
+                        <strong>Аналогия:</strong>
+                        <ul class="bullets" style="margin-top:6px;">
+                          <li><code>self</code> &mdash; как <em>почтовый адрес отправителя</em> на конверте: указан автором письма, не меняется кто бы письмо ни читал. Адрес = «где я писал».</li>
+                          <li><code>static</code> &mdash; как <em>каждый раз заново звонящий курьер</em>: смотрит на наклейку «кому» прямо сейчас. Адрес = «кто вызвал».</li>
+                        </ul>
+                    </div>
+
+                    <div class="example-label">Что было бы, если бы testSelf() был объявлен в ChildClass</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">ChildClass</span> <span class="keyword">extends</span> <span class="function">ParentClass</span> {
+    <span class="comment">// Если переопределить testSelf() здесь:</span>
+    <span class="keyword">public static function</span> <span class="function">testSelf</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="keyword">self</span>::<span class="function">who</span>();    <span class="comment">// теперь self = ChildClass!</span>
+    }
+
+    <span class="keyword">public static function</span> <span class="function">who</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="string">'Child'</span>;
+    }
+}
+
+<span class="keyword">echo</span> <span class="function">ChildClass</span>::<span class="function">testSelf</span>();   <span class="comment">// "Child"
+// Потому что self::who() теперь написан внутри ChildClass.
+// Главное правило: self указывает на класс, где БУКВАЛЬНО лежит строчка с self.</span></code></pre>
+
                     <div class="example-label">Практический пример: Factory method в Laravel Eloquent</div>
                     <pre><code><span class="comment">// В Eloquent почти все статические методы используют static:: чтобы работать с наследниками</span>
 
