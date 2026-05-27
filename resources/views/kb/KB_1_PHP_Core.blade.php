@@ -2275,6 +2275,68 @@ self::who() физически находится в файле ParentClass.</sp
 // Потому что self::who() теперь написан внутри ChildClass.
 // Главное правило: self указывает на класс, где БУКВАЛЬНО лежит строчка с self.</span></code></pre>
 
+                    <div class="content-block">
+                        <strong>Что значит «полиморфный» в контексте <code>static::</code>.</strong> Метод <code>getTableLate()</code> ведёт себя <em>по-разному в зависимости от того, через какой класс его вызвали</em>, даже если сам определён в родителе. Достигается за счёт <code>static::</code> &mdash; он указывает на класс, через который произошёл вызов во время выполнения (Late Static Binding). С обычным <code>self::</code> такого эффекта нет: значение всегда берётся из класса, где написан код.
+                    </div>
+
+                    <div class="example-label">Полиморфизм через static:: на переопределяемом свойстве</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">BaseModel</span> {
+    <span class="keyword">public static</span> <span class="variable">$table</span> = <span class="string">'base'</span>;
+
+    <span class="keyword">public static function</span> <span class="function">getTable</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="keyword">self</span>::<span class="variable">$table</span>;     <span class="comment">// self → всегда BaseModel</span>
+    }
+
+    <span class="keyword">public static function</span> <span class="function">getTableLate</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="keyword">static</span>::<span class="variable">$table</span>;   <span class="comment">// static → класс, через который вызвано</span>
+    }
+}
+
+<span class="keyword">class</span> <span class="function">UserModel</span> <span class="keyword">extends</span> <span class="function">BaseModel</span> {
+    <span class="keyword">public static</span> <span class="variable">$table</span> = <span class="string">'users'</span>;    <span class="comment">// переопределили</span>
+}
+
+<span class="keyword">echo</span> <span class="function">BaseModel</span>::<span class="function">getTable</span>();      <span class="comment">// "base"  — self::$table → BaseModel::$table</span>
+<span class="keyword">echo</span> <span class="function">BaseModel</span>::<span class="function">getTableLate</span>();  <span class="comment">// "base"  — static = BaseModel (вызвали от BaseModel)</span>
+
+<span class="keyword">echo</span> <span class="function">UserModel</span>::<span class="function">getTable</span>();      <span class="comment">// "base"  ⚠ self заблокирован на BaseModel</span>
+<span class="keyword">echo</span> <span class="function">UserModel</span>::<span class="function">getTableLate</span>();  <span class="comment">// "users" ✓ static подхватил UserModel::$table</span></code></pre>
+
+                    <div class="example-label">Что именно происходит — таблица</div>
+                    <pre><code><span class="comment">+--------------------------------+------+--------------+----------+
+| Вызов                          | self | static       | Результат|
++--------------------------------+------+--------------+----------+
+| BaseModel::getTable()          | Base | (не использ) | "base"   |
+| BaseModel::getTableLate()      | —    | BaseModel    | "base"   |
+| UserModel::getTable()          | Base | (не использ) | "base" ⚠ |
+| UserModel::getTableLate()      | —    | UserModel    | "users" ✓|
++--------------------------------+------+--------------+----------+
+
+Колонка "self" — какой класс PHP подставляет под self при выполнении
+                 (всегда тот, где написан код = BaseModel).
+Колонка "static" — какой класс подставляется под static
+                  (тот, через который начали вызов).
+
+⚠ UserModel::getTable() возвращает "base" — частая ловушка.
+   Программист переопределил $table в UserModel, ожидая что метод
+   подхватит новое значение. Но getTable() жёстко смотрит на
+   BaseModel::$table из-за self.
+✓ Чтобы наследники работали полиморфно — пишите static:: в базовом
+   классе для всего, что наследники могут переопределять.</span></code></pre>
+
+                    <div class="content-block">
+                        <strong>Связь с Eloquent.</strong> Именно поэтому Laravel <code>Model::find($id)</code> внутри использует <code>new static()</code>, а свойства типа <code>$table</code>, <code>$primaryKey</code>, <code>$fillable</code> читаются через <code>static::</code>. Это позволяет наследникам (<code>User extends Model</code>) переопределить <code>$table = 'users'</code> &mdash; и базовые методы родителя автоматически начинают работать с правильной таблицей. Без LSB пришлось бы переопределять <em>каждый</em> метод в каждом наследнике.
+                    </div>
+
+                    <div class="example-label">Краткая формула</div>
+                    <pre><code><span class="comment">self::    → НЕ полиморфно: всегда берёт из класса, где написан код.
+            Удобно когда вы УВЕРЕНЫ что наследники не переопределят.
+
+static::  → ПОЛИМОРФНО: берёт из класса, через который вызвали.
+            Используйте в базовом классе для всего, что наследники
+            могут менять: $table, $primaryKey, фабричные new static(),
+            override-методы вроде find/all/firstOrFail.</span></code></pre>
+
                     <div class="example-label">Практический пример: Factory method в Laravel Eloquent</div>
                     <pre><code><span class="comment">// В Eloquent почти все статические методы используют static:: чтобы работать с наследниками</span>
 
