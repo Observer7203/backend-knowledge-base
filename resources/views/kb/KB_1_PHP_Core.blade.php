@@ -1393,6 +1393,61 @@ enum Status: string {
     <span class="variable">$users</span>-><span class="function">toArray</span>(),
     <span class="keyword">fn</span>(<span class="variable">$user</span>) => <span class="variable">$user</span>[<span class="string">'is_active'</span>] === <span class="keyword">true</span>
 );</code></pre>
+
+                    <div class="content-block">
+                        <strong>Что значит <code>$n % 2 == 0</code>.</strong> Оператор <code>%</code> (modulo) &mdash; остаток от деления. <code>$n % 2</code> вернёт <code>0</code> для чётных чисел и <code>1</code> для нечётных. Поэтому <code>$n % 2 == 0</code> &mdash; проверка чётности. Аналогично <code>$n % 3 == 0</code> &mdash; делится ли на 3; <code>$n % 10</code> &mdash; последняя цифра числа.
+                    </div>
+
+                    <div class="example-label">Три режима array_filter — флаги USE_KEY и USE_BOTH</div>
+                    <pre><code><span class="variable">$data</span> = [<span class="string">'user_id'</span> => <span class="number">1</span>, <span class="string">'admin_id'</span> => <span class="number">2</span>, <span class="string">'name'</span> => <span class="string">'Test'</span>];
+
+<span class="comment">// 1. По умолчанию — в callback передаётся только ЗНАЧЕНИЕ</span>
+<span class="function">array_filter</span>(<span class="variable">$data</span>, <span class="keyword">fn</span>(<span class="variable">$value</span>) => <span class="function">is_numeric</span>(<span class="variable">$value</span>));
+<span class="comment">// ['user_id' => 1, 'admin_id' => 2]  — оставляет только числовые значения</span>
+
+<span class="comment">// 2. ARRAY_FILTER_USE_KEY — в callback передаётся только КЛЮЧ</span>
+<span class="function">array_filter</span>(<span class="variable">$data</span>, <span class="keyword">fn</span>(<span class="variable">$k</span>) => <span class="function">str_ends_with</span>(<span class="variable">$k</span>, <span class="string">'_id'</span>), <span class="keyword">ARRAY_FILTER_USE_KEY</span>);
+<span class="comment">// ['user_id' => 1, 'admin_id' => 2]  — оставляет ключи, заканчивающиеся на _id</span>
+
+<span class="comment">// 3. ARRAY_FILTER_USE_BOTH — в callback передаются ОБА: value, key (именно в таком порядке!)</span>
+<span class="function">array_filter</span>(<span class="variable">$data</span>, <span class="keyword">fn</span>(<span class="variable">$v</span>, <span class="variable">$k</span>) => <span class="function">str_starts_with</span>(<span class="variable">$k</span>, <span class="string">'user'</span>) && <span class="function">is_numeric</span>(<span class="variable">$v</span>), <span class="keyword">ARRAY_FILTER_USE_BOTH</span>);
+<span class="comment">// ['user_id' => 1]  — ключ начинается с "user" И значение числовое</span></code></pre>
+
+                    <div class="content-block">
+                        <strong>Зачем нужны эти флаги.</strong> Без них фильтрация только по значению; для фильтрации по ключу пришлось бы городить с <code>array_keys</code> + цикл. <code>ARRAY_FILTER_USE_KEY</code> упрощает паттерны вида «оставить только поля с префиксом» (часто &mdash; для очистки FormRequest от лишних ключей). <code>USE_BOTH</code> &mdash; когда условие зависит и от ключа, и от значения одновременно.
+                    </div>
+
+                    <div class="example-label">toArray() — это метод коллекции, не хелпер</div>
+                    <pre><code><span class="comment">// В строке $users->toArray() метод toArray() — это НЕ глобальная функция (хелпер).
+// Это метод экземпляра класса Illuminate\Support\Collection (или Eloquent\Model).</span>
+
+<span class="variable">$users</span> = <span class="function">User</span>::<span class="function">all</span>();     <span class="comment">// возвращает Collection (объект)</span>
+<span class="variable">$users</span>-><span class="function">toArray</span>();          <span class="comment">// рекурсивно превращает коллекцию в обычный массив PHP</span>
+
+<span class="comment">// Зачем .toArray()? array_filter — встроенная функция PHP, она принимает массив,
+// а не Laravel-коллекцию. Поэтому коллекцию приводят к массиву.
+
+// Но если вы остаётесь в мире Laravel — у Collection есть СВОИ методы filter() и where(),
+// которые умнее и идиоматичнее:</span>
+
+<span class="comment">// ❌ Менее идиоматично — выйти из Collection, использовать PHP-функцию:</span>
+<span class="variable">$active</span> = <span class="function">array_filter</span>(<span class="variable">$users</span>-><span class="function">toArray</span>(), <span class="keyword">fn</span>(<span class="variable">$u</span>) => <span class="variable">$u</span>[<span class="string">'is_active'</span>]);
+
+<span class="comment">// ✓ Лучше — остаться в Collection:</span>
+<span class="variable">$active</span> = <span class="variable">$users</span>-><span class="function">filter</span>(<span class="keyword">fn</span>(<span class="variable">$u</span>) => <span class="variable">$u</span>-><span class="variable">is_active</span>);
+
+<span class="comment">// ✓ Ещё лучше — where() для простых проверок:</span>
+<span class="variable">$active</span> = <span class="variable">$users</span>-><span class="function">where</span>(<span class="string">'is_active'</span>, <span class="keyword">true</span>);
+
+<span class="comment">// Если в итоге нужен массив — в конце .toArray():</span>
+<span class="variable">$activeArray</span> = <span class="variable">$users</span>-><span class="function">where</span>(<span class="string">'is_active'</span>, <span class="keyword">true</span>)-><span class="function">toArray</span>();</code></pre>
+
+                    <div class="remember-box">
+                        <strong>Хелпер vs метод в Laravel:</strong><br>
+                        — <strong>Хелперы</strong> &mdash; глобальные функции: <code>collect()</code>, <code>dd()</code>, <code>view()</code>, <code>config()</code>, <code>route()</code>, <code>now()</code>, <code>auth()</code>. Вызываются без объекта.<br>
+                        — <strong>Методы</strong> &mdash; определены в классах, вызываются через <code>-&gt;</code>: <code>$users-&gt;toArray()</code>, <code>$user-&gt;save()</code>, <code>$collection-&gt;filter()</code>.<br>
+                        Полный справочник хелперов &mdash; в KB_10 «Хелперы &amp; методы».
+                    </div>
                 </div>
 
                 <div class="subsection">
@@ -1427,8 +1482,52 @@ enum Status: string {
     <span class="keyword">return</span> <span class="variable">$carry</span>;
 }, [<span class="string">'total'</span> => <span class="number">0</span>, <span class="string">'count'</span> => <span class="number">0</span>, <span class="string">'avg'</span> => <span class="number">0</span>]);</code></pre>
 
+                    <div class="content-block">
+                        <strong>Пошаговый разбор `$sum = array_reduce($numbers, fn($carry, $item) =&gt; $carry + $item, 0)`</strong> для <code>[1, 2, 3, 4]</code>:
+                    </div>
+
+                    <div class="example-label">Что происходит на каждом шаге</div>
+                    <pre><code><span class="comment">+------+--------------+-------------------------+-------------+
+| Шаг  | $item       | Вычисление $carry+$item | Новый $carry|
++------+--------------+-------------------------+-------------+
+| init | —            | — (начальное = 0)       | 0           |
+| 1    | 1            | 0 + 1 = 1               | 1           |
+| 2    | 2            | 1 + 2 = 3               | 3           |
+| 3    | 3            | 3 + 3 = 6               | 6           |
+| 4    | 4            | 6 + 4 = 10              | 10          |
++------+--------------+-------------------------+-------------+
+
+После последнего элемента array_reduce возвращает $carry → 10.</span></code></pre>
+
+                    <div class="content-block">
+                        <strong>Как PHP «понимает» что первый параметр &mdash; аккумулятор, а второй &mdash; элемент?</strong> Не по именам переменных. <code>$carry</code> и <code>$item</code> &mdash; имена, придуманные разработчиком, они могут быть любыми (<code>$x</code>, <code>$y</code>, <code>$a</code>, <code>$b</code>). Важен <strong>порядок</strong>: первым аргументом callback всегда получает аккумулятор, вторым &mdash; текущий элемент. Это <strong>зашито в реализацию</strong> <code>array_reduce</code> на уровне ядра PHP.
+                    </div>
+
+                    <div class="example-label">Псевдо-реализация array_reduce (что внутри функции)</div>
+                    <pre><code><span class="keyword">function</span> <span class="function">my_array_reduce</span>(<span class="keyword">array</span> <span class="variable">$array</span>, <span class="keyword">callable</span> <span class="variable">$callback</span>, <span class="variable">$initial</span> = <span class="keyword">null</span>) {
+    <span class="variable">$accumulator</span> = <span class="variable">$initial</span>;
+
+    <span class="keyword">foreach</span> (<span class="variable">$array</span> <span class="keyword">as</span> <span class="variable">$item</span>) {
+        <span class="comment">// Жёстко зашитый порядок: 1-й arg = аккумулятор, 2-й = элемент</span>
+        <span class="variable">$accumulator</span> = <span class="variable">$callback</span>(<span class="variable">$accumulator</span>, <span class="variable">$item</span>);
+    }
+
+    <span class="keyword">return</span> <span class="variable">$accumulator</span>;
+}</code></pre>
+
+                    <div class="example-label">Эквивалент с обычным foreach</div>
+                    <pre><code><span class="variable">$sum</span> = <span class="number">0</span>;
+<span class="keyword">foreach</span> (<span class="variable">$numbers</span> <span class="keyword">as</span> <span class="variable">$item</span>) {
+    <span class="variable">$sum</span> += <span class="variable">$item</span>;
+}
+<span class="comment">// результат тот же: 10
+// array_reduce — более декларативный способ, особенно для построения структур</span></code></pre>
+
                     <div class="remember-box">
-                        array_reduce() очень мощен для свёртки, но может быть менее понятен. Убедись что первый параметр callback ($carry) - это аккумулятор, второй ($item) - текущий элемент.
+                        <strong>Зачем начальное значение (3-й параметр)?</strong><br>
+                        — Если массив пустой → <code>array_reduce</code> вернёт начальное значение (для <code>0</code> это логичная сумма, для <code>1</code> &mdash; произведение).<br>
+                        — Если массив не пустой → начальное значение участвует в первом вычислении (<code>0 + 1 = 1</code> в нашем примере).<br>
+                        Без начального значения по умолчанию — <code>null</code>, что часто ломает callback (<code>null + 1</code> = warning + 1).
                     </div>
                 </div>
 
