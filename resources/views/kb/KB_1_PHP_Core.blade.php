@@ -2131,6 +2131,241 @@ enum Status: string {
                 </div>
 
                 <div class="subsection">
+                    <h3 class="subsection-title">Static, self, static:: — классовые члены</h3>
+                    <div class="content-block">
+                        <strong>Static</strong> (статические свойства и методы) принадлежат <strong>самому классу</strong>, а не отдельным объектам. Они существуют в единственном экземпляре независимо от того, сколько объектов создано. Вызываются через оператор <code>::</code> без <code>new</code>.
+                        <br><br>
+                        <code>self</code> и <code>static</code> &mdash; два способа сослаться на класс изнутри его кода. Разница между ними проявляется при наследовании.
+                    </div>
+
+                    <div class="example-label">Базовый пример: счётчик через static</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Counter</span> {
+    <span class="keyword">public static</span> <span class="variable">$count</span> = <span class="number">0</span>;       <span class="comment">// статическое свойство</span>
+
+    <span class="keyword">public static function</span> <span class="function">increment</span>(): <span class="keyword">void</span> {
+        <span class="keyword">self</span>::<span class="variable">$count</span>++;                     <span class="comment">// доступ через self::</span>
+    }
+
+    <span class="keyword">public static function</span> <span class="function">getCount</span>(): <span class="keyword">int</span> {
+        <span class="keyword">return</span> <span class="keyword">self</span>::<span class="variable">$count</span>;
+    }
+}
+
+<span class="comment">// Вызов через :: без new — объект не создаётся</span>
+<span class="function">Counter</span>::<span class="function">increment</span>();
+<span class="function">Counter</span>::<span class="function">increment</span>();
+<span class="keyword">echo</span> <span class="function">Counter</span>::<span class="function">getCount</span>();    <span class="comment">// 2
+
+// Counter::$count живёт на уровне класса.
+// Если бы это было обычное свойство — у каждого объекта свой счётчик.
+// Со static — один счётчик на всё приложение.</span></code></pre>
+
+                    <div class="example-label">Оператор :: (Scope Resolution Operator, «Paamayim Nekudotayim»)</div>
+                    <pre><code><span class="comment">// Доступ через :: применяется для:
+
+// 1. Статических методов и свойств</span>
+<span class="function">ClassName</span>::<span class="function">staticMethod</span>();
+<span class="function">ClassName</span>::<span class="variable">$staticProperty</span>;
+
+<span class="comment">// 2. Констант класса (всегда через ::, даже у объекта)</span>
+<span class="function">ClassName</span>::<span class="variable">CONSTANT_NAME</span>;
+<span class="function">User</span>::<span class="variable">STATUS_ACTIVE</span>;
+
+<span class="comment">// 3. Псевдо-классов: self::, parent::, static::</span>
+<span class="keyword">self</span>::<span class="function">method</span>();        <span class="comment">// текущий класс (раннее связывание)</span>
+<span class="keyword">parent</span>::<span class="function">method</span>();      <span class="comment">// родительский класс</span>
+<span class="keyword">static</span>::<span class="function">method</span>();      <span class="comment">// фактический класс при вызове (LSB)</span>
+
+<span class="comment">// 4. ::class — получить полное имя класса как строку (PHP 5.5+)</span>
+<span class="keyword">echo</span> <span class="function">User</span>::<span class="keyword">class</span>;        <span class="comment">// "App\Models\User"</span>
+
+<span class="comment">// Историческое название "::" — Paamayim Nekudotayim (ивр. «двойное двоеточие»);
+// если PHP выдаст ошибку "Paamayim Nekudotayim" — это синтаксическая ошибка с ::</span></code></pre>
+
+                    <div class="example-label">self:: vs static:: — главное отличие (Late Static Binding)</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">ParentClass</span> {
+    <span class="keyword">public static function</span> <span class="function">testSelf</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="keyword">self</span>::<span class="function">who</span>();      <span class="comment">// раннее связывание</span>
+    }
+
+    <span class="keyword">public static function</span> <span class="function">testStatic</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="keyword">static</span>::<span class="function">who</span>();    <span class="comment">// позднее (Late Static Binding)</span>
+    }
+
+    <span class="keyword">public static function</span> <span class="function">who</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="variable">__CLASS__</span>;        <span class="comment">// магическая константа: имя текущего класса</span>
+    }
+}
+
+<span class="keyword">class</span> <span class="function">ChildClass</span> <span class="keyword">extends</span> <span class="function">ParentClass</span> {
+    <span class="keyword">public static function</span> <span class="function">who</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="variable">__CLASS__</span>;
+    }
+}
+
+<span class="keyword">echo</span> <span class="function">ChildClass</span>::<span class="function">testSelf</span>();    <span class="comment">// "ParentClass"  ← зафиксировано в parent</span>
+<span class="keyword">echo</span> <span class="function">ChildClass</span>::<span class="function">testStatic</span>();  <span class="comment">// "ChildClass"   ← фактический класс вызова</span>
+
+<span class="comment">// Объяснение:
+// self::who() в ParentClass — намертво привязано к ParentClass.
+//   Кто бы ни вызывал — всегда parent's who().
+// static::who() — динамически определяется во время выполнения.
+//   Если вызвано через ChildClass:: — найдёт ChildClass::who().
+// Это и есть Late Static Binding (LSB), появился в PHP 5.3.</span></code></pre>
+
+                    <div class="example-label">Практический пример: Factory method в Laravel Eloquent</div>
+                    <pre><code><span class="comment">// В Eloquent почти все статические методы используют static:: чтобы работать с наследниками</span>
+
+<span class="keyword">class</span> <span class="function">Model</span> {
+    <span class="keyword">public static function</span> <span class="function">find</span>(<span class="keyword">int</span> <span class="variable">$id</span>): <span class="keyword">?</span><span class="keyword">static</span> {
+        <span class="comment">// псевдо-код: достать из БД</span>
+        <span class="variable">$row</span> = <span class="function">DB</span>::<span class="function">findRow</span>(<span class="variable">$id</span>);
+        <span class="keyword">return</span> <span class="variable">$row</span> ? <span class="keyword">new</span> <span class="keyword">static</span>(<span class="variable">$row</span>) : <span class="keyword">null</span>;
+        <span class="comment">//          ↑ new static() — создаёт экземпляр фактического класса</span>
+    }
+}
+
+<span class="keyword">class</span> <span class="function">User</span> <span class="keyword">extends</span> <span class="function">Model</span> {}
+<span class="keyword">class</span> <span class="function">Admin</span> <span class="keyword">extends</span> <span class="function">User</span> {}
+
+<span class="variable">$user</span>  = <span class="function">User</span>::<span class="function">find</span>(<span class="number">1</span>);      <span class="comment">// возвращает User</span>
+<span class="variable">$admin</span> = <span class="function">Admin</span>::<span class="function">find</span>(<span class="number">5</span>);     <span class="comment">// возвращает Admin (не User!)</span>
+
+<span class="comment">// Если бы в find() было new self() — всегда бы возвращался Model.
+// new static() работает полиморфно — это ключ к Eloquent-фабрикам.</span></code></pre>
+
+                    <div class="example-label">parent:: — вызов метода родителя</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Animal</span> {
+    <span class="keyword">public function</span> <span class="function">describe</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="string">"Animal"</span>;
+    }
+}
+
+<span class="keyword">class</span> <span class="function">Dog</span> <span class="keyword">extends</span> <span class="function">Animal</span> {
+    <span class="keyword">public function</span> <span class="function">describe</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="keyword">parent</span>::<span class="function">describe</span>() . <span class="string">" → Dog"</span>;
+        <span class="comment">// parent:: — явный вызов реализации родителя
+        // Полезно когда переопределяешь метод, но хочешь сохранить базовое поведение</span>
+    }
+}
+
+(<span class="keyword">new</span> <span class="function">Dog</span>())-><span class="function">describe</span>();   <span class="comment">// "Animal → Dog"
+
+// В конструкторах parent::__construct() — стандартный способ
+// инициализировать родителя перед своей логикой:</span>
+<span class="keyword">class</span> <span class="function">SpecialUser</span> <span class="keyword">extends</span> <span class="function">User</span> {
+    <span class="keyword">public function</span> <span class="function">__construct</span>(<span class="keyword">string</span> <span class="variable">$name</span>, <span class="keyword">int</span> <span class="variable">$level</span>) {
+        <span class="keyword">parent</span>::<span class="function">__construct</span>(<span class="variable">$name</span>);   <span class="comment">// инициализация родителя</span>
+        <span class="variable">$this</span>-><span class="variable">level</span> = <span class="variable">$level</span>;
+    }
+}</code></pre>
+
+                    <div class="example-label">Константы класса — всегда через ::</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Order</span> {
+    <span class="keyword">const</span> <span class="variable">STATUS_PENDING</span> = <span class="string">'pending'</span>;
+    <span class="keyword">const</span> <span class="variable">STATUS_PAID</span>    = <span class="string">'paid'</span>;
+
+    <span class="comment">// PHP 7.1+ — у констант есть видимость:</span>
+    <span class="keyword">private const</span> <span class="variable">MAX_RETRIES</span> = <span class="number">3</span>;
+
+    <span class="comment">// PHP 8.3+ — typed constants:</span>
+    <span class="keyword">const int</span> <span class="variable">VERSION</span> = <span class="number">2</span>;
+}
+
+<span class="comment">// Доступ через :: (даже у объекта — не через ->):</span>
+<span class="keyword">echo</span> <span class="function">Order</span>::<span class="variable">STATUS_PENDING</span>;     <span class="comment">// "pending"</span>
+
+<span class="variable">$order</span> = <span class="keyword">new</span> <span class="function">Order</span>();
+<span class="keyword">echo</span> <span class="variable">$order</span>::<span class="variable">STATUS_PAID</span>;       <span class="comment">// "paid" (тоже через :: после объекта)
+// echo $order->STATUS_PAID;       — ❌ ошибка, через -> только свойства</span></code></pre>
+
+                    <div class="example-label">Когда использовать static вообще</div>
+                    <pre><code><span class="comment">// ✓ Утилитарные функции без состояния</span>
+<span class="keyword">class</span> <span class="function">StringHelper</span> {
+    <span class="keyword">public static function</span> <span class="function">slugify</span>(<span class="keyword">string</span> <span class="variable">$text</span>): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="function">strtolower</span>(<span class="function">str_replace</span>(<span class="string">' '</span>, <span class="string">'-'</span>, <span class="variable">$text</span>));
+    }
+}
+
+<span class="comment">// ✓ Фабричные методы (named constructors)</span>
+<span class="keyword">class</span> <span class="function">Date</span> {
+    <span class="keyword">public static function</span> <span class="function">today</span>(): <span class="keyword">static</span> { <span class="keyword">return new</span> <span class="keyword">static</span>(<span class="function">date</span>(<span class="string">'Y-m-d'</span>)); }
+    <span class="keyword">public static function</span> <span class="function">fromString</span>(<span class="keyword">string</span> <span class="variable">$s</span>): <span class="keyword">static</span> { <span class="keyword">return new</span> <span class="keyword">static</span>(<span class="variable">$s</span>); }
+}
+
+<span class="comment">// ✓ Константы (как enum-замена до PHP 8.1)</span>
+<span class="keyword">class</span> <span class="function">HttpStatus</span> {
+    <span class="keyword">const</span> <span class="variable">OK</span>        = <span class="number">200</span>;
+    <span class="keyword">const</span> <span class="variable">NOT_FOUND</span> = <span class="number">404</span>;
+}
+
+<span class="comment">// ❌ НЕ для сервисов с состоянием — таблица плюсов/минусов:
+// Static-сервис:                  Обычный сервис через DI:
+//   — невозможно мокать в тестах    + легко мокать
+//   — глобальное состояние          + изолированный state
+//   — нельзя подменить реализацию   + interface + DI
+//   + не надо передавать через DI   — нужно DI-контейнер
+
+// В Laravel почти НИКОГДА не используют свои static-сервисы — все через
+// контейнер. Static резервируется для фабрик (Model::find), хелперов
+// и фасадов (хотя фасады тоже под капотом обращаются к контейнеру).</span></code></pre>
+
+                    <div class="example-label">Подводные камни</div>
+                    <pre><code><span class="comment">// 1. $this в static-методе → Fatal Error</span>
+<span class="keyword">class</span> <span class="function">X</span> {
+    <span class="keyword">public static function</span> <span class="function">f</span>() {
+        <span class="keyword">echo</span> <span class="variable">$this</span>-><span class="variable">name</span>;   <span class="comment">// Fatal: Using $this when not in object context</span>
+    }
+}
+
+<span class="comment">// 2. Свойства через -> вместо ::</span>
+<span class="function">Counter</span>::<span class="variable">$count</span>++;     <span class="comment">// ✓ правильно</span>
+<span class="variable">$counter</span> = <span class="keyword">new</span> <span class="function">Counter</span>();
+<span class="variable">$counter</span>-><span class="variable">count</span>++;     <span class="comment">// ❌ ошибка — у объекта нет такого свойства,
+                       //    статическое живёт на классе</span>
+
+<span class="comment">// 3. Static в Octane / RoadRunner / Swoole — утечка состояния
+// В обычном PHP-FPM статика сбрасывается с окончанием процесса.
+// В long-running (Octane) статика живёт между запросами:</span>
+<span class="keyword">class</span> <span class="function">UserCache</span> {
+    <span class="keyword">private static array</span> <span class="variable">$cache</span> = [];   <span class="comment">// под Octane накапливается!</span>
+}
+<span class="comment">// Подробнее в KB_3 (Laravel → Octane).
+
+// 4. self vs static в final-классах
+// Если класс final (нельзя наследовать) — self и static идентичны.
+// Разница только при наследовании.
+
+// 5. Тестирование static — почти невозможно мокать
+// StringHelper::slugify($x) в коде → в тестах нельзя подменить.
+// Решение: сделать обычный сервис + interface, инжектить через DI.</span></code></pre>
+
+                    <div class="example-label">Сравнительная таблица</div>
+                    <pre><code><span class="comment">+----------------+-------------------------------+--------------------------+
+| Конструкция    | Связывание                     | Когда использовать       |
++----------------+-------------------------------+--------------------------+
+| self::         | Раннее (класс, где написано)  | Точно знаем класс,       |
+|                |                                | не ждём подмены          |
+| static::       | Позднее (LSB, класс вызова)   | Наследуемые статические  |
+|                |                                | методы, фабрики          |
+| parent::       | Родительский класс            | Вызов реализации parent  |
+|                |                                | при переопределении      |
+| $this->        | Текущий объект                 | Обычные методы           |
+| ClassName::    | Явно указанный класс          | Из внешнего кода         |
++----------------+-------------------------------+--------------------------+</span></code></pre>
+
+                    <div class="remember-box">
+                        <strong>Короткие правила:</strong><br>
+                        ✓ <code>self::</code> &mdash; когда вы пишете код, который не будет переопределяться в наследниках. Гарантия что вызывается именно этот класс.<br>
+                        ✓ <code>static::</code> &mdash; в фабриках (<code>new static()</code>) и методах, которые наследники могут переопределить. Это Late Static Binding.<br>
+                        ✓ <code>parent::</code> &mdash; чтобы дополнить (а не заменить) реализацию родителя; типично <code>parent::__construct()</code>.<br>
+                        ✓ <code>ClassName::CONSTANT</code> &mdash; константы класса всегда через <code>::</code>, даже если у вас есть объект.<br>
+                        ✗ Избегайте static-сервисов с состоянием &mdash; они не мокаются в тестах и текут под Octane.<br>
+                        💡 С PHP 8.0+ <code>new static()</code> можно типизировать как <code>: static</code> в return type &mdash; явный полиморфизм для фабрик.
+                    </div>
+                </div>
+
+                <div class="subsection">
                     <h3 class="subsection-title">Видимость: public, protected, private</h3>
                     <div class="example-label">Access Modifiers</div>
                     <pre><code><span class="keyword">class</span> <span class="function">User</span> {
