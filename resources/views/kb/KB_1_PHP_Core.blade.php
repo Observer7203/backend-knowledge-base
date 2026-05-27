@@ -1826,8 +1826,93 @@ enum Status: string {
 <span class="variable">$users</span> = <span class="function">User</span>::<span class="function">all</span>();
 <span class="function">usort</span>(<span class="variable">$users</span>-><span class="function">toArray</span>(), <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) => <span class="variable">$a</span>[<span class="string">'created_at'</span>] <=> <span class="variable">$b</span>[<span class="string">'created_at'</span>]);</code></pre>
 
+                    <div class="content-block">
+                        <strong>Оператор <code>&lt;=&gt;</code> — «spaceship» (космический корабль), PHP 7+.</strong> Трёхзначный оператор сравнения: возвращает целое число, показывающее <em>как</em> левая часть относится к правой. Это именно то, что хотят функции вроде <code>usort</code>, <code>uasort</code>, <code>uksort</code>, <code>SplPriorityQueue</code> и любые алгоритмы сортировки: «дай мне -1/0/1 и я разберусь».
+                    </div>
+
+                    <div class="example-label">Что возвращает $a &lt;=&gt; $b</div>
+                    <pre><code><span class="comment">// -1 — $a меньше $b
+// 0  — $a равно $b
+// 1  — $a больше $b</span>
+
+<span class="function">var_dump</span>(<span class="number">5</span> <=> <span class="number">10</span>);    <span class="comment">// int(-1)</span>
+<span class="function">var_dump</span>(<span class="number">5</span> <=> <span class="number">5</span>);     <span class="comment">// int(0)</span>
+<span class="function">var_dump</span>(<span class="number">10</span> <=> <span class="number">5</span>);    <span class="comment">// int(1)</span>
+
+<span class="comment">// Работает не только с числами:</span>
+<span class="function">var_dump</span>(<span class="string">"apple"</span> <=> <span class="string">"banana"</span>);  <span class="comment">// int(-1) — строки сравниваются лексикографически</span>
+<span class="function">var_dump</span>(<span class="string">"banana"</span> <=> <span class="string">"apple"</span>);  <span class="comment">// int(1)</span>
+
+<span class="comment">// С массивами — поэлементно (size, потом keys, потом values):</span>
+<span class="function">var_dump</span>([<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>] <=> [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]);  <span class="comment">// int(0)</span>
+<span class="function">var_dump</span>([<span class="number">1</span>, <span class="number">2</span>] <=> [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]);     <span class="comment">// int(-1) — меньше размер</span>
+
+<span class="comment">// С объектами — обычно через __toString() или магию класса</span></code></pre>
+
+                    <div class="example-label">Зачем нужны именно -1/0/1 для usort</div>
+                    <pre><code><span class="comment">// usort требует от callback вернуть:
+//   отрицательное число — если $a должен идти ПЕРЕД $b
+//   ноль                — если порядок неважен (равны)
+//   положительное       — если $a должен идти ПОСЛЕ $b
+
+// До PHP 7 без &lt;=&gt; писали так:</span>
+<span class="function">usort</span>(<span class="variable">$users</span>, <span class="keyword">function</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) {
+    <span class="keyword">if</span> (<span class="variable">$a</span>[<span class="string">'age'</span>] < <span class="variable">$b</span>[<span class="string">'age'</span>]) <span class="keyword">return</span> -<span class="number">1</span>;
+    <span class="keyword">if</span> (<span class="variable">$a</span>[<span class="string">'age'</span>] > <span class="variable">$b</span>[<span class="string">'age'</span>]) <span class="keyword">return</span> <span class="number">1</span>;
+    <span class="keyword">return</span> <span class="number">0</span>;
+});
+
+<span class="comment">// С &lt;=&gt; — одна строка:</span>
+<span class="function">usort</span>(<span class="variable">$users</span>, <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) => <span class="variable">$a</span>[<span class="string">'age'</span>] <=> <span class="variable">$b</span>[<span class="string">'age'</span>]);
+
+<span class="comment">// ❌ ВАЖНО: НЕ используйте $a - $b как компаратор!
+// Работает для int, но ломается для float (теряется точность дробей)
+// и для больших чисел (integer overflow). &lt;=&gt; — безопасно всегда.</span>
+<span class="function">usort</span>(<span class="variable">$arr</span>, <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) => <span class="variable">$a</span> - <span class="variable">$b</span>);    <span class="comment">// ❌ хрупко</span>
+<span class="function">usort</span>(<span class="variable">$arr</span>, <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) => <span class="variable">$a</span> <=> <span class="variable">$b</span>);   <span class="comment">// ✓ правильно</span></code></pre>
+
+                    <div class="example-label">Сортировка по возрастанию и убыванию — поменять операнды</div>
+                    <pre><code><span class="comment">// По возрастанию (ASC): $a слева, $b справа</span>
+<span class="function">usort</span>(<span class="variable">$users</span>, <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) => <span class="variable">$a</span>[<span class="string">'age'</span>] <=> <span class="variable">$b</span>[<span class="string">'age'</span>]);
+<span class="comment">// 25, 28, 30</span>
+
+<span class="comment">// По убыванию (DESC): поменять местами $a и $b</span>
+<span class="function">usort</span>(<span class="variable">$users</span>, <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) => <span class="variable">$b</span>[<span class="string">'age'</span>] <=> <span class="variable">$a</span>[<span class="string">'age'</span>]);
+<span class="comment">// 30, 28, 25
+
+// Альтернатива — умножить результат на -1 (читается хуже):</span>
+<span class="function">usort</span>(<span class="variable">$users</span>, <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) => -(<span class="variable">$a</span>[<span class="string">'age'</span>] <=> <span class="variable">$b</span>[<span class="string">'age'</span>]));</code></pre>
+
+                    <div class="example-label">Multi-criteria сортировка через цепочку &lt;=&gt; и ?:</div>
+                    <pre><code><span class="comment">// Сортировать сначала по возрасту, потом по имени.
+// Идея: первое не-нулевое &lt;=&gt; и есть итоговый результат.
+// ?: — короткий тернарный (Elvis): если левая часть truthy — её, иначе правую.</span>
+
+<span class="function">usort</span>(<span class="variable">$users</span>, <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) =>
+    (<span class="variable">$a</span>[<span class="string">'age'</span>] <=> <span class="variable">$b</span>[<span class="string">'age'</span>])
+    ?: (<span class="variable">$a</span>[<span class="string">'name'</span>] <=> <span class="variable">$b</span>[<span class="string">'name'</span>])
+);
+
+<span class="comment">// Логика:
+// — если возрасты разные (&lt;=&gt; вернёт -1 или 1) — итог это значение
+// — если равны (&lt;=&gt; вернёт 0, что falsy) — переходим к сравнению имён
+
+// Для трёх критериев и больше:</span>
+<span class="function">usort</span>(<span class="variable">$users</span>, <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) =>
+    (<span class="variable">$a</span>[<span class="string">'department'</span>] <=> <span class="variable">$b</span>[<span class="string">'department'</span>])
+    ?: (<span class="variable">$b</span>[<span class="string">'salary'</span>] <=> <span class="variable">$a</span>[<span class="string">'salary'</span>])    <span class="comment">// salary DESC (b vs a)</span>
+    ?: (<span class="variable">$a</span>[<span class="string">'name'</span>] <=> <span class="variable">$b</span>[<span class="string">'name'</span>])
+);
+<span class="comment">// Сначала по отделу (ASC), внутри отдела по зарплате (DESC), внутри по имени (ASC)</span></code></pre>
+
                     <div class="remember-box">
-                        Оператор <=> (spaceship) сравнивает: возвращает -1 если левая часть меньше, 0 если равны, 1 если больше. Это идеально для компараторов!
+                        <strong>Связанные функции сортировки в PHP:</strong><br>
+                        <code>usort</code> &mdash; пользовательский компаратор, теряет ключи (переиндексирует 0..N).<br>
+                        <code>uasort</code> &mdash; то же, но <strong>сохраняет ключи</strong> (Associative).<br>
+                        <code>uksort</code> &mdash; сортирует <strong>по ключам</strong>, не по значениям.<br>
+                        <code>sort</code> / <code>rsort</code> &mdash; быстрая сортировка без callback (ASC/DESC).<br>
+                        <code>ksort</code> / <code>krsort</code> &mdash; по ключам без callback.<br>
+                        В Laravel Collection: <code>$c-&gt;sortBy('age')</code>, <code>$c-&gt;sortByDesc('age')</code>, <code>$c-&gt;sortBy(fn($u) =&gt; ...)</code> &mdash; идиоматично, сохраняет ключи.
                     </div>
                 </div>
 
