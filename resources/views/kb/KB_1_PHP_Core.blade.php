@@ -2648,10 +2648,244 @@ static::  → ПОЛИМОРФНО: берёт из класса, через к�
 
 <span class="variable">$product</span> = <span class="keyword">new</span> <span class="function">Product</span>(<span class="string">"SKU123"</span>, <span class="number">99.99</span>);
 <span class="variable">$product</span>-><span class="variable">price</span> = <span class="number">50</span>;  <span class="comment">// ERROR! readonly свойство</span></code></pre>
+
+                    <div class="content-block">
+                        <strong>final ≠ readonly &mdash; это разные концепции.</strong> Их часто путают, потому что оба «запрещают что-то менять». Но:
+                        <ul class="bullets" style="margin-top:6px;">
+                          <li><code>final</code> &mdash; запрещает <strong>переопределение в подклассе</strong> (для метода или класса целиком);</li>
+                          <li><code>readonly</code> &mdash; запрещает <strong>изменение значения свойства</strong> после первой записи (обычно в конструкторе).</li>
+                        </ul>
+                        Они применяются к разным сущностям и решают разные задачи.
+                    </div>
+
+                    <div class="example-label">Сравнение в одной таблице</div>
+                    <pre><code><span class="comment">+-------------+--------------------+------------------------------+
+| Ключ. слово | К чему применяется | Что запрещает                |
++-------------+--------------------+------------------------------+
+| final       | методы, классы     | переопределение метода       |
+|             |                    | или наследование класса      |
+| readonly    | свойства           | изменение свойства           |
+|             |                    | после инициализации          |
++-------------+--------------------+------------------------------+
+
+final НЕ влияет на свойства (нельзя сделать значения "неизменяемыми").
+readonly НЕ влияет на методы (нельзя сделать "нельзя переопределить").</span></code></pre>
+
+                    <div class="example-label">final class — нельзя даже наследовать</div>
+                    <pre><code><span class="keyword">final class</span> <span class="function">Money</span> {           <span class="comment">// весь класс final</span>
+    <span class="keyword">public function</span> <span class="function">__construct</span>(
+        <span class="keyword">public readonly int</span>    <span class="variable">$amount</span>,
+        <span class="keyword">public readonly string</span> <span class="variable">$currency</span>,
+    ) {}
+}
+
+<span class="keyword">class</span> <span class="function">SpecialMoney</span> <span class="keyword">extends</span> <span class="function">Money</span> { }
+<span class="comment">// Fatal error: Class SpecialMoney cannot extend final class Money
+
+// Зачем final class:
+// — Value Object (Money, Email, Date) — гарантия что никто не наследует и не сломает инвариант
+// — Service classes в DDD/Hexagonal — явная декларация что класс закрыт для расширения
+// — Защита от хрупких иерархий: лучше явный отказ от наследования, чем глубокое дерево классов</span></code></pre>
+
+                    <div class="example-label">readonly можно «обойти» переопределением в подклассе</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Base</span> {
+    <span class="keyword">public readonly int</span> <span class="variable">$id</span>;
+
+    <span class="keyword">public function</span> <span class="function">__construct</span>(<span class="keyword">int</span> <span class="variable">$id</span>) {
+        <span class="variable">$this</span>-><span class="variable">id</span> = <span class="variable">$id</span>;
+    }
+}
+
+<span class="keyword">class</span> <span class="function">Child</span> <span class="keyword">extends</span> <span class="function">Base</span> {
+    <span class="keyword">public int</span> <span class="variable">$id</span>;            <span class="comment">// переобъявили БЕЗ readonly</span>
+
+    <span class="keyword">public function</span> <span class="function">__construct</span>(<span class="keyword">int</span> <span class="variable">$id</span>) {
+        <span class="keyword">parent</span>::<span class="function">__construct</span>(<span class="variable">$id</span>);
+        <span class="variable">$this</span>-><span class="variable">id</span> = <span class="number">999</span>;       <span class="comment">// ✓ теперь меняется, наследник убрал readonly</span>
+    }
+}
+
+<span class="comment">// PHP 8.4+ ужесточил это правило: readonly свойство в дочернем классе
+// обязательно должно остаться readonly. Полный обход через переобъявление
+// в большинстве версий работает, но это запах архитектуры.
+
+// Чтобы гарантированно защитить — комбинируйте:</span>
+<span class="keyword">final class</span> <span class="function">UserId</span> {           <span class="comment">// final class — нельзя наследовать вообще</span>
+    <span class="keyword">public function</span> <span class="function">__construct</span>(
+        <span class="keyword">public readonly int</span> <span class="variable">$value</span>,   <span class="comment">// readonly — нельзя изменить</span>
+    ) {}
+}
+<span class="comment">// Никто не сможет ни унаследовать, ни обойти readonly через переобъявление.</span></code></pre>
+
+                    <div class="example-label">readonly class — PHP 8.2+</div>
+                    <pre><code><span class="comment">// Помечает ВСЕ свойства класса как readonly одной декларацией:</span>
+<span class="keyword">readonly class</span> <span class="function">Order</span> {
+    <span class="keyword">public function</span> <span class="function">__construct</span>(
+        <span class="keyword">public int</span>    <span class="variable">$id</span>,         <span class="comment">// автоматически readonly</span>
+        <span class="keyword">public string</span> <span class="variable">$status</span>,     <span class="comment">// автоматически readonly</span>
+        <span class="keyword">public int</span>    <span class="variable">$totalMinor</span>, <span class="comment">// автоматически readonly</span>
+    ) {}
+}
+
+<span class="comment">// Эквивалентно:
+// class Order {
+//     public function __construct(
+//         public readonly int $id,
+//         public readonly string $status,
+//         public readonly int $totalMinor,
+//     ) {}
+// }
+
+// Удобно для immutable DTO. Часто комбинируют с final:</span>
+<span class="keyword">final readonly class</span> <span class="function">OrderData</span> { ... }</code></pre>
+
+                    <div class="remember-box">
+                        <strong>Какое слово зачем:</strong><br>
+                        — Хочешь, чтобы метод нельзя было переопределить → <code>final public function ...</code><br>
+                        — Хочешь, чтобы весь класс нельзя было наследовать → <code>final class ...</code><br>
+                        — Хочешь, чтобы значение свойства нельзя было изменить → <code>public readonly type $prop</code><br>
+                        — Хочешь, чтобы ВСЕ свойства были readonly (PHP 8.2+) → <code>readonly class ...</code><br>
+                        — Хочешь immutable DTO без наследования → <code>final readonly class ...</code><br>
+                        <br>
+                        Они не взаимозаменяемы. <code>readonly</code> не запрещает override метода, <code>final</code> не запрещает изменение свойства.
+                    </div>
                 </div>
 
                 <div class="subsection">
                     <h3 class="subsection-title">Наследование и полиморфизм</h3>
+
+                    <div class="content-block">
+                        <strong>Зачем нужно переопределение (override).</strong> Это возможность дочернего класса <em>заменить или дополнить</em> реализацию метода, унаследованного от родителя. Без переопределения вся иерархия была бы обречена на одинаковое поведение &mdash; смысла наследовать почти не было бы. Четыре основные причины:
+                        <ul class="bullets" style="margin-top:6px;">
+                          <li><strong>Расширение</strong> &mdash; делаем то же, что родитель, плюс что-то своё (через <code>parent::method()</code>);</li>
+                          <li><strong>Замена</strong> &mdash; полностью переписываем логику под нужды наследника;</li>
+                          <li><strong>Специализация</strong> &mdash; общий алгоритм подстраивается под конкретный случай;</li>
+                          <li><strong>Полиморфизм</strong> &mdash; код, работающий с родительским типом, автоматически получает поведение наследника.</li>
+                        </ul>
+                    </div>
+
+                    <div class="example-label">Классический пример: Animal / Dog / Cat</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Animal</span> {
+    <span class="keyword">public function</span> <span class="function">makeSound</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="string">"Какой-то звук"</span>;
+    }
+}
+
+<span class="keyword">class</span> <span class="function">Dog</span> <span class="keyword">extends</span> <span class="function">Animal</span> {
+    <span class="keyword">public function</span> <span class="function">makeSound</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="string">"Гав!"</span>;       <span class="comment">// замена реализации родителя</span>
+    }
+}
+
+<span class="keyword">class</span> <span class="function">Cat</span> <span class="keyword">extends</span> <span class="function">Animal</span> {
+    <span class="keyword">public function</span> <span class="function">makeSound</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="string">"Мяу!"</span>;
+    }
+}
+
+<span class="variable">$animals</span> = [<span class="keyword">new</span> <span class="function">Dog</span>(), <span class="keyword">new</span> <span class="function">Cat</span>(), <span class="keyword">new</span> <span class="function">Animal</span>()];
+<span class="keyword">foreach</span> (<span class="variable">$animals</span> <span class="keyword">as</span> <span class="variable">$animal</span>) {
+    <span class="keyword">echo</span> <span class="variable">$animal</span>-><span class="function">makeSound</span>() . <span class="string">"\n"</span>;
+}
+<span class="comment">// Гав!
+// Мяу!
+// Какой-то звук
+
+// Это и есть полиморфизм: foreach работает с типом Animal,
+// но каждый объект "звучит" по-своему. Без override — все три
+// вывели бы "Какой-то звук" (поведение родителя).</span></code></pre>
+
+                    <div class="example-label">Расширение через parent:: — не замена, а дополнение</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">User</span> {
+    <span class="keyword">public function</span> <span class="function">save</span>(): <span class="keyword">void</span> {
+        <span class="comment">// базовое сохранение в БД</span>
+        <span class="type">DB</span>::<span class="function">insert</span>(<span class="string">'users'</span>, [<span class="string">'name'</span> =&gt; <span class="variable">$this</span>-&gt;<span class="variable">name</span>]);
+    }
+}
+
+<span class="keyword">class</span> <span class="function">AuditedUser</span> <span class="keyword">extends</span> <span class="function">User</span> {
+    <span class="keyword">public function</span> <span class="function">save</span>(): <span class="keyword">void</span> {
+        <span class="keyword">parent</span>::<span class="function">save</span>();           <span class="comment">// сначала обычное сохранение</span>
+        <span class="type">AuditLog</span>::<span class="function">record</span>(<span class="string">'user.saved'</span>, <span class="variable">$this</span>-&gt;<span class="variable">id</span>);  <span class="comment">// потом аудит</span>
+    }
+}
+
+<span class="comment">// Логика родителя сохранена + добавлено своё.
+// Если бы написали без parent::save() — забыли бы сохранение в БД.</span></code></pre>
+
+                    <div class="example-label">Специализация: переопределение под частный случай (Laravel)</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Controller</span> {
+    <span class="keyword">protected function</span> <span class="function">authorize</span>(<span class="keyword">string</span> <span class="variable">$ability</span>): <span class="keyword">void</span> {
+        <span class="function">abort</span>(<span class="number">403</span>);        <span class="comment">// базовая логика: всегда запрещаем</span>
+    }
+}
+
+<span class="keyword">class</span> <span class="function">PostController</span> <span class="keyword">extends</span> <span class="function">Controller</span> {
+    <span class="keyword">protected function</span> <span class="function">authorize</span>(<span class="keyword">string</span> <span class="variable">$ability</span>): <span class="keyword">void</span> {
+        <span class="comment">// специализация: админам можно update</span>
+        <span class="keyword">if</span> (<span class="variable">$ability</span> === <span class="string">'update'</span> &amp;&amp; <span class="function">auth</span>()-&gt;<span class="function">user</span>()-&gt;<span class="function">isAdmin</span>()) {
+            <span class="keyword">return</span>;
+        }
+        <span class="keyword">parent</span>::<span class="function">authorize</span>(<span class="variable">$ability</span>);  <span class="comment">// остальное — по правилам родителя</span>
+    }
+}</code></pre>
+
+                    <div class="example-label">Когда переопределение НЕ нужно — final</div>
+                    <pre><code><span class="comment">// Если автор базового класса уверен, что метод НЕ должен меняться
+// в наследниках — помечает его final:</span>
+<span class="keyword">class</span> <span class="function">Database</span> {
+    <span class="keyword">final public function</span> <span class="function">connect</span>(): <span class="keyword">void</span> {
+        <span class="comment">// жёсткая последовательность подключения, менять опасно
+        // (порядок: SSL handshake → auth → set names → setup)</span>
+    }
+}
+
+<span class="keyword">class</span> <span class="function">MysqlDatabase</span> <span class="keyword">extends</span> <span class="function">Database</span> {
+    <span class="keyword">public function</span> <span class="function">connect</span>(): <span class="keyword">void</span> { }   <span class="comment">// Fatal: Cannot override final method</span>
+}
+
+<span class="comment">// final — способ сказать: "Этот алгоритм критичен, не трогай."</span></code></pre>
+
+                    <div class="example-label">Полиморфизм в production-коде (Strategy pattern)</div>
+                    <pre><code><span class="keyword">interface</span> <span class="function">PaymentGateway</span> {
+    <span class="keyword">public function</span> <span class="function">charge</span>(<span class="keyword">int</span> <span class="variable">$amount</span>): <span class="keyword">string</span>;
+}
+
+<span class="keyword">class</span> <span class="function">StripeGateway</span> <span class="keyword">implements</span> <span class="function">PaymentGateway</span> {
+    <span class="keyword">public function</span> <span class="function">charge</span>(<span class="keyword">int</span> <span class="variable">$amount</span>): <span class="keyword">string</span> { <span class="comment">/* Stripe API */</span> }
+}
+
+<span class="keyword">class</span> <span class="function">PaddleGateway</span> <span class="keyword">implements</span> <span class="function">PaymentGateway</span> {
+    <span class="keyword">public function</span> <span class="function">charge</span>(<span class="keyword">int</span> <span class="variable">$amount</span>): <span class="keyword">string</span> { <span class="comment">/* Paddle API */</span> }
+}
+
+<span class="keyword">class</span> <span class="function">CheckoutService</span> {
+    <span class="keyword">public function</span> <span class="function">__construct</span>(<span class="keyword">private</span> <span class="function">PaymentGateway</span> <span class="variable">$gateway</span>) {}
+
+    <span class="keyword">public function</span> <span class="function">processOrder</span>(<span class="function">Order</span> <span class="variable">$order</span>): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="variable">$this</span>-&gt;<span class="variable">gateway</span>-&gt;<span class="function">charge</span>(<span class="variable">$order</span>-&gt;<span class="variable">total</span>);
+    }
+}
+
+<span class="comment">// CheckoutService не знает, Stripe это или Paddle.
+// Он работает с КОНТРАКТОМ PaymentGateway, а конкретная реализация
+// (полиморфно) определяется тем, что инжектировано через DI.
+// Сменили Stripe на Paddle — CheckoutService не трогается ВООБЩЕ.
+// Это основа SOLID/DI/тестируемого кода.</span></code></pre>
+
+                    <div class="remember-box">
+                        <strong>Когда переопределять — да:</strong><br>
+                        ✓ Когда поведение наследника логически отличается (Dog::makeSound vs Animal::makeSound).<br>
+                        ✓ Когда нужно добавить логику до/после родительской (parent::save + audit).<br>
+                        ✓ Когда реализуете интерфейс/абстрактный метод &mdash; обязаны переопределить.<br>
+                        ✓ Для специализации (admin-bypass в authorize).<br>
+                        <br>
+                        <strong>Когда переопределять — нет:</strong><br>
+                        ✗ Если метод критичный для контракта (тогда автор пометит <code>final</code>).<br>
+                        ✗ Просто чтобы «было своё» без реальной разницы поведения.<br>
+                        ✗ Когда лучше композиция: вместо <code>extends</code> &mdash; инжектировать зависимость с другой реализацией интерфейса (Strategy pattern, см. KB_5).
+                    </div>
+
                     <div class="example-label">Наследование и переопределение методов</div>
                     <pre><code><span class="keyword">class</span> <span class="function">Animal</span> {
     <span class="keyword">protected</span> <span class="variable">$name</span>;
