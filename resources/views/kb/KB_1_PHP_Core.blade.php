@@ -3111,6 +3111,231 @@ readonly НЕ влияет на методы (нельзя сделать "не�
 
 <span class="variable">$repo</span> = <span class="keyword">new</span> <span class="function">Repository</span>();  <span class="comment">// ERROR! Cannot instantiate abstract class</span>
 <span class="variable">$repo</span> = <span class="keyword">new</span> <span class="function">UserRepository</span>();  <span class="comment">// OK</span></code></pre>
+
+                    <div class="content-block">
+                        <strong>Ключевые признаки абстрактного класса:</strong>
+                        <ul class="bullets" style="margin-top:6px;">
+                          <li>Объявляется ключевым словом <code>abstract</code> перед <code>class</code>;</li>
+                          <li>Может содержать <strong>абстрактные методы</strong> &mdash; только сигнатура без тела: <code>abstract public function foo();</code> (заканчивается точкой с запятой, без <code>{}</code>);</li>
+                          <li>Любой наследник <strong>обязан реализовать</strong> все абстрактные методы (или сам стать абстрактным);</li>
+                          <li>Может содержать <strong>обычные методы с реализацией</strong> &mdash; они переиспользуются всеми наследниками;</li>
+                          <li>Может иметь свойства, конструктор, константы &mdash; всё как в обычном классе;</li>
+                          <li><strong>Нельзя создать объект</strong> через <code>new</code> &mdash; только через подкласс.</li>
+                        </ul>
+                    </div>
+
+                    <div class="example-label">Реальный пример 1: Animal / Dog / Cat — основа полиморфизма</div>
+                    <pre><code><span class="keyword">abstract class</span> <span class="function">Animal</span> {
+    <span class="keyword">protected string</span> <span class="variable">$name</span>;
+
+    <span class="keyword">public function</span> <span class="function">__construct</span>(<span class="keyword">string</span> <span class="variable">$name</span>) {
+        <span class="variable">$this</span>-><span class="variable">name</span> = <span class="variable">$name</span>;
+    }
+
+    <span class="comment">// Готовый метод — все наследники получают бесплатно</span>
+    <span class="keyword">public function</span> <span class="function">getName</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">name</span>;
+    }
+
+    <span class="comment">// Абстрактный — каждый наследник обязан реализовать по-своему</span>
+    <span class="keyword">abstract public function</span> <span class="function">makeSound</span>(): <span class="keyword">string</span>;
+}
+
+<span class="keyword">class</span> <span class="function">Dog</span> <span class="keyword">extends</span> <span class="function">Animal</span> {
+    <span class="keyword">public function</span> <span class="function">makeSound</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="string">"Гав!"</span>; }
+}
+
+<span class="keyword">class</span> <span class="function">Cat</span> <span class="keyword">extends</span> <span class="function">Animal</span> {
+    <span class="keyword">public function</span> <span class="function">makeSound</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="string">"Мяу!"</span>; }
+}
+
+<span class="comment">// $animal = new Animal("Test");   // Fatal: Cannot instantiate abstract class</span>
+
+<span class="variable">$dog</span> = <span class="keyword">new</span> <span class="function">Dog</span>(<span class="string">"Бобик"</span>);
+<span class="keyword">echo</span> <span class="variable">$dog</span>-><span class="function">getName</span>();     <span class="comment">// "Бобик" — унаследовано</span>
+<span class="keyword">echo</span> <span class="variable">$dog</span>-><span class="function">makeSound</span>();   <span class="comment">// "Гав!"  — собственная реализация</span></code></pre>
+
+                    <div class="example-label">Реальный пример 2: Template Method — общий CRUD-контроллер</div>
+                    <pre><code><span class="comment">// Каркас алгоритма фиксирован в родителе; шаги — в наследниках</span>
+
+<span class="keyword">abstract class</span> <span class="function">CrudController</span> <span class="keyword">extends</span> <span class="function">Controller</span> {
+    <span class="comment">// Наследники обязаны указать модель и правила</span>
+    <span class="keyword">abstract protected function</span> <span class="function">modelClass</span>(): <span class="keyword">string</span>;
+    <span class="keyword">abstract protected function</span> <span class="function">validationRules</span>(<span class="function">Request</span> <span class="variable">$r</span>): <span class="keyword">array</span>;
+
+    <span class="comment">// Общая логика для всех CRUD-контроллеров — пишется один раз</span>
+    <span class="keyword">public function</span> <span class="function">store</span>(<span class="function">Request</span> <span class="variable">$request</span>): <span class="function">JsonResponse</span> {
+        <span class="variable">$validated</span> = <span class="variable">$request</span>-&gt;<span class="function">validate</span>(<span class="variable">$this</span>-&gt;<span class="function">validationRules</span>(<span class="variable">$request</span>));
+        <span class="variable">$item</span> = (<span class="variable">$this</span>-&gt;<span class="function">modelClass</span>())::<span class="function">create</span>(<span class="variable">$validated</span>);
+        <span class="keyword">return</span> <span class="function">response</span>()-&gt;<span class="function">json</span>(<span class="variable">$item</span>, <span class="number">201</span>);
+    }
+
+    <span class="keyword">public function</span> <span class="function">index</span>(): <span class="function">JsonResponse</span> {
+        <span class="keyword">return</span> <span class="function">response</span>()-&gt;<span class="function">json</span>((<span class="variable">$this</span>-&gt;<span class="function">modelClass</span>())::<span class="function">all</span>());
+    }
+}
+
+<span class="keyword">class</span> <span class="function">UserController</span> <span class="keyword">extends</span> <span class="function">CrudController</span> {
+    <span class="keyword">protected function</span> <span class="function">modelClass</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="function">User</span>::<span class="keyword">class</span>; }
+
+    <span class="keyword">protected function</span> <span class="function">validationRules</span>(<span class="function">Request</span> <span class="variable">$r</span>): <span class="keyword">array</span> {
+        <span class="keyword">return</span> [<span class="string">'name'</span> =&gt; <span class="string">'required|string'</span>, <span class="string">'email'</span> =&gt; <span class="string">'required|email|unique:users'</span>];
+    }
+}
+
+<span class="keyword">class</span> <span class="function">ProductController</span> <span class="keyword">extends</span> <span class="function">CrudController</span> {
+    <span class="keyword">protected function</span> <span class="function">modelClass</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="function">Product</span>::<span class="keyword">class</span>; }
+
+    <span class="keyword">protected function</span> <span class="function">validationRules</span>(<span class="function">Request</span> <span class="variable">$r</span>): <span class="keyword">array</span> {
+        <span class="keyword">return</span> [<span class="string">'title'</span> =&gt; <span class="string">'required|string|max:100'</span>, <span class="string">'price'</span> =&gt; <span class="string">'required|numeric|min:0'</span>];
+    }
+}
+
+<span class="comment">// Зачем абстрактный: store() и index() пишутся ОДИН раз в CrudController.
+// Каждый наследник лишь указывает модель и правила. Если завтра добавится
+// логирование запросов — добавляется в одном месте, работает для всех.</span></code></pre>
+
+                    <div class="example-label">Реальный пример 3: NotificationService — каркас + контракт send()</div>
+                    <pre><code><span class="keyword">abstract class</span> <span class="function">NotificationService</span> {
+    <span class="keyword">public function</span> <span class="function">__construct</span>(
+        <span class="keyword">protected string</span> <span class="variable">$recipient</span>,
+        <span class="keyword">protected string</span> <span class="variable">$message</span>,
+    ) {}
+
+    <span class="comment">// Каркас: каждый наследник делает свой send()</span>
+    <span class="keyword">abstract public function</span> <span class="function">send</span>(): <span class="keyword">bool</span>;
+
+    <span class="comment">// Общая утилита — все наследники переиспользуют</span>
+    <span class="keyword">protected function</span> <span class="function">log</span>(<span class="keyword">string</span> <span class="variable">$status</span>): <span class="keyword">void</span> {
+        <span class="function">Log</span>::<span class="function">info</span>(<span class="string">"[<span class="variable">$status</span>] Sent to <span class="variable">$this</span>-&gt;<span class="variable">recipient</span>"</span>);
+    }
+}
+
+<span class="keyword">class</span> <span class="function">EmailService</span> <span class="keyword">extends</span> <span class="function">NotificationService</span> {
+    <span class="keyword">public function</span> <span class="function">send</span>(): <span class="keyword">bool</span> {
+        <span class="variable">$ok</span> = <span class="function">Mail</span>::<span class="function">to</span>(<span class="variable">$this</span>-&gt;<span class="variable">recipient</span>)-&gt;<span class="function">send</span>(<span class="keyword">new</span> <span class="function">GenericMail</span>(<span class="variable">$this</span>-&gt;<span class="variable">message</span>));
+        <span class="variable">$this</span>-&gt;<span class="function">log</span>(<span class="variable">$ok</span> ? <span class="string">'OK'</span> : <span class="string">'FAIL'</span>);
+        <span class="keyword">return</span> <span class="variable">$ok</span>;
+    }
+}
+
+<span class="keyword">class</span> <span class="function">SmsService</span> <span class="keyword">extends</span> <span class="function">NotificationService</span> {
+    <span class="keyword">public function</span> <span class="function">send</span>(): <span class="keyword">bool</span> {
+        <span class="variable">$ok</span> = <span class="function">Http</span>::<span class="function">post</span>(<span class="string">'https://sms.api/send'</span>, [...])-&gt;<span class="function">successful</span>();
+        <span class="variable">$this</span>-&gt;<span class="function">log</span>(<span class="variable">$ok</span> ? <span class="string">'OK'</span> : <span class="string">'FAIL'</span>);
+        <span class="keyword">return</span> <span class="variable">$ok</span>;
+    }
+}
+
+<span class="comment">// Полиморфное использование — код не знает, какой именно сервис</span>
+<span class="variable">$notifications</span> = [
+    <span class="keyword">new</span> <span class="function">EmailService</span>(<span class="string">'a@ex.com'</span>, <span class="string">'Hi'</span>),
+    <span class="keyword">new</span> <span class="function">SmsService</span>(<span class="string">'+1234'</span>, <span class="string">'Hi'</span>),
+];
+<span class="keyword">foreach</span> (<span class="variable">$notifications</span> <span class="keyword">as</span> <span class="variable">$n</span>) {
+    <span class="variable">$n</span>-&gt;<span class="function">send</span>();   <span class="comment">// каждый отрабатывает по-своему, логирование общее</span>
+}</code></pre>
+
+                    <div class="example-label">Реальный пример 4: BaseEntity — общая модельная логика</div>
+                    <pre><code><span class="keyword">use</span> <span class="function">Illuminate\Database\Eloquent\Model</span>;
+
+<span class="keyword">abstract class</span> <span class="function">BaseEntity</span> <span class="keyword">extends</span> <span class="function">Model</span> {
+    <span class="comment">// Наследник указывает по какому полю искать (slug, username, etc.)</span>
+    <span class="keyword">abstract public function</span> <span class="function">searchField</span>(): <span class="keyword">string</span>;
+
+    <span class="comment">// Универсальный поиск — работает для всех наследников</span>
+    <span class="keyword">public static function</span> <span class="function">findByUnique</span>(<span class="keyword">string</span> <span class="variable">$value</span>): <span class="keyword">?</span><span class="keyword">static</span> {
+        <span class="variable">$instance</span> = <span class="keyword">new</span> <span class="keyword">static</span>();
+        <span class="keyword">return</span> <span class="keyword">static</span>::<span class="function">where</span>(<span class="variable">$instance</span>-&gt;<span class="function">searchField</span>(), <span class="variable">$value</span>)-&gt;<span class="function">first</span>();
+    }
+
+    <span class="comment">// Общий аксессор для формата даты — у всех моделей</span>
+    <span class="keyword">public function</span> <span class="function">createdAtShort</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="variable">$this</span>-&gt;<span class="variable">created_at</span>-&gt;<span class="function">format</span>(<span class="string">'d.m.Y'</span>);
+    }
+}
+
+<span class="keyword">class</span> <span class="function">Article</span> <span class="keyword">extends</span> <span class="function">BaseEntity</span> {
+    <span class="keyword">public function</span> <span class="function">searchField</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="string">'slug'</span>; }
+}
+
+<span class="keyword">class</span> <span class="function">User</span> <span class="keyword">extends</span> <span class="function">BaseEntity</span> {
+    <span class="keyword">public function</span> <span class="function">searchField</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="string">'username'</span>; }
+}
+
+<span class="comment">// Полиморфно — Article ищется по slug, User по username</span>
+<span class="variable">$article</span> = <span class="function">Article</span>::<span class="function">findByUnique</span>(<span class="string">'hello-world'</span>);
+<span class="variable">$user</span>    = <span class="function">User</span>::<span class="function">findByUnique</span>(<span class="string">'john_doe'</span>);
+
+<span class="comment">// findByUnique() написан 1 раз; каждый наследник без копипасты получает поиск.</span></code></pre>
+
+                    <div class="example-label">Реальный пример 5: SPL FilterIterator — встроенная PHP-абстракция</div>
+                    <pre><code><span class="comment">// PHP в SPL даёт абстрактный FilterIterator — пишешь свой class extends...
+// и обязательно реализуешь accept().</span>
+
+<span class="keyword">abstract class</span> <span class="function">FilterIterator</span> <span class="keyword">extends</span> <span class="function">IteratorIterator</span> {
+    <span class="comment">// Этот метод сам PHP вызывает на каждой итерации,
+    // и наследник ОБЯЗАН его реализовать</span>
+    <span class="keyword">abstract public function</span> <span class="function">accept</span>(): <span class="keyword">bool</span>;
+}
+
+<span class="comment">// Свой фильтр — оставляет только строки длиннее N символов</span>
+<span class="keyword">class</span> <span class="function">MinLengthFilter</span> <span class="keyword">extends</span> <span class="function">FilterIterator</span> {
+    <span class="keyword">public function</span> <span class="function">__construct</span>(<span class="function">Iterator</span> <span class="variable">$it</span>, <span class="keyword">private int</span> <span class="variable">$min</span>) {
+        <span class="keyword">parent</span>::<span class="function">__construct</span>(<span class="variable">$it</span>);
+    }
+
+    <span class="keyword">public function</span> <span class="function">accept</span>(): <span class="keyword">bool</span> {
+        <span class="keyword">return</span> <span class="function">strlen</span>((<span class="keyword">string</span>) <span class="variable">$this</span>-&gt;<span class="function">current</span>()) &gt;= <span class="variable">$this</span>-&gt;<span class="variable">min</span>;
+    }
+}
+
+<span class="variable">$words</span>    = <span class="keyword">new</span> <span class="function">ArrayIterator</span>([<span class="string">'a'</span>, <span class="string">'hi'</span>, <span class="string">'apple'</span>, <span class="string">'no'</span>, <span class="string">'banana'</span>]);
+<span class="variable">$filtered</span> = <span class="keyword">new</span> <span class="function">MinLengthFilter</span>(<span class="variable">$words</span>, <span class="number">3</span>);
+
+<span class="keyword">foreach</span> (<span class="variable">$filtered</span> <span class="keyword">as</span> <span class="variable">$w</span>) <span class="keyword">echo</span> <span class="variable">$w</span> . <span class="string">"\n"</span>;
+<span class="comment">// apple
+// banana
+// (короткие отфильтрованы PHP-движком, мы дали только правило)</span></code></pre>
+
+                    <div class="content-block">
+                        <strong>Когда выбирать абстрактный класс</strong> (а не интерфейс или обычный класс):
+                        <ul class="bullets" style="margin-top:6px;">
+                          <li>Есть <strong>общая логика</strong> для группы классов (поля, конструктор, готовые методы), которую глупо дублировать;</li>
+                          <li>Часть деталей нужно <strong>обязательно</strong> реализовать в каждом наследнике (абстрактные методы как контракт);</li>
+                          <li>Семантически «нет смысла создавать сам родитель» &mdash; <code>Animal</code> вообще, <code>NotificationService</code> вообще, <code>Repository</code> вообще не существуют как объекты;</li>
+                          <li>Нужно реализовать <strong>паттерн Template Method</strong> &mdash; общий алгоритм с переопределяемыми шагами.</li>
+                        </ul>
+                        <strong>Когда НЕ абстрактный класс:</strong>
+                        <ul class="bullets" style="margin-top:6px;">
+                          <li>Если общей реализации нет, есть только контракт &rarr; <strong>interface</strong>;</li>
+                          <li>Если нужно реализовать <em>несколько</em> контрактов &rarr; интерфейсы (PHP не имеет множественного наследования классов);</li>
+                          <li>Если родитель сам по себе осмыслен и может существовать как объект &rarr; обычный класс + наследование без <code>abstract</code>.</li>
+                        </ul>
+                    </div>
+
+                    <div class="example-label">Отличия от обычного класса и интерфейса (для быстрого выбора)</div>
+                    <pre><code><span class="comment">+-------------------------+--------+--------+----------+
+| Характеристика          | Class  | Abstr. | Interface|
++-------------------------+--------+--------+----------+
+| new ClassName()         | ✓      | ❌     | ❌       |
+| Готовые методы          | ✓      | ✓      | ❌ (PHP&lt;8.1)|
+| Абстрактные методы      | ❌     | ✓      | ✓ (по сути)|
+| Свойства/поля           | ✓      | ✓      | ❌       |
+| Конструктор             | ✓      | ✓      | ❌       |
+| Множественное наследов. | 1 родит| 1 родит| много    |
+| Константы               | ✓      | ✓      | ✓        |
+| Тип в type hint         | ✓      | ✓      | ✓        |
++-------------------------+--------+--------+----------+</span></code></pre>
+
+                    <div class="remember-box">
+                        <strong>Правило большого пальца:</strong><br>
+                        — Если хочется <strong>дать каркас</strong> с готовой реализацией части методов + обязать наследников доделать остальное → <code>abstract class</code>.<br>
+                        — Если нужен только <strong>контракт</strong> (без общего кода) → <code>interface</code>.<br>
+                        — Если нужна <strong>и реализация, и множественное наследование</strong> поведения → <code>trait</code> (см. KB_9).<br>
+                        <br>
+                        Абстрактный класс &mdash; полуфабрикат: даёт заготовку и правила, но требует доделки. Хорошо работает в связке с Strategy/Template Method патернами (см. KB_5).
+                    </div>
                 </div>
 
                 <div class="subsection">
