@@ -3654,6 +3654,22 @@ readonly НЕ влияет на методы (нельзя сделать "не�
         ];
     }
 }</code></pre>
+
+                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>❓ Метод <code>validate()</code> обязательно реализовывать в классе?</strong>
+                        <p style="margin:8px 0"><strong>Нет.</strong> <code>validate()</code> в trait уже имеет <strong>готовую реализацию</strong> — она «вмешивается» в класс через <code>use Validatable</code>. Класс <code>UserForm</code> получает её бесплатно и может вызвать <code>$form->validate($data)</code> без переопределения.</p>
+                        <p style="margin:8px 0"><strong>Обязателен только <code>rules()</code></strong> — у него <code>abstract</code> модификатор. Trait декларирует: «я умею валидировать, но правила задаёт класс-пользователь». Если класс не реализует <code>rules()</code> — будет fatal error:</p>
+                        <pre style="background:#1F2937;color:#F3F4F6;padding:10px 14px;border-radius:6px;font-size:12px;margin:6px 0;overflow-x:auto">Fatal error: Class UserForm contains 1 abstract method
+and must therefore be declared abstract or implement
+the remaining methods (Validatable::rules)</pre>
+                        <p style="margin:8px 0"><strong>Возможные сценарии</strong> для класса с trait:</p>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>Abstract метод trait</strong> (<code>rules()</code>) — <em>обязан</em> реализовать класс.</li>
+                            <li><strong>Concrete метод trait</strong> (<code>validate()</code>) — <em>не обязан</em>, наследует as-is. Может переопределить, если хочет другую логику.</li>
+                            <li><strong>Свойство trait</strong> (<code>$cache</code>) — попадает в класс автоматически.</li>
+                        </ul>
+                        <p style="margin:10px 0 0"><strong>Это та же логика, что у abstract class:</strong> abstract method = контракт, concrete method = бесплатное наследство.</p>
+                    </div>
                 </div>
 
                 <div class="subsection">
@@ -3887,7 +3903,7 @@ readonly НЕ влияет на методы (нельзя сделать "не�
 
     <span class="comment">// Вызывается при unset() на приватном свойстве</span>
     <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__unset</span>(<span class="keyword">string</span> <span class="variable">$name</span>) {
-        <span class="function">unset</span>(<span class="variable">$this</span>-><span class="variable">data</span>[<span class="variable">$name</span>]);
+        <span class="function">unset</span>(<span class="variable">$this</span>-><span class="variable">data</span>[<span class="variable">$name</span>]);  <span class="comment">// удалить ключ из внутреннего массива</span>
     }
 }
 
@@ -3924,6 +3940,18 @@ readonly НЕ влияет на методы (нельзя сделать "не�
 
 <span class="function">var_dump</span>(<span class="function">isset</span>(<span class="variable">$user</span>-><span class="variable">name</span>));
 <span class="comment">// PHP: → __isset('name') → false (ключ удалён из $data)</span></code></pre>
+
+                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>❓ Что такое <code>unset()</code> внутри <code>__unset</code>?</strong>
+                        <p style="margin:8px 0"><code>unset()</code> — это <strong>языковая конструкция PHP</strong> (не функция, как <code>strlen()</code>). Делает одно из двух в зависимости от аргумента:</p>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><code>unset($var)</code> — уничтожает переменную (помечает память для GC)</li>
+                            <li><code>unset($array[$key])</code> — удаляет элемент массива по ключу. После этого <code>isset($array[$key])</code> = <code>false</code>, <code>array_key_exists()</code> = <code>false</code></li>
+                            <li><code>unset($obj->prop)</code> — удаляет свойство объекта (либо вызывает <code>__unset</code>, если свойства нет)</li>
+                        </ul>
+                        <p style="margin:10px 0 0"><strong>В нашем коде:</strong> <code>unset($this->data[$name])</code> удаляет ключ <code>$name</code> из приватного массива <code>$data</code>. Это нужно, чтобы виртуальное свойство «исчезло» — в следующий раз <code>isset($user->name)</code> вернёт <code>false</code>.</p>
+                        <p style="margin:10px 0 0"><strong>Важно:</strong> для индексированных массивов (<code>[1,2,3]</code>) <code>unset</code> <em>не</em> переиндексирует ключи. После <code>unset($arr[1])</code> массив станет <code>[0 =&gt; 1, 2 =&gt; 3]</code> — пропуск в ключах. Чтобы переиндексировать, используй <code>array_values()</code>.</p>
+                    </div>
 
                     <div class="remember-box">
                         <strong>__get/__set</strong> отлично подходят для ленивой загрузки данных, валидации, логирования доступа к свойствам. Это использует <strong>Laravel Eloquent</strong> — поля модели хранятся в <code>$attributes</code>, и обращение <code>$user->name</code> идёт через <code>__get</code>, который читает из <code>$attributes['name']</code> и применяет accessor/cast.
