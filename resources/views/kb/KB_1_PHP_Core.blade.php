@@ -3448,6 +3448,114 @@ readonly НЕ влияет на методы (нельзя сделать "не�
                 <h2 class="section-title">6. ООП: Traits</h2>
 
                 <div class="subsection">
+                    <h3 class="subsection-title">Trait vs Abstract Class vs Interface — сравнение</h3>
+                    <div class="content-block">
+                        Эти три инструмента решают разные задачи и часто комбинируются. Главная ошибка — путать их назначение и выбирать неподходящий.
+                    </div>
+
+                    <table class="data-table" style="width:100%;border-collapse:collapse;margin:12px 0">
+                        <thead>
+                            <tr style="background:#F3F4F6">
+                                <th style="text-align:left;padding:10px 12px;border:1px solid #E5E7EB">Характеристика</th>
+                                <th style="text-align:left;padding:10px 12px;border:1px solid #E5E7EB">Abstract Class</th>
+                                <th style="text-align:left;padding:10px 12px;border:1px solid #E5E7EB">Interface</th>
+                                <th style="text-align:left;padding:10px 12px;border:1px solid #E5E7EB">Trait</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB"><strong>Концепция</strong></td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">«Является чем-то» (is-a)</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">«Умеет что-то» (can-do)</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">«Копипаст методов» (горизонталь)</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB"><strong>Множественное использование</strong></td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">❌ Один родитель</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Сколько угодно</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Сколько угодно</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB"><strong>Свойства (поля)</strong></td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Да, любая видимость</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">❌ Только константы</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Да, любая видимость</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB"><strong>Реализация методов</strong></td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Смесь abstract + concrete</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">❌ Только сигнатуры</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Полные методы</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB"><strong>Конструктор</strong></td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Да</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">❌ Нет</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">⚠️ Технически да, но опасно</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB"><strong>Можно ли создать инстанс</strong></td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">❌ Нет (только наследник)</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">❌ Нет</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">❌ Нет (только через <code>use</code>)</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB"><strong>Приоритет при конфликте</strong></td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Класс переопределяет родителя</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">—</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Класс &gt; Trait &gt; Parent class</td>
+                            </tr>
+                            <tr>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB"><strong>Полиморфизм через type-hint</strong></td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Да</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Да (рекомендовано)</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">❌ Нет (trait — не тип)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="example-label">Когда что использовать</div>
+                    <pre><code><span class="comment">// ABSTRACT CLASS — общий родитель с базовой логикой и данными</span>
+<span class="comment">// Используй когда: есть иерархия "is-a" и общее состояние</span>
+<span class="keyword">abstract</span> <span class="keyword">class</span> <span class="function">Animal</span> {
+    <span class="keyword">protected</span> <span class="keyword">string</span> <span class="variable">$name</span>;            <span class="comment">// общее состояние</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">eat</span>() { <span class="comment">/* общее поведение */</span> }
+    <span class="keyword">abstract</span> <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">sound</span>(): <span class="keyword">string</span>;  <span class="comment">// подкласс ОБЯЗАН</span>
+}
+
+<span class="comment">// INTERFACE — контракт способностей, без реализации</span>
+<span class="comment">// Используй когда: нужно описать capability для type-hint</span>
+<span class="keyword">interface</span> <span class="function">Trainable</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">learn</span>(<span class="keyword">string</span> <span class="variable">$command</span>): <span class="keyword">void</span>;
+}
+
+<span class="comment">// TRAIT — переиспользуемое поведение для классов разных веток</span>
+<span class="comment">// Используй когда: один и тот же метод нужен в неродственных классах</span>
+<span class="keyword">trait</span> <span class="function">Loggable</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">log</span>(<span class="keyword">string</span> <span class="variable">$msg</span>): <span class="keyword">void</span> {
+        <span class="function">error_log</span>(<span class="function">static</span>::<span class="keyword">class</span> . <span class="string">": $msg"</span>);
+    }
+}
+
+<span class="comment">// КОМБИНАЦИЯ — реальный код часто использует все три</span>
+<span class="keyword">class</span> <span class="function">Dog</span> <span class="keyword">extends</span> <span class="function">Animal</span> <span class="keyword">implements</span> <span class="function">Trainable</span> {
+    <span class="keyword">use</span> <span class="function">Loggable</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">sound</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="string">"Woof"</span>; }
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">learn</span>(<span class="keyword">string</span> <span class="variable">$cmd</span>): <span class="keyword">void</span> { <span class="variable">$this</span>-><span class="function">log</span>(<span class="string">"Learned $cmd"</span>); }
+}</code></pre>
+
+                    <div class="remember-box">
+                        <strong>Правило большого пальца:</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>Abstract</strong> — когда есть "is-a" иерархия и общее состояние (BaseController, BaseModel)</li>
+                            <li><strong>Interface</strong> — когда нужен контракт для DI / полиморфизма (PaymentGatewayInterface)</li>
+                            <li><strong>Trait</strong> — когда один и тот же код нужен в неродственных классах (Loggable, Cacheable, Notifiable)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="subsection">
                     <h3 class="subsection-title">Основы Traits</h3>
                     <div class="content-block">
                         <strong>Trait</strong> - способ повторного использования кода в классах. Это как "горизонтальное наследование". Класс может использовать несколько traits, но может наследовать только один класс.
@@ -3582,6 +3690,43 @@ readonly НЕ влияет на методы (нельзя сделать "не�
     <span class="keyword">abstract</span> <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">toArray</span>();
 }</code></pre>
 
+                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>🔍 Разбор trait Cacheable — что делает <code>isset</code>?</strong>
+                        <p style="margin:8px 0"><code>isset($this->cache[$key])</code> — это <strong>языковая конструкция PHP</strong>, не часть trait. Проверяет, что элемент массива <code>$cache</code> с ключом <code>$key</code> существует <strong>И не равен <code>null</code></strong>.</p>
+                        <p style="margin:8px 0"><strong>Логика remember():</strong></p>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li>Если ключ есть → вернуть закэшированное значение (нет повторного вычисления)</li>
+                            <li>Если нет → вызвать <code>$callback()</code>, сохранить результат в <code>$cache[$key]</code> и вернуть</li>
+                        </ul>
+                    </div>
+
+                    <div class="example-label">isset vs array_key_exists — критичный нюанс</div>
+                    <pre><code><span class="comment">// ⚠️ Если callback может вернуть null — isset обманет!</span>
+<span class="variable">$user</span>-><span class="function">remember</span>(<span class="string">'profile'</span>, <span class="keyword">fn</span>() => <span class="keyword">null</span>);
+<span class="comment">// isset($cache['profile']) === false  (т.к. null)</span>
+<span class="comment">// → callback вызовется СНОВА, кэш не работает</span>
+
+<span class="comment">// ✅ Правильно — array_key_exists проверяет ТОЛЬКО наличие ключа</span>
+<span class="keyword">trait</span> <span class="function">CacheableSafe</span> {
+    <span class="keyword">private</span> <span class="keyword">array</span> <span class="variable">$cache</span> = [];
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">remember</span>(<span class="keyword">string</span> <span class="variable">$key</span>, <span class="keyword">callable</span> <span class="variable">$callback</span>): <span class="keyword">mixed</span> {
+        <span class="keyword">if</span> (<span class="function">array_key_exists</span>(<span class="variable">$key</span>, <span class="variable">$this</span>-><span class="variable">cache</span>)) {
+            <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">cache</span>[<span class="variable">$key</span>];  <span class="comment">// сработает даже если кэш = null</span>
+        }
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">cache</span>[<span class="variable">$key</span>] = <span class="variable">$callback</span>();
+    }
+}</code></pre>
+
+                    <div class="info-box" style="background:#FEE2E2;border-left:4px solid #DC2626;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>⚠️ Ограничения trait Cacheable:</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>Кэш живёт только в рамках одного HTTP-запроса</strong> (in-memory). Между запросами всё сбрасывается.</li>
+                            <li>Для долговременного кэша используй Laravel <code>Cache::remember()</code> (Redis/Memcached/file).</li>
+                            <li>Если класс уже имеет своё <code>$cache</code> с другой видимостью или дефолтом — будет fatal error при <code>use Cacheable</code>.</li>
+                        </ul>
+                    </div>
+
                     <div class="remember-box">
                         Traits отлично подходят для кроссэффективности, которая НЕ является частью иерархии. Используй их для логирования, кэширования, валидации и других "горизонтальных" обязанностей!
                     </div>
@@ -3600,13 +3745,13 @@ readonly НЕ влияет на методы (нельзя сделать "не�
 
     <span class="comment">// __construct вызывается при создании объекта</span>
     <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">string</span> <span class="variable">$host</span>, <span class="keyword">string</span> <span class="variable">$user</span>) {
-        <span class="variable">$this</span>-><span class="variable">$connection</span> = <span class="function">mysqli_connect</span>(<span class="variable">$host</span>, <span class="variable">$user</span>);
+        <span class="variable">$this</span>-><span class="variable">connection</span> = <span class="function">mysqli_connect</span>(<span class="variable">$host</span>, <span class="variable">$user</span>);
         <span class="keyword">echo</span> <span class="string">"Connected"</span>;
     }
 
     <span class="comment">// __destruct вызывается при удалении объекта</span>
     <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__destruct</span>() {
-        <span class="function">mysqli_close</span>(<span class="variable">$this</span>-><span class="variable">$connection</span>);
+        <span class="function">mysqli_close</span>(<span class="variable">$this</span>-><span class="variable">connection</span>);
         <span class="keyword">echo</span> <span class="string">"Disconnected"</span>;
     }
 }
@@ -3615,6 +3760,106 @@ readonly НЕ влияет на методы (нельзя сделать "не�
 <span class="comment">// Output: "Connected"</span>
 <span class="variable">$db</span> = <span class="keyword">null</span>;  <span class="comment">// или выход из области видимости</span>
 <span class="comment">// Output: "Disconnected"</span></code></pre>
+
+                    <div class="info-box" style="background:#FEF3C7;border-left:4px solid #F59E0B;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>⚠️ Откуда берутся <code>$host</code>, <code>$user</code>, <code>$connection</code>?</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><code>$host</code>, <code>$user</code> — <strong>параметры конструктора</strong>. Они не определены где-то заранее. Получают значения в момент <code>new Database("localhost", "root")</code>.</li>
+                            <li><code>$connection</code> — <strong>свойство класса</strong> (<code>private $connection;</code>). Внутри <code>__construct</code> в него записывается результат <code>mysqli_connect()</code> — объект-ссылка на реальное соединение с MySQL.</li>
+                            <li><strong>Связь с БД:</strong> <code>mysqli_connect()</code> открывает TCP-соединение с MySQL-сервером (<code>localhost</code> = сокет или <code>127.0.0.1:3306</code>) и аутентифицирует пользователя. Параметры обычно читаются из <code>.env</code> и передаются в конструктор снаружи.</li>
+                            <li><strong>Опечатка-капкан:</strong> <code>$this->$connection</code> (с двумя <code>$</code>) — это обращение к свойству, чьё имя хранится в переменной <code>$connection</code> (variable property). Если переменная пустая — fatal error. Правильно: <code>$this->connection</code> без второго <code>$</code>.</li>
+                        </ul>
+                    </div>
+
+                    <div class="example-label">RAII — реальные сценарии __construct + __destruct</div>
+                    <pre><code><span class="comment">// 1. FileHandler — открыть/закрыть файл автоматически</span>
+<span class="keyword">class</span> <span class="function">FileHandler</span> {
+    <span class="keyword">private</span> <span class="variable">$handle</span>;
+    <span class="keyword">private</span> <span class="keyword">string</span> <span class="variable">$path</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">string</span> <span class="variable">$path</span>, <span class="keyword">string</span> <span class="variable">$mode</span> = <span class="string">'r'</span>) {
+        <span class="variable">$this</span>-><span class="variable">path</span> = <span class="variable">$path</span>;
+        <span class="variable">$this</span>-><span class="variable">handle</span> = <span class="function">fopen</span>(<span class="variable">$path</span>, <span class="variable">$mode</span>);
+        <span class="keyword">if</span> (!<span class="variable">$this</span>-><span class="variable">handle</span>) <span class="keyword">throw</span> <span class="keyword">new</span> <span class="function">Exception</span>(<span class="string">"Cannot open file"</span>);
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">read</span>(): <span class="keyword">string</span> {
+        <span class="keyword">return</span> <span class="function">fread</span>(<span class="variable">$this</span>-><span class="variable">handle</span>, <span class="function">filesize</span>(<span class="variable">$this</span>-><span class="variable">path</span>));
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__destruct</span>() {
+        <span class="keyword">if</span> (<span class="variable">$this</span>-><span class="variable">handle</span>) <span class="function">fclose</span>(<span class="variable">$this</span>-><span class="variable">handle</span>);  <span class="comment">// гарантированно закроется</span>
+    }
+}
+
+<span class="comment">// 2. FileLock — захват/освобождение файловой блокировки</span>
+<span class="keyword">class</span> <span class="function">FileLock</span> {
+    <span class="keyword">private</span> <span class="variable">$handle</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">string</span> <span class="variable">$file</span>) {
+        <span class="variable">$this</span>-><span class="variable">handle</span> = <span class="function">fopen</span>(<span class="variable">$file</span>, <span class="string">'c'</span>);
+        <span class="function">flock</span>(<span class="variable">$this</span>-><span class="variable">handle</span>, <span class="constant">LOCK_EX</span>);  <span class="comment">// эксклюзивная блокировка</span>
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__destruct</span>() {
+        <span class="function">flock</span>(<span class="variable">$this</span>-><span class="variable">handle</span>, <span class="constant">LOCK_UN</span>);
+        <span class="function">fclose</span>(<span class="variable">$this</span>-><span class="variable">handle</span>);
+    }
+}
+
+<span class="comment">// 3. Logger — открыть лог, дописать стартовую/финальную запись</span>
+<span class="keyword">class</span> <span class="function">Logger</span> {
+    <span class="keyword">private</span> <span class="variable">$logFile</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">string</span> <span class="variable">$filename</span>) {
+        <span class="variable">$this</span>-><span class="variable">logFile</span> = <span class="function">fopen</span>(<span class="variable">$filename</span>, <span class="string">'a'</span>);
+        <span class="variable">$this</span>-><span class="function">write</span>(<span class="string">"Logger started"</span>);
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">write</span>(<span class="keyword">string</span> <span class="variable">$message</span>): <span class="keyword">void</span> {
+        <span class="function">fwrite</span>(<span class="variable">$this</span>-><span class="variable">logFile</span>, <span class="function">date</span>(<span class="string">'Y-m-d H:i:s'</span>) . <span class="string">" - $message\n"</span>);
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__destruct</span>() {
+        <span class="variable">$this</span>-><span class="function">write</span>(<span class="string">"Logger finished"</span>);
+        <span class="function">fclose</span>(<span class="variable">$this</span>-><span class="variable">logFile</span>);
+    }
+}
+
+<span class="comment">// 4. TransactionGuard — гарантированный rollback при сбое</span>
+<span class="keyword">class</span> <span class="function">TransactionGuard</span> {
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">private</span> <span class="function">PDO</span> <span class="variable">$db</span>) {
+        <span class="variable">$this</span>-><span class="variable">db</span>-><span class="function">beginTransaction</span>();
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">commit</span>(): <span class="keyword">void</span> { <span class="variable">$this</span>-><span class="variable">db</span>-><span class="function">commit</span>(); }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__destruct</span>() {
+        <span class="comment">// если commit не был вызван — откатываем</span>
+        <span class="keyword">if</span> (<span class="variable">$this</span>-><span class="variable">db</span>-><span class="function">inTransaction</span>()) <span class="variable">$this</span>-><span class="variable">db</span>-><span class="function">rollBack</span>();
+    }
+}
+
+<span class="comment">// Использование:</span>
+<span class="keyword">function</span> <span class="function">transfer</span>(<span class="function">PDO</span> <span class="variable">$db</span>): <span class="keyword">void</span> {
+    <span class="variable">$tx</span> = <span class="keyword">new</span> <span class="function">TransactionGuard</span>(<span class="variable">$db</span>);
+    <span class="comment">// ... любой throw здесь автоматически откатит транзакцию через __destruct</span>
+    <span class="variable">$tx</span>-><span class="function">commit</span>();
+}</code></pre>
+
+                    <div class="remember-box">
+                        <strong>RAII (Resource Acquisition Is Initialization)</strong> — паттерн из C++, отлично работает в PHP: <strong>конструктор захватывает ресурс, деструктор освобождает</strong>. Применимо к файлам, сокетам, блокировкам, транзакциям, GD-изображениям. Защищает от утечек, если код упал с exception.
+                    </div>
+
+                    <div class="info-box" style="background:#FEE2E2;border-left:4px solid #DC2626;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>⚠️ Когда деструктор НЕ подходит:</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>Критичные операции</strong> — нельзя полагаться на <code>__destruct</code> для отправки данных или подтверждений. Порядок и время вызова не гарантированы.</li>
+                            <li><strong>Сложная очистка с зависимостями</strong> — при сборке мусора зависимые объекты могут быть уже уничтожены.</li>
+                            <li><strong>Long-running процессы (queue workers, daemons)</strong> — объект может жить долго, лучше явный <code>close()</code>.</li>
+                            <li><strong>PDO/Redis</strong> — обычно закрываются автоматически при уничтожении объекта, явный close в __destruct избыточен.</li>
+                        </ul>
+                    </div>
                 </div>
 
                 <div class="subsection">
@@ -3651,8 +3896,41 @@ readonly НЕ влияет на методы (нельзя сделать "не�
 <span class="keyword">echo</span> <span class="variable">$user</span>-><span class="variable">name</span>;          <span class="comment">// Вызовет __get</span>
 <span class="keyword">isset</span>(<span class="variable">$user</span>-><span class="variable">name</span>);        <span class="comment">// Вызовет __isset</span></code></pre>
 
+                    <div class="info-box" style="background:#FEF3C7;border-left:4px solid #F59E0B;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>❓ Что значит «несуществующее свойство»?</strong>
+                        <p style="margin:8px 0">Это свойство, которое <strong>явно не объявлено</strong> в классе (нет ни <code>public $name</code>, ни <code>protected $name</code>, ни <code>private $name</code>). В примере выше у класса <code>User</code> есть только <code>private $data</code> — свойства <code>$name</code> у класса нет.</p>
+                        <p style="margin:8px 0">Магические методы срабатывают в <strong>двух случаях</strong>:</p>
+                        <ol style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>Свойство не объявлено вообще</strong> — как <code>$user->name</code> в примере. PHP не находит свойство → вызывает <code>__set()/__get()</code>.</li>
+                            <li><strong>Свойство объявлено, но недоступно</strong> — например, <code>private $name</code>, а вы обращаетесь к нему извне класса. Тоже идёт через магические методы.</li>
+                        </ol>
+                        <p style="margin:10px 0 0"><strong>Зачем <code>private $data = []</code>?</strong> Это «бэкенд» для виртуальных свойств. Любое <code>$user->foo = ...</code> уходит в <code>$data['foo']</code>. Так делают ORM (Eloquent), DTO, прокси-объекты — поля заранее не известны, они приходят из БД/API.</p>
+                    </div>
+
+                    <div class="example-label">Поток вызовов магических методов</div>
+                    <pre><code><span class="variable">$user</span> = <span class="keyword">new</span> <span class="function">User</span>();
+
+<span class="variable">$user</span>-><span class="variable">name</span> = <span class="string">"Alice"</span>;
+<span class="comment">// PHP: нет свойства $name → __set('name', 'Alice') → $data['name'] = 'Alice'</span>
+
+<span class="keyword">echo</span> <span class="variable">$user</span>-><span class="variable">name</span>;
+<span class="comment">// PHP: нет свойства $name → __get('name') → return $data['name'] = 'Alice'</span>
+
+<span class="function">var_dump</span>(<span class="function">isset</span>(<span class="variable">$user</span>-><span class="variable">name</span>));
+<span class="comment">// PHP: нет свойства $name → __isset('name') → isset($data['name']) = true</span>
+
+<span class="function">unset</span>(<span class="variable">$user</span>-><span class="variable">name</span>);
+<span class="comment">// PHP: нет свойства $name → __unset('name') → unset($data['name'])</span>
+
+<span class="function">var_dump</span>(<span class="function">isset</span>(<span class="variable">$user</span>-><span class="variable">name</span>));
+<span class="comment">// PHP: → __isset('name') → false (ключ удалён из $data)</span></code></pre>
+
                     <div class="remember-box">
-                        __get/__set отлично подходят для ленивой загрузки данных, валидации, или логирования доступа к свойствам. Это использует Laravel Models!
+                        <strong>__get/__set</strong> отлично подходят для ленивой загрузки данных, валидации, логирования доступа к свойствам. Это использует <strong>Laravel Eloquent</strong> — поля модели хранятся в <code>$attributes</code>, и обращение <code>$user->name</code> идёт через <code>__get</code>, который читает из <code>$attributes['name']</code> и применяет accessor/cast.
+                    </div>
+
+                    <div class="info-box" style="background:#FEE2E2;border-left:4px solid #DC2626;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>⚠️ Цена за магию:</strong> магические методы <strong>медленнее</strong> прямого доступа к свойству (lookup + вызов метода) и <strong>усложняют IDE-автодополнение</strong>. Для обычных DTO/Value Objects лучше явно объявить свойства. Магия нужна только когда поля динамические (ORM, JSON-API, прокси).
                     </div>
                 </div>
 
