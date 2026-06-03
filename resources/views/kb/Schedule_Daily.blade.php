@@ -255,7 +255,8 @@ const weeks = [
       ]},
       { tasks: [
         { t: "Мини-проект: CLI утилита", d: "Парсит named args, enum для команд, generator для логов, custom exceptions.", type: "project" },
-        { t: "Шпаргалка PHP Core", d: "Своими словами: 15 ключевых тем PHP для собеса. Anki-колода.", type: "review" },
+        { t: "📋 Открой Шпаргалку PHP в KB_1", d: "KB_1 → раздел 'Шпаргалка PHP'. Прочитай все сводные таблицы (типы, массивы, ООП, magic, PHP 8). Распечатай или сохрани.", file: "KB_1_PHP_Core.html", type: "review" },
+        { t: "🛠 Практика руками — микро-задачи 1-5", d: "KB_1 → раздел 'Практика руками'. Сделай первые 5 микро-задач по 15 мин каждая (type juggling, strict_types, regex, sprintf, array_map).", file: "KB_1_PHP_Core.html", type: "code" },
       ]},
     ]
   },
@@ -319,6 +320,7 @@ const weeks = [
       { tasks: [
         { t: "Контроллеры + Middleware basics", d: "KB_3 разд.3-4 — Resource controllers, invokable, middleware before/after.", file: "KB_3_Laravel.html", type: "read" },
         { t: "🔄 Повтор: SQL квизы все", d: "JOIN'ы, ACID, нормализация, индексы — без подглядывания.", type: "review" },
+        { t: "❓ Вопросник KB_1 — Уровень 1 (Junior+)", d: "KB_1 → раздел 'Вопросник для собеса'. Пройди 10 вопросов Уровня 1. Отвечай ВСЛУХ. Запиши слабые места.", file: "KB_1_PHP_Core.html", type: "quiz" },
         { t: "Шпаргалка SQL", d: "JOIN'ы, ACID 4 буквы, нормализация 1-3NF, composite index, leftmost prefix.", type: "review" },
       ]},
     ]
@@ -481,6 +483,7 @@ const weeks = [
       { tasks: [
         { t: "HTTPS/TLS + Headers + Secrets + RBAC/ABAC", d: "KB_4 разд.11-16 — TLS handshake, HSTS, CSP/X-Frame, env management, role/attribute access.", file: "KB_4_Security.html", type: "read" },
         { t: "Финал KB_4: все квизы + INTERVIEW DRILL", d: "Ответь на все Security вопросы из Backend_Learning_Program вслух.", file: "Backend_Learning_Program.html", type: "quiz" },
+        { t: "❓ Вопросник KB_1 — Уровень 2 (Middle, $2500-3000)", d: "KB_1 → раздел 'Вопросник для собеса'. Пройди 20 вопросов Уровня 2 ВСЛУХ. Это ровно те вопросы что спросят на твоём собесе.", file: "KB_1_PHP_Core.html", type: "quiz" },
         { t: "Шпаргалка Security", d: "Token Rotation flow, JWT structure, OAuth flows, CSRF/XSS/CORS — по 2 предложения.", type: "review" },
       ]},
     ]
@@ -545,6 +548,7 @@ const weeks = [
       { tasks: [
         { t: "Mutation testing + Coverage + Snapshot", d: "KB_14 — Infection PHP, как читать coverage report, snapshot testing.", file: "KB_14_Testing_Deep.html", type: "read" },
         { t: "Pest arch testing + Testing pyramid", d: "KB_6 разд.6-7 — arch::expect для архитектурных правил, пропорции unit/feature/e2e.", file: "KB_6_Testing_DevOps.html", type: "read" },
+        { t: "🛠 Практика KB_1: готовые задания 1-3", d: "KB_1 → 'Практика руками' → готовые задания. Сделай trait Cacheable + TransactionGuard + Магический Builder. Тесты обязательно.", file: "KB_1_PHP_Core.html", type: "code" },
         { t: "🔄 Повтор: SOLID + паттерны", d: "Repository vs Service, Strategy, Decorator — без подсмотра.", type: "review" },
       ]},
     ]
@@ -599,6 +603,8 @@ const weeks = [
         { t: "🔄 FULL REVIEW: Architecture + Testing + DevOps", d: "KB_5 + KB_14 + KB_6 квизы. SOLID наизусть, паттерны, TDD цикл, Docker.", file: "KB_5_Architecture.html", type: "review" },
       ]},
       { tasks: [
+        { t: "❓ Финальный прогон KB_1 Вопросник — все 45 вопросов", d: "KB_1 → 'Вопросник для собеса'. Уровни 1+2+3 подряд. Таймер 90 сек на вопрос. Запиши на диктофон. Слушай и оценивай.", file: "KB_1_PHP_Core.html", type: "quiz" },
+        { t: "🛠 Мини-проект на выбор", d: "KB_1 → 'Практика руками' → мини-проекты. Сделай 1 на выбор: Свой Collection / Validator / DI-контейнер / Mini-ORM. Это сильный аргумент на собесе.", file: "KB_1_PHP_Core.html", type: "project" },
         { t: "MOCK INTERVIEW: полный", d: "24 вопроса × 2 мин = 48 мин. Запиши на диктофон. Прослушай и оцени.", file: "Backend_Learning_Program.html", type: "quiz" },
         { t: "Финал: README портфолио + резюме", d: "am.eabr.org (SSO+MegaRega) + pet-project + KB как proof. Резюме с этим стеком.", type: "project" },
       ]},
