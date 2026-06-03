@@ -3699,50 +3699,56 @@ readonly НЕ влияет на методы (нельзя сделать "не�
                     </div>
                 </div>
 
-                <!-- ═══ Объяснялка / Вопросник по Traits ═══ -->
-                <div class="subsection" style="border-top:3px solid #3B82F6;padding-top:24px;margin-top:32px">
-                    <h3 class="subsection-title" style="color:#1E40AF">❓ Вопросник / Объяснялка по Traits</h3>
-                    <div class="content-block">
-                        Здесь собраны короткие ответы на частые вопросы по этому разделу. Если что-то непонятно в основном материале выше — ищи ответ тут.
-                    </div>
+                <!-- ═══ Пояснялка-сноска по Traits ═══ -->
+                <div class="subsection" style="margin-top:48px;padding:20px 22px;background:#FAFAF7;border-top:1px solid #D1D5DB;border-left:3px solid #9CA3AF;color:#374151;font-size:14px;line-height:1.7">
+                    <h3 style="font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#6B7280;margin:0 0 14px">📖 Пояснялка — частые вопросы по разделу</h3>
 
-                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>В: Что такое <code>isset</code> в trait Cacheable?</strong>
-                        <p style="margin:8px 0">О: <code>isset</code> — это <strong>языковая конструкция PHP</strong>, проверяет что элемент массива существует И не равен <code>null</code>. В коде <code>if (isset($this->cache[$key]))</code> — проверка наличия закэшированного значения. Если есть — вернуть; если нет — вычислить, сохранить, вернуть.</p>
-                    </div>
+                    <p style="margin:0 0 12px"><strong>① Что такое <code>isset</code> в trait Cacheable?</strong><br>
+                    В фрагменте кода <code>if (isset($this->cache[$key]))</code> — это <strong>встроенная языковая конструкция PHP</strong> (не часть trait). Она проверяет, что элемент массива <code>$this->cache</code> с ключом <code>$key</code> существует <strong>И не равен <code>null</code></strong>. В контексте трейта <code>Cacheable</code> логика такая: если ключ есть → вернуть закэшированное значение (без повторного вычисления); если нет → вызвать <code>$callback()</code>, сохранить результат в <code>$cache[$key]</code> и вернуть.</p>
 
-                    <div class="info-box" style="background:#FEF3C7;border-left:4px solid #F59E0B;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>В: Почему именно <code>isset</code>, а не <code>array_key_exists</code>?</strong>
-                        <p style="margin:8px 0">О: <code>isset</code> вернёт <code>false</code> если значение равно <code>null</code>. Если callback может вернуть <code>null</code> — <code>isset</code> ошибочно решит что кэша нет и вызовет callback СНОВА. Безопаснее <code>array_key_exists($key, $cache)</code> — он проверяет ТОЛЬКО наличие ключа.</p>
-                    </div>
+                    <p style="margin:0 0 12px"><strong>② Почему именно <code>isset</code>, а не <code>array_key_exists</code>?</strong><br>
+                    <code>isset($this->cache[$key])</code> вернёт <code>true</code>, только если элемент существует <strong>и его значение не <code>null</code></strong>. Если кэшируемая функция может вернуть <code>null</code>, то <code>isset</code> ошибочно решит, что кэша нет, и вызовет <code>$callback()</code> повторно. В таких случаях лучше <code>array_key_exists($key, $this->cache)</code> — он проверяет <em>только</em> наличие ключа. Автор трейта, вероятно, исходит из того, что <code>$callback()</code> никогда не возвращает <code>null</code>, либо такое поведение допустимо.</p>
 
-                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>В: Метод <code>validate()</code> из trait — обязательно реализовывать в классе?</strong>
-                        <p style="margin:8px 0">О: <strong>Нет.</strong> Concrete-метод (с реализацией) trait наследуется классом как есть. Класс может вызвать <code>$form->validate()</code> сразу. Обязателен только <code>abstract</code>-метод (<code>rules()</code>). Без его реализации — fatal error: <em>"Class contains abstract method and must implement"</em>.</p>
-                    </div>
+                    <p style="margin:0 0 12px"><strong>③ Метод <code>validate()</code> из trait — обязательно реализовывать в классе?</strong><br>
+                    <strong>Нет.</strong> <code>validate()</code> в trait уже имеет <strong>готовую реализацию</strong> — она «вмешивается» в класс через <code>use Validatable</code>. Класс <code>UserForm</code> получает её бесплатно и может вызвать <code>$form->validate($data)</code> без переопределения. <strong>Обязателен только <code>rules()</code></strong> — у него <code>abstract</code> модификатор. Trait декларирует: «я умею валидировать, но правила задаёт класс-пользователь». Если класс не реализует <code>rules()</code> — fatal error:</p>
+                    <pre style="background:#1F2937;color:#F3F4F6;padding:10px 14px;border-radius:4px;font-size:12px;margin:0 0 12px;overflow-x:auto">Fatal error: Class UserForm contains 1 abstract method
+and must therefore be declared abstract or implement
+the remaining methods (Validatable::rules)</pre>
+                    <p style="margin:0 0 12px"><strong>Возможные сценарии</strong> для класса с trait:</p>
+                    <ul style="margin:0 0 12px 20px;padding:0;line-height:1.7">
+                        <li><strong>Abstract метод trait</strong> (<code>rules()</code>) — <em>обязан</em> реализовать класс.</li>
+                        <li><strong>Concrete метод trait</strong> (<code>validate()</code>) — <em>не обязан</em>, наследует as-is. Может переопределить, если хочет другую логику.</li>
+                        <li><strong>Свойство trait</strong> (<code>$cache</code>) — попадает в класс автоматически.</li>
+                    </ul>
+                    <p style="margin:0 0 12px"><em>Это та же логика, что у abstract class:</em> abstract method = контракт, concrete method = бесплатное наследство.</p>
 
-                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>В: Интерфейсы могут хранить свойства?</strong>
-                        <p style="margin:8px 0">О: <strong>Нет</strong>, только сигнатуры методов (и константы). Свойства — забота класса-реализатора. Интерфейс говорит «должен уметь delete/save», но КАК это устроено внутри — решает класс.</p>
-                    </div>
+                    <p style="margin:0 0 12px"><strong>④ Интерфейсы могут хранить свойства?</strong><br>
+                    <strong>Нет</strong> — интерфейс не может содержать свойства (поля). Только сигнатуры методов (и, в некоторых случаях, константы). Он говорит: «Класс, который меня реализует, обязан иметь такие-то методы», но как эти методы будут работать и какие внутренние свойства для этого понадобятся — решает сам класс.</p>
+                    <pre style="background:#1F2937;color:#F3F4F6;padding:10px 14px;border-radius:4px;font-size:12px;margin:0 0 12px;overflow-x:auto">interface CacheableInterface {
+    public function remember($key, callable $callback);
+}
 
-                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>В: Трейты могут хранить свойства? Можно ли их изменить в классе?</strong>
-                        <p style="margin:8px 0">О: <strong>Да</strong>, трейт может содержать свойства любой видимости (<code>public/protected/private</code>). При <code>use</code> они становятся частью класса.</p>
-                        <ul style="margin:8px 0 0 20px;line-height:1.7">
-                            <li>Изменить <strong>значение</strong> свойства — да, легко: <code>$this->cache = []</code></li>
-                            <li>Изменить <strong>само объявление</strong> (видимость, тип) — fatal error при <code>use</code>, если несовместимо с тем что в трейте</li>
-                        </ul>
-                    </div>
+// Класс сам решает, хранить ли кэш в свойстве $cache, в БД, в Redis и т.д.
+class UserService implements CacheableInterface {
+    private $cache = []; // ← свойство придумал класс, интерфейс его не требует
+    public function remember($key, callable $callback) { /* ... */ }
+}</pre>
 
-                    <div class="info-box" style="background:#FEE2E2;border-left:4px solid #DC2626;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>⚠ Ограничения trait Cacheable</strong>
-                        <ul style="margin:8px 0 0 20px;line-height:1.7">
-                            <li>Кэш живёт <strong>только в рамках одного HTTP-запроса</strong> (in-memory). Между запросами — сброс.</li>
-                            <li>Для долговременного кэша — <code>Cache::remember()</code> (Redis/Memcached/file).</li>
-                            <li>Если класс уже имеет своё <code>$cache</code> с другой видимостью — fatal error при <code>use Cacheable</code>.</li>
-                        </ul>
-                    </div>
+                    <p style="margin:0 0 12px"><strong>⑤ Трейты могут хранить свойства? Можно ли их изменить в классе?</strong><br>
+                    <strong>Да</strong> — трейт может определять свойства (поля) с любым модификатором (<code>public</code>, <code>protected</code>, <code>private</code>). Когда класс подключает трейт через <code>use</code>, все эти свойства становятся частью класса, как будто они были написаны прямо в классе.</p>
+                    <p style="margin:0 0 12px"><strong>Что значит «класс может изменить их»?</strong></p>
+                    <ul style="margin:0 0 12px 20px;padding:0;line-height:1.7">
+                        <li><strong>Изменить значения свойств</strong> — да, легко. Класс может перезаписать <code>$this->cache = []</code> в своём методе.</li>
+                        <li><strong>Изменить само объявление</strong> (видимость <code>private</code> на <code>protected</code>, тип или значение по умолчанию) — так просто не выйдет. Если класс повторно объявит свойство с тем же именем, PHP выдаст ошибку, если объявления несовместимы. Можно переопределить метод, который работает со свойством, или использовать механизм <code>insteadof / as</code> — но для свойств это редко и сложно.</li>
+                    </ul>
+                    <p style="margin:0 0 12px"><em>Правильнее сказать: трейт даёт классу готовые свойства, а класс может использовать и модифицировать их значения, но не может «отменить» или «изменить сигнатуру» самого свойства без конфликта.</em></p>
+
+                    <p style="margin:0 0 12px"><strong>⑥ ⚠ Ограничения trait Cacheable</strong></p>
+                    <ul style="margin:0;padding:0 0 0 20px;line-height:1.7">
+                        <li><strong>Свойство <code>private $cache</code></strong> — область видимости <code>private</code> внутри трейта, но оно становится частью класса, использующего трейт. Если в классе уже есть свойство <code>$cache</code> — конфликт (его можно разрешить в классе).</li>
+                        <li><strong>Кэш живёт только в пределах одного запроса</strong> (in-memory, не сохраняется между HTTP-запросами).</li>
+                        <li><strong>Для долговременного кэширования</strong> (Redis, memcached) — этот трейт не подходит. Используй <code>Cache::remember()</code>.</li>
+                    </ul>
                 </div>
             </div>
 
@@ -4014,64 +4020,75 @@ readonly НЕ влияет на методы (нельзя сделать "не�
                     </div>
                 </div>
 
-                <!-- ═══ Объяснялка / Вопросник по Магическим методам ═══ -->
-                <div class="subsection" style="border-top:3px solid #3B82F6;padding-top:24px;margin-top:32px">
-                    <h3 class="subsection-title" style="color:#1E40AF">❓ Вопросник / Объяснялка по магическим методам</h3>
-                    <div class="content-block">
-                        Короткие ответы на частые вопросы по этому разделу.
-                    </div>
+                <!-- ═══ Пояснялка-сноска по Магическим методам ═══ -->
+                <div class="subsection" style="margin-top:48px;padding:20px 22px;background:#FAFAF7;border-top:1px solid #D1D5DB;border-left:3px solid #9CA3AF;color:#374151;font-size:14px;line-height:1.7">
+                    <h3 style="font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#6B7280;margin:0 0 14px">📖 Пояснялка — частые вопросы по разделу</h3>
 
-                    <div class="info-box" style="background:#FEF3C7;border-left:4px solid #F59E0B;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>В: Откуда в примере <code>Database</code> берутся <code>$host</code>, <code>$user</code>, <code>$connection</code>?</strong>
-                        <ul style="margin:8px 0 0 20px;line-height:1.7">
-                            <li><code>$host</code>, <code>$user</code> — <strong>параметры конструктора</strong>. Передаются извне при <code>new Database("localhost", "root")</code>.</li>
-                            <li><code>$connection</code> — <strong>свойство класса</strong> (<code>private $connection;</code>). Внутри <code>__construct</code> сохраняет результат <code>mysqli_connect()</code>.</li>
-                            <li><strong>Связь с БД:</strong> <code>mysqli_connect()</code> открывает TCP-соединение с MySQL и аутентифицирует пользователя.</li>
-                            <li><strong>Опечатка-капкан:</strong> <code>$this->$connection</code> (два <code>$</code>) — это обращение к свойству, чьё имя в переменной. Правильно: <code>$this->connection</code>.</li>
-                        </ul>
-                    </div>
+                    <p style="margin:0 0 12px"><strong>① Откуда в примере <code>Database</code> берутся <code>$host</code>, <code>$user</code> и <code>$connection</code>?</strong><br>
+                    Распространённое замешательство: в коде класса нет видимого определения <code>$host</code> и <code>$user</code>. Они не являются полями класса — они приходят извне.</p>
+                    <ul style="margin:0 0 12px 20px;padding:0;line-height:1.7">
+                        <li><code>$host</code>, <code>$user</code> — <strong>параметры конструктора</strong>. Не определены где-то заранее. Получают значения в момент создания объекта: <code>$db = new Database("localhost", "root")</code> — «localhost» становится <code>$host</code>, «root» становится <code>$user</code>.</li>
+                        <li><code>$connection</code> — <strong>свойство класса</strong> (<code>private $connection;</code>). Внутри конструктора выполняется <code>$this->connection = mysqli_connect($host, $user)</code>. Функция <code>mysqli_connect()</code> открывает реальное TCP-соединение с сервером MySQL и аутентифицируется. Возвращает объект-ссылку на соединение, который сохраняется в свойстве.</li>
+                        <li><strong>Связь с БД:</strong> <code>mysqli_connect()</code> внутри устанавливает TCP-соединение с MySQL по указанному хосту (<code>localhost</code> = сокет или <code>127.0.0.1:3306</code>) и аутентифицируется с указанным пользователем. Если пароль не передан, PHP попытается подключиться без пароля — сработает только если у пользователя действительно нет пароля.</li>
+                        <li><strong>В реальных проектах</strong> параметры обычно читаются из <code>.env</code> / <code>config.php</code> и передаются в конструктор. Это стандартный приём: класс не знает, какой именно хост и пользователь будут использоваться — это решает тот, кто создаёт объект.</li>
+                        <li><strong>⚠ Опечатка-капкан:</strong> в исходном коде было написано <code>$this->$connection</code> (с двумя <code>$</code>). Правильно: <code>$this->connection</code> (без лишнего <code>$</code> после <code>-&gt;</code>). <code>$this->$connection</code> — это обращение к свойству, имя которого хранится в переменной <code>$connection</code> (variable property). Если переменная не определена — fatal error.</li>
+                    </ul>
 
-                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>В: Что такое «несуществующее свойство» для <code>__get/__set/__isset/__unset</code>?</strong>
-                        <p style="margin:8px 0">О: Это свойство, которое <strong>явно не объявлено</strong> в классе (нет <code>public/protected/private $name</code>). Магические методы срабатывают в двух случаях:</p>
-                        <ol style="margin:8px 0 0 20px;line-height:1.7">
-                            <li>Свойство не объявлено вообще — <code>$user->name = ...</code> при отсутствии поля <code>$name</code></li>
-                            <li>Свойство объявлено, но недоступно из контекста (<code>private</code>, а доступ извне)</li>
-                        </ol>
-                        <p style="margin:10px 0 0"><strong>Зачем <code>private $data = []</code>?</strong> Это «бэкенд» для виртуальных свойств. Любое <code>$user->foo = ...</code> уходит в <code>$data['foo']</code>. Так делают ORM (Eloquent), DTO, прокси.</p>
-                    </div>
+                    <p style="margin:0 0 12px"><strong>② Что значит «несуществующее свойство» для <code>__get/__set/__isset/__unset</code>?</strong><br>
+                    Это свойство, которое <strong>явно не объявлено</strong> в классе (нет ни <code>public $name</code>, ни <code>protected $name</code>, ни <code>private $name</code>). В примере класса <code>User</code> есть только <code>private $data</code> — свойства <code>$name</code> у класса нет, но обращение <code>$user->name = "Alice"</code> работает благодаря <code>__set</code>.</p>
+                    <p style="margin:0 0 12px">Магические методы срабатывают в <strong>двух случаях</strong>:</p>
+                    <ol style="margin:0 0 12px 20px;padding:0;line-height:1.7">
+                        <li><strong>Свойство не объявлено вообще</strong> — как <code>$user->name</code> в примере. PHP не находит свойство → вызывает <code>__set() / __get()</code> и не выдаёт ошибку.</li>
+                        <li><strong>Свойство объявлено, но недоступно в текущем контексте</strong> — например, <code>private $name</code>, а вы пытаетесь обратиться к нему извне класса. В этом случае <code>__get / __set</code> тоже будут вызваны.</li>
+                    </ol>
+                    <p style="margin:0 0 12px"><strong>Почему в примере используется <code>private $data = []</code>?</strong> Вместо реальных свойств объектов автор использует «виртуальные» свойства, которые хранятся внутри массива <code>$data</code>. Это позволяет:</p>
+                    <ul style="margin:0 0 12px 20px;padding:0;line-height:1.7">
+                        <li>Динамически создавать любые поля без их предварительного объявления.</li>
+                        <li>Контролировать доступ через геттеры/сеттеры.</li>
+                        <li>Легко преобразовывать объект в массив или JSON (достаточно вернуть <code>$data</code>).</li>
+                    </ul>
+                    <p style="margin:0 0 12px"><strong>Поток вызовов:</strong></p>
+                    <pre style="background:#1F2937;color:#F3F4F6;padding:10px 14px;border-radius:4px;font-size:12px;margin:0 0 12px;overflow-x:auto">$user = new User();
+$user->name = "Alice";       // нет свойства $name → __set('name', 'Alice')
+echo $user->name;            // нет свойства $name → __get('name') → 'Alice'
+var_dump(isset($user->name));// __isset('name') → true
+unset($user->name);          // __unset('name')
+var_dump(isset($user->name));// __isset('name') → false</pre>
+                    <p style="margin:0 0 12px"><strong>Где применяется в реальном коде:</strong> прокси-объекты, ORM (например, Eloquent — поля модели соответствуют столбцам БД), реализация «ленивого» чтения свойств, декораторы и обёртки.</p>
 
-                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>В: Что такое <code>unset()</code> внутри <code>__unset</code>?</strong>
-                        <p style="margin:8px 0">О: <code>unset()</code> — <strong>языковая конструкция PHP</strong>. Три формы:</p>
-                        <ul style="margin:8px 0 0 20px;line-height:1.7">
-                            <li><code>unset($var)</code> — уничтожает переменную (память помечается для GC)</li>
-                            <li><code>unset($array[$key])</code> — удаляет элемент массива; <code>isset</code>/<code>array_key_exists</code> вернут <code>false</code></li>
-                            <li><code>unset($obj->prop)</code> — удаляет свойство объекта (либо вызывает <code>__unset</code>, если свойства нет)</li>
-                        </ul>
-                        <p style="margin:10px 0 0"><strong>⚠ Для индексированных массивов</strong> <code>unset</code> <em>не</em> переиндексирует ключи. После <code>unset($arr[1])</code> массив станет <code>[0 =&gt; 1, 2 =&gt; 3]</code>. Для переиндексации: <code>array_values()</code>.</p>
-                    </div>
+                    <p style="margin:0 0 12px"><strong>③ Что такое <code>unset()</code> внутри <code>__unset</code>?</strong><br>
+                    <code>unset()</code> — это <strong>встроенная языковая конструкция PHP</strong> (не функция, как <code>strlen()</code>). Делает одно из трёх в зависимости от аргумента:</p>
+                    <ul style="margin:0 0 12px 20px;padding:0;line-height:1.7">
+                        <li><code>unset($var)</code> — уничтожает переменную (помечает память для GC, но не мгновенно).</li>
+                        <li><code>unset($array[$key])</code> — удаляет элемент массива по ключу. После этого <code>isset($array[$key])</code> = <code>false</code> и <code>array_key_exists()</code> = <code>false</code>.</li>
+                        <li><code>unset($obj->prop)</code> — удаляет свойство объекта (либо вызывает <code>__unset</code>, если свойства нет).</li>
+                    </ul>
+                    <p style="margin:0 0 12px"><strong>В нашем коде:</strong> <code>unset($this->data[$name])</code> удаляет ключ <code>$name</code> из приватного массива <code>$data</code>. Это нужно, чтобы виртуальное свойство «исчезло» — в следующий раз <code>isset($user->name)</code> вернёт <code>false</code>.</p>
+                    <p style="margin:0 0 12px"><strong>⚠ Важный нюанс:</strong> для индексированных массивов (<code>[1,2,3]</code>) <code>unset</code> <em>не</em> переиндексирует числовые ключи. После <code>unset($arr[1])</code> массив станет <code>[0 =&gt; 1, 2 =&gt; 3]</code> — пропуск в ключах. Чтобы переиндексировать, используй <code>array_values($arr)</code>.</p>
+                    <p style="margin:0 0 12px"><em>Разница для переменных:</em> <code>unset</code> переменной уничтожает её, освобождая память. Для массива — удаляет элемент.</p>
 
-                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>В: Что такое RAII? Зачем <code>__construct</code> + <code>__destruct</code>?</strong>
-                        <p style="margin:8px 0">О: <strong>RAII (Resource Acquisition Is Initialization)</strong> — паттерн из C++: <strong>конструктор захватывает ресурс, деструктор освобождает</strong>. Гарантирует освобождение при любом завершении (включая <code>throw</code>).</p>
-                        <p style="margin:8px 0">Применимо к: <strong>файлам</strong> (FileHandler), <strong>сокетам</strong> (SocketClient), <strong>блокировкам</strong> (FileLock — <code>flock LOCK_EX</code> → <code>LOCK_UN</code>), <strong>транзакциям</strong> (TransactionGuard — <code>beginTransaction</code> → <code>rollBack</code>), <strong>GD-изображениям</strong> (ImageResource).</p>
-                    </div>
+                    <p style="margin:0 0 12px"><strong>④ Что такое RAII? Зачем <code>__construct</code> + <code>__destruct</code>?</strong><br>
+                    <strong>RAII (Resource Acquisition Is Initialization)</strong> — паттерн родом из C++: <strong>конструктор захватывает ресурс, деструктор освобождает его</strong>. Применим и в PHP, Python, Ruby. Позволяет избежать утечек и забытого освобождения ресурсов даже если код упал с exception.</p>
+                    <p style="margin:0 0 12px"><strong>Частые сценарии:</strong></p>
+                    <ul style="margin:0 0 12px 20px;padding:0;line-height:1.7">
+                        <li><strong>Файлы:</strong> <code>FileHandler</code> — <code>fopen</code> в конструкторе, <code>fclose</code> в деструкторе. Гарантировано закроется даже если <code>read()</code> бросил исключение.</li>
+                        <li><strong>Сокеты:</strong> <code>SocketClient</code> — <code>fsockopen</code> → <code>fclose</code>. Авто-закрытие сетевых соединений.</li>
+                        <li><strong>Блокировки файла / семафоры:</strong> <code>FileLock</code> — <code>flock LOCK_EX</code> → <code>flock LOCK_UN</code>. Блокировка автоматически снимется при выходе из scope.</li>
+                        <li><strong>Транзакции БД:</strong> <code>TransactionGuard</code> — <code>beginTransaction</code> в конструкторе, в деструкторе <code>if (inTransaction()) rollBack()</code>. Защита от незакрытых транзакций при сбое.</li>
+                        <li><strong>GD-изображения / тяжёлые ресурсы:</strong> <code>ImageResource</code> — <code>imagecreatefromjpeg</code> → <code>imagedestroy</code>. Освобождение памяти не дожидаясь GC.</li>
+                        <li><strong>Логирование:</strong> <code>Logger</code> — открыть лог в конструкторе с записью «Logger started», в деструкторе — «Logger finished» и <code>fclose</code>.</li>
+                    </ul>
 
-                    <div class="info-box" style="background:#FEE2E2;border-left:4px solid #DC2626;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>В: Когда деструктор НЕ подходит?</strong>
-                        <ul style="margin:8px 0 0 20px;line-height:1.7">
-                            <li><strong>Критичные операции</strong> — нельзя полагаться на <code>__destruct</code> для отправки данных/подтверждений. Порядок и время вызова не гарантированы.</li>
-                            <li><strong>Сложная очистка с зависимостями</strong> — при сборке мусора зависимые объекты могут быть уже уничтожены.</li>
-                            <li><strong>Long-running процессы (queue workers)</strong> — объект может жить долго, лучше явный <code>close()</code>.</li>
-                            <li><strong>PDO/Redis</strong> — обычно закрываются автоматически, явный close в __destruct избыточен.</li>
-                        </ul>
-                    </div>
+                    <p style="margin:0 0 12px"><strong>⑤ Когда деструктор НЕ подходит?</strong></p>
+                    <ul style="margin:0 0 12px 20px;padding:0;line-height:1.7">
+                        <li><strong>Завершение работы с БД</strong> — обычно <em>не</em> требует закрытия в деструкторе, т.к. соединение PDO закрывается автоматически при уничтожении объекта или в конце скрипта.</li>
+                        <li><strong>Сложная логика очистки</strong> — деструктор вызывается при сборке мусора, <strong>порядок не гарантирован</strong>, могут быть зависимости на другие объекты, которые уже были уничтожены.</li>
+                        <li><strong>Критические операции</strong> — нельзя полагаться на деструктор, чтобы сохранить данные или отправить подтверждение. Например, в long-running процессах (queue workers, daemons) лучше явно вызывать метод <code>close()</code>.</li>
+                        <li><strong>PDO / Redis</strong> — обычно закрываются автоматически при уничтожении объекта, явный close в <code>__destruct</code> избыточен.</li>
+                    </ul>
 
-                    <div class="info-box" style="background:#FEE2E2;border-left:4px solid #DC2626;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>В: Какова цена за магические методы?</strong>
-                        <p style="margin:8px 0">О: Они <strong>медленнее</strong> прямого доступа к свойству (lookup + вызов метода) и <strong>ломают IDE-автодополнение</strong>. Для обычных DTO лучше явно объявить поля. Магия — только когда поля действительно динамические (ORM, JSON-API, прокси-объекты).</p>
-                    </div>
+                    <p style="margin:0"><strong>⑥ Какова цена за магические методы?</strong><br>
+                    Магические методы <strong>медленнее</strong> прямого доступа к свойству (lookup + вызов метода) и <strong>усложняют IDE-автодополнение</strong>. Их используют для прокси-объектов (например, ORM, где поля соответствуют столбцам БД), реализации «ленивого» чтения свойств, декораторов и обёрток. В большинстве простых классов лучше явно объявлять свойства и писать обычные геттеры/сеттеры (<code>getName()</code>, <code>setName()</code>) — код понятнее и быстрее.</p>
                 </div>
             </div>
 
