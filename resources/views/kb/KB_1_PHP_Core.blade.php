@@ -284,6 +284,148 @@
     margin-right:4px;
   }
 
+  /* ═══ Data tables (Шпаргалка) ═══ */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0 22px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .data-table th {
+    background: #F3F4F6;
+    color: #1F2937;
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 700;
+    border-bottom: 2px solid #D1D5DB;
+  }
+  .data-table td {
+    padding: 9px 14px;
+    font-size: 13px;
+    color: #374151;
+    border-bottom: 1px solid #E5E7EB;
+    vertical-align: top;
+    line-height: 1.55;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: #F9FAFB; }
+  .data-table code {
+    background: #EFF6FF; color: #1D4ED8;
+    padding: 1px 6px; border-radius: 3px; font-size: 12px;
+  }
+
+  /* ═══ Q&A items (Вопросник) ═══ */
+  .qa-item {
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    transition: box-shadow 0.15s;
+  }
+  .qa-item:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+  .qa-q {
+    padding: 13px 18px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #1F2937;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    user-select: none;
+  }
+  .qa-q::before {
+    content: '▸';
+    color: #9CA3AF;
+    font-size: 12px;
+    transition: transform 0.18s;
+    flex-shrink: 0;
+  }
+  .qa-item.open .qa-q::before { transform: rotate(90deg); }
+  .qa-q .q-num {
+    background: #EFF6FF; color: #1D4ED8;
+    padding: 2px 8px; border-radius: 4px;
+    font-size: 11px; font-weight: 700;
+    margin-right: 2px;
+  }
+  .qa-a {
+    max-height: 0;
+    overflow: hidden;
+    padding: 0 18px;
+    color: #374151;
+    font-size: 13.5px;
+    line-height: 1.7;
+    border-top: 1px solid transparent;
+    transition: max-height 0.25s ease, padding 0.2s ease;
+  }
+  .qa-item.open .qa-a {
+    max-height: 800px;
+    padding: 14px 18px 16px;
+    border-top-color: #E5E7EB;
+  }
+  .qa-a code {
+    background: #F3F4F6; color: #DC2626;
+    padding: 1px 5px; border-radius: 3px; font-size: 12.5px;
+  }
+  .qa-a p { margin: 0 0 8px; }
+  .qa-a p:last-child { margin-bottom: 0; }
+
+  /* ═══ Practice tasks ═══ */
+  .practice-task {
+    background: #fff;
+    border: 1px solid #E5E7EB;
+    border-left: 4px solid var(--primary);
+    border-radius: 6px;
+    padding: 18px 20px;
+    margin-bottom: 18px;
+  }
+  .practice-task-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1F2937;
+    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .practice-task-meta {
+    display: inline-block;
+    background: #F3F4F6;
+    color: #6B7280;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 6px;
+  }
+  .practice-step-label {
+    display: inline-block;
+    background: #EFF6FF;
+    color: #1D4ED8;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    margin: 12px 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .practice-pitfalls {
+    background: #FEF2F2;
+    border-left: 3px solid #DC2626;
+    padding: 10px 14px;
+    margin-top: 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: #7F1D1D;
+  }
+  .practice-pitfalls strong { color: #991B1B; }
+
   @media (max-width:768px) {
     .container { grid-template-columns:1fr; }
     .sidebar { position:static; width:100%; height:auto; border-right:none; border-bottom:1px solid var(--border); }
@@ -4826,139 +4968,189 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
             <div id="cheatsheet" class="section">
                 <h2 class="section-title">📋 Шпаргалка PHP — всё в одной таблице</h2>
 
+                <div class="content-block">
+                    Финальная распечатка перед собеседованием. Все ключевые темы в виде таблиц с примерами. Используй как Anki-колоду или как референс «один взгляд — освежил память».
+                </div>
+
                 <div class="subsection">
-                    <h3 class="subsection-title">Типы и сравнения</h3>
-                    <div class="example-label">Самое спрашиваемое</div>
-                    <pre><code><span class="comment">+----------------+--------------------------------+---------------------+
-| Что            | Как работает                   | Пример              |
-+----------------+--------------------------------+---------------------+
-| == (loose)     | type juggling, '0'==false      | '1' == 1 → true     |
-| === (strict)   | сравнение типа И значения      | '1' === 1 → false   |
-| &lt;=&gt; spaceship | -1 / 0 / 1                     | 1 &lt;=&gt; 2 → -1        |
-| ??             | null coalescing                | $a ?? 'default'     |
-| ?->            | nullsafe (PHP 8)               | $user?->profile     |
-| strict_types=1 | требует точный тип в аргументах| declare(strict_...) |
-+----------------+--------------------------------+---------------------+</span></code></pre>
+                    <h3 class="subsection-title">Типы данных и операторы сравнения</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Конструкция</th><th>Как работает</th><th>Пример</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>==</code> (loose)</td><td>Type juggling: приводит типы перед сравнением</td><td><code>'0' == false</code> → <code>true</code></td></tr>
+                            <tr><td><code>===</code> (strict)</td><td>Сравнение типа И значения</td><td><code>'1' === 1</code> → <code>false</code></td></tr>
+                            <tr><td><code>&lt;=&gt;</code> (spaceship)</td><td>Возвращает -1 / 0 / 1</td><td><code>1 &lt;=&gt; 2</code> → <code>-1</code></td></tr>
+                            <tr><td><code>??</code> (null coalescing)</td><td>Значение если null/undefined</td><td><code>$a ?? 'default'</code></td></tr>
+                            <tr><td><code>?-&gt;</code> (nullsafe)</td><td>Цепочка вызовов без NPE (PHP 8)</td><td><code>$user?-&gt;profile?-&gt;avatar</code></td></tr>
+                            <tr><td><code>declare(strict_types=1)</code></td><td>Требует точный тип в аргументах</td><td>Кидает <code>TypeError</code> при несовпадении</td></tr>
+                            <tr><td><code>(array)object</code></td><td>Cast объекта в массив</td><td>private → <code>"\0ClassName\0prop"</code> (null-байты!)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="example-label">False-y значения PHP — ВСЁ что превращается в false</div>
+                    <pre><code><span class="comment">// 6 значений (все остальные — true):</span>
+<span class="keyword">false</span>, <span class="number">0</span>, <span class="number">0.0</span>, <span class="string">""</span>, <span class="string">"0"</span>, <span class="keyword">null</span>, []
+
+<span class="comment">// ⚠ Ловушки:
+// "0.0"  → true (это строка не пустая!)
+// "false" → true (это строка не пустая!)
+// [0] → true (массив не пустой)</span></code></pre>
                 </div>
 
                 <div class="subsection">
                     <h3 class="subsection-title">Массивы — ключевые функции</h3>
-                    <pre><code><span class="comment">+----------------+-----------------------------------------+
-| Функция        | Что делает                              |
-+----------------+-----------------------------------------+
-| array_map      | трансформация (новый массив)            |
-| array_filter   | фильтрация (ключи сохраняются!)         |
-| array_reduce   | свёртка в одно значение                 |
-| array_walk     | мутация in-place (по ссылке &amp;)         |
-| array_merge    | сложение, числовые ключи переиндекс.   |
-| + (объедин.)   | левый имеет приоритет, ключи сохр.      |
-| usort          | сортировка с callback                   |
-| array_column   | вытащить столбец из массива объектов    |
-| array_key_exists| ключ есть (даже если null)             |
-| isset          | ключ есть И не null                     |
-+----------------+-----------------------------------------+
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Функция</th><th>Что делает</th><th>Возвращает</th><th>Ключи</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>array_map</code></td><td>Трансформация каждого элемента</td><td>Новый массив</td><td>Сбрасывает (числовые) или сохраняет (assoc)</td></tr>
+                            <tr><td><code>array_filter</code></td><td>Фильтрация по callback</td><td>Новый массив</td><td><strong>Сохраняются!</strong> (часто баг)</td></tr>
+                            <tr><td><code>array_reduce</code></td><td>Свёртка в одно значение</td><td>Любой тип</td><td>—</td></tr>
+                            <tr><td><code>array_walk</code></td><td>Мутация in-place (по ссылке <code>&amp;</code>)</td><td><code>bool</code></td><td>—</td></tr>
+                            <tr><td><code>array_merge</code></td><td>Сложение, числовые переиндексируются</td><td>Новый массив</td><td>String-ключи перезаписываются</td></tr>
+                            <tr><td><code>+</code> (объединение)</td><td>Левый имеет приоритет</td><td>Новый массив</td><td>Сохраняются (без переиндексации)</td></tr>
+                            <tr><td><code>usort</code></td><td>Сортировка с callback (spaceship)</td><td><code>bool</code> (in-place)</td><td>Сбрасываются</td></tr>
+                            <tr><td><code>array_column</code></td><td>Вытащить столбец из массива объектов</td><td>Массив значений</td><td>—</td></tr>
+                            <tr><td><code>array_key_exists</code></td><td>Ключ есть (даже если value = <code>null</code>)</td><td><code>bool</code></td><td>—</td></tr>
+                            <tr><td><code>isset</code></td><td>Ключ есть <strong>И</strong> не <code>null</code></td><td><code>bool</code></td><td>—</td></tr>
+                        </tbody>
+                    </table>
 
-Флаги array_filter:
-  default            → callback($value)
-  ARRAY_FILTER_USE_KEY  → callback($key)
-  ARRAY_FILTER_USE_BOTH → callback($value, $key)
+                    <div class="example-label">Флаги array_filter</div>
+                    <table class="data-table">
+                        <thead><tr><th>Флаг</th><th>Сигнатура callback</th><th>Когда применять</th></tr></thead>
+                        <tbody>
+                            <tr><td>по умолчанию</td><td><code>fn($value)</code></td><td>Стандартная фильтрация по значению</td></tr>
+                            <tr><td><code>ARRAY_FILTER_USE_KEY</code></td><td><code>fn($key)</code></td><td>Фильтрация по ключу (префикс/суффикс ключа)</td></tr>
+                            <tr><td><code>ARRAY_FILTER_USE_BOTH</code></td><td><code>fn($value, $key)</code></td><td>Когда условие зависит от обоих</td></tr>
+                        </tbody>
+                    </table>
 
-array_reduce порядок аргументов callback:
-  fn($carry, $item) — 1-й аккумулятор, 2-й текущий элемент
-  имена переменных НЕ важны, важен порядок</span></code></pre>
+                    <div class="remember-box">
+                        <strong>array_reduce порядок аргументов callback:</strong> <code>fn($carry, $item)</code> — 1-й аккумулятор, 2-й текущий элемент. <strong>Имена НЕ важны</strong>, важен <strong>порядок</strong>. Это зашито в реализацию PHP.
+                    </div>
                 </div>
 
                 <div class="subsection">
-                    <h3 class="subsection-title">ООП — abstract / interface / trait</h3>
-                    <pre><code><span class="comment">+-----------+----------+----------+-------+
-| Что       | Abstract | Interface| Trait |
-+-----------+----------+----------+-------+
-| Множ.     | ❌ один  | ✅ много | ✅ много|
-| Свойства  | ✅       | ❌ const | ✅    |
-| Реализация| микс     | ❌       | полная|
-| Конструктор|✅       | ❌       | ⚠     |
-| Инстанс   | ❌       | ❌       | ❌ use |
-| Type-hint | ✅       | ✅       | ❌    |
-+-----------+----------+----------+-------+
+                    <h3 class="subsection-title">ООП — abstract vs interface vs trait</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Характеристика</th><th>Abstract Class</th><th>Interface</th><th>Trait</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Множественное использование</td><td>❌ один родитель</td><td>✅ сколько угодно</td><td>✅ сколько угодно</td></tr>
+                            <tr><td>Свойства (поля)</td><td>✅ любая видимость</td><td>❌ только константы</td><td>✅ любая видимость</td></tr>
+                            <tr><td>Реализация методов</td><td>микс abstract+concrete</td><td>❌ только сигнатуры</td><td>✅ полные методы</td></tr>
+                            <tr><td>Конструктор</td><td>✅ да</td><td>❌ нет</td><td>⚠ технически да, опасно</td></tr>
+                            <tr><td>Создать инстанс</td><td>❌ нет</td><td>❌ нет</td><td>❌ только через <code>use</code></td></tr>
+                            <tr><td>Type-hint в функциях</td><td>✅ да</td><td>✅ да (рекомендовано)</td><td>❌ trait — не тип</td></tr>
+                            <tr><td>Семантика</td><td>«is-a»</td><td>«can-do»</td><td>«копипаст методов»</td></tr>
+                            <tr><td>Когда выбирать</td><td>иерархия + общее состояние</td><td>контракт для DI / полиморфизма</td><td>код для разных веток</td></tr>
+                        </tbody>
+                    </table>
 
-Когда:
-  Abstract → is-a иерархия + общее состояние (BaseController)
-  Interface → контракт для DI / полиморфизма (PaymentInterface)
-  Trait → переиспольз. кода в разных ветках (Loggable, Cacheable)</span></code></pre>
+                    <div class="example-label">Late Static Binding — static:: vs self::</div>
+                    <table class="data-table">
+                        <thead><tr><th>Конструкция</th><th>Резолвится в</th><th>Использовать когда</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>self::</code></td><td>Класс где написано (compile-time)</td><td>Нужен именно ЭТОТ класс, без подмены</td></tr>
+                            <tr><td><code>static::</code></td><td>Реальный вызываемый класс (runtime)</td><td>Полиморфизм через статику (фабрики, ORM)</td></tr>
+                            <tr><td><code>parent::</code></td><td>Родительский класс</td><td>Вызов родителя из переопределённого метода</td></tr>
+                        </tbody>
+                    </table>
                 </div>
 
                 <div class="subsection">
                     <h3 class="subsection-title">Магические методы</h3>
-                    <pre><code><span class="comment">+-----------------+--------------------------------------+
-| Метод           | Когда вызывается                     |
-+-----------------+--------------------------------------+
-| __construct     | new Class(...)                       |
-| __destruct      | $obj = null / выход из scope         |
-| __get($name)    | чтение несуществующего/private       |
-| __set($n, $v)   | запись несуществующего/private       |
-| __isset($name)  | isset($obj->prop) на магическом      |
-| __unset($name)  | unset($obj->prop) на магическом      |
-| __call($n, $a)  | вызов несущ. метода                  |
-| __callStatic    | вызов несущ. static метода           |
-| __toString      | (string)$obj, echo $obj              |
-| __invoke($args) | $obj() — объект как функция          |
-| __clone         | clone $obj                           |
-| __debugInfo     | var_dump — что показывать            |
-| __serialize     | serialize() — что сохранять          |
-+-----------------+--------------------------------------+
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Метод</th><th>Когда вызывается</th><th>Типичный use case</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>__construct</code></td><td><code>new Class(...)</code></td><td>Инициализация, RAII захват ресурса</td></tr>
+                            <tr><td><code>__destruct</code></td><td><code>$obj = null</code> / выход из scope</td><td>RAII освобождение ресурса</td></tr>
+                            <tr><td><code>__get($name)</code></td><td>Чтение несуществующего/<code>private</code></td><td>ORM атрибуты, прокси</td></tr>
+                            <tr><td><code>__set($name, $value)</code></td><td>Запись несуществующего/<code>private</code></td><td>ORM атрибуты, валидация в сеттере</td></tr>
+                            <tr><td><code>__isset($name)</code></td><td><code>isset($obj-&gt;prop)</code> на магическом</td><td>Поддержка <code>isset</code> для виртуальных свойств</td></tr>
+                            <tr><td><code>__unset($name)</code></td><td><code>unset($obj-&gt;prop)</code> на магическом</td><td>Удаление виртуального свойства</td></tr>
+                            <tr><td><code>__call($name, $args)</code></td><td>Вызов несущ. метода</td><td>Fluent Builder, Query Builder</td></tr>
+                            <tr><td><code>__callStatic($n, $a)</code></td><td>Вызов несущ. static метода</td><td>Facade pattern (Laravel)</td></tr>
+                            <tr><td><code>__toString()</code></td><td><code>(string)$obj</code>, <code>echo $obj</code></td><td>Value Objects (Money → "$100")</td></tr>
+                            <tr><td><code>__invoke($args)</code></td><td><code>$obj()</code> — объект как функция</td><td>Single Action Classes (Laravel)</td></tr>
+                            <tr><td><code>__clone()</code></td><td><code>clone $obj</code></td><td>Глубокое клонирование (deep copy)</td></tr>
+                            <tr><td><code>__debugInfo()</code></td><td><code>var_dump / print_r</code></td><td>Скрыть password, секреты из дампа</td></tr>
+                            <tr><td><code>__serialize() / __unserialize</code></td><td><code>serialize($obj)</code></td><td>Контроль сериализации, защита secrets</td></tr>
+                        </tbody>
+                    </table>
 
-RAII: __construct захватывает, __destruct освобождает
-   → file/socket/lock/transaction</span></code></pre>
+                    <div class="remember-box">
+                        <strong>RAII (Resource Acquisition Is Initialization):</strong> конструктор захватывает ресурс, деструктор освобождает. Применимо к: <strong>файлам</strong>, <strong>сокетам</strong>, <strong>блокировкам</strong>, <strong>транзакциям</strong>, <strong>GD-изображениям</strong>.
+                    </div>
                 </div>
 
                 <div class="subsection">
                     <h3 class="subsection-title">PHP 8.x — ключевые фичи</h3>
-                    <pre><code><span class="comment">+----------------------+--------------------------------+
-| Фича                 | Пример                         |
-+----------------------+--------------------------------+
-| match                | match($x) { 1, 2 =&gt; 'a', ... } |
-| enum                 | enum Status { case Active; }   |
-| readonly             | public readonly int $id;       |
-| constructor promotion| __construct(private int $id)   |
-| named arguments      | foo(name: 'Alice', age: 30)    |
-| nullsafe             | $user?->profile?->avatar       |
-| first-class callable | strlen(...)                    |
-| attributes           | #[Route('/path')]              |
-+----------------------+--------------------------------+</span></code></pre>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Фича</th><th>Версия</th><th>Пример</th><th>Зачем</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>match</code></td><td>8.0</td><td><code>match($x) { 1, 2 =&gt; 'a' }</code></td><td>Строгое сравнение (vs <code>switch</code>), возвращает значение</td></tr>
+                            <tr><td><code>enum</code></td><td>8.1</td><td><code>enum Status { case Active; }</code></td><td>Типизированные константы, методы</td></tr>
+                            <tr><td><code>readonly</code></td><td>8.1</td><td><code>public readonly int $id;</code></td><td>Иммутабельность (Value Objects, DTO)</td></tr>
+                            <tr><td>Constructor promotion</td><td>8.0</td><td><code>__construct(private int $id)</code></td><td>Меньше boilerplate в DTO</td></tr>
+                            <tr><td>Named arguments</td><td>8.0</td><td><code>foo(name: 'Alice', age: 30)</code></td><td>Читаемость, можно пропускать опц. параметры</td></tr>
+                            <tr><td><code>?-&gt;</code> nullsafe</td><td>8.0</td><td><code>$user?-&gt;profile?-&gt;avatar</code></td><td>Цепочка без NullPointerException</td></tr>
+                            <tr><td>First-class callable</td><td>8.1</td><td><code>strlen(...)</code></td><td>Передача функции как closure без обёртки</td></tr>
+                            <tr><td>Attributes</td><td>8.0</td><td><code>#[Route('/path')]</code></td><td>Декларативная конфигурация (Symfony Routes)</td></tr>
+                            <tr><td>Fibers</td><td>8.1</td><td><code>new Fiber(fn() =&gt; ...)</code></td><td>Корутины, основа Amphp/ReactPHP</td></tr>
+                            <tr><td>Intersection types</td><td>8.1</td><td><code>Countable&amp;Iterator $x</code></td><td>Множественные требования к типу</td></tr>
+                        </tbody>
+                    </table>
                 </div>
 
                 <div class="subsection">
-                    <h3 class="subsection-title">Top-30 «убийц» на собесе</h3>
-                    <pre><code><span class="comment">1.  == vs === (type juggling)
-2.  null vs '' vs 0 vs false (что false-y)
-3.  abstract vs interface vs trait
-4.  self:: vs static:: (Late Static Binding)
-5.  RAII: __construct + __destruct
-6.  array_map vs array_filter vs array_reduce
-7.  &amp; в array_walk — by reference
-8.  Lifecycle PHP-запроса
-9.  GET vs POST + when to use
-10. PSR-4 autoloading
-11. composer.json sections
-12. Exception hierarchy (Error vs Exception)
-13. generators yield — when, why
-14. closures — use() vs arrow fn
-15. magic methods — IDE-cost
-16. Eloquent N+1 (cross-ref KB_3/KB_12)
-17. Laravel lifecycle (cross-ref KB_3)
-18. SQL индексы (cross-ref KB_2)
-19. JWT vs session (cross-ref KB_4)
-20. SOLID (cross-ref KB_5)
-21. PDO prepared statements
-22. password_hash vs md5
-23. spread operator ... в массивах
-24. union types int|string
-25. nullable ?int
-26. constructor promotion
-27. enums (PHP 8.1)
-28. readonly properties
-29. attributes (PHP 8)
-30. fibers (PHP 8.1) — корутины</span></code></pre>
+                    <h3 class="subsection-title">Top-30 тем — что спросят на собеседовании</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>#</th><th>Тема</th><th>Уровень</th><th>Раздел KB</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>1</td><td><code>==</code> vs <code>===</code> (type juggling)</td><td>Junior+</td><td>1. Типы данных</td></tr>
+                            <tr><td>2</td><td>False-y значения (что превращается в <code>false</code>)</td><td>Junior+</td><td>1. Типы данных</td></tr>
+                            <tr><td>3</td><td><code>abstract</code> vs <code>interface</code> vs <code>trait</code></td><td>Middle</td><td>5. ООП Abstract, 6. Traits</td></tr>
+                            <tr><td>4</td><td><code>self::</code> vs <code>static::</code> (Late Static Binding)</td><td>Middle</td><td>4. ООП Основы</td></tr>
+                            <tr><td>5</td><td>RAII: <code>__construct</code> + <code>__destruct</code></td><td>Middle</td><td>7. Магические методы</td></tr>
+                            <tr><td>6</td><td><code>array_map</code> vs <code>filter</code> vs <code>reduce</code></td><td>Junior+</td><td>3. Массивы</td></tr>
+                            <tr><td>7</td><td><code>&amp;</code> в <code>array_walk</code> — by reference</td><td>Middle</td><td>3. Массивы</td></tr>
+                            <tr><td>8</td><td>Lifecycle PHP-запроса (index.php → response)</td><td>Middle</td><td>cross-ref KB_3</td></tr>
+                            <tr><td>9</td><td>PSR-4 autoloading</td><td>Middle</td><td>8. Namespaces</td></tr>
+                            <tr><td>10</td><td><code>composer.json</code> sections</td><td>Junior+</td><td>8. Namespaces</td></tr>
+                            <tr><td>11</td><td>Exception hierarchy (<code>Error</code> vs <code>Exception</code>)</td><td>Middle</td><td>9. Обработка ошибок</td></tr>
+                            <tr><td>12</td><td>Generators <code>yield</code> — когда, зачем</td><td>Middle</td><td>11. Генераторы</td></tr>
+                            <tr><td>13</td><td>Closures: <code>use()</code> vs arrow fn</td><td>Middle</td><td>12. Closures</td></tr>
+                            <tr><td>14</td><td>Магические методы — цена за магию</td><td>Middle</td><td>7. Магические методы</td></tr>
+                            <tr><td>15</td><td>PDO prepared statements (защита от SQLi)</td><td>Junior+</td><td>cross-ref KB_2/KB_4</td></tr>
+                            <tr><td>16</td><td><code>password_hash</code> vs <code>md5</code></td><td>Junior+</td><td>cross-ref KB_4</td></tr>
+                            <tr><td>17</td><td>Spread operator <code>...</code> в массивах и аргументах</td><td>Middle</td><td>3. Массивы</td></tr>
+                            <tr><td>18</td><td>Union types <code>int|string</code></td><td>Middle</td><td>1. Типы данных</td></tr>
+                            <tr><td>19</td><td>Nullable <code>?int</code></td><td>Junior+</td><td>1. Типы данных</td></tr>
+                            <tr><td>20</td><td>Constructor promotion (PHP 8)</td><td>Middle</td><td>10. PHP 8+</td></tr>
+                            <tr><td>21</td><td><code>match</code> vs <code>switch</code></td><td>Middle</td><td>10. PHP 8+</td></tr>
+                            <tr><td>22</td><td><code>enum</code> (PHP 8.1)</td><td>Middle</td><td>10. PHP 8+</td></tr>
+                            <tr><td>23</td><td><code>readonly</code> свойства</td><td>Middle</td><td>4. ООП Основы</td></tr>
+                            <tr><td>24</td><td>Attributes (PHP 8) — Laravel routes/validation</td><td>Senior</td><td>10. PHP 8+</td></tr>
+                            <tr><td>25</td><td>Fibers — корутины</td><td>Senior</td><td>10. PHP 8+</td></tr>
+                            <tr><td>26</td><td>opcache / JIT</td><td>Senior</td><td>cross-ref KB_6</td></tr>
+                            <tr><td>27</td><td>Copy-on-Write для массивов</td><td>Senior</td><td>3. Массивы</td></tr>
+                            <tr><td>28</td><td><code>SplObjectStorage</code>, <code>WeakMap</code></td><td>Senior</td><td>—</td></tr>
+                            <tr><td>29</td><td><code>Iterator</code> vs <code>Generator</code></td><td>Middle</td><td>11. Генераторы</td></tr>
+                            <tr><td>30</td><td><code>__invoke</code> — Single Action Classes</td><td>Middle</td><td>7. Магические методы, cross-ref KB_5</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
@@ -4967,75 +5159,432 @@ RAII: __construct захватывает, __destruct освобождает
                 <h2 class="section-title">❓ Вопросник для собеседования (PHP Core)</h2>
 
                 <div class="content-block">
-                    Реальные вопросы, которые задают на middle PHP / Laravel собеседованиях. Отвечай вслух, без подсматривания. Если запнулся — открой соответствующий раздел KB.
+                    Реальные вопросы, которые задают на middle PHP / Laravel собеседованиях. <strong>Сначала отвечай вслух</strong>, потом кликни вопрос — увидишь развёрнутый ответ. Если запнулся — открой соответствующий раздел KB. На собесе важен не дословный ответ, а понимание сути.
                 </div>
 
                 <div class="subsection">
-                    <h3 class="subsection-title">Уровень 1 — Junior+ ($1500-2000)</h3>
-                    <div class="content-block">
-                        <ol style="line-height:1.8">
-                            <li>В чём разница <code>==</code> и <code>===</code>? Приведи пример где результат отличается.</li>
-                            <li>Что выведет: <code>var_dump('0' == false)</code>? А <code>var_dump('0' === false)</code>?</li>
-                            <li>Что такое type juggling? Где он опасен?</li>
-                            <li>Назови 5 false-y значений в PHP.</li>
-                            <li>В чём разница между <code>isset</code> и <code>array_key_exists</code>?</li>
-                            <li>Что делает <code>strict_types=1</code>?</li>
-                            <li>В чём разница между <code>fn</code> (arrow) и <code>function</code> (anonymous)?</li>
-                            <li>Чем отличается <code>private</code> от <code>protected</code>?</li>
-                            <li>Что такое <code>$this</code>? Когда нельзя использовать?</li>
-                            <li>Что выведет <code>echo "Hello $name"</code> vs <code>echo 'Hello $name'</code>?</li>
-                        </ol>
+                    <h3 class="subsection-title">Уровень 1 — Junior+ ($1500-2000) · 10 вопросов</h3>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">1</span> В чём разница <code>==</code> и <code>===</code>? Приведи пример где результат отличается.</div>
+                        <div class="qa-a">
+                            <p><code>==</code> (loose) приводит типы перед сравнением — это <strong>type juggling</strong>. <code>===</code> (strict) сравнивает <strong>и тип, и значение</strong>.</p>
+                            <p>Пример: <code>'0' == false</code> → <code>true</code> (PHP сначала привёл к bool, получил false, сравнил с false). Но <code>'0' === false</code> → <code>false</code> (тип строки и тип bool — разные).</p>
+                            <p>На собесе <strong>всегда говори, что используешь <code>===</code></strong>. Loose-сравнение даёт неочевидные баги (<code>"abc" == 0</code> в PHP &lt; 8 было <code>true</code>).</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">2</span> Что выведет: <code>var_dump('0' == false)</code>? А <code>var_dump('0' === false)</code>?</div>
+                        <div class="qa-a">
+                            <p><code>'0' == false</code> → <code>bool(true)</code>. Строка <code>'0'</code> в bool-контексте превращается в <code>false</code>, потому сравнение <code>false == false</code> = true.</p>
+                            <p><code>'0' === false</code> → <code>bool(false)</code>. Тип <code>string</code> ≠ тип <code>bool</code>.</p>
+                            <p><strong>⚠ Ловушка:</strong> <code>'0.0' == false</code> → <code>false</code> (это непустая строка, не равна '0'). Поэтому <code>filter_var</code> в PHP осторожнее.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">3</span> Что такое type juggling? Где он опасен?</div>
+                        <div class="qa-a">
+                            <p><strong>Type juggling</strong> — автоматическое приведение типов при сравнении или операциях. PHP пытается «угадать» что ты хотел.</p>
+                            <p>Опасен в трёх местах: <strong>1)</strong> сравнения паролей — <code>$hash == $userInput</code> может магически совпасть с <code>0</code>; используй <code>hash_equals()</code>. <strong>2)</strong> <code>in_array($needle, $haystack)</code> без 3-го параметра <code>true</code> — найдёт <code>"foo"</code> если в массиве есть <code>0</code>. <strong>3)</strong> ключи массивов — числовые строки <code>"5"</code> и числа <code>5</code> резолвятся в один ключ.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">4</span> Назови 6 false-y значений в PHP.</div>
+                        <div class="qa-a">
+                            <p><strong>6 значений</strong>, которые в bool-контексте становятся <code>false</code>: <code>false</code>, <code>0</code>, <code>0.0</code>, <code>""</code>, <code>"0"</code>, <code>null</code>, <code>[]</code> (пустой массив).</p>
+                            <p><strong>Ловушки:</strong> <code>"0.0"</code> → <code>true</code> (непустая строка!), <code>"false"</code> → <code>true</code> (строка), <code>[0]</code> → <code>true</code> (непустой массив).</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">5</span> В чём разница между <code>isset</code> и <code>array_key_exists</code>?</div>
+                        <div class="qa-a">
+                            <p><code>isset($arr[$key])</code> — true если ключ есть <strong>И</strong> значение не <code>null</code>.</p>
+                            <p><code>array_key_exists($key, $arr)</code> — true если ключ есть, <strong>даже если значение null</strong>.</p>
+                            <p>Когда применять <code>array_key_exists</code>: если <code>null</code> — валидное значение в твоём массиве (например, кэш может закэшировать <code>null</code> как результат).</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">6</span> Что делает <code>declare(strict_types=1)</code>?</div>
+                        <div class="qa-a">
+                            <p>Включает <strong>строгую типизацию</strong> для скалярных type-hints в текущем файле. Должен быть первым оператором в файле.</p>
+                            <p>Без него: <code>function add(int $a, int $b)</code> примет <code>add('5', 3)</code> — PHP приведёт строку к int. Со <code>strict_types=1</code> — выкинет <code>TypeError</code>.</p>
+                            <p>На собесе говорить: «использую <code>strict_types=1</code> во всех файлах, это требование PSR-12 для production-кода».</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">7</span> В чём разница между <code>fn</code> (arrow) и <code>function</code> (anonymous)?</div>
+                        <div class="qa-a">
+                            <p><strong>Arrow function <code>fn($x) =&gt; $x*2</code></strong> — короткий синтаксис, автоматически захватывает переменные из родительского scope <strong>по значению</strong>. Только одно выражение, без <code>{}</code>.</p>
+                            <p><strong>Anonymous function <code>function($x) use ($y) { ... }</code></strong> — нужен явный <code>use</code> для захвата. Может содержать любое тело. По умолчанию захват по значению (по ссылке — <code>use (&amp;$y)</code>).</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">8</span> Чем отличается <code>private</code> от <code>protected</code>?</div>
+                        <div class="qa-a">
+                            <p><code>private</code> — доступно <strong>только в самом классе</strong>. Даже наследник не видит.</p>
+                            <p><code>protected</code> — доступно в классе <strong>и во всех наследниках</strong>.</p>
+                            <p>На практике: используй <code>private</code> по умолчанию (инкапсуляция). <code>protected</code> — только когда осознанно проектируешь расширяемость через наследование.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">9</span> Что такое <code>$this</code>? Когда нельзя использовать?</div>
+                        <div class="qa-a">
+                            <p><code>$this</code> — <strong>ссылка на текущий экземпляр объекта</strong> внутри метода класса.</p>
+                            <p><strong>Нельзя использовать:</strong> в <code>static</code> методах (нет инстанса — есть только класс); в обычных функциях вне класса; в <code>__destruct</code> после уничтожения других полей.</p>
+                            <p>В static-методе вместо <code>$this</code> — <code>self::</code> (текущий класс) или <code>static::</code> (Late Static Binding).</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">10</span> Что выведет <code>echo "Hello $name"</code> vs <code>echo 'Hello $name'</code>?</div>
+                        <div class="qa-a">
+                            <p><strong>Double quotes <code>"..."</code></strong> — интерполируют переменные: <code>echo "Hello $name"</code> → <code>"Hello Alice"</code> (если <code>$name = 'Alice'</code>).</p>
+                            <p><strong>Single quotes <code>'...'</code></strong> — литералы, переменные НЕ интерполируются: <code>echo 'Hello $name'</code> → <code>"Hello $name"</code> буквально.</p>
+                            <p>Также в double quotes работают escape-последовательности: <code>"\n"</code> = перенос строки, в single — буквально 2 символа.</p>
+                        </div>
                     </div>
                 </div>
 
                 <div class="subsection">
-                    <h3 class="subsection-title">Уровень 2 — Middle ($2500-3000)</h3>
-                    <div class="content-block">
-                        <ol start="11" style="line-height:1.8">
-                            <li>В чём разница abstract class и interface? Когда что?</li>
-                            <li>Зачем нужен trait? Чем отличается от abstract class?</li>
-                            <li>Может ли trait хранить свойства? А интерфейс? А abstract?</li>
-                            <li>Что такое Late Static Binding? Чем <code>static::</code> отличается от <code>self::</code>?</li>
-                            <li>Что делает <code>final</code>? А <code>readonly</code>?</li>
-                            <li>Назови 5 магических методов и когда они вызываются.</li>
-                            <li>Что такое RAII? Приведи 3 примера применения <code>__construct/__destruct</code>.</li>
-                            <li>Что происходит при <code>$user->name = 'X'</code>, если в классе нет свойства <code>$name</code>?</li>
-                            <li>Что такое PSR-4? Зачем нужен autoload?</li>
-                            <li>Чем отличается <code>require</code>, <code>require_once</code> и autoload?</li>
-                            <li>Объясни как работает <code>array_reduce</code>. Что такое аккумулятор?</li>
-                            <li>В чём разница <code>array_map</code>, <code>array_filter</code>, <code>array_walk</code>?</li>
-                            <li>Зачем нужен <code>&amp;</code> в <code>array_walk(&$item)</code>?</li>
-                            <li>Что делает <code>ARRAY_FILTER_USE_KEY</code>?</li>
-                            <li>Что такое spread operator <code>...</code> в массивах? В аргументах?</li>
-                            <li>Когда нужен generator (<code>yield</code>)? Чем отличается от обычной функции?</li>
-                            <li>Что такое closure? Зачем <code>use ($var)</code>? Можно ли менять переменную в closure?</li>
-                            <li>Объясни разницу между <code>Error</code> и <code>Exception</code>.</li>
-                            <li>Что такое <code>match</code>? Чем отличается от <code>switch</code>?</li>
-                            <li>Зачем нужен enum (PHP 8.1)? Чем отличается от констант?</li>
-                        </ol>
+                    <h3 class="subsection-title">Уровень 2 — Middle ($2500-3000) · 20 вопросов</h3>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">11</span> В чём разница abstract class и interface? Когда что?</div>
+                        <div class="qa-a">
+                            <p><strong>Abstract class</strong> — частичная реализация. Может иметь свойства, конкретные методы, абстрактные методы. Один родитель.</p>
+                            <p><strong>Interface</strong> — только контракт (сигнатуры). Свойств нет, только константы. Можно реализовать сколько угодно.</p>
+                            <p><strong>Когда:</strong> abstract — если есть общее состояние и «is-a» иерархия (BaseController); interface — если нужен контракт для DI / полиморфизма (PaymentInterface). На практике часто комбинируют: <code>class Dog extends Animal implements Trainable</code>.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">12</span> Зачем нужен trait? Чем отличается от abstract class?</div>
+                        <div class="qa-a">
+                            <p><strong>Trait</strong> — горизонтальное переиспользование кода. Класс может подключить сколько угодно трейтов через <code>use</code>. Решает проблему отсутствия множественного наследования.</p>
+                            <p><strong>Отличие от abstract:</strong> abstract — это <strong>«is-a»</strong> (Animal → Dog). Trait — это <strong>«has-behavior»</strong> (Loggable, Cacheable, Notifiable). Используй trait когда метод нужен в неродственных классах.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">13</span> Может ли trait хранить свойства? А интерфейс? А abstract?</div>
+                        <div class="qa-a">
+                            <p><strong>Abstract class:</strong> ✅ да, любые свойства любой видимости.</p>
+                            <p><strong>Interface:</strong> ❌ только константы (<code>const</code>), свойств нет.</p>
+                            <p><strong>Trait:</strong> ✅ да, любые свойства. При <code>use</code> попадают в класс как родные. Если в классе уже есть свойство с тем же именем — fatal error при несовместимом объявлении.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">14</span> Что такое Late Static Binding? Чем <code>static::</code> отличается от <code>self::</code>?</div>
+                        <div class="qa-a">
+                            <p><code>self::</code> — резолвится в класс, где <strong>написан</strong> код (compile-time). <code>static::</code> — резолвится в <strong>реально вызванный</strong> класс (runtime).</p>
+                            <p><strong>Пример:</strong> <code>class A { static function make() { return new static(); } }</code>. Если <code>B extends A</code>, то <code>B::make()</code> с <code>self::</code> вернёт <code>A</code>, а с <code>static::</code> — <code>B</code>.</p>
+                            <p>Применение: фабричные методы, Eloquent <code>Model::create()</code> возвращает экземпляр конкретной модели.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">15</span> Что делает <code>final</code>? А <code>readonly</code>?</div>
+                        <div class="qa-a">
+                            <p><strong><code>final class</code></strong> — нельзя унаследоваться. <strong><code>final method</code></strong> — нельзя переопределить в наследниках.</p>
+                            <p><strong><code>readonly</code></strong> (PHP 8.1) — свойство можно проинициализировать ОДИН раз (в конструкторе), потом — fatal error при попытке записи. Применяется в Value Objects, DTO.</p>
+                            <p>Разница: <code>final</code> запрещает <em>переопределение</em>, <code>readonly</code> запрещает <em>изменение значения</em>.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">16</span> Назови 5 магических методов и когда они вызываются.</div>
+                        <div class="qa-a">
+                            <p><strong><code>__construct</code></strong> — при <code>new Class(...)</code>.</p>
+                            <p><strong><code>__destruct</code></strong> — при <code>$obj = null</code> или выходе из scope (RAII).</p>
+                            <p><strong><code>__get($name)</code></strong> — при чтении несуществующего/недоступного свойства (Eloquent attributes).</p>
+                            <p><strong><code>__call($name, $args)</code></strong> — при вызове несуществующего метода (fluent builders, facades).</p>
+                            <p><strong><code>__toString()</code></strong> — при <code>(string)$obj</code> или <code>echo $obj</code> (Value Objects, Money → "$100").</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">17</span> Что такое RAII? Приведи 3 примера применения <code>__construct/__destruct</code>.</div>
+                        <div class="qa-a">
+                            <p><strong>RAII (Resource Acquisition Is Initialization)</strong> — паттерн из C++: конструктор захватывает ресурс, деструктор освобождает. Гарантирует освобождение даже при <code>throw</code>.</p>
+                            <p><strong>Примеры:</strong></p>
+                            <ul style="margin:8px 0 0 20px">
+                                <li><strong>FileHandler</strong> — <code>fopen</code> в конструкторе, <code>fclose</code> в деструкторе.</li>
+                                <li><strong>TransactionGuard</strong> — <code>beginTransaction</code> → <code>rollBack</code> если не было <code>commit()</code>.</li>
+                                <li><strong>FileLock</strong> — <code>flock LOCK_EX</code> → <code>LOCK_UN</code>. Блокировка снимется при выходе из scope.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">18</span> Что происходит при <code>$user->name = 'X'</code>, если в классе нет свойства <code>$name</code>?</div>
+                        <div class="qa-a">
+                            <p>PHP не находит свойство <code>$name</code> → проверяет, есть ли в классе <code>__set()</code>.</p>
+                            <p>Если <code>__set</code> есть → вызывается с аргументами <code>('name', 'X')</code>. Без ошибки.</p>
+                            <p>Если <code>__set</code> нет → создаётся <strong>динамическое публичное свойство</strong> <code>$user-&gt;name = 'X'</code>. В PHP 8.2+ — deprecated warning. В PHP 9 — будет fatal error без <code>#[AllowDynamicProperties]</code>.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">19</span> Что такое PSR-4? Зачем нужен autoload?</div>
+                        <div class="qa-a">
+                            <p><strong>PSR-4</strong> — стандарт autoloading. Маппит namespace на путь к файлу: <code>App\Models\User</code> → <code>app/Models/User.php</code>. Composer генерирует автозагрузчик.</p>
+                            <p><strong>Autoload</strong> избавляет от ручных <code>require</code>: PHP сам подгрузит файл при первом использовании класса. Без него — гора <code>require</code> в каждом файле.</p>
+                            <p>Настройка в <code>composer.json</code>: <code>"autoload": { "psr-4": { "App\\\\": "app/" } }</code>.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">20</span> Чем отличается <code>require</code>, <code>require_once</code> и autoload?</div>
+                        <div class="qa-a">
+                            <p><strong><code>require</code></strong> — подгружает файл, fatal error если файла нет. Каждый раз заново.</p>
+                            <p><strong><code>require_once</code></strong> — подгружает только если ещё не подгружен (отслеживается на уровне PHP).</p>
+                            <p><strong>Autoload</strong> — PHP сам вызывает функцию (зарегистрированную через <code>spl_autoload_register</code>) когда видит неизвестный класс. Composer регистрирует PSR-4 автозагрузчик.</p>
+                            <p>В современном коде <code>require</code>/<code>require_once</code> почти не пишут — всё через Composer autoload.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">21</span> Объясни как работает <code>array_reduce</code>. Что такое аккумулятор?</div>
+                        <div class="qa-a">
+                            <p><code>array_reduce($arr, $callback, $initial)</code> — <strong>сворачивает</strong> массив в одно значение, последовательно применяя callback.</p>
+                            <p><strong>Аккумулятор</strong> — промежуточный результат. На каждой итерации callback получает <code>($accumulator, $currentItem)</code> и возвращает новый аккумулятор.</p>
+                            <p><strong>Пример:</strong> сумма массива <code>[1,2,3,4]</code> с initial <code>0</code> → 0+1=1, 1+2=3, 3+3=6, 6+4=10. Возвращает 10.</p>
+                            <p>PHP жёстко зашил <strong>порядок аргументов callback</strong>: 1-й — аккумулятор, 2-й — текущий элемент. Имена переменных не важны.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">22</span> В чём разница <code>array_map</code>, <code>array_filter</code>, <code>array_walk</code>?</div>
+                        <div class="qa-a">
+                            <p><strong><code>array_map($cb, $arr)</code></strong> — трансформирует, возвращает <strong>новый</strong> массив. Ключи сбрасываются для числовых массивов.</p>
+                            <p><strong><code>array_filter($arr, $cb)</code></strong> — фильтрует, возвращает <strong>новый</strong> массив. <strong>Ключи сохраняются</strong> (это частый сюрприз — после фильтрации могут быть «дырки» в индексах).</p>
+                            <p><strong><code>array_walk($arr, $cb)</code></strong> — мутирует массив <strong>in-place</strong>. Callback принимает <code>&amp;$value</code> по ссылке. Возвращает <code>bool</code>.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">23</span> Зачем нужен <code>&amp;</code> в <code>array_walk(&$item)</code>?</div>
+                        <div class="qa-a">
+                            <p><code>&amp;</code> — <strong>передача по ссылке</strong>. Без неё callback получит копию значения и не сможет изменить элемент массива.</p>
+                            <p>С <code>&amp;</code> любые изменения <code>$item</code> внутри callback меняют сам массив (in-place mutation).</p>
+                            <p><strong>Контраст с <code>array_map</code>:</strong> map создаёт новый массив (без мутации), walk — мутирует исходный.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">24</span> Что делает <code>ARRAY_FILTER_USE_KEY</code>?</div>
+                        <div class="qa-a">
+                            <p>Флаг для <code>array_filter</code> — меняет что приходит в callback: вместо <strong>значения</strong> приходит <strong>ключ</strong>.</p>
+                            <p><strong>Без флага:</strong> <code>array_filter($arr, fn($value) =&gt; ...)</code>.</p>
+                            <p><strong>С <code>USE_KEY</code>:</strong> <code>array_filter($arr, fn($key) =&gt; str_ends_with($key, '_id'), ARRAY_FILTER_USE_KEY)</code> — фильтрация по ключу.</p>
+                            <p><strong>Есть ещё <code>ARRAY_FILTER_USE_BOTH</code></strong> — в callback приходят оба: <code>fn($value, $key)</code>.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">25</span> Что такое spread operator <code>...</code> в массивах? В аргументах?</div>
+                        <div class="qa-a">
+                            <p><strong>В аргументах:</strong> <code>function sum(...$nums)</code> — variadic, собирает аргументы в массив.</p>
+                            <p><strong>При вызове:</strong> <code>sum(...[1,2,3])</code> — распаковывает массив в отдельные аргументы.</p>
+                            <p><strong>В массивах (PHP 7.4+):</strong> <code>$merged = [...$arr1, ...$arr2, 'extra']</code> — расширение массивов. Быстрее чем <code>array_merge</code>.</p>
+                            <p><strong>С string-ключами (PHP 8.1+):</strong> <code>[...$assoc1, ...$assoc2]</code> — работает, дубликаты ключей перезаписываются справа.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">26</span> Когда нужен generator (<code>yield</code>)? Чем отличается от обычной функции?</div>
+                        <div class="qa-a">
+                            <p><strong>Generator</strong> — функция, которая «лениво» возвращает значения через <code>yield</code> вместо <code>return</code>. Не загружает весь массив в память.</p>
+                            <p><strong>Когда нужен:</strong> чтение больших файлов построчно (миллионы строк), обработка потоков, бесконечные последовательности.</p>
+                            <p><strong>Пример:</strong> чтение CSV — <code>file_get_contents</code> загружает 10 GB в память → OOM. Generator с <code>fgets</code> → 1 строка за раз, постоянное потребление памяти.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">27</span> Что такое closure? Зачем <code>use ($var)</code>? Можно ли менять переменную в closure?</div>
+                        <div class="qa-a">
+                            <p><strong>Closure</strong> — анонимная функция, которая «захватывает» переменные из внешнего scope.</p>
+                            <p><strong><code>use ($var)</code></strong> — явный список переменных для захвата. По умолчанию <strong>по значению</strong> (копия). Для захвата по ссылке: <code>use (&amp;$var)</code>.</p>
+                            <p><strong>Менять переменную:</strong> по значению — изменения внутри closure не видны снаружи. По ссылке — видны.</p>
+                            <p><strong>Arrow function</strong> (<code>fn</code>) автоматически захватывает всё нужное по значению, без <code>use</code>.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">28</span> Объясни разницу между <code>Error</code> и <code>Exception</code>.</div>
+                        <div class="qa-a">
+                            <p>Оба наследуют <code>Throwable</code>, оба ловятся через <code>catch</code>.</p>
+                            <p><strong><code>Exception</code></strong> — бизнес/доменные ошибки (validation, not found, unauthorized). Их <strong>ловят</strong> и обрабатывают.</p>
+                            <p><strong><code>Error</code></strong> — системные/программные (<code>TypeError</code>, <code>ParseError</code>, <code>OutOfMemoryError</code>). Обычно <strong>НЕ ловят</strong> — это баг, чинить код, а не глотать.</p>
+                            <p>Иерархия: <code>Throwable</code> ← <code>Error</code> / <code>Exception</code>. Чтобы поймать всё: <code>catch (\Throwable $t)</code>.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">29</span> Что такое <code>match</code>? Чем отличается от <code>switch</code>?</div>
+                        <div class="qa-a">
+                            <p><code>match</code> (PHP 8) — выражение, возвращает значение. Использует <strong>строгое сравнение <code>===</code></strong>. Не нужен <code>break</code>. Если ни одна ветка не подошла — <code>UnhandledMatchError</code>.</p>
+                            <p><code>switch</code> — оператор (не выражение). Использует <strong>loose <code>==</code></strong>. Нужен <code>break</code>, иначе fall-through. Если ничего не подошло и нет <code>default</code> — молча идёт дальше.</p>
+                            <p>В новом коде — <code>match</code> предпочтительнее: безопаснее, короче.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">30</span> Зачем нужен enum (PHP 8.1)? Чем отличается от констант?</div>
+                        <div class="qa-a">
+                            <p><strong>Enum</strong> — типизированный набор значений. Можно использовать как type-hint: <code>function setStatus(Status $s)</code>.</p>
+                            <p><strong>Преимущества над <code>const</code></strong>: 1) защита от случайных значений (<code>'active' </code>vs typo); 2) можно добавлять методы; 3) IDE подсказывает все варианты; 4) <code>Status::cases()</code> вернёт все значения.</p>
+                            <p><strong>Виды:</strong> Pure enum (без значений) и Backed enum (<code>enum Status: string { case Active = 'active'; }</code>) для сериализации в БД.</p>
+                        </div>
                     </div>
                 </div>
 
                 <div class="subsection">
-                    <h3 class="subsection-title">Уровень 3 — Middle+/Senior ($3000+)</h3>
-                    <div class="content-block">
-                        <ol start="31" style="line-height:1.8">
-                            <li>Что такое attributes (PHP 8)? Приведи пример из Laravel/Symfony.</li>
-                            <li>Объясни fibers (PHP 8.1). В чём отличие от generators?</li>
-                            <li>Как работает opcache? Что такое JIT (PHP 8)?</li>
-                            <li>Что такое weak references (<code>WeakMap</code>)? Зачем нужны?</li>
-                            <li>Как PHP управляет памятью? Что такое circular reference?</li>
-                            <li>Объясни Copy-on-Write для массивов в PHP.</li>
-                            <li>В чём проблема <code>serialize</code> объектов? Как её решает <code>__serialize</code>?</li>
-                            <li>Что такое <code>SplObjectStorage</code>? Зачем нужен?</li>
-                            <li>Как реализовать <code>iterable</code> через <code>Iterator</code> vs <code>Generator</code>?</li>
-                            <li>Что такое <code>Stringable</code> interface (PHP 8)?</li>
-                            <li>Объясни поведение <code>static</code> переменных в функциях.</li>
-                            <li>Что такое <code>__invoke</code>? Зачем делать класс callable?</li>
-                            <li>Чем отличается <code>::class</code> от <code>get_class($obj)</code>?</li>
-                            <li>В чём опасность <code>extract()</code> и <code>compact()</code>?</li>
-                            <li>Как реализовать singleton без global state? Какие альтернативы?</li>
-                        </ol>
+                    <h3 class="subsection-title">Уровень 3 — Middle+/Senior ($3000+) · 15 вопросов</h3>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">31</span> Что такое attributes (PHP 8)? Приведи пример из Laravel/Symfony.</div>
+                        <div class="qa-a">
+                            <p><strong>Attributes</strong> — нативный механизм декларативной метаинформации над классами/методами/свойствами. До PHP 8 жили в doc-комментариях как аннотации.</p>
+                            <p><strong>Пример Symfony:</strong> <code>#[Route('/users/{id}', methods: ['GET'])] public function show(int $id) {...}</code>.</p>
+                            <p><strong>Laravel:</strong> <code>#[Route]</code> в роутинге PHP 8 style, <code>#[Validate('email')]</code> в формах.</p>
+                            <p>Читаются через рефлексию (<code>ReflectionClass::getAttributes()</code>).</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">32</span> Объясни fibers (PHP 8.1). В чём отличие от generators?</div>
+                        <div class="qa-a">
+                            <p><strong>Fibers</strong> — корутины с явным управлением. Можно <code>suspend</code> в середине выполнения и <code>resume</code> снаружи.</p>
+                            <p><strong>Отличие от generators:</strong> generator может только <code>yield</code> вверх по стеку (своему caller). Fiber может suspend/resume произвольно — это основа для async-фреймворков (AmpHP, ReactPHP).</p>
+                            <p>На практике: писать fibers напрямую почти не приходится — используют поверх async-библиотек.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">33</span> Как работает opcache? Что такое JIT (PHP 8)?</div>
+                        <div class="qa-a">
+                            <p><strong>opcache</strong> — кэширует <strong>скомпилированный bytecode</strong> PHP в shared memory. Без него каждый запрос парсит .php файлы заново.</p>
+                            <p><strong>JIT (Just-In-Time)</strong> — компиляция «горячего» bytecode в нативный машинный код. Включается в opcache (<code>opcache.jit=tracing</code>).</p>
+                            <p><strong>Эффект:</strong> на типичных веб-задачах (ввод/вывод) JIT даёт ~3-5%. На вычислительных (math, image processing) — до 2-3x.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">34</span> Что такое weak references (<code>WeakMap</code>)? Зачем нужны?</div>
+                        <div class="qa-a">
+                            <p><strong>WeakReference / WeakMap</strong> — хранят объект, но <strong>не мешают GC</strong> его удалить. Если объект больше нигде не используется — он удаляется, ссылка обнуляется.</p>
+                            <p><strong>Зачем:</strong> кэш по объектам, observers/listeners (чтобы listener не удерживал объект в памяти бесконечно), object identity maps в ORM.</p>
+                            <p>До PHP 7.4 пришлось бы хранить ID + использовать обычный массив — но это утечка памяти.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">35</span> Как PHP управляет памятью? Что такое circular reference?</div>
+                        <div class="qa-a">
+                            <p>PHP использует <strong>reference counting</strong> + <strong>cycle collector</strong>. Каждый объект имеет счётчик ссылок (<code>refcount</code>). При <code>refcount=0</code> — удаляется.</p>
+                            <p><strong>Circular reference</strong> — два объекта ссылаются друг на друга (<code>$a-&gt;b = $b; $b-&gt;a = $a</code>). Refcount никогда не станет 0. Cycle collector периодически их находит и удаляет.</p>
+                            <p>В коде это можно увидеть через <code>gc_collect_cycles()</code>. В long-running процессах (queue workers) важно следить за memory leaks.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">36</span> Объясни Copy-on-Write для массивов в PHP.</div>
+                        <div class="qa-a">
+                            <p>Когда массив присваивается другой переменной (<code>$b = $a</code>) — PHP <strong>не копирует данные сразу</strong>. Обе переменные ссылаются на одни данные с <code>refcount=2</code>.</p>
+                            <p>Копия создаётся <strong>только при первой модификации</strong> одной из них (<code>$b[] = 1</code>). Это и есть Copy-on-Write.</p>
+                            <p>Эффект: передача массива в функцию by-value — бесплатна, пока никто не пишет. Поэтому immutable-стиль в PHP не такой дорогой как кажется.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">37</span> В чём проблема <code>serialize</code> объектов? Как её решает <code>__serialize</code>?</div>
+                        <div class="qa-a">
+                            <p><code>serialize($obj)</code> сериализует <strong>все свойства</strong> объекта, включая приватные. Проблема: <strong>secrets / passwords / API tokens</strong> попадают в сериализованный вид. Если такой объект сохраняется в кэш — leak.</p>
+                            <p><strong><code>__serialize()</code></strong> (PHP 7.4+) — позволяет вернуть <code>array</code> с тем, что <strong>хочешь</strong> сохранить. Полный контроль.</p>
+                            <p><strong><code>__unserialize($data)</code></strong> — восстанавливает объект из этого массива.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">38</span> Что такое <code>SplObjectStorage</code>? Зачем нужен?</div>
+                        <div class="qa-a">
+                            <p><strong>SplObjectStorage</strong> — структура «массив, где ключ — объект, значение — любые данные».</p>
+                            <p>В обычном массиве PHP ключ может быть только string/int — объект использовать нельзя. <code>SplObjectStorage</code> работает по <code>spl_object_hash($obj)</code>.</p>
+                            <p>Применение: object identity maps в ORM, observer registries, dependency graphs.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">39</span> Как реализовать <code>iterable</code> через <code>Iterator</code> vs <code>Generator</code>?</div>
+                        <div class="qa-a">
+                            <p><strong>Iterator</strong> — интерфейс с 5 методами: <code>current()</code>, <code>key()</code>, <code>next()</code>, <code>rewind()</code>, <code>valid()</code>. Полный контроль над итерацией. Можно несколько раз пройти.</p>
+                            <p><strong>Generator</strong> — функция с <code>yield</code>. Короче, но <strong>одноразовый</strong>: после прохождения нельзя rewind (бросает исключение).</p>
+                            <p>В Laravel <code>LazyCollection</code> — обёртка над Generator с возможностью «обернуть в Iterator» при необходимости.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">40</span> Что такое <code>Stringable</code> interface (PHP 8)?</div>
+                        <div class="qa-a">
+                            <p><strong>Stringable</strong> — интерфейс с одним методом <code>__toString(): string</code>. Любой класс с <code>__toString</code> автоматически считается <code>Stringable</code> (это <strong>implicit interface</strong>).</p>
+                            <p><strong>Применение:</strong> type-hint <code>function log(string|Stringable $msg)</code> — принимает и строки, и объекты с <code>__toString</code> (например, <code>Money</code>, <code>Url</code>).</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">41</span> Объясни поведение <code>static</code> переменных в функциях.</div>
+                        <div class="qa-a">
+                            <p><code>function f() { static $count = 0; $count++; return $count; }</code> — <code>$count</code> сохраняется между вызовами, инициализируется один раз.</p>
+                            <p>Это не глобальная переменная — она видна только внутри функции. Полезно для счётчиков, мемоизации (хотя для серьёзной мемоизации лучше делать отдельный объект-кэш).</p>
+                            <p>⚠ Не работает с recursion-эффектами в parallel testing — статика общая на процесс.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">42</span> Что такое <code>__invoke</code>? Зачем делать класс callable?</div>
+                        <div class="qa-a">
+                            <p><code>__invoke($args)</code> — магический метод, позволяющий вызвать объект как функцию: <code>$obj($arg1, $arg2)</code>.</p>
+                            <p><strong>Зачем:</strong> Single Action Classes в Laravel (<code>class RegisterUser { public function __invoke(RegisterUserData $data) {...} }</code>). Контроллер делает <code>$action($data)</code>.</p>
+                            <p>Преимущество над обычным методом <code>handle()</code>: можно DI-инжектить как callable, передавать в pipeline, использовать как value-object для команды.</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">43</span> Чем отличается <code>::class</code> от <code>get_class($obj)</code>?</div>
+                        <div class="qa-a">
+                            <p><strong><code>User::class</code></strong> — резолвится в <strong>compile-time</strong> в полное имя класса с namespace (<code>"App\\Models\\User"</code>). Работает с use-импортами, IDE подсказывает.</p>
+                            <p><strong><code>get_class($obj)</code></strong> — резолвится в <strong>runtime</strong>, возвращает класс конкретного экземпляра. Без аргумента (внутри метода) — текущий класс.</p>
+                            <p><strong>Когда что:</strong> <code>::class</code> — для типов в сигнатурах, биндингов DI, attributes. <code>get_class</code> — когда нужно знать реальный класс instance (например, для логирования).</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">44</span> В чём опасность <code>extract()</code> и <code>compact()</code>?</div>
+                        <div class="qa-a">
+                            <p><strong><code>extract($arr)</code></strong> — создаёт переменные в текущем scope из ключей массива. Опасность: <strong>может перезаписать существующие переменные</strong>. Если массив от пользователя — security hole.</p>
+                            <p><strong><code>compact('a', 'b')</code></strong> — обратная операция: создаёт массив из переменных по их именам. Менее опасно, но IDE не подсказывает.</p>
+                            <p>В современном коде их избегают: extract — почти никогда, compact — иногда в передаче в Blade-views (хотя Laravel рекомендует именованные массивы).</p>
+                        </div>
+                    </div>
+
+                    <div class="qa-item">
+                        <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">45</span> Как реализовать singleton без global state? Какие альтернативы?</div>
+                        <div class="qa-a">
+                            <p><strong>Классический singleton</strong> — статический <code>getInstance()</code> с <code>private __construct</code>. Проблема: global state, плохо тестируется (нельзя mockать), скрытая зависимость.</p>
+                            <p><strong>Альтернатива №1 — Service Container (DI):</strong> класс просто требует через конструктор: <code>__construct(private Cache $cache)</code>. Container даёт всем нужным <strong>один и тот же</strong> экземпляр через <code>singleton()</code> биндинг.</p>
+                            <p><strong>Альтернатива №2 — параметризация:</strong> вместо «всегда один» — передавать инстанс явно. Тогда тесты могут передать mock.</p>
+                            <p>В Laravel singleton почти всегда означает «singleton scope в контейнере», а не GoF-singleton.</p>
+                        </div>
                     </div>
 
                     <div class="remember-box">
@@ -5049,77 +5598,671 @@ RAII: __construct захватывает, __destruct освобождает
                 <h2 class="section-title">🛠 Практика руками (PHP Core)</h2>
 
                 <div class="content-block">
-                    Реальные мини-задачи и проекты для отработки PHP. Отмечай ✓ когда сделал. Цель — <strong>писать код</strong>, а не читать. Без практики теория не приклеивается.
+                    Без практики теория не приклеивается. Здесь — задания трёх уровней: <strong>микро-задачи</strong> (15 мин) для разогрева, <strong>готовые задания</strong> (30-60 мин) с полным разбором и эталонным кодом, <strong>мини-проекты</strong> (1-2 часа) в стиле LeetCode. Каждое задание — Постановка → Шаги → Эталонный код → Тесты → Подводные камни. Не подсматривай решение до первой попытки.
                 </div>
 
+                <!-- ─────── Микро-задачи ─────── -->
                 <div class="subsection">
-                    <h3 class="subsection-title">📌 Чек-лист микро-задач (15 минут каждая)</h3>
+                    <h3 class="subsection-title">📌 Микро-задачи (15 мин каждая) — разогрев</h3>
                     <div class="content-block">
-                        <ul style="list-style:none;padding:0;line-height:2">
-                            <li>☐ <strong>1. Type juggling</strong> — функция <code>isTruthy($x)</code> которая возвращает true только если <code>$x</code> не входит в [0, '0', '', null, false, []]. Покрой 10 тестами.</li>
-                            <li>☐ <strong>2. strict_types</strong> — функция <code>add(int $a, int $b): int</code>. Вызови её с <code>'5'</code> и <code>'3'</code>. Получи TypeError. Включи/выключи <code>declare(strict_types=1)</code> — наблюдай разницу.</li>
-                            <li>☐ <strong>3. Строки</strong> — функция <code>extractEmails($text)</code> которая через regex возвращает все email из текста.</li>
-                            <li>☐ <strong>4. sprintf</strong> — функция <code>formatPrice(float $amount, string $currency)</code> возвращает <code>"$1,234.56 USD"</code> (через <code>number_format</code> + <code>sprintf</code>).</li>
-                            <li>☐ <strong>5. array_map</strong> — массив пользователей, верни массив их имён.</li>
-                            <li>☐ <strong>6. array_filter с USE_KEY</strong> — массив <code>['user_id'=>1, 'admin_id'=>2, 'name'=>'X']</code>, оставь только ключи на <code>_id</code>.</li>
-                            <li>☐ <strong>7. array_reduce</strong> — массив заказов, посчитай total/count/avg одним вызовом.</li>
-                            <li>☐ <strong>8. array_walk с &amp;</strong> — массив цен, добавь к каждой 10% налог in-place.</li>
-                            <li>☐ <strong>9. usort spaceship</strong> — массив объектов User (имя, возраст), отсортируй по возрасту через <code>fn($a,$b) =&gt; $a-&gt;age &lt;=&gt; $b-&gt;age</code>.</li>
-                            <li>☐ <strong>10. destructuring</strong> — массив <code>['name'=&gt;'A','age'=&gt;30,'city'=&gt;'X']</code>. Через <code>[‎'name'=&gt;$n] = $arr</code> вытащи name в переменную.</li>
-                        </ul>
+                        Каждая задача с эталонным решением. Сначала пиши сам, потом сверяй.
+                    </div>
+
+                    <div class="practice-task">
+                        <div class="practice-task-title">Задача 1: <code>isTruthy($x)</code> <span class="practice-task-meta">~15 мин · type juggling</span></div>
+                        <p style="font-size:13.5px;color:#374151;margin:6px 0 8px"><strong>Постановка:</strong> Функция возвращает <code>true</code> только если <code>$x</code> НЕ входит в 6 false-y значений PHP. Покрой 10 тестами.</p>
+
+                        <div class="practice-step-label">Эталонное решение</div>
+                        <pre><code><span class="keyword">declare</span>(<span class="function">strict_types</span>=<span class="number">1</span>);
+
+<span class="keyword">function</span> <span class="function">isTruthy</span>(<span class="keyword">mixed</span> <span class="variable">$x</span>): <span class="keyword">bool</span>
+{
+    <span class="comment">// Самый простой и корректный способ — bool-cast</span>
+    <span class="keyword">return</span> (<span class="keyword">bool</span>) <span class="variable">$x</span>;
+}</code></pre>
+
+                        <div class="practice-step-label">Тесты (PHPUnit)</div>
+                        <pre><code><span class="keyword">use</span> <span class="function">PHPUnit\Framework\TestCase</span>;
+
+<span class="keyword">class</span> <span class="function">IsTruthyTest</span> <span class="keyword">extends</span> <span class="function">TestCase</span>
+{
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">testFalsyValues</span>(): <span class="keyword">void</span>
+    {
+        <span class="keyword">foreach</span> ([<span class="keyword">false</span>, <span class="number">0</span>, <span class="number">0.0</span>, <span class="string">""</span>, <span class="string">"0"</span>, <span class="keyword">null</span>, []] <span class="keyword">as</span> <span class="variable">$x</span>) {
+            <span class="variable">$this</span>-><span class="function">assertFalse</span>(<span class="function">isTruthy</span>(<span class="variable">$x</span>));
+        }
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">testTruthyTraps</span>(): <span class="keyword">void</span>
+    {
+        <span class="comment">// Ловушки — должны быть true</span>
+        <span class="variable">$this</span>-><span class="function">assertTrue</span>(<span class="function">isTruthy</span>(<span class="string">"0.0"</span>));    <span class="comment">// непустая строка!</span>
+        <span class="variable">$this</span>-><span class="function">assertTrue</span>(<span class="function">isTruthy</span>(<span class="string">"false"</span>));  <span class="comment">// строка!</span>
+        <span class="variable">$this</span>-><span class="function">assertTrue</span>(<span class="function">isTruthy</span>([<span class="number">0</span>]));      <span class="comment">// непустой массив</span>
+        <span class="variable">$this</span>-><span class="function">assertTrue</span>(<span class="function">isTruthy</span>(<span class="number">-1</span>));        <span class="comment">// любое не-ноль</span>
+    }
+}</code></pre>
+
+                        <div class="practice-pitfalls">
+                            <strong>⚠ Подводные камни:</strong> <code>"0.0"</code>, <code>"false"</code>, <code>[0]</code> — НЕ false-y (это всегда вопрос на собесе). Не пиши свой список — <code>(bool)$x</code> точнее и короче.
+                        </div>
+                    </div>
+
+                    <div class="practice-task">
+                        <div class="practice-task-title">Задача 2: <code>strict_types</code> и TypeError <span class="practice-task-meta">~15 мин · типы</span></div>
+                        <p style="font-size:13.5px;color:#374151;margin:6px 0 8px"><strong>Постановка:</strong> Напиши функцию <code>add(int $a, int $b): int</code>. Вызови с <code>'5'</code> и <code>'3'</code> в двух режимах — со <code>strict_types=1</code> и без. Объясни разницу.</p>
+
+                        <div class="practice-step-label">Эталонное решение</div>
+                        <pre><code><span class="comment">// === файл strict.php ===</span>
+<span class="keyword">declare</span>(<span class="function">strict_types</span>=<span class="number">1</span>);
+
+<span class="keyword">function</span> <span class="function">add</span>(<span class="keyword">int</span> <span class="variable">$a</span>, <span class="keyword">int</span> <span class="variable">$b</span>): <span class="keyword">int</span>
+{
+    <span class="keyword">return</span> <span class="variable">$a</span> + <span class="variable">$b</span>;
+}
+
+<span class="keyword">try</span> {
+    <span class="keyword">echo</span> <span class="function">add</span>(<span class="string">'5'</span>, <span class="string">'3'</span>);
+} <span class="keyword">catch</span> (<span class="function">TypeError</span> <span class="variable">$e</span>) {
+    <span class="keyword">echo</span> <span class="string">"Caught: "</span> . <span class="variable">$e</span>-><span class="function">getMessage</span>();
+    <span class="comment">// "add(): Argument #1 ($a) must be of type int, string given"</span>
+}
+
+<span class="comment">// === файл loose.php (БЕЗ declare) ===</span>
+<span class="keyword">function</span> <span class="function">add</span>(<span class="keyword">int</span> <span class="variable">$a</span>, <span class="keyword">int</span> <span class="variable">$b</span>): <span class="keyword">int</span>
+{
+    <span class="keyword">return</span> <span class="variable">$a</span> + <span class="variable">$b</span>;
+}
+<span class="keyword">echo</span> <span class="function">add</span>(<span class="string">'5'</span>, <span class="string">'3'</span>);  <span class="comment">// 8 (PHP молча привёл '5' и '3' к int)</span></code></pre>
+
+                        <div class="practice-pitfalls">
+                            <strong>⚠ Подводные камни:</strong> <code>declare(strict_types=1)</code> работает <strong>только в файле, где написан</strong>. Не наследуется по include/autoload. Должен быть <strong>первым оператором</strong> файла (после <code>&lt;?php</code>).
+                        </div>
+                    </div>
+
+                    <div class="practice-task">
+                        <div class="practice-task-title">Задача 3: <code>extractEmails($text)</code> <span class="practice-task-meta">~15 мин · regex</span></div>
+                        <p style="font-size:13.5px;color:#374151;margin:6px 0 8px"><strong>Постановка:</strong> Через regex извлеки все email-адреса из произвольного текста. Возврат — массив уникальных email в нижнем регистре.</p>
+
+                        <div class="practice-step-label">Эталонное решение</div>
+                        <pre><code><span class="keyword">function</span> <span class="function">extractEmails</span>(<span class="keyword">string</span> <span class="variable">$text</span>): <span class="keyword">array</span>
+{
+    <span class="comment">// Упрощённый regex (RFC 5322 — гораздо сложнее, но в 99% хватает)</span>
+    <span class="variable">$pattern</span> = <span class="string">'/[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}/i'</span>;
+
+    <span class="function">preg_match_all</span>(<span class="variable">$pattern</span>, <span class="variable">$text</span>, <span class="variable">$matches</span>);
+
+    <span class="keyword">return</span> <span class="function">array_values</span>(<span class="function">array_unique</span>(
+        <span class="function">array_map</span>(<span class="string">'strtolower'</span>, <span class="variable">$matches</span>[<span class="number">0</span>])
+    ));
+}
+
+<span class="comment">// Использование</span>
+<span class="variable">$text</span> = <span class="string">'Пиши на Alice@Example.com или bob@test.io. Дубль: alice@example.com'</span>;
+<span class="function">print_r</span>(<span class="function">extractEmails</span>(<span class="variable">$text</span>));
+<span class="comment">// ['alice@example.com', 'bob@test.io']</span></code></pre>
+
+                        <div class="practice-pitfalls">
+                            <strong>⚠ Подводные камни:</strong> для прода — <code>filter_var($email, FILTER_VALIDATE_EMAIL)</code> точнее regex. <code>array_unique</code> сохраняет ключи — оборачивай в <code>array_values</code>. Флаг <code>/i</code> — case-insensitive, но в результат вернётся оригинальный регистр.
+                        </div>
+                    </div>
+
+                    <div class="practice-task">
+                        <div class="practice-task-title">Задача 4: <code>formatPrice($amount, $currency)</code> <span class="practice-task-meta">~15 мин · sprintf</span></div>
+                        <p style="font-size:13.5px;color:#374151;margin:6px 0 8px"><strong>Постановка:</strong> Форматирование цены в виде <code>"$1,234.56 USD"</code>. Использовать <code>number_format</code> + <code>sprintf</code>.</p>
+
+                        <div class="practice-step-label">Эталонное решение</div>
+                        <pre><code><span class="keyword">function</span> <span class="function">formatPrice</span>(<span class="keyword">float</span> <span class="variable">$amount</span>, <span class="keyword">string</span> <span class="variable">$currency</span>): <span class="keyword">string</span>
+{
+    <span class="variable">$symbol</span> = <span class="keyword">match</span>(<span class="variable">$currency</span>) {
+        <span class="string">'USD'</span> => <span class="string">'$'</span>,
+        <span class="string">'EUR'</span> => <span class="string">'€'</span>,
+        <span class="string">'KZT'</span> => <span class="string">'₸'</span>,
+        <span class="keyword">default</span> => <span class="string">''</span>,
+    };
+
+    <span class="comment">// number_format($n, decimals=2, decSep='.', thousandsSep=',')</span>
+    <span class="variable">$formatted</span> = <span class="function">number_format</span>(<span class="variable">$amount</span>, <span class="number">2</span>, <span class="string">'.'</span>, <span class="string">','</span>);
+
+    <span class="keyword">return</span> <span class="function">sprintf</span>(<span class="string">'%s%s %s'</span>, <span class="variable">$symbol</span>, <span class="variable">$formatted</span>, <span class="variable">$currency</span>);
+}
+
+<span class="keyword">echo</span> <span class="function">formatPrice</span>(<span class="number">1234.5</span>, <span class="string">'USD'</span>);   <span class="comment">// "$1,234.50 USD"</span>
+<span class="keyword">echo</span> <span class="function">formatPrice</span>(<span class="number">99.99</span>, <span class="string">'EUR'</span>);    <span class="comment">// "€99.99 EUR"</span>
+<span class="keyword">echo</span> <span class="function">formatPrice</span>(<span class="number">5500</span>, <span class="string">'KZT'</span>);     <span class="comment">// "₸5,500.00 KZT"</span></code></pre>
+
+                        <div class="practice-pitfalls">
+                            <strong>⚠ Подводные камни:</strong> для локализации (русские числа: «1 234,56») — использовать <code>NumberFormatter::CURRENCY</code> из ext-intl. В JSON-API лучше отдавать <strong>цена + валюта отдельно</strong> (минимальные единицы — копейки/центы), а форматировать на фронте.
+                        </div>
+                    </div>
+
+                    <div class="practice-task">
+                        <div class="practice-task-title">Задачи 5-10: микро-разогрев <span class="practice-task-meta">~10 мин каждая</span></div>
+                        <p style="font-size:13.5px;color:#374151;margin:6px 0 8px"><strong>Постановка и эталонные one-liner'ы</strong> (сделай свой вариант, потом сверь):</p>
+
+                        <div class="practice-step-label">5. array_map — массив пользователей → массив имён</div>
+                        <pre><code><span class="variable">$users</span> = [[<span class="string">'name'</span>=><span class="string">'A'</span>], [<span class="string">'name'</span>=><span class="string">'B'</span>], [<span class="string">'name'</span>=><span class="string">'C'</span>]];
+<span class="variable">$names</span> = <span class="function">array_map</span>(<span class="keyword">fn</span>(<span class="variable">$u</span>) => <span class="variable">$u</span>[<span class="string">'name'</span>], <span class="variable">$users</span>);
+<span class="comment">// ['A', 'B', 'C']</span>
+
+<span class="comment">// Через array_column короче:</span>
+<span class="variable">$names</span> = <span class="function">array_column</span>(<span class="variable">$users</span>, <span class="string">'name'</span>);</code></pre>
+
+                        <div class="practice-step-label">6. array_filter с USE_KEY</div>
+                        <pre><code><span class="variable">$data</span> = [<span class="string">'user_id'</span>=><span class="number">1</span>, <span class="string">'admin_id'</span>=><span class="number">2</span>, <span class="string">'name'</span>=><span class="string">'X'</span>];
+<span class="variable">$ids</span> = <span class="function">array_filter</span>(
+    <span class="variable">$data</span>,
+    <span class="keyword">fn</span>(<span class="variable">$k</span>) => <span class="function">str_ends_with</span>(<span class="variable">$k</span>, <span class="string">'_id'</span>),
+    <span class="keyword">ARRAY_FILTER_USE_KEY</span>
+);
+<span class="comment">// ['user_id'=>1, 'admin_id'=>2]</span></code></pre>
+
+                        <div class="practice-step-label">7. array_reduce — статистика заказов</div>
+                        <pre><code><span class="variable">$orders</span> = [[<span class="string">'amount'</span>=><span class="number">100</span>], [<span class="string">'amount'</span>=><span class="number">200</span>], [<span class="string">'amount'</span>=><span class="number">150</span>]];
+<span class="variable">$stats</span> = <span class="function">array_reduce</span>(<span class="variable">$orders</span>, <span class="keyword">function</span>(<span class="variable">$carry</span>, <span class="variable">$o</span>) {
+    <span class="variable">$carry</span>[<span class="string">'total'</span>] += <span class="variable">$o</span>[<span class="string">'amount'</span>];
+    <span class="variable">$carry</span>[<span class="string">'count'</span>]++;
+    <span class="variable">$carry</span>[<span class="string">'avg'</span>] = <span class="variable">$carry</span>[<span class="string">'total'</span>] / <span class="variable">$carry</span>[<span class="string">'count'</span>];
+    <span class="keyword">return</span> <span class="variable">$carry</span>;
+}, [<span class="string">'total'</span>=><span class="number">0</span>, <span class="string">'count'</span>=><span class="number">0</span>, <span class="string">'avg'</span>=><span class="number">0</span>]);
+<span class="comment">// ['total'=>450, 'count'=>3, 'avg'=>150]</span></code></pre>
+
+                        <div class="practice-step-label">8. array_walk с &amp; — 10% налог in-place</div>
+                        <pre><code><span class="variable">$prices</span> = [<span class="number">100</span>, <span class="number">200</span>, <span class="number">300</span>];
+<span class="function">array_walk</span>(<span class="variable">$prices</span>, <span class="keyword">fn</span>(&<span class="variable">$p</span>) => <span class="variable">$p</span> *= <span class="number">1.1</span>);
+<span class="comment">// [110, 220, 330] — массив изменён in-place</span></code></pre>
+
+                        <div class="practice-step-label">9. usort с spaceship — сортировка объектов</div>
+                        <pre><code><span class="variable">$users</span> = [
+    (<span class="keyword">object</span>)[<span class="string">'name'</span>=><span class="string">'C'</span>, <span class="string">'age'</span>=><span class="number">30</span>],
+    (<span class="keyword">object</span>)[<span class="string">'name'</span>=><span class="string">'A'</span>, <span class="string">'age'</span>=><span class="number">25</span>],
+    (<span class="keyword">object</span>)[<span class="string">'name'</span>=><span class="string">'B'</span>, <span class="string">'age'</span>=><span class="number">28</span>],
+];
+<span class="function">usort</span>(<span class="variable">$users</span>, <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) => <span class="variable">$a</span>-><span class="variable">age</span> &lt;=&gt; <span class="variable">$b</span>-><span class="variable">age</span>);
+<span class="comment">// отсортировано по возрасту: 25, 28, 30</span></code></pre>
+
+                        <div class="practice-step-label">10. Destructuring ассоциативного массива</div>
+                        <pre><code><span class="variable">$arr</span> = [<span class="string">'name'</span>=><span class="string">'Alice'</span>, <span class="string">'age'</span>=><span class="number">30</span>, <span class="string">'city'</span>=><span class="string">'NYC'</span>];
+
+[<span class="string">'name'</span> => <span class="variable">$n</span>, <span class="string">'age'</span> => <span class="variable">$a</span>] = <span class="variable">$arr</span>;
+<span class="comment">// $n = 'Alice', $a = 30 (без city)</span>
+
+<span class="comment">// В function-signature (PHP 8.0+):</span>
+<span class="keyword">function</span> <span class="function">process</span>([<span class="string">'name'</span> => <span class="variable">$name</span>]) { <span class="comment">/* ... */</span> }</code></pre>
                     </div>
                 </div>
 
+                <!-- ─────── Готовые задания ─────── -->
                 <div class="subsection">
-                    <h3 class="subsection-title">📦 Готовые задания (30-60 минут)</h3>
-                    <div class="content-block">
-                        <p><strong>Задание 1: trait Cacheable</strong></p>
-                        <p>Реализуй <code>trait Cacheable</code> со свойством <code>$cache</code> и методом <code>remember($key, callable $cb)</code>. Сделай его безопасным через <code>array_key_exists</code> (не <code>isset</code>). Подключи к классу <code>UserService</code>. Acceptance: кэш работает даже когда callback возвращает <code>null</code>.</p>
+                    <h3 class="subsection-title">📦 Готовые задания — полный разбор (30-60 мин)</h3>
 
-                        <p><strong>Задание 2: RAII TransactionGuard</strong></p>
-                        <p>Класс <code>TransactionGuard</code> принимает <code>PDO</code>. В конструкторе <code>beginTransaction</code>. Метод <code>commit()</code>. Деструктор: если транзакция не закоммичена — <code>rollBack</code>. Acceptance: при <code>throw</code> внутри функции — автоматический rollback.</p>
+                    <div class="practice-task">
+                        <div class="practice-task-title">Задание 1: trait <code>Cacheable</code> с защитой от <code>null</code> <span class="practice-task-meta">~30 мин</span></div>
+                        <p style="font-size:13.5px;color:#374151;margin:6px 0 8px"><strong>Постановка:</strong> Реализуй trait <code>Cacheable</code> со свойством <code>$cache</code> и методом <code>remember($key, callable $cb)</code>. <strong>Acceptance:</strong> кэш работает даже когда callback возвращает <code>null</code> (большинство наивных реализаций ломаются именно тут).</p>
 
-                        <p><strong>Задание 3: Магический Builder</strong></p>
-                        <p>Класс <code>QueryBuilder</code> с <code>__call</code> — любой вызов вида <code>$qb-&gt;where('age', '&gt;', 18)-&gt;orderBy('name')-&gt;limit(10)</code> сохраняет вызовы в массив. Метод <code>toSql()</code> собирает SQL. Acceptance: fluent chain работает.</p>
+                        <div class="practice-step-label">Шаги</div>
+                        <ol style="margin:0 0 10px 22px;line-height:1.7;font-size:13.5px">
+                            <li>Объяви trait, добавь <code>private array $cache = []</code>.</li>
+                            <li>Метод <code>remember</code>: проверь наличие ключа через <code>array_key_exists</code> (НЕ <code>isset</code>!).</li>
+                            <li>Если есть — верни закэшированное. Если нет — вызови callback, сохрани, верни.</li>
+                            <li>Подключи в <code>UserService</code> через <code>use Cacheable</code>.</li>
+                            <li>Напиши тест с callback, возвращающим <code>null</code>: убедись что callback вызывается ровно 1 раз.</li>
+                        </ol>
 
-                        <p><strong>Задание 4: Interface PaymentGateway</strong></p>
-                        <p>Интерфейс <code>PaymentInterface { charge($amount); refund($txId); }</code>. Две реализации: <code>StripePayment</code>, <code>PayPalPayment</code>. Функция <code>processOrder(PaymentInterface $pg, $amount)</code>. Acceptance: один и тот же код работает с обеими реализациями.</p>
+                        <div class="practice-step-label">Эталонное решение</div>
+                        <pre><code><span class="keyword">trait</span> <span class="function">Cacheable</span>
+{
+    <span class="keyword">private</span> <span class="keyword">array</span> <span class="variable">$cache</span> = [];
 
-                        <p><strong>Задание 5: Abstract BaseRepository</strong></p>
-                        <p>Abstract <code>BaseRepository</code> с реализованным <code>find($id)</code>, <code>all()</code> через PDO и abstract <code>table(): string</code>. Наследники: <code>UserRepository</code> (<code>table() = 'users'</code>), <code>OrderRepository</code>. Acceptance: <code>find()</code> работает без переопределения.</p>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">remember</span>(<span class="keyword">string</span> <span class="variable">$key</span>, <span class="keyword">callable</span> <span class="variable">$callback</span>): <span class="keyword">mixed</span>
+    {
+        <span class="comment">// array_key_exists вместо isset — корректно работает с null</span>
+        <span class="keyword">if</span> (<span class="function">array_key_exists</span>(<span class="variable">$key</span>, <span class="variable">$this</span>-><span class="variable">cache</span>)) {
+            <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">cache</span>[<span class="variable">$key</span>];
+        }
+
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">cache</span>[<span class="variable">$key</span>] = <span class="variable">$callback</span>();
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">forget</span>(<span class="keyword">string</span> <span class="variable">$key</span>): <span class="keyword">void</span>
+    {
+        <span class="function">unset</span>(<span class="variable">$this</span>-><span class="variable">cache</span>[<span class="variable">$key</span>]);
+    }
+}
+
+<span class="keyword">class</span> <span class="function">UserService</span>
+{
+    <span class="keyword">use</span> <span class="function">Cacheable</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">findById</span>(<span class="keyword">int</span> <span class="variable">$id</span>): ?<span class="keyword">array</span>
+    {
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="function">remember</span>(<span class="string">"user.$id"</span>, <span class="keyword">function</span>() <span class="keyword">use</span> (<span class="variable">$id</span>) {
+            <span class="comment">// Может вернуть null если пользователь не найден</span>
+            <span class="keyword">return</span> <span class="function">DB</span>::<span class="function">find</span>(<span class="variable">$id</span>);
+        });
+    }
+}</code></pre>
+
+                        <div class="practice-step-label">Тесты — критический кейс null</div>
+                        <pre><code><span class="keyword">class</span> <span class="function">CacheableTest</span> <span class="keyword">extends</span> <span class="function">TestCase</span>
+{
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">testCachesNullResult</span>(): <span class="keyword">void</span>
+    {
+        <span class="variable">$service</span> = <span class="keyword">new</span> <span class="function">UserService</span>();
+        <span class="variable">$callCount</span> = <span class="number">0</span>;
+
+        <span class="variable">$callback</span> = <span class="keyword">function</span>() <span class="keyword">use</span> (&<span class="variable">$callCount</span>) {
+            <span class="variable">$callCount</span>++;
+            <span class="keyword">return</span> <span class="keyword">null</span>;  <span class="comment">// валидное значение</span>
+        };
+
+        <span class="variable">$service</span>-><span class="function">remember</span>(<span class="string">'k'</span>, <span class="variable">$callback</span>);
+        <span class="variable">$service</span>-><span class="function">remember</span>(<span class="string">'k'</span>, <span class="variable">$callback</span>);  <span class="comment">// должно взять из кэша</span>
+        <span class="variable">$service</span>-><span class="function">remember</span>(<span class="string">'k'</span>, <span class="variable">$callback</span>);
+
+        <span class="variable">$this</span>-><span class="function">assertEquals</span>(<span class="number">1</span>, <span class="variable">$callCount</span>);  <span class="comment">// callback вызван только 1 раз</span>
+    }
+}</code></pre>
+
+                        <div class="practice-pitfalls">
+                            <strong>⚠ Подводные камни:</strong> наивная реализация с <code>isset</code> — НЕ сработает для <code>null</code>: <code>isset($cache['k'])</code> вернёт <code>false</code> если значение null, и callback вызовется снова (классический баг). Также если в классе уже есть <code>$cache</code> с другой видимостью — fatal error при <code>use Cacheable</code>.
+                        </div>
+                    </div>
+
+                    <div class="practice-task">
+                        <div class="practice-task-title">Задание 2: <code>TransactionGuard</code> через RAII <span class="practice-task-meta">~45 мин</span></div>
+                        <p style="font-size:13.5px;color:#374151;margin:6px 0 8px"><strong>Постановка:</strong> Класс автоматически откатывает транзакцию, если не было явного <code>commit()</code>. Защита от забытого rollback при exception.</p>
+
+                        <div class="practice-step-label">Шаги</div>
+                        <ol style="margin:0 0 10px 22px;line-height:1.7;font-size:13.5px">
+                            <li>Класс принимает <code>PDO</code> в конструкторе. Сразу вызывает <code>beginTransaction()</code>.</li>
+                            <li>Свойство <code>$committed = false</code>.</li>
+                            <li>Метод <code>commit()</code>: вызвать <code>$pdo->commit()</code>, поставить <code>$committed = true</code>.</li>
+                            <li>Деструктор: если <code>!$committed</code> и <code>$pdo->inTransaction()</code> — <code>rollBack()</code>.</li>
+                            <li>Тест: внутри функции с <code>TransactionGuard</code> кидаем exception, проверяем что транзакция откатилась.</li>
+                        </ol>
+
+                        <div class="practice-step-label">Эталонное решение</div>
+                        <pre><code><span class="keyword">final class</span> <span class="function">TransactionGuard</span>
+{
+    <span class="keyword">private</span> <span class="keyword">bool</span> <span class="variable">$committed</span> = <span class="keyword">false</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">private</span> <span class="function">PDO</span> <span class="variable">$db</span>)
+    {
+        <span class="variable">$this</span>-><span class="variable">db</span>-><span class="function">beginTransaction</span>();
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">commit</span>(): <span class="keyword">void</span>
+    {
+        <span class="variable">$this</span>-><span class="variable">db</span>-><span class="function">commit</span>();
+        <span class="variable">$this</span>-><span class="variable">committed</span> = <span class="keyword">true</span>;
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__destruct</span>()
+    {
+        <span class="comment">// если не было commit() и транзакция активна — откатываем</span>
+        <span class="keyword">if</span> (!<span class="variable">$this</span>-><span class="variable">committed</span> && <span class="variable">$this</span>-><span class="variable">db</span>-><span class="function">inTransaction</span>()) {
+            <span class="variable">$this</span>-><span class="variable">db</span>-><span class="function">rollBack</span>();
+        }
+    }
+}
+
+<span class="comment">// Использование</span>
+<span class="keyword">function</span> <span class="function">transferMoney</span>(<span class="function">PDO</span> <span class="variable">$db</span>, <span class="keyword">int</span> <span class="variable">$fromId</span>, <span class="keyword">int</span> <span class="variable">$toId</span>, <span class="keyword">int</span> <span class="variable">$amount</span>): <span class="keyword">void</span>
+{
+    <span class="variable">$tx</span> = <span class="keyword">new</span> <span class="function">TransactionGuard</span>(<span class="variable">$db</span>);
+
+    <span class="variable">$db</span>-><span class="function">prepare</span>(<span class="string">'UPDATE accounts SET balance = balance - ? WHERE id = ?'</span>)
+        -><span class="function">execute</span>([<span class="variable">$amount</span>, <span class="variable">$fromId</span>]);
+
+    <span class="variable">$db</span>-><span class="function">prepare</span>(<span class="string">'UPDATE accounts SET balance = balance + ? WHERE id = ?'</span>)
+        -><span class="function">execute</span>([<span class="variable">$amount</span>, <span class="variable">$toId</span>]);
+
+    <span class="comment">// Любой throw здесь — транзакция откатится автоматически в __destruct</span>
+    <span class="variable">$tx</span>-><span class="function">commit</span>();
+}</code></pre>
+
+                        <div class="practice-step-label">Тест — auto-rollback при exception</div>
+                        <pre><code><span class="keyword">public</span> <span class="keyword">function</span> <span class="function">testAutoRollbackOnException</span>(): <span class="keyword">void</span>
+{
+    <span class="variable">$db</span> = <span class="keyword">new</span> <span class="function">PDO</span>(<span class="string">'sqlite::memory:'</span>);
+    <span class="variable">$db</span>-><span class="function">exec</span>(<span class="string">'CREATE TABLE t (v INT)'</span>);
+
+    <span class="keyword">try</span> {
+        <span class="variable">$tx</span> = <span class="keyword">new</span> <span class="function">TransactionGuard</span>(<span class="variable">$db</span>);
+        <span class="variable">$db</span>-><span class="function">exec</span>(<span class="string">'INSERT INTO t VALUES (1)'</span>);
+        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="function">RuntimeException</span>(<span class="string">'oops'</span>);
+        <span class="variable">$tx</span>-><span class="function">commit</span>();  <span class="comment">// сюда не дойдёт</span>
+    } <span class="keyword">catch</span> (<span class="function">RuntimeException</span>) {
+        <span class="comment">// $tx уничтожен → __destruct → rollBack</span>
+    }
+
+    <span class="variable">$count</span> = <span class="variable">$db</span>-><span class="function">query</span>(<span class="string">'SELECT COUNT(*) FROM t'</span>)-><span class="function">fetchColumn</span>();
+    <span class="variable">$this</span>-><span class="function">assertEquals</span>(<span class="number">0</span>, <span class="variable">$count</span>);  <span class="comment">// данных нет — rollback сработал</span>
+}</code></pre>
+
+                        <div class="practice-pitfalls">
+                            <strong>⚠ Подводные камни:</strong> деструктор вызывается при GC — порядок не гарантирован. Если <code>TransactionGuard</code> ссылается на другие объекты, которые тоже на GC — могут быть проблемы. В long-running процессах лучше явный <code>finally { $tx-&gt;rollBackIfNeeded(); }</code>. Также проверка <code>$db-&gt;inTransaction()</code> важна — без неё <code>rollBack</code> на уже зафиксированной транзакции бросит exception.
+                        </div>
+                    </div>
+
+                    <div class="practice-task">
+                        <div class="practice-task-title">Задание 3: Магический <code>QueryBuilder</code> через <code>__call</code> <span class="practice-task-meta">~45 мин</span></div>
+                        <p style="font-size:13.5px;color:#374151;margin:6px 0 8px"><strong>Постановка:</strong> Fluent API через магический <code>__call</code>. <code>$qb->where(...)->orderBy(...)->limit(10)->toSql()</code> — собирает SQL без явного объявления методов.</p>
+
+                        <div class="practice-step-label">Эталонное решение</div>
+                        <pre><code><span class="keyword">final class</span> <span class="function">QueryBuilder</span>
+{
+    <span class="keyword">private</span> <span class="keyword">array</span> <span class="variable">$wheres</span> = [];
+    <span class="keyword">private</span> <span class="keyword">array</span> <span class="variable">$orders</span> = [];
+    <span class="keyword">private</span> ?<span class="keyword">int</span> <span class="variable">$limit</span> = <span class="keyword">null</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">private</span> <span class="keyword">string</span> <span class="variable">$table</span>) {}
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__call</span>(<span class="keyword">string</span> <span class="variable">$name</span>, <span class="keyword">array</span> <span class="variable">$args</span>): <span class="keyword">self</span>
+    {
+        <span class="keyword">match</span>(<span class="variable">$name</span>) {
+            <span class="string">'where'</span>   => <span class="variable">$this</span>-><span class="variable">wheres</span>[] = <span class="function">sprintf</span>(<span class="string">'%s %s %s'</span>,
+                <span class="variable">$args</span>[<span class="number">0</span>], <span class="variable">$args</span>[<span class="number">1</span>], <span class="variable">$this</span>-><span class="function">quote</span>(<span class="variable">$args</span>[<span class="number">2</span>])),
+            <span class="string">'orderBy'</span> => <span class="variable">$this</span>-><span class="variable">orders</span>[] = <span class="variable">$args</span>[<span class="number">0</span>] . <span class="string">' '</span> . (<span class="variable">$args</span>[<span class="number">1</span>] ?? <span class="string">'ASC'</span>),
+            <span class="string">'limit'</span>   => <span class="variable">$this</span>-><span class="variable">limit</span> = (<span class="keyword">int</span>) <span class="variable">$args</span>[<span class="number">0</span>],
+            <span class="keyword">default</span>   => <span class="keyword">throw</span> <span class="keyword">new</span> <span class="function">BadMethodCallException</span>(<span class="string">"Unknown method: $name"</span>),
+        };
+
+        <span class="keyword">return</span> <span class="variable">$this</span>;  <span class="comment">// fluent chain</span>
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">toSql</span>(): <span class="keyword">string</span>
+    {
+        <span class="variable">$sql</span> = <span class="string">"SELECT * FROM {<span class="variable">$this</span>-><span class="variable">table</span>}"</span>;
+
+        <span class="keyword">if</span> (<span class="variable">$this</span>-><span class="variable">wheres</span>) {
+            <span class="variable">$sql</span> .= <span class="string">' WHERE '</span> . <span class="function">implode</span>(<span class="string">' AND '</span>, <span class="variable">$this</span>-><span class="variable">wheres</span>);
+        }
+        <span class="keyword">if</span> (<span class="variable">$this</span>-><span class="variable">orders</span>) {
+            <span class="variable">$sql</span> .= <span class="string">' ORDER BY '</span> . <span class="function">implode</span>(<span class="string">', '</span>, <span class="variable">$this</span>-><span class="variable">orders</span>);
+        }
+        <span class="keyword">if</span> (<span class="variable">$this</span>-><span class="variable">limit</span> !== <span class="keyword">null</span>) {
+            <span class="variable">$sql</span> .= <span class="string">" LIMIT {<span class="variable">$this</span>-><span class="variable">limit</span>}"</span>;
+        }
+
+        <span class="keyword">return</span> <span class="variable">$sql</span>;
+    }
+
+    <span class="keyword">private</span> <span class="keyword">function</span> <span class="function">quote</span>(<span class="keyword">mixed</span> <span class="variable">$v</span>): <span class="keyword">string</span>
+    {
+        <span class="keyword">return</span> <span class="function">is_int</span>(<span class="variable">$v</span>) ? (<span class="keyword">string</span>) <span class="variable">$v</span> : <span class="string">"'"</span> . <span class="function">addslashes</span>(<span class="variable">$v</span>) . <span class="string">"'"</span>;
+    }
+}
+
+<span class="comment">// Использование</span>
+<span class="variable">$sql</span> = (<span class="keyword">new</span> <span class="function">QueryBuilder</span>(<span class="string">'users'</span>))
+    -><span class="function">where</span>(<span class="string">'age'</span>, <span class="string">'>'</span>, <span class="number">18</span>)
+    -><span class="function">where</span>(<span class="string">'country'</span>, <span class="string">'='</span>, <span class="string">'KZ'</span>)
+    -><span class="function">orderBy</span>(<span class="string">'name'</span>)
+    -><span class="function">limit</span>(<span class="number">10</span>)
+    -><span class="function">toSql</span>();
+
+<span class="comment">// "SELECT * FROM users WHERE age > 18 AND country = 'KZ' ORDER BY name ASC LIMIT 10"</span></code></pre>
+
+                        <div class="practice-pitfalls">
+                            <strong>⚠ Подводные камни:</strong> <code>addslashes</code> в реальном коде — НЕ защита от SQLi! Используй prepared statements (<code>PDO::prepare</code> с параметрами). Магия через <code>__call</code> ломает IDE-автодополнение — поэтому Laravel <code>QueryBuilder</code> уже добавил явные методы. Магия хороша для прототипов / DSL, но в production хочется явных сигнатур.
+                        </div>
+                    </div>
+
+                    <div class="practice-task">
+                        <div class="practice-task-title">Задание 4: <code>PaymentInterface</code> с двумя реализациями <span class="practice-task-meta">~45 мин</span></div>
+                        <p style="font-size:13.5px;color:#374151;margin:6px 0 8px"><strong>Постановка:</strong> Интерфейс + Stripe и PayPal реализации. Функция <code>processOrder</code> работает с любой через type-hint интерфейса.</p>
+
+                        <div class="practice-step-label">Эталонное решение</div>
+                        <pre><code><span class="keyword">interface</span> <span class="function">PaymentInterface</span>
+{
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">charge</span>(<span class="keyword">int</span> <span class="variable">$amountCents</span>, <span class="keyword">string</span> <span class="variable">$currency</span>): <span class="keyword">string</span>;  <span class="comment">// возвращает transactionId</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">refund</span>(<span class="keyword">string</span> <span class="variable">$transactionId</span>): <span class="keyword">bool</span>;
+}
+
+<span class="keyword">final class</span> <span class="function">StripePayment</span> <span class="keyword">implements</span> <span class="function">PaymentInterface</span>
+{
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">private</span> <span class="keyword">string</span> <span class="variable">$apiKey</span>) {}
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">charge</span>(<span class="keyword">int</span> <span class="variable">$amountCents</span>, <span class="keyword">string</span> <span class="variable">$currency</span>): <span class="keyword">string</span>
+    {
+        <span class="comment">// Реальный код: \Stripe\Charge::create(...)</span>
+        <span class="keyword">return</span> <span class="string">'stripe_ch_'</span> . <span class="function">uniqid</span>();
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">refund</span>(<span class="keyword">string</span> <span class="variable">$transactionId</span>): <span class="keyword">bool</span>
+    {
+        <span class="keyword">return</span> <span class="function">str_starts_with</span>(<span class="variable">$transactionId</span>, <span class="string">'stripe_'</span>);
+    }
+}
+
+<span class="keyword">final class</span> <span class="function">PayPalPayment</span> <span class="keyword">implements</span> <span class="function">PaymentInterface</span>
+{
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">charge</span>(<span class="keyword">int</span> <span class="variable">$amountCents</span>, <span class="keyword">string</span> <span class="variable">$currency</span>): <span class="keyword">string</span>
+    {
+        <span class="keyword">return</span> <span class="string">'paypal_TX_'</span> . <span class="function">strtoupper</span>(<span class="function">uniqid</span>());
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">refund</span>(<span class="keyword">string</span> <span class="variable">$transactionId</span>): <span class="keyword">bool</span>
+    {
+        <span class="keyword">return</span> <span class="function">str_starts_with</span>(<span class="variable">$transactionId</span>, <span class="string">'paypal_'</span>);
+    }
+}
+
+<span class="comment">// Полиморфизм — функция работает с ЛЮБОЙ реализацией</span>
+<span class="keyword">function</span> <span class="function">processOrder</span>(<span class="function">PaymentInterface</span> <span class="variable">$gateway</span>, <span class="keyword">int</span> <span class="variable">$cents</span>): <span class="keyword">string</span>
+{
+    <span class="keyword">return</span> <span class="variable">$gateway</span>-><span class="function">charge</span>(<span class="variable">$cents</span>, <span class="string">'USD'</span>);
+}
+
+<span class="comment">// Один и тот же код — две разные платёжки</span>
+<span class="variable">$stripeId</span> = <span class="function">processOrder</span>(<span class="keyword">new</span> <span class="function">StripePayment</span>(<span class="string">'sk_test_...'</span>), <span class="number">1000</span>);
+<span class="variable">$paypalId</span> = <span class="function">processOrder</span>(<span class="keyword">new</span> <span class="function">PayPalPayment</span>(), <span class="number">1000</span>);</code></pre>
+
+                        <div class="practice-pitfalls">
+                            <strong>⚠ Подводные камни:</strong> <strong>сумма в центах</strong> (<code>int</code>) — никогда <code>float</code>! <code>0.1 + 0.2 !== 0.3</code> в плавающей точке. Reusable check: интерфейс должен быть достаточно широким (Stripe и PayPal оба умеют refund, capture, partial refund, idempotency_key — учти на проектировании).
+                        </div>
+                    </div>
+
+                    <div class="practice-task">
+                        <div class="practice-task-title">Задание 5: Abstract <code>BaseRepository</code> через PDO <span class="practice-task-meta">~50 мин</span></div>
+                        <p style="font-size:13.5px;color:#374151;margin:6px 0 8px"><strong>Постановка:</strong> Abstract класс с готовыми <code>find($id)</code>, <code>all()</code>. Наследники определяют только <code>table()</code>. Демонстрация шаблонного метода.</p>
+
+                        <div class="practice-step-label">Эталонное решение</div>
+                        <pre><code><span class="keyword">abstract class</span> <span class="function">BaseRepository</span>
+{
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">protected</span> <span class="function">PDO</span> <span class="variable">$db</span>) {}
+
+    <span class="comment">// Подкласс ОБЯЗАН реализовать — какая таблица</span>
+    <span class="keyword">abstract</span> <span class="keyword">protected</span> <span class="keyword">function</span> <span class="function">table</span>(): <span class="keyword">string</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">find</span>(<span class="keyword">int</span> <span class="variable">$id</span>): ?<span class="keyword">array</span>
+    {
+        <span class="variable">$stmt</span> = <span class="variable">$this</span>-><span class="variable">db</span>-><span class="function">prepare</span>(
+            <span class="string">"SELECT * FROM {<span class="variable">$this</span>-><span class="function">table</span>()} WHERE id = :id"</span>
+        );
+        <span class="variable">$stmt</span>-><span class="function">execute</span>([<span class="string">'id'</span> => <span class="variable">$id</span>]);
+
+        <span class="variable">$row</span> = <span class="variable">$stmt</span>-><span class="function">fetch</span>(<span class="function">PDO</span>::<span class="constant">FETCH_ASSOC</span>);
+        <span class="keyword">return</span> <span class="variable">$row</span> ?: <span class="keyword">null</span>;
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">all</span>(<span class="keyword">int</span> <span class="variable">$limit</span> = <span class="number">100</span>): <span class="keyword">array</span>
+    {
+        <span class="variable">$stmt</span> = <span class="variable">$this</span>-><span class="variable">db</span>-><span class="function">prepare</span>(
+            <span class="string">"SELECT * FROM {<span class="variable">$this</span>-><span class="function">table</span>()} LIMIT :limit"</span>
+        );
+        <span class="variable">$stmt</span>-><span class="function">bindValue</span>(<span class="string">':limit'</span>, <span class="variable">$limit</span>, <span class="function">PDO</span>::<span class="constant">PARAM_INT</span>);
+        <span class="variable">$stmt</span>-><span class="function">execute</span>();
+        <span class="keyword">return</span> <span class="variable">$stmt</span>-><span class="function">fetchAll</span>(<span class="function">PDO</span>::<span class="constant">FETCH_ASSOC</span>);
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">delete</span>(<span class="keyword">int</span> <span class="variable">$id</span>): <span class="keyword">bool</span>
+    {
+        <span class="variable">$stmt</span> = <span class="variable">$this</span>-><span class="variable">db</span>-><span class="function">prepare</span>(
+            <span class="string">"DELETE FROM {<span class="variable">$this</span>-><span class="function">table</span>()} WHERE id = :id"</span>
+        );
+        <span class="keyword">return</span> <span class="variable">$stmt</span>-><span class="function">execute</span>([<span class="string">'id'</span> => <span class="variable">$id</span>]);
+    }
+}
+
+<span class="comment">// Наследники определяют ОДИН метод</span>
+<span class="keyword">final class</span> <span class="function">UserRepository</span> <span class="keyword">extends</span> <span class="function">BaseRepository</span>
+{
+    <span class="keyword">protected</span> <span class="keyword">function</span> <span class="function">table</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="string">'users'</span>; }
+}
+
+<span class="keyword">final class</span> <span class="function">OrderRepository</span> <span class="keyword">extends</span> <span class="function">BaseRepository</span>
+{
+    <span class="keyword">protected</span> <span class="keyword">function</span> <span class="function">table</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="string">'orders'</span>; }
+}
+
+<span class="comment">// Использование — find/all/delete бесплатно во всех</span>
+<span class="variable">$users</span> = <span class="keyword">new</span> <span class="function">UserRepository</span>(<span class="variable">$pdo</span>);
+<span class="variable">$user</span> = <span class="variable">$users</span>-><span class="function">find</span>(<span class="number">1</span>);
+<span class="variable">$all</span> = <span class="variable">$users</span>-><span class="function">all</span>(<span class="number">50</span>);</code></pre>
+
+                        <div class="practice-pitfalls">
+                            <strong>⚠ Подводные камни:</strong> <strong>имя таблицы в SQL через интерполяцию</strong> — НЕ через prepared params (PDO не позволяет биндить идентификаторы). Поэтому критично, чтобы <code>table()</code> возвращал <strong>литерал</strong>, а не user input. <code>LIMIT</code> в PDO с MySQL надо биндить через <code>PARAM_INT</code> — иначе lexer воспримет число как строку и SQL сломается.
+                        </div>
                     </div>
                 </div>
 
+                <!-- ─────── Мини-проекты ─────── -->
                 <div class="subsection">
                     <h3 class="subsection-title">🚀 Мини-проекты в стиле LeetCode (1-2 часа)</h3>
-                    <div class="content-block">
-                        <p><strong>Mini Project 1: Свой <code>array_reduce</code></strong></p>
-                        <p>Напиши <code>my_array_reduce(array $arr, callable $cb, $initial)</code>. Покрой 5 тестами: сумма, произведение, max, построение assoc-массива из списка, пустой массив. Сравни поведение со встроенной — должно совпасть 1-в-1.</p>
 
-                        <p><strong>Mini Project 2: Свой Collection</strong></p>
-                        <p>Класс <code>Collection</code> с методами <code>map()</code>, <code>filter()</code>, <code>reduce()</code>, <code>first()</code>, <code>count()</code>, <code>toArray()</code>, <code>__toString()</code> (JSON). Метод <code>filter()</code> возвращает новую Collection (immutable). Acceptance: <code>(new Collection([1,2,3]))-&gt;map(fn($x) =&gt; $x*2)-&gt;filter(fn($x) =&gt; $x &gt; 2)-&gt;toArray()</code> возвращает <code>[4, 6]</code>.</p>
+                    <div class="practice-task">
+                        <div class="practice-task-title">Mini Project 1: Свой <code>my_array_reduce</code> <span class="practice-task-meta">~60 мин</span></div>
+                        <p style="font-size:13.5px;color:#374151;margin:6px 0 8px"><strong>Постановка:</strong> Реализуй <code>my_array_reduce(array $arr, callable $cb, $initial)</code>. Поведение должно совпасть со встроенной 1-в-1 на 5 кейсах.</p>
 
-                        <p><strong>Mini Project 3: Свой Validator</strong></p>
-                        <p>Класс <code>Validator</code> с цепочкой правил: <code>Validator::make($data, ['email' =&gt; 'required|email', 'age' =&gt; 'required|int|min:18'])</code>. Реализуй 5 правил: <code>required, email, int, min, max</code>. Возвращай массив ошибок. Acceptance: проходит unit-тесты на 5 кейсов (ок / невалидный email / возраст &lt;18 / отсутствует поле / тип не int).</p>
+                        <div class="practice-step-label">Скелет + ключевая идея</div>
+                        <pre><code><span class="keyword">function</span> <span class="function">my_array_reduce</span>(<span class="keyword">array</span> <span class="variable">$arr</span>, <span class="keyword">callable</span> <span class="variable">$callback</span>, <span class="keyword">mixed</span> <span class="variable">$initial</span> = <span class="keyword">null</span>): <span class="keyword">mixed</span>
+{
+    <span class="variable">$accumulator</span> = <span class="variable">$initial</span>;
 
-                        <p><strong>Mini Project 4: Свой DI-контейнер (упрощённый)</strong></p>
-                        <p>Класс <code>Container</code> с методами <code>bind(string $abstract, callable $factory)</code> и <code>resolve(string $abstract)</code>. Поддержи <code>singleton()</code> — фабрика вызывается один раз. Acceptance: <code>$c-&gt;bind('Logger', fn() =&gt; new FileLogger())</code>, <code>$c-&gt;resolve('Logger')</code> возвращает экземпляр.</p>
+    <span class="keyword">foreach</span> (<span class="variable">$arr</span> <span class="keyword">as</span> <span class="variable">$item</span>) {
+        <span class="comment">// Жёстко зашитый порядок: 1-й arg = аккумулятор, 2-й = элемент</span>
+        <span class="variable">$accumulator</span> = <span class="variable">$callback</span>(<span class="variable">$accumulator</span>, <span class="variable">$item</span>);
+    }
 
-                        <p><strong>Mini Project 5: Mini-ORM (Active Record)</strong></p>
-                        <p>Abstract <code>Model</code> со статическими <code>find($id)</code>, <code>all()</code>, методами <code>save()</code>, <code>delete()</code>. Использует магические <code>__get/__set</code> для динамических атрибутов из БД. Наследник <code>User extends Model</code> с <code>$table = 'users'</code>. Acceptance: <code>$u = User::find(1); $u-&gt;name = 'X'; $u-&gt;save();</code> работает.</p>
+    <span class="keyword">return</span> <span class="variable">$accumulator</span>;
+}</code></pre>
+
+                        <div class="practice-step-label">Тесты — 5 кейсов</div>
+                        <pre><code><span class="comment">// 1. Сумма</span>
+<span class="function">assert</span>(<span class="function">my_array_reduce</span>([<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>], <span class="keyword">fn</span>(<span class="variable">$a</span>,<span class="variable">$b</span>) => <span class="variable">$a</span>+<span class="variable">$b</span>, <span class="number">0</span>) === <span class="number">10</span>);
+
+<span class="comment">// 2. Произведение</span>
+<span class="function">assert</span>(<span class="function">my_array_reduce</span>([<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>,<span class="number">4</span>], <span class="keyword">fn</span>(<span class="variable">$a</span>,<span class="variable">$b</span>) => <span class="variable">$a</span>*<span class="variable">$b</span>, <span class="number">1</span>) === <span class="number">24</span>);
+
+<span class="comment">// 3. Max</span>
+<span class="function">assert</span>(<span class="function">my_array_reduce</span>([<span class="number">3</span>,<span class="number">7</span>,<span class="number">2</span>,<span class="number">9</span>,<span class="number">5</span>], <span class="keyword">fn</span>(<span class="variable">$a</span>,<span class="variable">$b</span>) => <span class="variable">$a</span> > <span class="variable">$b</span> ? <span class="variable">$a</span> : <span class="variable">$b</span>, <span class="number">0</span>) === <span class="number">9</span>);
+
+<span class="comment">// 4. Построение assoc-массива</span>
+<span class="variable">$users</span> = [[<span class="string">'id'</span>=><span class="number">1</span>,<span class="string">'name'</span>=><span class="string">'A'</span>], [<span class="string">'id'</span>=><span class="number">2</span>,<span class="string">'name'</span>=><span class="string">'B'</span>]];
+<span class="variable">$indexed</span> = <span class="function">my_array_reduce</span>(<span class="variable">$users</span>, <span class="keyword">function</span>(<span class="variable">$c</span>, <span class="variable">$u</span>) {
+    <span class="variable">$c</span>[<span class="variable">$u</span>[<span class="string">'id'</span>]] = <span class="variable">$u</span>[<span class="string">'name'</span>];
+    <span class="keyword">return</span> <span class="variable">$c</span>;
+}, []);
+<span class="function">assert</span>(<span class="variable">$indexed</span> === [<span class="number">1</span>=><span class="string">'A'</span>, <span class="number">2</span>=><span class="string">'B'</span>]);
+
+<span class="comment">// 5. Пустой массив → возвращает initial</span>
+<span class="function">assert</span>(<span class="function">my_array_reduce</span>([], <span class="keyword">fn</span>(<span class="variable">$a</span>,<span class="variable">$b</span>) => <span class="variable">$a</span>+<span class="variable">$b</span>, <span class="number">99</span>) === <span class="number">99</span>);</code></pre>
+
+                        <div class="practice-pitfalls">
+                            <strong>⚠ Подводные камни:</strong> убедись что callback получает аккумулятор <strong>1-м аргументом</strong>. Если перевернёшь — все assert упадут. Это и есть ответ на собесе «как PHP понимает порядок»: <em>зашито в реализации функции</em>.
+                        </div>
+                    </div>
+
+                    <div class="practice-task">
+                        <div class="practice-task-title">Mini Project 2: Свой <code>Collection</code> (immutable) <span class="practice-task-meta">~90 мин</span></div>
+                        <p style="font-size:13.5px;color:#374151;margin:6px 0 8px"><strong>Постановка:</strong> Класс с методами <code>map / filter / reduce / first / count / toArray / toJson</code>. <code>filter</code> и <code>map</code> возвращают <strong>новую</strong> Collection (immutable).</p>
+
+                        <div class="practice-step-label">Эталонная структура</div>
+                        <pre><code><span class="keyword">final class</span> <span class="function">Collection</span> <span class="keyword">implements</span> <span class="function">Countable</span>, <span class="function">IteratorAggregate</span>
+{
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">private</span> <span class="keyword">readonly</span> <span class="keyword">array</span> <span class="variable">$items</span> = []) {}
+
+    <span class="keyword">public static</span> <span class="keyword">function</span> <span class="function">of</span>(<span class="keyword">array</span> <span class="variable">$items</span>): <span class="keyword">self</span>
+    {
+        <span class="keyword">return</span> <span class="keyword">new</span> <span class="keyword">self</span>(<span class="variable">$items</span>);
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">map</span>(<span class="keyword">callable</span> <span class="variable">$fn</span>): <span class="keyword">self</span>
+    {
+        <span class="keyword">return</span> <span class="keyword">new</span> <span class="keyword">self</span>(<span class="function">array_map</span>(<span class="variable">$fn</span>, <span class="variable">$this</span>-><span class="variable">items</span>));
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">filter</span>(<span class="keyword">callable</span> <span class="variable">$fn</span>): <span class="keyword">self</span>
+    {
+        <span class="keyword">return</span> <span class="keyword">new</span> <span class="keyword">self</span>(<span class="function">array_values</span>(<span class="function">array_filter</span>(<span class="variable">$this</span>-><span class="variable">items</span>, <span class="variable">$fn</span>)));
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">reduce</span>(<span class="keyword">callable</span> <span class="variable">$fn</span>, <span class="keyword">mixed</span> <span class="variable">$initial</span>): <span class="keyword">mixed</span>
+    {
+        <span class="keyword">return</span> <span class="function">array_reduce</span>(<span class="variable">$this</span>-><span class="variable">items</span>, <span class="variable">$fn</span>, <span class="variable">$initial</span>);
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">first</span>(): <span class="keyword">mixed</span>
+    {
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">items</span>[<span class="function">array_key_first</span>(<span class="variable">$this</span>-><span class="variable">items</span>)] ?? <span class="keyword">null</span>;
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">count</span>(): <span class="keyword">int</span>
+    {
+        <span class="keyword">return</span> <span class="function">count</span>(<span class="variable">$this</span>-><span class="variable">items</span>);
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">toArray</span>(): <span class="keyword">array</span> { <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">items</span>; }
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">toJson</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="function">json_encode</span>(<span class="variable">$this</span>-><span class="variable">items</span>); }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">getIterator</span>(): <span class="function">ArrayIterator</span>
+    {
+        <span class="keyword">return</span> <span class="keyword">new</span> <span class="function">ArrayIterator</span>(<span class="variable">$this</span>-><span class="variable">items</span>);
+    }
+}
+
+<span class="comment">// Acceptance-тест</span>
+<span class="variable">$result</span> = <span class="function">Collection</span>::<span class="function">of</span>([<span class="number">1</span>,<span class="number">2</span>,<span class="number">3</span>])
+    -><span class="function">map</span>(<span class="keyword">fn</span>(<span class="variable">$x</span>) => <span class="variable">$x</span> * <span class="number">2</span>)
+    -><span class="function">filter</span>(<span class="keyword">fn</span>(<span class="variable">$x</span>) => <span class="variable">$x</span> > <span class="number">2</span>)
+    -><span class="function">toArray</span>();
+
+<span class="function">assert</span>(<span class="variable">$result</span> === [<span class="number">4</span>, <span class="number">6</span>]);</code></pre>
+
+                        <div class="practice-pitfalls">
+                            <strong>⚠ Подводные камни:</strong> <code>readonly array</code> — иммутабельный, но если в массиве лежат объекты, они НЕ становятся readonly. Это <em>shallow immutability</em>. <code>array_filter</code> сохраняет ключи — оборачиваем в <code>array_values</code> чтобы collection всегда была sequential.
+                        </div>
+                    </div>
+
+                    <div class="practice-task">
+                        <div class="practice-task-title">Mini Project 3-5: краткие постановки <span class="practice-task-meta">по 1-2 часа</span></div>
+
+                        <p style="font-size:13.5px;color:#374151;margin:6px 0"><strong>Mini Project 3: Свой Validator</strong><br>
+                        <code>Validator::make($data, ['email' =&gt; 'required|email', 'age' =&gt; 'required|int|min:18'])</code> → массив ошибок или пусто. Реализуй 5 правил: <code>required, email, int, min, max</code>. <strong>Архитектура:</strong> правила = классы, реализующие <code>RuleInterface</code> с методом <code>passes($value): bool</code>. Validator парсит строку правил → создаёт массив объектов → прогоняет каждое. <strong>Тесты:</strong> 5 кейсов (ок / невалидный email / возраст &lt;18 / отсутствует поле / тип не int).</p>
+
+                        <p style="font-size:13.5px;color:#374151;margin:6px 0"><strong>Mini Project 4: Свой DI-контейнер</strong><br>
+                        Класс <code>Container</code> с <code>bind(string $abstract, callable $factory)</code>, <code>singleton(...)</code>, <code>resolve(string $abstract)</code>. Поддержи <strong>auto-resolution через рефлексию</strong>: если <code>resolve('App\Service')</code> и в конструкторе зависимость — рекурсивно резолвится. <strong>Acceptance:</strong> <code>$c-&gt;bind('Logger', fn() =&gt; new FileLogger())</code>, <code>$c-&gt;resolve('Service')</code> создаёт сервис с инжектированным Logger.</p>
+
+                        <p style="font-size:13.5px;color:#374151;margin:6px 0"><strong>Mini Project 5: Mini-ORM (Active Record)</strong><br>
+                        Abstract <code>Model</code> со static <code>find($id) / all()</code>, instance <code>save() / delete()</code>. Использует <code>__get/__set</code> для динамических атрибутов из БД (магия!). Наследник <code>User extends Model</code> определяет только <code>protected static $table = 'users'</code>. <strong>Acceptance:</strong> <code>$u = User::find(1); $u-&gt;name = 'X'; $u-&gt;save();</code> работает. <strong>Это упрощённая модель Eloquent</strong> — поймёшь Laravel «изнутри».</p>
                     </div>
                 </div>
 
+                <!-- ─────── План применения ─────── -->
                 <div class="subsection">
-                    <h3 class="subsection-title">🎯 Что делать с этим списком</h3>
+                    <h3 class="subsection-title">🎯 План применения на 2 недели</h3>
                     <div class="remember-box">
-                        <strong>План на 2 недели подготовки к собесу:</strong>
+                        <strong>Перед собесом на $2500-3000:</strong>
                         <ul style="margin:8px 0 0 20px;line-height:1.8">
-                            <li><strong>Неделя 1:</strong> Сделай все 10 микро-задач (по 2/день) + 2-3 готовых задания.</li>
-                            <li><strong>Неделя 2:</strong> Сделай оставшиеся готовые задания + 2 мини-проекта на выбор (рекомендую Collection + Validator).</li>
-                            <li><strong>Перед собесом:</strong> прогони все 45 вопросов из «❓ Вопросник» вслух с таймером 90 сек на вопрос.</li>
+                            <li><strong>Неделя 1:</strong> Все 10 микро-задач (по 2/день) + готовые задания 1-2 (Cacheable + TransactionGuard).</li>
+                            <li><strong>Неделя 2:</strong> Готовые задания 3-5 (Builder + PaymentInterface + BaseRepository) + Mini Project 2 (Collection).</li>
+                            <li><strong>За 3 дня до собеса:</strong> прогон 45 вопросов из «❓ Вопросник» вслух, таймер 90 сек.</li>
+                            <li><strong>День перед:</strong> распечатать Шпаргалку, ещё раз пробежать ключевые таблицы.</li>
                         </ul>
-                        <p style="margin:10px 0 0">Эти задания напрямую отрабатывают темы которые на собесе спросят. Не пропускай.</p>
+                        <p style="margin:10px 0 0">Это задания напрямую отрабатывают то, что спросят. Mini Project 2 (Collection) — про неё спрашивают на собесе через Eloquent Collection: «как реализована filter?» — ты будешь знать на собственном коде.</p>
                     </div>
                 </div>
             </div>
@@ -5142,6 +6285,11 @@ RAII: __construct захватывает, __destruct освобождает
                 el.classList.remove('active');
             });
             event.target.classList.add('active');
+        }
+
+        // Toggle Q&A answers
+        function toggleQA(el) {
+            el.parentElement.classList.toggle('open');
         }
 
         // Collapsible functionality
