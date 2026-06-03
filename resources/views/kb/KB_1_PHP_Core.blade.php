@@ -352,6 +352,9 @@
             <a class="nav-item" onclick="showSection('php8')">PHP 8+ фичи</a>
             <a class="nav-item" onclick="showSection('generators')">Генераторы</a>
             <a class="nav-item" onclick="showSection('closures')">Closures</a>
+            <a class="nav-item" onclick="showSection('cheatsheet')" style="margin-top:18px;border-top:1px solid #E5E7EB;padding-top:14px">📋 Шпаргалка PHP</a>
+            <a class="nav-item" onclick="showSection('interview')">❓ Вопросник для собеса</a>
+            <a class="nav-item" onclick="showSection('practice')">🛠 Практика руками</a>
         </div>
 
         <!-- Main Content -->
@@ -3655,21 +3658,6 @@ readonly НЕ влияет на методы (нельзя сделать "не�
     }
 }</code></pre>
 
-                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>❓ Метод <code>validate()</code> обязательно реализовывать в классе?</strong>
-                        <p style="margin:8px 0"><strong>Нет.</strong> <code>validate()</code> в trait уже имеет <strong>готовую реализацию</strong> — она «вмешивается» в класс через <code>use Validatable</code>. Класс <code>UserForm</code> получает её бесплатно и может вызвать <code>$form->validate($data)</code> без переопределения.</p>
-                        <p style="margin:8px 0"><strong>Обязателен только <code>rules()</code></strong> — у него <code>abstract</code> модификатор. Trait декларирует: «я умею валидировать, но правила задаёт класс-пользователь». Если класс не реализует <code>rules()</code> — будет fatal error:</p>
-                        <pre style="background:#1F2937;color:#F3F4F6;padding:10px 14px;border-radius:6px;font-size:12px;margin:6px 0;overflow-x:auto">Fatal error: Class UserForm contains 1 abstract method
-and must therefore be declared abstract or implement
-the remaining methods (Validatable::rules)</pre>
-                        <p style="margin:8px 0"><strong>Возможные сценарии</strong> для класса с trait:</p>
-                        <ul style="margin:8px 0 0 20px;line-height:1.7">
-                            <li><strong>Abstract метод trait</strong> (<code>rules()</code>) — <em>обязан</em> реализовать класс.</li>
-                            <li><strong>Concrete метод trait</strong> (<code>validate()</code>) — <em>не обязан</em>, наследует as-is. Может переопределить, если хочет другую логику.</li>
-                            <li><strong>Свойство trait</strong> (<code>$cache</code>) — попадает в класс автоматически.</li>
-                        </ul>
-                        <p style="margin:10px 0 0"><strong>Это та же логика, что у abstract class:</strong> abstract method = контракт, concrete method = бесплатное наследство.</p>
-                    </div>
                 </div>
 
                 <div class="subsection">
@@ -3706,45 +3694,54 @@ the remaining methods (Validatable::rules)</pre>
     <span class="keyword">abstract</span> <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">toArray</span>();
 }</code></pre>
 
-                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>🔍 Разбор trait Cacheable — что делает <code>isset</code>?</strong>
-                        <p style="margin:8px 0"><code>isset($this->cache[$key])</code> — это <strong>языковая конструкция PHP</strong>, не часть trait. Проверяет, что элемент массива <code>$cache</code> с ключом <code>$key</code> существует <strong>И не равен <code>null</code></strong>.</p>
-                        <p style="margin:8px 0"><strong>Логика remember():</strong></p>
-                        <ul style="margin:8px 0 0 20px;line-height:1.7">
-                            <li>Если ключ есть → вернуть закэшированное значение (нет повторного вычисления)</li>
-                            <li>Если нет → вызвать <code>$callback()</code>, сохранить результат в <code>$cache[$key]</code> и вернуть</li>
-                        </ul>
-                    </div>
-
-                    <div class="example-label">isset vs array_key_exists — критичный нюанс</div>
-                    <pre><code><span class="comment">// ⚠️ Если callback может вернуть null — isset обманет!</span>
-<span class="variable">$user</span>-><span class="function">remember</span>(<span class="string">'profile'</span>, <span class="keyword">fn</span>() => <span class="keyword">null</span>);
-<span class="comment">// isset($cache['profile']) === false  (т.к. null)</span>
-<span class="comment">// → callback вызовется СНОВА, кэш не работает</span>
-
-<span class="comment">// ✅ Правильно — array_key_exists проверяет ТОЛЬКО наличие ключа</span>
-<span class="keyword">trait</span> <span class="function">CacheableSafe</span> {
-    <span class="keyword">private</span> <span class="keyword">array</span> <span class="variable">$cache</span> = [];
-
-    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">remember</span>(<span class="keyword">string</span> <span class="variable">$key</span>, <span class="keyword">callable</span> <span class="variable">$callback</span>): <span class="keyword">mixed</span> {
-        <span class="keyword">if</span> (<span class="function">array_key_exists</span>(<span class="variable">$key</span>, <span class="variable">$this</span>-><span class="variable">cache</span>)) {
-            <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">cache</span>[<span class="variable">$key</span>];  <span class="comment">// сработает даже если кэш = null</span>
-        }
-        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">cache</span>[<span class="variable">$key</span>] = <span class="variable">$callback</span>();
-    }
-}</code></pre>
-
-                    <div class="info-box" style="background:#FEE2E2;border-left:4px solid #DC2626;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>⚠️ Ограничения trait Cacheable:</strong>
-                        <ul style="margin:8px 0 0 20px;line-height:1.7">
-                            <li><strong>Кэш живёт только в рамках одного HTTP-запроса</strong> (in-memory). Между запросами всё сбрасывается.</li>
-                            <li>Для долговременного кэша используй Laravel <code>Cache::remember()</code> (Redis/Memcached/file).</li>
-                            <li>Если класс уже имеет своё <code>$cache</code> с другой видимостью или дефолтом — будет fatal error при <code>use Cacheable</code>.</li>
-                        </ul>
-                    </div>
-
                     <div class="remember-box">
                         Traits отлично подходят для кроссэффективности, которая НЕ является частью иерархии. Используй их для логирования, кэширования, валидации и других "горизонтальных" обязанностей!
+                    </div>
+                </div>
+
+                <!-- ═══ Объяснялка / Вопросник по Traits ═══ -->
+                <div class="subsection" style="border-top:3px solid #3B82F6;padding-top:24px;margin-top:32px">
+                    <h3 class="subsection-title" style="color:#1E40AF">❓ Вопросник / Объяснялка по Traits</h3>
+                    <div class="content-block">
+                        Здесь собраны короткие ответы на частые вопросы по этому разделу. Если что-то непонятно в основном материале выше — ищи ответ тут.
+                    </div>
+
+                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>В: Что такое <code>isset</code> в trait Cacheable?</strong>
+                        <p style="margin:8px 0">О: <code>isset</code> — это <strong>языковая конструкция PHP</strong>, проверяет что элемент массива существует И не равен <code>null</code>. В коде <code>if (isset($this->cache[$key]))</code> — проверка наличия закэшированного значения. Если есть — вернуть; если нет — вычислить, сохранить, вернуть.</p>
+                    </div>
+
+                    <div class="info-box" style="background:#FEF3C7;border-left:4px solid #F59E0B;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>В: Почему именно <code>isset</code>, а не <code>array_key_exists</code>?</strong>
+                        <p style="margin:8px 0">О: <code>isset</code> вернёт <code>false</code> если значение равно <code>null</code>. Если callback может вернуть <code>null</code> — <code>isset</code> ошибочно решит что кэша нет и вызовет callback СНОВА. Безопаснее <code>array_key_exists($key, $cache)</code> — он проверяет ТОЛЬКО наличие ключа.</p>
+                    </div>
+
+                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>В: Метод <code>validate()</code> из trait — обязательно реализовывать в классе?</strong>
+                        <p style="margin:8px 0">О: <strong>Нет.</strong> Concrete-метод (с реализацией) trait наследуется классом как есть. Класс может вызвать <code>$form->validate()</code> сразу. Обязателен только <code>abstract</code>-метод (<code>rules()</code>). Без его реализации — fatal error: <em>"Class contains abstract method and must implement"</em>.</p>
+                    </div>
+
+                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>В: Интерфейсы могут хранить свойства?</strong>
+                        <p style="margin:8px 0">О: <strong>Нет</strong>, только сигнатуры методов (и константы). Свойства — забота класса-реализатора. Интерфейс говорит «должен уметь delete/save», но КАК это устроено внутри — решает класс.</p>
+                    </div>
+
+                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>В: Трейты могут хранить свойства? Можно ли их изменить в классе?</strong>
+                        <p style="margin:8px 0">О: <strong>Да</strong>, трейт может содержать свойства любой видимости (<code>public/protected/private</code>). При <code>use</code> они становятся частью класса.</p>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li>Изменить <strong>значение</strong> свойства — да, легко: <code>$this->cache = []</code></li>
+                            <li>Изменить <strong>само объявление</strong> (видимость, тип) — fatal error при <code>use</code>, если несовместимо с тем что в трейте</li>
+                        </ul>
+                    </div>
+
+                    <div class="info-box" style="background:#FEE2E2;border-left:4px solid #DC2626;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>⚠ Ограничения trait Cacheable</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li>Кэш живёт <strong>только в рамках одного HTTP-запроса</strong> (in-memory). Между запросами — сброс.</li>
+                            <li>Для долговременного кэша — <code>Cache::remember()</code> (Redis/Memcached/file).</li>
+                            <li>Если класс уже имеет своё <code>$cache</code> с другой видимостью — fatal error при <code>use Cacheable</code>.</li>
+                        </ul>
                     </div>
                 </div>
             </div>
@@ -3777,14 +3774,8 @@ the remaining methods (Validatable::rules)</pre>
 <span class="variable">$db</span> = <span class="keyword">null</span>;  <span class="comment">// или выход из области видимости</span>
 <span class="comment">// Output: "Disconnected"</span></code></pre>
 
-                    <div class="info-box" style="background:#FEF3C7;border-left:4px solid #F59E0B;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>⚠️ Откуда берутся <code>$host</code>, <code>$user</code>, <code>$connection</code>?</strong>
-                        <ul style="margin:8px 0 0 20px;line-height:1.7">
-                            <li><code>$host</code>, <code>$user</code> — <strong>параметры конструктора</strong>. Они не определены где-то заранее. Получают значения в момент <code>new Database("localhost", "root")</code>.</li>
-                            <li><code>$connection</code> — <strong>свойство класса</strong> (<code>private $connection;</code>). Внутри <code>__construct</code> в него записывается результат <code>mysqli_connect()</code> — объект-ссылка на реальное соединение с MySQL.</li>
-                            <li><strong>Связь с БД:</strong> <code>mysqli_connect()</code> открывает TCP-соединение с MySQL-сервером (<code>localhost</code> = сокет или <code>127.0.0.1:3306</code>) и аутентифицирует пользователя. Параметры обычно читаются из <code>.env</code> и передаются в конструктор снаружи.</li>
-                            <li><strong>Опечатка-капкан:</strong> <code>$this->$connection</code> (с двумя <code>$</code>) — это обращение к свойству, чьё имя хранится в переменной <code>$connection</code> (variable property). Если переменная пустая — fatal error. Правильно: <code>$this->connection</code> без второго <code>$</code>.</li>
-                        </ul>
+                    <div class="content-block" style="background:#F3F4F6;padding:10px 14px;border-radius:6px;font-size:13px;margin:10px 0">
+                        <em>📖 Откуда берутся <code>$host</code>, <code>$user</code>, <code>$connection</code>, что такое RAII, когда деструктор не подходит — см. <strong>«❓ Вопросник / Объяснялка» в конце раздела</strong>.</em>
                     </div>
 
                     <div class="example-label">RAII — реальные сценарии __construct + __destruct</div>
@@ -3863,19 +3854,6 @@ the remaining methods (Validatable::rules)</pre>
     <span class="variable">$tx</span>-><span class="function">commit</span>();
 }</code></pre>
 
-                    <div class="remember-box">
-                        <strong>RAII (Resource Acquisition Is Initialization)</strong> — паттерн из C++, отлично работает в PHP: <strong>конструктор захватывает ресурс, деструктор освобождает</strong>. Применимо к файлам, сокетам, блокировкам, транзакциям, GD-изображениям. Защищает от утечек, если код упал с exception.
-                    </div>
-
-                    <div class="info-box" style="background:#FEE2E2;border-left:4px solid #DC2626;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>⚠️ Когда деструктор НЕ подходит:</strong>
-                        <ul style="margin:8px 0 0 20px;line-height:1.7">
-                            <li><strong>Критичные операции</strong> — нельзя полагаться на <code>__destruct</code> для отправки данных или подтверждений. Порядок и время вызова не гарантированы.</li>
-                            <li><strong>Сложная очистка с зависимостями</strong> — при сборке мусора зависимые объекты могут быть уже уничтожены.</li>
-                            <li><strong>Long-running процессы (queue workers, daemons)</strong> — объект может жить долго, лучше явный <code>close()</code>.</li>
-                            <li><strong>PDO/Redis</strong> — обычно закрываются автоматически при уничтожении объекта, явный close в __destruct избыточен.</li>
-                        </ul>
-                    </div>
                 </div>
 
                 <div class="subsection">
@@ -3912,15 +3890,8 @@ the remaining methods (Validatable::rules)</pre>
 <span class="keyword">echo</span> <span class="variable">$user</span>-><span class="variable">name</span>;          <span class="comment">// Вызовет __get</span>
 <span class="keyword">isset</span>(<span class="variable">$user</span>-><span class="variable">name</span>);        <span class="comment">// Вызовет __isset</span></code></pre>
 
-                    <div class="info-box" style="background:#FEF3C7;border-left:4px solid #F59E0B;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>❓ Что значит «несуществующее свойство»?</strong>
-                        <p style="margin:8px 0">Это свойство, которое <strong>явно не объявлено</strong> в классе (нет ни <code>public $name</code>, ни <code>protected $name</code>, ни <code>private $name</code>). В примере выше у класса <code>User</code> есть только <code>private $data</code> — свойства <code>$name</code> у класса нет.</p>
-                        <p style="margin:8px 0">Магические методы срабатывают в <strong>двух случаях</strong>:</p>
-                        <ol style="margin:8px 0 0 20px;line-height:1.7">
-                            <li><strong>Свойство не объявлено вообще</strong> — как <code>$user->name</code> в примере. PHP не находит свойство → вызывает <code>__set()/__get()</code>.</li>
-                            <li><strong>Свойство объявлено, но недоступно</strong> — например, <code>private $name</code>, а вы обращаетесь к нему извне класса. Тоже идёт через магические методы.</li>
-                        </ol>
-                        <p style="margin:10px 0 0"><strong>Зачем <code>private $data = []</code>?</strong> Это «бэкенд» для виртуальных свойств. Любое <code>$user->foo = ...</code> уходит в <code>$data['foo']</code>. Так делают ORM (Eloquent), DTO, прокси-объекты — поля заранее не известны, они приходят из БД/API.</p>
+                    <div class="content-block" style="background:#F3F4F6;padding:10px 14px;border-radius:6px;font-size:13px;margin:10px 0">
+                        <em>📖 Что такое «несуществующее свойство», два кейса срабатывания магии, цена за магию, что такое <code>unset()</code> — см. <strong>«❓ Вопросник / Объяснялка» в конце раздела</strong>.</em>
                     </div>
 
                     <div class="example-label">Поток вызовов магических методов</div>
@@ -3941,24 +3912,8 @@ the remaining methods (Validatable::rules)</pre>
 <span class="function">var_dump</span>(<span class="function">isset</span>(<span class="variable">$user</span>-><span class="variable">name</span>));
 <span class="comment">// PHP: → __isset('name') → false (ключ удалён из $data)</span></code></pre>
 
-                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>❓ Что такое <code>unset()</code> внутри <code>__unset</code>?</strong>
-                        <p style="margin:8px 0"><code>unset()</code> — это <strong>языковая конструкция PHP</strong> (не функция, как <code>strlen()</code>). Делает одно из двух в зависимости от аргумента:</p>
-                        <ul style="margin:8px 0 0 20px;line-height:1.7">
-                            <li><code>unset($var)</code> — уничтожает переменную (помечает память для GC)</li>
-                            <li><code>unset($array[$key])</code> — удаляет элемент массива по ключу. После этого <code>isset($array[$key])</code> = <code>false</code>, <code>array_key_exists()</code> = <code>false</code></li>
-                            <li><code>unset($obj->prop)</code> — удаляет свойство объекта (либо вызывает <code>__unset</code>, если свойства нет)</li>
-                        </ul>
-                        <p style="margin:10px 0 0"><strong>В нашем коде:</strong> <code>unset($this->data[$name])</code> удаляет ключ <code>$name</code> из приватного массива <code>$data</code>. Это нужно, чтобы виртуальное свойство «исчезло» — в следующий раз <code>isset($user->name)</code> вернёт <code>false</code>.</p>
-                        <p style="margin:10px 0 0"><strong>Важно:</strong> для индексированных массивов (<code>[1,2,3]</code>) <code>unset</code> <em>не</em> переиндексирует ключи. После <code>unset($arr[1])</code> массив станет <code>[0 =&gt; 1, 2 =&gt; 3]</code> — пропуск в ключах. Чтобы переиндексировать, используй <code>array_values()</code>.</p>
-                    </div>
-
                     <div class="remember-box">
                         <strong>__get/__set</strong> отлично подходят для ленивой загрузки данных, валидации, логирования доступа к свойствам. Это использует <strong>Laravel Eloquent</strong> — поля модели хранятся в <code>$attributes</code>, и обращение <code>$user->name</code> идёт через <code>__get</code>, который читает из <code>$attributes['name']</code> и применяет accessor/cast.
-                    </div>
-
-                    <div class="info-box" style="background:#FEE2E2;border-left:4px solid #DC2626;padding:14px 18px;margin:14px 0;border-radius:6px">
-                        <strong>⚠️ Цена за магию:</strong> магические методы <strong>медленнее</strong> прямого доступа к свойству (lookup + вызов метода) и <strong>усложняют IDE-автодополнение</strong>. Для обычных DTO/Value Objects лучше явно объявить свойства. Магия нужна только когда поля динамические (ORM, JSON-API, прокси).
                     </div>
                 </div>
 
@@ -4056,6 +4011,66 @@ the remaining methods (Validatable::rules)</pre>
 
                     <div class="remember-box">
                         __debugInfo и __serialize очень полезны для безопасности - скрывают чувствительные данные от отладки и сохранения. Используй их для password, API tokens, и прочих secrets!
+                    </div>
+                </div>
+
+                <!-- ═══ Объяснялка / Вопросник по Магическим методам ═══ -->
+                <div class="subsection" style="border-top:3px solid #3B82F6;padding-top:24px;margin-top:32px">
+                    <h3 class="subsection-title" style="color:#1E40AF">❓ Вопросник / Объяснялка по магическим методам</h3>
+                    <div class="content-block">
+                        Короткие ответы на частые вопросы по этому разделу.
+                    </div>
+
+                    <div class="info-box" style="background:#FEF3C7;border-left:4px solid #F59E0B;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>В: Откуда в примере <code>Database</code> берутся <code>$host</code>, <code>$user</code>, <code>$connection</code>?</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><code>$host</code>, <code>$user</code> — <strong>параметры конструктора</strong>. Передаются извне при <code>new Database("localhost", "root")</code>.</li>
+                            <li><code>$connection</code> — <strong>свойство класса</strong> (<code>private $connection;</code>). Внутри <code>__construct</code> сохраняет результат <code>mysqli_connect()</code>.</li>
+                            <li><strong>Связь с БД:</strong> <code>mysqli_connect()</code> открывает TCP-соединение с MySQL и аутентифицирует пользователя.</li>
+                            <li><strong>Опечатка-капкан:</strong> <code>$this->$connection</code> (два <code>$</code>) — это обращение к свойству, чьё имя в переменной. Правильно: <code>$this->connection</code>.</li>
+                        </ul>
+                    </div>
+
+                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>В: Что такое «несуществующее свойство» для <code>__get/__set/__isset/__unset</code>?</strong>
+                        <p style="margin:8px 0">О: Это свойство, которое <strong>явно не объявлено</strong> в классе (нет <code>public/protected/private $name</code>). Магические методы срабатывают в двух случаях:</p>
+                        <ol style="margin:8px 0 0 20px;line-height:1.7">
+                            <li>Свойство не объявлено вообще — <code>$user->name = ...</code> при отсутствии поля <code>$name</code></li>
+                            <li>Свойство объявлено, но недоступно из контекста (<code>private</code>, а доступ извне)</li>
+                        </ol>
+                        <p style="margin:10px 0 0"><strong>Зачем <code>private $data = []</code>?</strong> Это «бэкенд» для виртуальных свойств. Любое <code>$user->foo = ...</code> уходит в <code>$data['foo']</code>. Так делают ORM (Eloquent), DTO, прокси.</p>
+                    </div>
+
+                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>В: Что такое <code>unset()</code> внутри <code>__unset</code>?</strong>
+                        <p style="margin:8px 0">О: <code>unset()</code> — <strong>языковая конструкция PHP</strong>. Три формы:</p>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><code>unset($var)</code> — уничтожает переменную (память помечается для GC)</li>
+                            <li><code>unset($array[$key])</code> — удаляет элемент массива; <code>isset</code>/<code>array_key_exists</code> вернут <code>false</code></li>
+                            <li><code>unset($obj->prop)</code> — удаляет свойство объекта (либо вызывает <code>__unset</code>, если свойства нет)</li>
+                        </ul>
+                        <p style="margin:10px 0 0"><strong>⚠ Для индексированных массивов</strong> <code>unset</code> <em>не</em> переиндексирует ключи. После <code>unset($arr[1])</code> массив станет <code>[0 =&gt; 1, 2 =&gt; 3]</code>. Для переиндексации: <code>array_values()</code>.</p>
+                    </div>
+
+                    <div class="info-box" style="background:#EFF6FF;border-left:4px solid #3B82F6;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>В: Что такое RAII? Зачем <code>__construct</code> + <code>__destruct</code>?</strong>
+                        <p style="margin:8px 0">О: <strong>RAII (Resource Acquisition Is Initialization)</strong> — паттерн из C++: <strong>конструктор захватывает ресурс, деструктор освобождает</strong>. Гарантирует освобождение при любом завершении (включая <code>throw</code>).</p>
+                        <p style="margin:8px 0">Применимо к: <strong>файлам</strong> (FileHandler), <strong>сокетам</strong> (SocketClient), <strong>блокировкам</strong> (FileLock — <code>flock LOCK_EX</code> → <code>LOCK_UN</code>), <strong>транзакциям</strong> (TransactionGuard — <code>beginTransaction</code> → <code>rollBack</code>), <strong>GD-изображениям</strong> (ImageResource).</p>
+                    </div>
+
+                    <div class="info-box" style="background:#FEE2E2;border-left:4px solid #DC2626;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>В: Когда деструктор НЕ подходит?</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>Критичные операции</strong> — нельзя полагаться на <code>__destruct</code> для отправки данных/подтверждений. Порядок и время вызова не гарантированы.</li>
+                            <li><strong>Сложная очистка с зависимостями</strong> — при сборке мусора зависимые объекты могут быть уже уничтожены.</li>
+                            <li><strong>Long-running процессы (queue workers)</strong> — объект может жить долго, лучше явный <code>close()</code>.</li>
+                            <li><strong>PDO/Redis</strong> — обычно закрываются автоматически, явный close в __destruct избыточен.</li>
+                        </ul>
+                    </div>
+
+                    <div class="info-box" style="background:#FEE2E2;border-left:4px solid #DC2626;padding:14px 18px;margin:14px 0;border-radius:6px">
+                        <strong>В: Какова цена за магические методы?</strong>
+                        <p style="margin:8px 0">О: Они <strong>медленнее</strong> прямого доступа к свойству (lookup + вызов метода) и <strong>ломают IDE-автодополнение</strong>. Для обычных DTO лучше явно объявить поля. Магия — только когда поля действительно динамические (ORM, JSON-API, прокси-объекты).</p>
                     </div>
                 </div>
             </div>
@@ -4787,6 +4802,308 @@ the remaining methods (Validatable::rules)</pre>
 <span class="comment">// Compose middleware</span>
 <span class="variable">$pipeline</span> = <span class="variable">$logger</span>(<span class="variable">$auth</span>(<span class="variable">$handler</span>));
 <span class="variable">$result</span> = <span class="variable">$pipeline</span>(<span class="variable">$request</span>);</code></pre>
+                </div>
+            </div>
+
+            <!-- ═══════════ SECTION 13: CHEATSHEET ═══════════ -->
+            <div id="cheatsheet" class="section">
+                <h2 class="section-title">📋 Шпаргалка PHP — всё в одной таблице</h2>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Типы и сравнения</h3>
+                    <div class="example-label">Самое спрашиваемое</div>
+                    <pre><code><span class="comment">+----------------+--------------------------------+---------------------+
+| Что            | Как работает                   | Пример              |
++----------------+--------------------------------+---------------------+
+| == (loose)     | type juggling, '0'==false      | '1' == 1 → true     |
+| === (strict)   | сравнение типа И значения      | '1' === 1 → false   |
+| &lt;=&gt; spaceship | -1 / 0 / 1                     | 1 &lt;=&gt; 2 → -1        |
+| ??             | null coalescing                | $a ?? 'default'     |
+| ?->            | nullsafe (PHP 8)               | $user?->profile     |
+| strict_types=1 | требует точный тип в аргументах| declare(strict_...) |
++----------------+--------------------------------+---------------------+</span></code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Массивы — ключевые функции</h3>
+                    <pre><code><span class="comment">+----------------+-----------------------------------------+
+| Функция        | Что делает                              |
++----------------+-----------------------------------------+
+| array_map      | трансформация (новый массив)            |
+| array_filter   | фильтрация (ключи сохраняются!)         |
+| array_reduce   | свёртка в одно значение                 |
+| array_walk     | мутация in-place (по ссылке &amp;)         |
+| array_merge    | сложение, числовые ключи переиндекс.   |
+| + (объедин.)   | левый имеет приоритет, ключи сохр.      |
+| usort          | сортировка с callback                   |
+| array_column   | вытащить столбец из массива объектов    |
+| array_key_exists| ключ есть (даже если null)             |
+| isset          | ключ есть И не null                     |
++----------------+-----------------------------------------+
+
+Флаги array_filter:
+  default            → callback($value)
+  ARRAY_FILTER_USE_KEY  → callback($key)
+  ARRAY_FILTER_USE_BOTH → callback($value, $key)
+
+array_reduce порядок аргументов callback:
+  fn($carry, $item) — 1-й аккумулятор, 2-й текущий элемент
+  имена переменных НЕ важны, важен порядок</span></code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">ООП — abstract / interface / trait</h3>
+                    <pre><code><span class="comment">+-----------+----------+----------+-------+
+| Что       | Abstract | Interface| Trait |
++-----------+----------+----------+-------+
+| Множ.     | ❌ один  | ✅ много | ✅ много|
+| Свойства  | ✅       | ❌ const | ✅    |
+| Реализация| микс     | ❌       | полная|
+| Конструктор|✅       | ❌       | ⚠     |
+| Инстанс   | ❌       | ❌       | ❌ use |
+| Type-hint | ✅       | ✅       | ❌    |
++-----------+----------+----------+-------+
+
+Когда:
+  Abstract → is-a иерархия + общее состояние (BaseController)
+  Interface → контракт для DI / полиморфизма (PaymentInterface)
+  Trait → переиспольз. кода в разных ветках (Loggable, Cacheable)</span></code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Магические методы</h3>
+                    <pre><code><span class="comment">+-----------------+--------------------------------------+
+| Метод           | Когда вызывается                     |
++-----------------+--------------------------------------+
+| __construct     | new Class(...)                       |
+| __destruct      | $obj = null / выход из scope         |
+| __get($name)    | чтение несуществующего/private       |
+| __set($n, $v)   | запись несуществующего/private       |
+| __isset($name)  | isset($obj->prop) на магическом      |
+| __unset($name)  | unset($obj->prop) на магическом      |
+| __call($n, $a)  | вызов несущ. метода                  |
+| __callStatic    | вызов несущ. static метода           |
+| __toString      | (string)$obj, echo $obj              |
+| __invoke($args) | $obj() — объект как функция          |
+| __clone         | clone $obj                           |
+| __debugInfo     | var_dump — что показывать            |
+| __serialize     | serialize() — что сохранять          |
++-----------------+--------------------------------------+
+
+RAII: __construct захватывает, __destruct освобождает
+   → file/socket/lock/transaction</span></code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">PHP 8.x — ключевые фичи</h3>
+                    <pre><code><span class="comment">+----------------------+--------------------------------+
+| Фича                 | Пример                         |
++----------------------+--------------------------------+
+| match                | match($x) { 1, 2 =&gt; 'a', ... } |
+| enum                 | enum Status { case Active; }   |
+| readonly             | public readonly int $id;       |
+| constructor promotion| __construct(private int $id)   |
+| named arguments      | foo(name: 'Alice', age: 30)    |
+| nullsafe             | $user?->profile?->avatar       |
+| first-class callable | strlen(...)                    |
+| attributes           | #[Route('/path')]              |
++----------------------+--------------------------------+</span></code></pre>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Top-30 «убийц» на собесе</h3>
+                    <pre><code><span class="comment">1.  == vs === (type juggling)
+2.  null vs '' vs 0 vs false (что false-y)
+3.  abstract vs interface vs trait
+4.  self:: vs static:: (Late Static Binding)
+5.  RAII: __construct + __destruct
+6.  array_map vs array_filter vs array_reduce
+7.  &amp; в array_walk — by reference
+8.  Lifecycle PHP-запроса
+9.  GET vs POST + when to use
+10. PSR-4 autoloading
+11. composer.json sections
+12. Exception hierarchy (Error vs Exception)
+13. generators yield — when, why
+14. closures — use() vs arrow fn
+15. magic methods — IDE-cost
+16. Eloquent N+1 (cross-ref KB_3/KB_12)
+17. Laravel lifecycle (cross-ref KB_3)
+18. SQL индексы (cross-ref KB_2)
+19. JWT vs session (cross-ref KB_4)
+20. SOLID (cross-ref KB_5)
+21. PDO prepared statements
+22. password_hash vs md5
+23. spread operator ... в массивах
+24. union types int|string
+25. nullable ?int
+26. constructor promotion
+27. enums (PHP 8.1)
+28. readonly properties
+29. attributes (PHP 8)
+30. fibers (PHP 8.1) — корутины</span></code></pre>
+                </div>
+            </div>
+
+            <!-- ═══════════ SECTION 14: INTERVIEW QUESTIONS ═══════════ -->
+            <div id="interview" class="section">
+                <h2 class="section-title">❓ Вопросник для собеседования (PHP Core)</h2>
+
+                <div class="content-block">
+                    Реальные вопросы, которые задают на middle PHP / Laravel собеседованиях. Отвечай вслух, без подсматривания. Если запнулся — открой соответствующий раздел KB.
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Уровень 1 — Junior+ ($1500-2000)</h3>
+                    <div class="content-block">
+                        <ol style="line-height:1.8">
+                            <li>В чём разница <code>==</code> и <code>===</code>? Приведи пример где результат отличается.</li>
+                            <li>Что выведет: <code>var_dump('0' == false)</code>? А <code>var_dump('0' === false)</code>?</li>
+                            <li>Что такое type juggling? Где он опасен?</li>
+                            <li>Назови 5 false-y значений в PHP.</li>
+                            <li>В чём разница между <code>isset</code> и <code>array_key_exists</code>?</li>
+                            <li>Что делает <code>strict_types=1</code>?</li>
+                            <li>В чём разница между <code>fn</code> (arrow) и <code>function</code> (anonymous)?</li>
+                            <li>Чем отличается <code>private</code> от <code>protected</code>?</li>
+                            <li>Что такое <code>$this</code>? Когда нельзя использовать?</li>
+                            <li>Что выведет <code>echo "Hello $name"</code> vs <code>echo 'Hello $name'</code>?</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Уровень 2 — Middle ($2500-3000)</h3>
+                    <div class="content-block">
+                        <ol start="11" style="line-height:1.8">
+                            <li>В чём разница abstract class и interface? Когда что?</li>
+                            <li>Зачем нужен trait? Чем отличается от abstract class?</li>
+                            <li>Может ли trait хранить свойства? А интерфейс? А abstract?</li>
+                            <li>Что такое Late Static Binding? Чем <code>static::</code> отличается от <code>self::</code>?</li>
+                            <li>Что делает <code>final</code>? А <code>readonly</code>?</li>
+                            <li>Назови 5 магических методов и когда они вызываются.</li>
+                            <li>Что такое RAII? Приведи 3 примера применения <code>__construct/__destruct</code>.</li>
+                            <li>Что происходит при <code>$user->name = 'X'</code>, если в классе нет свойства <code>$name</code>?</li>
+                            <li>Что такое PSR-4? Зачем нужен autoload?</li>
+                            <li>Чем отличается <code>require</code>, <code>require_once</code> и autoload?</li>
+                            <li>Объясни как работает <code>array_reduce</code>. Что такое аккумулятор?</li>
+                            <li>В чём разница <code>array_map</code>, <code>array_filter</code>, <code>array_walk</code>?</li>
+                            <li>Зачем нужен <code>&amp;</code> в <code>array_walk(&$item)</code>?</li>
+                            <li>Что делает <code>ARRAY_FILTER_USE_KEY</code>?</li>
+                            <li>Что такое spread operator <code>...</code> в массивах? В аргументах?</li>
+                            <li>Когда нужен generator (<code>yield</code>)? Чем отличается от обычной функции?</li>
+                            <li>Что такое closure? Зачем <code>use ($var)</code>? Можно ли менять переменную в closure?</li>
+                            <li>Объясни разницу между <code>Error</code> и <code>Exception</code>.</li>
+                            <li>Что такое <code>match</code>? Чем отличается от <code>switch</code>?</li>
+                            <li>Зачем нужен enum (PHP 8.1)? Чем отличается от констант?</li>
+                        </ol>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Уровень 3 — Middle+/Senior ($3000+)</h3>
+                    <div class="content-block">
+                        <ol start="31" style="line-height:1.8">
+                            <li>Что такое attributes (PHP 8)? Приведи пример из Laravel/Symfony.</li>
+                            <li>Объясни fibers (PHP 8.1). В чём отличие от generators?</li>
+                            <li>Как работает opcache? Что такое JIT (PHP 8)?</li>
+                            <li>Что такое weak references (<code>WeakMap</code>)? Зачем нужны?</li>
+                            <li>Как PHP управляет памятью? Что такое circular reference?</li>
+                            <li>Объясни Copy-on-Write для массивов в PHP.</li>
+                            <li>В чём проблема <code>serialize</code> объектов? Как её решает <code>__serialize</code>?</li>
+                            <li>Что такое <code>SplObjectStorage</code>? Зачем нужен?</li>
+                            <li>Как реализовать <code>iterable</code> через <code>Iterator</code> vs <code>Generator</code>?</li>
+                            <li>Что такое <code>Stringable</code> interface (PHP 8)?</li>
+                            <li>Объясни поведение <code>static</code> переменных в функциях.</li>
+                            <li>Что такое <code>__invoke</code>? Зачем делать класс callable?</li>
+                            <li>Чем отличается <code>::class</code> от <code>get_class($obj)</code>?</li>
+                            <li>В чём опасность <code>extract()</code> и <code>compact()</code>?</li>
+                            <li>Как реализовать singleton без global state? Какие альтернативы?</li>
+                        </ol>
+                    </div>
+
+                    <div class="remember-box">
+                        <strong>💡 Тактика на собесе:</strong> если не знаешь точно — скажи «не помню точно, но логика была примерно такая...» и рассуждай. Лучше ошибиться рассуждая, чем молчать. На большинстве middle-собесов оценивают не только знание, но и способ думания.
+                    </div>
+                </div>
+            </div>
+
+            <!-- ═══════════ SECTION 15: PRACTICE ═══════════ -->
+            <div id="practice" class="section">
+                <h2 class="section-title">🛠 Практика руками (PHP Core)</h2>
+
+                <div class="content-block">
+                    Реальные мини-задачи и проекты для отработки PHP. Отмечай ✓ когда сделал. Цель — <strong>писать код</strong>, а не читать. Без практики теория не приклеивается.
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">📌 Чек-лист микро-задач (15 минут каждая)</h3>
+                    <div class="content-block">
+                        <ul style="list-style:none;padding:0;line-height:2">
+                            <li>☐ <strong>1. Type juggling</strong> — функция <code>isTruthy($x)</code> которая возвращает true только если <code>$x</code> не входит в [0, '0', '', null, false, []]. Покрой 10 тестами.</li>
+                            <li>☐ <strong>2. strict_types</strong> — функция <code>add(int $a, int $b): int</code>. Вызови её с <code>'5'</code> и <code>'3'</code>. Получи TypeError. Включи/выключи <code>declare(strict_types=1)</code> — наблюдай разницу.</li>
+                            <li>☐ <strong>3. Строки</strong> — функция <code>extractEmails($text)</code> которая через regex возвращает все email из текста.</li>
+                            <li>☐ <strong>4. sprintf</strong> — функция <code>formatPrice(float $amount, string $currency)</code> возвращает <code>"$1,234.56 USD"</code> (через <code>number_format</code> + <code>sprintf</code>).</li>
+                            <li>☐ <strong>5. array_map</strong> — массив пользователей, верни массив их имён.</li>
+                            <li>☐ <strong>6. array_filter с USE_KEY</strong> — массив <code>['user_id'=>1, 'admin_id'=>2, 'name'=>'X']</code>, оставь только ключи на <code>_id</code>.</li>
+                            <li>☐ <strong>7. array_reduce</strong> — массив заказов, посчитай total/count/avg одним вызовом.</li>
+                            <li>☐ <strong>8. array_walk с &amp;</strong> — массив цен, добавь к каждой 10% налог in-place.</li>
+                            <li>☐ <strong>9. usort spaceship</strong> — массив объектов User (имя, возраст), отсортируй по возрасту через <code>fn($a,$b) =&gt; $a-&gt;age &lt;=&gt; $b-&gt;age</code>.</li>
+                            <li>☐ <strong>10. destructuring</strong> — массив <code>['name'=&gt;'A','age'=&gt;30,'city'=&gt;'X']</code>. Через <code>[‎'name'=&gt;$n] = $arr</code> вытащи name в переменную.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">📦 Готовые задания (30-60 минут)</h3>
+                    <div class="content-block">
+                        <p><strong>Задание 1: trait Cacheable</strong></p>
+                        <p>Реализуй <code>trait Cacheable</code> со свойством <code>$cache</code> и методом <code>remember($key, callable $cb)</code>. Сделай его безопасным через <code>array_key_exists</code> (не <code>isset</code>). Подключи к классу <code>UserService</code>. Acceptance: кэш работает даже когда callback возвращает <code>null</code>.</p>
+
+                        <p><strong>Задание 2: RAII TransactionGuard</strong></p>
+                        <p>Класс <code>TransactionGuard</code> принимает <code>PDO</code>. В конструкторе <code>beginTransaction</code>. Метод <code>commit()</code>. Деструктор: если транзакция не закоммичена — <code>rollBack</code>. Acceptance: при <code>throw</code> внутри функции — автоматический rollback.</p>
+
+                        <p><strong>Задание 3: Магический Builder</strong></p>
+                        <p>Класс <code>QueryBuilder</code> с <code>__call</code> — любой вызов вида <code>$qb-&gt;where('age', '&gt;', 18)-&gt;orderBy('name')-&gt;limit(10)</code> сохраняет вызовы в массив. Метод <code>toSql()</code> собирает SQL. Acceptance: fluent chain работает.</p>
+
+                        <p><strong>Задание 4: Interface PaymentGateway</strong></p>
+                        <p>Интерфейс <code>PaymentInterface { charge($amount); refund($txId); }</code>. Две реализации: <code>StripePayment</code>, <code>PayPalPayment</code>. Функция <code>processOrder(PaymentInterface $pg, $amount)</code>. Acceptance: один и тот же код работает с обеими реализациями.</p>
+
+                        <p><strong>Задание 5: Abstract BaseRepository</strong></p>
+                        <p>Abstract <code>BaseRepository</code> с реализованным <code>find($id)</code>, <code>all()</code> через PDO и abstract <code>table(): string</code>. Наследники: <code>UserRepository</code> (<code>table() = 'users'</code>), <code>OrderRepository</code>. Acceptance: <code>find()</code> работает без переопределения.</p>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">🚀 Мини-проекты в стиле LeetCode (1-2 часа)</h3>
+                    <div class="content-block">
+                        <p><strong>Mini Project 1: Свой <code>array_reduce</code></strong></p>
+                        <p>Напиши <code>my_array_reduce(array $arr, callable $cb, $initial)</code>. Покрой 5 тестами: сумма, произведение, max, построение assoc-массива из списка, пустой массив. Сравни поведение со встроенной — должно совпасть 1-в-1.</p>
+
+                        <p><strong>Mini Project 2: Свой Collection</strong></p>
+                        <p>Класс <code>Collection</code> с методами <code>map()</code>, <code>filter()</code>, <code>reduce()</code>, <code>first()</code>, <code>count()</code>, <code>toArray()</code>, <code>__toString()</code> (JSON). Метод <code>filter()</code> возвращает новую Collection (immutable). Acceptance: <code>(new Collection([1,2,3]))-&gt;map(fn($x) =&gt; $x*2)-&gt;filter(fn($x) =&gt; $x &gt; 2)-&gt;toArray()</code> возвращает <code>[4, 6]</code>.</p>
+
+                        <p><strong>Mini Project 3: Свой Validator</strong></p>
+                        <p>Класс <code>Validator</code> с цепочкой правил: <code>Validator::make($data, ['email' =&gt; 'required|email', 'age' =&gt; 'required|int|min:18'])</code>. Реализуй 5 правил: <code>required, email, int, min, max</code>. Возвращай массив ошибок. Acceptance: проходит unit-тесты на 5 кейсов (ок / невалидный email / возраст &lt;18 / отсутствует поле / тип не int).</p>
+
+                        <p><strong>Mini Project 4: Свой DI-контейнер (упрощённый)</strong></p>
+                        <p>Класс <code>Container</code> с методами <code>bind(string $abstract, callable $factory)</code> и <code>resolve(string $abstract)</code>. Поддержи <code>singleton()</code> — фабрика вызывается один раз. Acceptance: <code>$c-&gt;bind('Logger', fn() =&gt; new FileLogger())</code>, <code>$c-&gt;resolve('Logger')</code> возвращает экземпляр.</p>
+
+                        <p><strong>Mini Project 5: Mini-ORM (Active Record)</strong></p>
+                        <p>Abstract <code>Model</code> со статическими <code>find($id)</code>, <code>all()</code>, методами <code>save()</code>, <code>delete()</code>. Использует магические <code>__get/__set</code> для динамических атрибутов из БД. Наследник <code>User extends Model</code> с <code>$table = 'users'</code>. Acceptance: <code>$u = User::find(1); $u-&gt;name = 'X'; $u-&gt;save();</code> работает.</p>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">🎯 Что делать с этим списком</h3>
+                    <div class="remember-box">
+                        <strong>План на 2 недели подготовки к собесу:</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.8">
+                            <li><strong>Неделя 1:</strong> Сделай все 10 микро-задач (по 2/день) + 2-3 готовых задания.</li>
+                            <li><strong>Неделя 2:</strong> Сделай оставшиеся готовые задания + 2 мини-проекта на выбор (рекомендую Collection + Validator).</li>
+                            <li><strong>Перед собесом:</strong> прогони все 45 вопросов из «❓ Вопросник» вслух с таймером 90 сек на вопрос.</li>
+                        </ul>
+                        <p style="margin:10px 0 0">Эти задания напрямую отрабатывают темы которые на собесе спросят. Не пропускай.</p>
+                    </div>
                 </div>
             </div>
 
