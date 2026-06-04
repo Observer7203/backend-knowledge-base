@@ -583,16 +583,25 @@
 <span class="comment">// Оператор конкатенации (точка) — наоборот, число становится строкой</span>
 <span class="keyword">echo</span> <span class="number">5</span> . <span class="string">" apples"</span>;     <span class="comment">// "5 apples"</span></code></pre>
 
-                    <div class="example-label">Type Juggling в сравнениях (скрытые баги)</div>
-                    <pre><code><span class="function">var_dump</span>(<span class="string">"10"</span> == <span class="number">10</span>);    <span class="comment">// true  (juggling: строка → число)</span>
-<span class="function">var_dump</span>(<span class="string">"10"</span> === <span class="number">10</span>);   <span class="comment">// false (строгое сравнение, типы разные)</span>
+                    <div class="example-label">Type Juggling в сравнениях — поведение зависит от версии PHP</div>
+                    <pre><code><span class="comment">// === PHP 8.0+ (актуальное поведение) ===</span>
+<span class="function">var_dump</span>(<span class="string">"10"</span> == <span class="number">10</span>);    <span class="comment">// true   (строка ЧИСЛОВАЯ → сравнение как числа)</span>
+<span class="function">var_dump</span>(<span class="string">"10"</span> === <span class="number">10</span>);   <span class="comment">// false  (строгое: типы разные)</span>
 
-<span class="function">var_dump</span>(<span class="string">""</span> == <span class="number">0</span>);        <span class="comment">// true  (пустая строка → 0)</span>
-<span class="function">var_dump</span>(<span class="string">"abc"</span> == <span class="number">0</span>);     <span class="comment">// true  (нечисловая строка → 0) — до PHP 8.0</span>
-<span class="function">var_dump</span>(<span class="string">"1abc"</span> == <span class="number">1</span>);    <span class="comment">// true  ("1abc" → 1)</span>
+<span class="function">var_dump</span>(<span class="string">""</span> == <span class="number">0</span>);        <span class="comment">// false  ← было true до PHP 8.0!</span>
+<span class="function">var_dump</span>(<span class="string">"abc"</span> == <span class="number">0</span>);     <span class="comment">// false  ← было true до PHP 8.0!</span>
+<span class="function">var_dump</span>(<span class="string">"1abc"</span> == <span class="number">1</span>);    <span class="comment">// false  ← было true до PHP 8.0!</span>
+<span class="function">var_dump</span>(<span class="string">"0"</span> == <span class="number">0</span>);       <span class="comment">// true   (строка числовая, значение 0)</span>
+<span class="function">var_dump</span>(<span class="string">"100"</span> == <span class="string">"1e2"</span>); <span class="comment">// true   (обе строки числовые: 100 == 100)</span></code></pre>
 
-<span class="comment">// PHP 8.0+ изменил поведение для строк, не содержащих чисел:</span>
-<span class="comment">// "abc" == 0 теперь false (сравнение идёт как строки)</span></code></pre>
+                    <div class="content-block" style="background:#FEF2F2;border-left:3px solid #DC2626;padding:14px 18px;margin:10px 0;border-radius:4px">
+                        <strong>⚠ Что изменилось в PHP 8.0 (RFC: "Saner string to number comparisons"):</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>До 8.0:</strong> сравнение строки с числом → <strong>строка приводится к числу</strong>. Нечисловая строка → <code>0</code>. Поэтому <code>"abc" == 0</code> было <code>true</code> — источник классических багов в безопасности.</li>
+                            <li><strong>С 8.0+:</strong> если строка <strong>нечисловая</strong> — <strong>число приводится к строке</strong>, сравниваются две строки. Если строка <strong>числовая</strong> (<code>"10"</code>, <code>"1e2"</code>) — по-прежнему сравниваются как числа.</li>
+                            <li><strong>Запоминать одно правило:</strong> числовая строка ↔ число — как числа; нечисловая ↔ число — как строки.</li>
+                        </ul>
+                    </div>
 
                     <div class="content-block">
                         <strong>Правило:</strong> для надёжности сравнения используйте <code>===</code> и <code>!==</code> &mdash; они проверяют и тип, и значение. Это особенно критично при работе с данными из форм, JSON, БД, где тип может приходить неожиданным.
@@ -4997,6 +5006,37 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 // "0.0"  → true (это строка не пустая!)
 // "false" → true (это строка не пустая!)
 // [0] → true (массив не пустой)</span></code></pre>
+
+                    <div class="example-label" style="background:#DC2626">⚠ PHP 8.0 — ИЗМЕНЕНИЕ сравнения строка vs число (RFC)</div>
+                    <div class="content-block" style="background:#FEF2F2;border-left:3px solid #DC2626;padding:14px 18px;margin:10px 0;border-radius:4px">
+                        <p style="margin:0 0 8px"><strong>Старое поведение (PHP &lt; 8.0):</strong> при <code>==</code> между строкой и числом — <strong>строка приводилась к числу</strong>. Нечисловая строка → <code>0</code>. Поэтому <code>"abc" == 0</code> было <code>true</code> — источник классических уязвимостей.</p>
+                        <p style="margin:0 0 8px"><strong>Новое поведение (PHP 8.0+):</strong> если строка <strong>нечисловая</strong> — наоборот, <strong>число приводится к строке</strong>, сравниваются две строки. Если строка <strong>числовая</strong> (<code>"10"</code>, <code>"1e2"</code>) — по-прежнему сравниваются как числа.</p>
+                    </div>
+
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Выражение</th><th>PHP &lt; 8.0</th><th>PHP 8.0+</th><th>Почему</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>"10" == 10</code></td><td><code>true</code></td><td><code>true</code></td><td>Строка <strong>числовая</strong>, сравнение как числа (не изменилось)</td></tr>
+                            <tr><td><code>"10" === 10</code></td><td><code>false</code></td><td><code>false</code></td><td>Strict: <code>string</code> ≠ <code>int</code> (не изменилось)</td></tr>
+                            <tr><td><code>"" == 0</code></td><td><code>true</code></td><td><strong style="color:#DC2626">false</strong></td><td>Нечисловая (пустая) строка. PHP 8: <code>0</code> → <code>"0"</code>, <code>""</code> ≠ <code>"0"</code></td></tr>
+                            <tr><td><code>"abc" == 0</code></td><td><code>true</code></td><td><strong style="color:#DC2626">false</strong></td><td>Нечисловая строка. PHP 8: <code>0</code> → <code>"0"</code>, <code>"abc"</code> ≠ <code>"0"</code></td></tr>
+                            <tr><td><code>"0" == 0</code></td><td><code>true</code></td><td><code>true</code></td><td>Строка числовая (значение 0)</td></tr>
+                            <tr><td><code>"1abc" == 1</code></td><td><code>true</code></td><td><strong style="color:#DC2626">false</strong></td><td>«Полу-числовая» — раньше парсилась до <code>1</code>, в PHP 8: nonnumeric → сравнение строк</td></tr>
+                            <tr><td><code>"100" == "1e2"</code></td><td><code>true</code></td><td><code>true</code></td><td>Обе строки числовые: 100 == 100</td></tr>
+                            <tr><td><code>'0' == false</code></td><td><code>true</code></td><td><code>true</code></td><td>Сравнение с <code>bool</code> — другие правила (приведение к bool)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="remember-box">
+                        <strong>Правило для шпаргалки (PHP 8.0+):</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>Строка ЧИСЛОВАЯ + число</strong> → сравнение как числа (<code>"10" == 10</code> → true)</li>
+                            <li><strong>Строка НЕчисловая + число</strong> → число приводится к строке (<code>"abc" == 0</code> → false)</li>
+                            <li><strong>Безопасное правило:</strong> в production-коде используй ТОЛЬКО <code>===</code>. На собесе говорить «всегда <code>===</code>, изменение PHP 8 знаю наизусть».</li>
+                        </ul>
+                    </div>
                 </div>
 
                 <div class="subsection">
@@ -5170,7 +5210,8 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                         <div class="qa-a">
                             <p><code>==</code> (loose) приводит типы перед сравнением — это <strong>type juggling</strong>. <code>===</code> (strict) сравнивает <strong>и тип, и значение</strong>.</p>
                             <p>Пример: <code>'0' == false</code> → <code>true</code> (PHP сначала привёл к bool, получил false, сравнил с false). Но <code>'0' === false</code> → <code>false</code> (тип строки и тип bool — разные).</p>
-                            <p>На собесе <strong>всегда говори, что используешь <code>===</code></strong>. Loose-сравнение даёт неочевидные баги (<code>"abc" == 0</code> в PHP &lt; 8 было <code>true</code>).</p>
+                            <p><strong>⚠ PHP 8.0 изменил правила:</strong> сравнение нечисловой строки с числом раньше было <code>"abc" == 0</code> → <code>true</code> (строка → 0). С PHP 8.0 наоборот — <strong>число приводится к строке</strong>, поэтому <code>"abc" == 0</code> → <code>false</code> (т.к. <code>"abc"</code> ≠ <code>"0"</code>). Подробнее — в Шпаргалке, раздел «Типы».</p>
+                            <p>На собесе <strong>всегда говори, что используешь <code>===</code></strong>. Loose-сравнение даёт неочевидные баги.</p>
                         </div>
                     </div>
 
