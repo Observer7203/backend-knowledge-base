@@ -643,6 +643,66 @@
 <span class="variable">$obj</span> = (<span class="keyword">object</span>)[<span class="string">"a"</span> =&gt; <span class="number">1</span>, <span class="string">"b"</span> =&gt; <span class="number">2</span>];
 <span class="comment">// stdClass с $obj-&gt;a = 1, $obj-&gt;b = 2</span></code></pre>
 
+                    <div class="example-label">Разбор вывода <code>var_dump($obj)</code> построчно</div>
+                    <pre><code><span class="function">var_dump</span>(<span class="variable">$obj</span>);
+
+<span class="comment">// Вывод:
+//   object(stdClass)#1 (2) {
+//     ["a"]=> int(1)
+//     ["b"]=> int(2)
+//   }
+
+// Что значит каждая часть:
+//
+// object        — тип значения: объект (не array, не string)
+// (stdClass)    — имя класса экземпляра
+// #1            — внутренний ID объекта в этом дампе (для отслеживания
+//                 рекурсивных ссылок: если объект появится дважды,
+//                 во второй раз увидишь "#1" повторно — это та же сущность)
+// (2)           — количество свойств у объекта
+// ["a"]=> int(1) — свойство "a" типа int со значением 1
+// ["b"]=> int(2) — свойство "b" типа int со значением 2</span></code></pre>
+
+                    <div class="content-block" style="background:#EFF6FF;border-left:3px solid #3B82F6;padding:14px 18px;margin:10px 0;border-radius:4px">
+                        <strong>Что такое <code>stdClass</code>?</strong>
+                        <p style="margin:6px 0 0"><code>stdClass</code> — это <strong>встроенный пустой класс PHP</strong>. Не имеет методов, свойств, констант. Используется как «универсальный контейнер» когда нужен объект без определения своего класса.</p>
+                        <p style="margin:8px 0 0">PHP автоматически создаёт <code>stdClass</code> в трёх случаях:</p>
+                        <ul style="margin:6px 0 0 20px;line-height:1.7">
+                            <li><code>new stdClass()</code> — явно</li>
+                            <li><code>(object)$array</code> — приведение массива к объекту</li>
+                            <li><code>json_decode($json)</code> без второго аргумента <code>true</code> — JSON-объекты становятся <code>stdClass</code></li>
+                        </ul>
+                    </div>
+
+                    <div class="example-label">Объект vs ассоциативный массив — сравнение</div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Аспект</th><th>Ассоциативный массив</th><th>Объект</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Что это</td><td>Упорядоченная коллекция пар «ключ → значение»</td><td>Экземпляр класса с свойствами (и методами)</td></tr>
+                            <tr><td>Доступ к данным</td><td><code>$person["name"]</code></td><td><code>$person-&gt;name</code></td></tr>
+                            <tr><td>Создание</td><td><code>['name' =&gt; 'Иван', 'age' =&gt; 30]</code></td><td><code>(object)['name'=&gt;'Иван']</code> или <code>new stdClass()</code></td></tr>
+                            <tr><td>Добавить поле</td><td><code>$arr['email'] = 'a@b.ru'</code></td><td><code>$obj-&gt;email = 'a@b.ru'</code></td></tr>
+                            <tr><td>Методы / поведение</td><td>❌ Нет (только функции работают с массивом снаружи)</td><td>✅ Можно добавить через свой класс</td></tr>
+                            <tr><td>Передача в функцию</td><td>Копирование (CoW под капотом)</td><td>По ссылке (одна сущность в памяти)</td></tr>
+                            <tr><td>Проверка поля</td><td><code>isset($arr['name'])</code> / <code>array_key_exists</code></td><td><code>isset($obj-&gt;name)</code> / <code>property_exists</code></td></tr>
+                            <tr><td><code>var_dump</code></td><td><code>array(2) { ["name"]=&gt; ... }</code></td><td><code>object(stdClass)#1 (2) { ["name"]=&gt; ... }</code></td></tr>
+                            <tr><td>Сериализация в JSON</td><td><code>json_encode</code> — JSON-объект</td><td><code>json_encode</code> — тоже JSON-объект</td></tr>
+                            <tr><td>Тип в type-hint</td><td><code>array</code></td><td><code>object</code> / конкретный класс</td></tr>
+                            <tr><td>Производительность</td><td>Чуть быстрее</td><td>Чуть медленнее, но разница не критична</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="remember-box">
+                        <strong>Когда что использовать:</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>Ассоциативный массив</strong> — конфиги, простые DTO без поведения, передача данных «как есть», быстрые трансформации (<code>array_map</code>, <code>array_filter</code>, <code>ksort</code>).</li>
+                            <li><strong>Объект (свой класс)</strong> — сущности с поведением (User с <code>register()</code>, Order с <code>calculateTotal()</code>), важна типизация (type-hints, IDE-подсказки), наследование, инкапсуляция.</li>
+                            <li><strong><code>stdClass</code></strong> — временный «контейнер» когда не хочется создавать класс: результат <code>json_decode</code>, быстрый DTO для шаблона (удобнее <code>$item-&gt;name</code> чем <code>$item['name']</code>). В production-коде лучше явный класс — больше контроля.</li>
+                        </ul>
+                    </div>
+
                     <div class="content-block">
                         <strong>Объект → массив: правила видимости свойств.</strong> При <code>(array)$object</code> ключами становятся имена свойств, значениями — их значения. Но видимость (public/protected/private) меняет формат ключа: PHP добавляет служебные null-байты для скрытия инкапсуляции.
                     </div>
