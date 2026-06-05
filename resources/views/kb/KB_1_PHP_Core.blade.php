@@ -1551,6 +1551,33 @@ $                  — конец строки: после доменной зо
 // До PHP 7.1 — только позиционная (без ключей):
 // [$first, $second, $third] = $array;</span></code></pre>
 
+                    <div class="example-label">Бонус: как работает <code>(object)["a"=>1, "b"=>2]</code></div>
+                    <pre><code><span class="comment">// Это два шага:
+// 1. Сначала [] с => создаёт ассоциативный массив:
+//    ["a" => 1, "b" => 2]
+// 2. (object) приводит массив к объекту — получается stdClass,
+//    где ключи становятся публичными свойствами:</span>
+
+<span class="variable">$obj</span> = (<span class="keyword">object</span>)[<span class="string">"a"</span> =&gt; <span class="number">1</span>, <span class="string">"b"</span> =&gt; <span class="number">2</span>];
+
+<span class="comment">// Эквивалентно:</span>
+<span class="variable">$obj</span> = <span class="keyword">new</span> <span class="keyword">stdClass</span>();
+<span class="variable">$obj</span>-&gt;<span class="variable">a</span> = <span class="number">1</span>;
+<span class="variable">$obj</span>-&gt;<span class="variable">b</span> = <span class="number">2</span>;
+
+<span class="comment">// Доступ:</span>
+<span class="keyword">echo</span> <span class="variable">$obj</span>-&gt;<span class="variable">a</span>;  <span class="comment">// 1
+// (через -> потому что это объект, не массив)</span>
+
+<span class="comment">// ⚠ Ключи с пробелами или цифровые становятся "магическими":</span>
+<span class="variable">$obj</span> = (<span class="keyword">object</span>)[<span class="string">"first name"</span> =&gt; <span class="string">"Alice"</span>, <span class="number">0</span> =&gt; <span class="string">"zero"</span>];
+<span class="keyword">echo</span> <span class="variable">$obj</span>-&gt;{<span class="string">"first name"</span>};  <span class="comment">// "Alice" — через {} для невалидных имён
+// $obj->0 — SYNTAX ERROR, тоже только через $obj->{0}</span></code></pre>
+
+                    <div class="content-block">
+                        <strong>Когда используется такой каст:</strong> быстро создать <code>stdClass</code> для DTO/конфига без объявления класса; работа с JSON (<code>json_decode($json)</code> без <code>true</code> возвращает именно <code>stdClass</code> — структура та же); миграция данных между разными API. Для production-кода лучше явные классы — IDE подсказывает поля, видны опечатки.
+                    </div>
+
                     <div class="example-label">Что => НЕ значит в PHP</div>
                     <pre><code><span class="comment">// ❌ Не оператор сравнения — для этого == или ===
 $a => $b   <span class="comment">// SYNTAX ERROR</span>
@@ -1566,17 +1593,30 @@ enum Status: string {
     case DRAFT => 'черновик';    <span class="comment">// SYNTAX ERROR</span>
 }</span></code></pre>
 
-                    <div class="example-label">Краткая памятка</div>
-                    <pre><code><span class="comment">+--------------------------+------------------------------------+
-| Контекст                 | Пример                             |
-+--------------------------+------------------------------------+
-| Массив                   | ['key' => 'value']                 |
-| foreach                  | foreach ($arr as $k => $v)         |
-| Стрелочная функция       | fn($x) => $x * 2                   |
-| match (PHP 8+)           | match($x) { 1 => 'one' }           |
-| yield в генераторе       | yield $key => $value               |
-| Деструктуризация (7.1+)  | ['key' => $var] = $arr             |
-+--------------------------+------------------------------------+</span></code></pre>
+                    <div class="example-label">Краткая памятка — все контексты <code>=&gt;</code></div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Контекст</th><th>Пример</th><th>Семантика</th><th>Версия PHP</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Ассоциативный массив</td><td><code>['key' =&gt; 'value']</code></td><td>Связывает ключ со значением</td><td>любая</td></tr>
+                            <tr><td><code>foreach</code> с ключами</td><td><code>foreach ($arr as $k =&gt; $v)</code></td><td>Перебор: ключ и значение</td><td>любая</td></tr>
+                            <tr><td>Стрелочная функция</td><td><code>fn($x) =&gt; $x * 2</code></td><td>Заменяет <code>return</code> + <code>{}</code></td><td>7.4+</td></tr>
+                            <tr><td><code>match</code>-выражение</td><td><code>match($x) { 1 =&gt; 'one' }</code></td><td>Разделитель проверяемого и результата</td><td>8.0+</td></tr>
+                            <tr><td><code>yield</code> в генераторе</td><td><code>yield $key =&gt; $value</code></td><td>Выдача пары ключ-значение</td><td>5.5+</td></tr>
+                            <tr><td>Деструктуризация по ключам</td><td><code>['key' =&gt; $var] = $arr</code></td><td>Извлечение по имени ключа</td><td>7.1+</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="remember-box">
+                        <strong>Запомни:</strong> <code>=&gt;</code> — это <strong>ассоциация / связь</strong> (ключ ↔ значение, аргумент ↔ результат). Не путать с:
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><code>-&gt;</code> — обращение к свойству/методу объекта: <code>$user-&gt;name</code>, <code>$db-&gt;query()</code></li>
+                            <li><code>::</code> — обращение к статике/классу: <code>User::all()</code>, <code>self::CONST</code></li>
+                            <li><code>==</code> / <code>===</code> — сравнение (loose / strict)</li>
+                            <li><code>=&lt;</code> / <code>&gt;=</code> — операторы сравнения «меньше или равно» / «больше или равно»</li>
+                        </ul>
+                    </div>
 
                     <div class="remember-box">
                         <strong>Мнемоника:</strong> <code>=&gt;</code> всегда обозначает <strong>связь между двумя сторонами</strong>: «ключ ↔ значение» (в массивах, foreach, yield, деструктуризации) либо «вход ↔ выход» (в стрелочных функциях и match). Левая часть &mdash; что подаём, правая &mdash; что получаем или какое значение хранится.
