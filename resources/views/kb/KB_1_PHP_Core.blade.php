@@ -2314,6 +2314,109 @@ enum Status: string {
                 <h2 class="section-title">4. ООП: Классы, Наследование, Полиморфизм</h2>
 
                 <div class="subsection">
+                    <h3 class="subsection-title">Класс vs Объект. Создание объекта через <code>new</code></h3>
+                    <div class="content-block">
+                        Это первая концепция ООП, на которой спотыкаются — путают <strong>класс</strong> и <strong>объект</strong>. Класс — это описание (тип). Объект — это конкретный экземпляр в памяти, созданный по этому описанию. Создаётся объект оператором <code>new</code>.
+                    </div>
+
+                    <div class="example-label">Аналогия — чертёж и дом</div>
+                    <pre><code><span class="comment">// КЛАСС — это чертёж (описание): какие свойства и методы будут.
+// Сам по себе класс не занимает память для хранения данных.
+// Это просто текст программы.</span>
+
+<span class="keyword">class</span> <span class="function">User</span> {
+    <span class="keyword">public</span> <span class="keyword">string</span> <span class="variable">$name</span>;
+    <span class="keyword">protected</span> <span class="keyword">int</span> <span class="variable">$id</span>;
+}
+
+<span class="comment">// ОБЪЕКТ — это конкретный дом, построенный по чертежу.
+// В памяти выделено место под его свойства, в нём хранятся реальные значения.</span>
+
+<span class="variable">$user1</span> = <span class="keyword">new</span> <span class="function">User</span>();   <span class="comment">// первый объект класса User</span>
+<span class="variable">$user2</span> = <span class="keyword">new</span> <span class="function">User</span>();   <span class="comment">// второй объект — независимый</span>
+
+<span class="comment">// $user1 и $user2 — РАЗНЫЕ объекты в памяти,
+// хотя оба построены по одному и тому же классу User.</span></code></pre>
+
+                    <div class="content-block" style="background:#EFF6FF;border-left:3px solid #3B82F6;padding:14px 18px;margin:10px 0;border-radius:4px">
+                        <strong>Что делает <code>new ClassName()</code> под капотом:</strong>
+                        <ol style="margin:6px 0 0 20px;line-height:1.7">
+                            <li>Выделяет память для нового объекта (с местом под все объявленные свойства + служебная информация).</li>
+                            <li>Запускает <code>__construct()</code>, если он определён в классе.</li>
+                            <li>Возвращает <strong>ссылку</strong> на созданный объект (PHP всегда работает с объектами по ссылке, не по значению).</li>
+                        </ol>
+                    </div>
+
+                    <div class="example-label">Почему <code>new User()</code>, а не просто <code>User</code>?</div>
+                    <pre><code><span class="variable">$array</span> = (<span class="keyword">array</span>)<span class="keyword">new</span> <span class="function">User</span>();   <span class="comment">// ✓ объект → массив</span>
+<span class="variable">$array</span> = (<span class="keyword">array</span>)<span class="function">User</span>;          <span class="comment">// ✗ ошибка: класс не значение</span>
+
+<span class="comment">// Почему так:
+// User — это ИМЯ КЛАССА (тип данных), как int или string.
+// Его нельзя использовать как переменную или значение.
+// Это просто метка для PHP: "вот по такому описанию строить объекты".
+
+// new User() — это ВЫРАЖЕНИЕ, которое возвращает объект.
+// А с объектом уже можно делать что угодно: кастить, передавать, сохранять.</span>
+
+<span class="comment">// Аналогично с другими операциями над типом:</span>
+<span class="function">var_dump</span>(<span class="function">User</span>);            <span class="comment">// ✗ ошибка</span>
+<span class="function">var_dump</span>(<span class="keyword">new</span> <span class="function">User</span>());      <span class="comment">// ✓ дамп объекта</span>
+
+<span class="comment">// Имя класса как СТРОКА — можно (через ::class или просто "User"):</span>
+<span class="keyword">echo</span> <span class="function">User</span>::<span class="keyword">class</span>;        <span class="comment">// "User" — это уже строка, не класс</span>
+<span class="keyword">echo</span> <span class="function">get_class</span>(<span class="keyword">new</span> <span class="function">User</span>()); <span class="comment">// "User"</span></code></pre>
+
+                    <div class="example-label">Пример с конструктором — задаём начальные значения</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">User</span> {
+    <span class="keyword">public</span> <span class="keyword">string</span> <span class="variable">$name</span>;
+    <span class="keyword">public</span> <span class="keyword">int</span> <span class="variable">$age</span>;
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">__construct</span>(<span class="keyword">string</span> <span class="variable">$name</span>, <span class="keyword">int</span> <span class="variable">$age</span>)
+    {
+        <span class="variable">$this</span>-&gt;<span class="variable">name</span> = <span class="variable">$name</span>;
+        <span class="variable">$this</span>-&gt;<span class="variable">age</span>  = <span class="variable">$age</span>;
+    }
+}
+
+<span class="comment">// Конструктор вызывается автоматически — поля сразу заполнены</span>
+<span class="variable">$user</span> = <span class="keyword">new</span> <span class="function">User</span>(<span class="string">"Alice"</span>, <span class="number">30</span>);
+
+<span class="keyword">echo</span> <span class="variable">$user</span>-&gt;<span class="variable">name</span>;  <span class="comment">// "Alice"
+// Без конструктора пришлось бы заполнять руками после new:
+// $user = new User();
+// $user->name = "Alice";
+// $user->age  = 30;</span></code></pre>
+
+                    <div class="example-label">Сравнение: класс vs объект</div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Аспект</th><th>Класс</th><th>Объект</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Что это</td><td>Описание (чертёж, рецепт, тип)</td><td>Экземпляр (конкретный дом, пирог) в памяти</td></tr>
+                            <tr><td>Память</td><td>Не выделена под данные</td><td>Выделена — хранит реальные значения свойств</td></tr>
+                            <tr><td>Как «создать»</td><td><code>class User { ... }</code></td><td><code>new User(...)</code></td></tr>
+                            <tr><td>Сколько может быть</td><td>Один (в namespace)</td><td>Сколько угодно из одного класса</td></tr>
+                            <tr><td>Доступ к свойству</td><td>Нельзя (нет свойств у класса)</td><td><code>$user-&gt;name</code></td></tr>
+                            <tr><td>Static-член</td><td><code>User::CONST</code>, <code>User::method()</code></td><td>принадлежит классу, не объекту</td></tr>
+                            <tr><td>Тип в PHP</td><td>—</td><td><code>object</code> (можно type-hint <code>User</code>)</td></tr>
+                            <tr><td>В <code>var_dump</code></td><td>не дампится</td><td><code>object(User)#1 (2) {...}</code></td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="remember-box">
+                        <strong>Главное:</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>Класс</strong> ≠ <strong>объект</strong>. Это первая ловушка для тех, кто пришёл из процедурного программирования.</li>
+                            <li><strong>Оператор <code>new</code></strong> — единственный стандартный способ создать объект (есть ещё рефлексия через <code>ReflectionClass::newInstance()</code>, но это специфика).</li>
+                            <li><strong>Объект в PHP всегда передаётся по ссылке</strong>: <code>$b = $a</code> делает <code>$b</code> и <code>$a</code> ссылками на ОДИН объект. Изменение одного видно в другом. Для копии — <code>clone $a</code>.</li>
+                            <li>Аналогия для запоминания: <strong>класс — рецепт пирога</strong>, <strong>объект — испечённый пирог</strong>. Рецепт можно прочитать, но съесть нельзя. Пирог можно есть, взвешивать, разрезать.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="subsection">
                     <h3 class="subsection-title">$this — ссылка на текущий объект</h3>
                     <div class="content-block">
                         <code>$this</code> &mdash; <strong>псевдо-переменная</strong>, доступная внутри любого нестатического метода класса. Она ссылается на <strong>тот объект, у которого сейчас вызывается метод</strong>. Через <code>$this-&gt;имя</code> читаются и записываются свойства, через <code>$this-&gt;метод()</code> вызываются другие методы того же объекта.
