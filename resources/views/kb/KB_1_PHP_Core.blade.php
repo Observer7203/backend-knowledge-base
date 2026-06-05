@@ -1537,6 +1537,79 @@ $                  — конец строки: после доменной зо
                 <h2 class="section-title">3. Массивы углублённо</h2>
 
                 <div class="subsection">
+                    <h3 class="subsection-title">Что такое массив. Индексированный vs ассоциативный</h3>
+                    <div class="content-block">
+                        В PHP массив — это <strong>упорядоченная коллекция пар «ключ → значение»</strong>. В отличие от других языков (где разные структуры — list, dict, tuple), в PHP один тип <code>array</code> для всего: и список, и словарь. Различают <strong>индексированный</strong> и <strong>ассоциативный</strong> по тому, какие ключи использованы.
+                    </div>
+
+                    <div class="example-label">Индексированный массив — ключи числовые автоматически</div>
+                    <pre><code><span class="variable">$list</span> = [<span class="string">"яблоко"</span>, <span class="string">"банан"</span>, <span class="string">"апельсин"</span>];
+
+<span class="comment">// PHP под капотом сгенерировал ключи 0, 1, 2:
+// [ 0 => "яблоко", 1 => "банан", 2 => "апельсин" ]</span>
+
+<span class="keyword">echo</span> <span class="variable">$list</span>[<span class="number">0</span>];  <span class="comment">// "яблоко"</span>
+<span class="keyword">echo</span> <span class="variable">$list</span>[<span class="number">1</span>];  <span class="comment">// "банан"</span>
+
+<span class="comment">// Использование: списки, упорядоченные коллекции, где
+// позиция элемента имеет значение (история, очередь, лог).</span></code></pre>
+
+                    <div class="example-label">Ассоциативный массив — ключи явно заданы (часто строки)</div>
+                    <pre><code><span class="variable">$person</span> = [
+    <span class="string">"name"</span> =&gt; <span class="string">"Иван"</span>,
+    <span class="string">"age"</span>  =&gt; <span class="number">30</span>,
+    <span class="string">"city"</span> =&gt; <span class="string">"Москва"</span>,
+];
+
+<span class="keyword">echo</span> <span class="variable">$person</span>[<span class="string">"name"</span>];  <span class="comment">// "Иван"
+// Ключ — это имя, оно несёт смысл. Не позиция.</span>
+
+<span class="comment">// Ключи могут быть смешанными:</span>
+<span class="variable">$mixed</span> = [<span class="number">1</span> =&gt; <span class="string">"один"</span>, <span class="string">"key"</span> =&gt; <span class="string">"value"</span>];
+
+<span class="comment">// Использование: конфиги, DTO, данные из формы/БД/JSON,
+// где у каждого поля есть осмысленное имя.</span></code></pre>
+
+                    <div class="content-block" style="background:#EFF6FF;border-left:3px solid #3B82F6;padding:14px 18px;margin:10px 0;border-radius:4px">
+                        <strong>Откуда слово «ассоциативный»?</strong>
+                        <p style="margin:6px 0 0">От «<strong>ассоциация</strong>» — связь, соответствие между двумя объектами. В ассоциативном массиве каждый ключ явно <strong>связан (ассоциирован)</strong> со своим значением — ключ означает что-то <em>содержательное</em>, а не просто порядковый номер.</p>
+                        <p style="margin:8px 0 0"><strong>Сравнение:</strong></p>
+                        <ul style="margin:6px 0 0 20px;line-height:1.7">
+                            <li><strong>Индексированный:</strong> <code>0 → "яблоко"</code>, <code>1 → "банан"</code> — связь только по порядку.</li>
+                            <li><strong>Ассоциативный:</strong> <code>"name" → "Иван"</code> — ключ <code>"name"</code> ассоциирован со значением <code>"Иван"</code>.</li>
+                        </ul>
+                        <p style="margin:10px 0 0">В других языках ассоциативные массивы называются: <strong>словарь</strong> (Python <code>dict</code>), <strong>хеш</strong> (Ruby <code>Hash</code>), <strong>map</strong> (Java <code>HashMap</code>), <strong>объект</strong> (JavaScript <code>{}</code>).</p>
+                    </div>
+
+                    <div class="example-label">Под капотом в PHP — один тип <code>array</code></div>
+                    <pre><code><span class="comment">// PHP внутри хранит массив как упорядоченную hash-таблицу.
+// Поэтому ИНДЕКСИРОВАННЫЙ массив — это всего лишь
+// ассоциативный с автогенерированными числовыми ключами.</span>
+
+<span class="variable">$a</span> = [<span class="string">"x"</span>, <span class="string">"y"</span>, <span class="string">"z"</span>];
+<span class="comment">// Эквивалентно:</span>
+<span class="variable">$a</span> = [<span class="number">0</span> =&gt; <span class="string">"x"</span>, <span class="number">1</span> =&gt; <span class="string">"y"</span>, <span class="number">2</span> =&gt; <span class="string">"z"</span>];
+
+<span class="comment">// Поэтому функции типа array_keys, array_values, foreach
+// работают одинаково для обоих видов:</span>
+<span class="function">array_keys</span>(<span class="variable">$a</span>);       <span class="comment">// [0, 1, 2]</span>
+<span class="function">array_keys</span>(<span class="variable">$person</span>);  <span class="comment">// ["name", "age", "city"]</span>
+
+<span class="comment">// Проверить, "индексированный" массив (PHP 8.1+):</span>
+<span class="function">array_is_list</span>(<span class="variable">$a</span>);      <span class="comment">// true (ключи 0..n-1 по порядку)</span>
+<span class="function">array_is_list</span>(<span class="variable">$person</span>); <span class="comment">// false</span></code></pre>
+
+                    <div class="remember-box">
+                        <strong>Когда что:</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>Индексированный</strong> — последовательность однотипных элементов: <code>$users = [User1, User2, User3]</code>, лог-записи, результаты выборки.</li>
+                            <li><strong>Ассоциативный</strong> — структурированные данные с именованными полями: ответ API, ряд из БД, конфиг.</li>
+                        </ul>
+                        <p style="margin:10px 0 0"><strong>Ловушка JSON:</strong> при <code>json_encode</code> индексированный массив становится JSON-массивом <code>[...]</code>, ассоциативный — JSON-объектом <code>{...}</code>. Если случайно «продырявить» индексированный (<code>unset($a[1])</code>) — он станет ассоциативным <code>[0=>"x", 2=>"z"]</code> и JSON будет уже объектом, а не массивом. Лечится <code>array_values()</code>.</p>
+                    </div>
+                </div>
+
+                <div class="subsection">
                     <h3 class="subsection-title">Оператор => — все 6 контекстов использования</h3>
                     <div class="content-block">
                         В PHP оператор <code>=&gt;</code> (его внутреннее имя &mdash; <code>T_DOUBLE_ARROW</code>) встречается в шести разных контекстах. Это <strong>не оператор сравнения</strong> (для этого <code>==</code>, <code>===</code>) и не общая «стрелка» как в JavaScript. Семантика в каждом контексте разная, но синтаксис один.
