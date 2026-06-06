@@ -1037,6 +1037,272 @@
                 </div>
 
                 <div class="subsection">
+                    <h3 class="subsection-title">Логические операторы (<code>&amp;&amp;</code>, <code>||</code>, <code>!</code>, <code>and</code>, <code>or</code>, <code>xor</code>)</h3>
+                    <div class="content-block">
+                        Объединяют булевы выражения. Используются в <code>if</code>, <code>while</code>, тернарных выражениях, <code>match</code>. PHP имеет <strong>два набора</strong>: символьные (<code>&amp;&amp;</code>, <code>||</code>) и словесные (<code>and</code>, <code>or</code>). Они почти эквивалентны, но <strong>разный приоритет</strong> — это критично.
+                    </div>
+
+                    <div class="example-label">Все логические операторы</div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Оператор</th><th>Что делает</th><th>Пример</th><th>Приоритет</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>!</code> (NOT)</td><td>Инвертирование</td><td><code>!is_numeric($x)</code> → true если НЕ число</td><td>Высокий</td></tr>
+                            <tr><td><code>&amp;&amp;</code> (AND)</td><td>true если ОБА</td><td><code>$a &gt; 0 &amp;&amp; $a &lt; 10</code></td><td>Высокий</td></tr>
+                            <tr><td><code>||</code> (OR)</td><td>true если ХОТЯ БЫ ОДИН</td><td><code>$role === 'admin' || $isOwner</code></td><td>Высокий</td></tr>
+                            <tr><td><code>and</code></td><td>То же что <code>&amp;&amp;</code>, но НИЖЕ приоритет</td><td><code>$x = $a and $b</code> → <code>($x = $a) and $b</code></td><td>Низкий</td></tr>
+                            <tr><td><code>or</code></td><td>То же что <code>||</code>, но НИЖЕ приоритет</td><td>см. ловушку ниже</td><td>Низкий</td></tr>
+                            <tr><td><code>xor</code></td><td>true если РОВНО ОДИН</td><td><code>$a xor $b</code> — взаимоисключающее ИЛИ</td><td>Низкий</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="example-label">Таблица истинности AND, OR, XOR</div>
+                    <table class="data-table">
+                        <thead><tr><th>A</th><th>B</th><th>A &amp;&amp; B</th><th>A || B</th><th>A xor B</th></tr></thead>
+                        <tbody>
+                            <tr><td>true</td><td>true</td><td><code>true</code></td><td><code>true</code></td><td><code>false</code></td></tr>
+                            <tr><td>true</td><td>false</td><td><code>false</code></td><td><code>true</code></td><td><code>true</code></td></tr>
+                            <tr><td>false</td><td>true</td><td><code>false</code></td><td><code>true</code></td><td><code>true</code></td></tr>
+                            <tr><td>false</td><td>false</td><td><code>false</code></td><td><code>false</code></td><td><code>false</code></td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="example-label">Короткое замыкание (short-circuit evaluation)</div>
+                    <pre><code><span class="comment">// PHP вычисляет операнды СЛЕВА НАПРАВО и останавливается
+// как только результат уже известен.
+
+// && — если ЛЕВЫЙ false, правый НЕ вычисляется:</span>
+<span class="variable">$user</span> = <span class="keyword">null</span>;
+<span class="keyword">if</span> (<span class="variable">$user</span> !== <span class="keyword">null</span> &amp;&amp; <span class="variable">$user</span>-><span class="function">isAdmin</span>()) { ... }
+<span class="comment">// $user->isAdmin() НЕ вызовется на null — нет Error.
+
+// || — если ЛЕВЫЙ true, правый НЕ вычисляется:</span>
+<span class="variable">$result</span> = <span class="variable">$cached</span> ?: <span class="function">expensive_lookup</span>();
+<span class="comment">// expensive_lookup() не вызовется, если $cached истинно.
+
+// Практическое применение: guard clauses</span>
+<span class="keyword">if</span> (!<span class="function">is_numeric</span>(<span class="variable">$amount</span>) || !<span class="function">is_numeric</span>(<span class="variable">$quantity</span>)) {
+    <span class="keyword">throw</span> <span class="keyword">new</span> <span class="function">InvalidArgumentException</span>(<span class="string">'Numeric expected'</span>);
+}
+<span class="comment">// Если первое условие true (amount не число) — второе даже не проверяется.</span></code></pre>
+
+                    <div class="example-label">⚠ Ловушка приоритета: <code>||</code> vs <code>or</code></div>
+                    <pre><code><span class="comment">// Эти две строки выглядят одинаково — но РАБОТАЮТ ПО-РАЗНОМУ:</span>
+
+<span class="variable">$result</span> = <span class="keyword">false</span> || <span class="keyword">true</span>;
+<span class="comment">// Скобки: $result = (false || true) → $result = true</span>
+
+<span class="variable">$result</span> = <span class="keyword">false</span> <span class="keyword">or</span> <span class="keyword">true</span>;
+<span class="comment">// Скобки: ($result = false) or true → $result = FALSE !!!
+// Потому что = имеет ВЫШЕ приоритет чем or, но НИЖЕ чем ||.
+
+// ПРАВИЛО: в новом коде всегда используй && и ||.
+// or / and / xor оставлены для совместимости — почти не применяются.</span></code></pre>
+
+                    <div class="example-label">Реальные паттерны</div>
+                    <pre><code><span class="comment">// 1. Несколько guard-условий перед основной логикой</span>
+<span class="keyword">public</span> <span class="keyword">function</span> <span class="function">register</span>(<span class="function">User</span> <span class="variable">$user</span>): <span class="keyword">void</span>
+{
+    <span class="keyword">if</span> (!<span class="variable">$user</span>-><span class="function">isVerified</span>() || <span class="variable">$user</span>-><span class="function">isBanned</span>() || <span class="variable">$user</span>-><span class="variable">age</span> &lt; <span class="number">18</span>) {
+        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="function">RuntimeException</span>(<span class="string">'Cannot register'</span>);
+    }
+    <span class="comment">// ... основная логика</span>
+}
+
+<span class="comment">// 2. Проверка любого из ролей (OR)</span>
+<span class="keyword">if</span> (<span class="variable">$user</span>-><span class="function">hasRole</span>(<span class="string">'admin'</span>) || <span class="variable">$user</span>-><span class="function">hasRole</span>(<span class="string">'manager'</span>)) {
+    <span class="comment">// доступ разрешён хотя бы одной из ролей</span>
+}
+
+<span class="comment">// 3. Range check (AND)</span>
+<span class="keyword">if</span> (<span class="variable">$age</span> &gt;= <span class="number">18</span> &amp;&amp; <span class="variable">$age</span> &lt;= <span class="number">65</span>) {
+    <span class="comment">// возраст в диапазоне</span>
+}
+
+<span class="comment">// 4. Сложные условия со скобками</span>
+<span class="keyword">if</span> ((<span class="variable">$role</span> === <span class="string">'admin'</span> &amp;&amp; <span class="variable">$user</span>-><span class="variable">active</span>) || <span class="variable">$user</span>-><span class="variable">id</span> === <span class="variable">$ownerId</span>) {
+    <span class="comment">// (active админ) ИЛИ (владелец) — скобки явно фиксируют логику</span>
+}</code></pre>
+
+                    <div class="remember-box">
+                        <strong>Главное:</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>Используй <code>&amp;&amp;</code> и <code>||</code></strong> — не <code>and</code>/<code>or</code>. Разница только в приоритете, и приоритет у них коварный.</li>
+                            <li><strong>Short-circuit — это не оптимизация, это инструмент.</strong> Активно применяют для безопасной проверки nullable объектов: <code>$user !== null &amp;&amp; $user-&gt;isAdmin()</code>.</li>
+                            <li><strong>В сложных условиях — скобки.</strong> Не полагайся на приоритет <code>&amp;&amp;</code> выше <code>||</code> — это работает, но читателю надо вспоминать. Скобки делают код самодокументируемым.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Тернарный, Elvis, null coalescing (<code>?:</code>, <code>??</code>, <code>?-&gt;</code>)</h3>
+                    <div class="content-block">
+                        Группа коротких операторов для условных выражений. Все используют <code>?</code>, но семантика разная. На собесе часто путают — особенно тернарный vs <code>??</code>.
+                    </div>
+
+                    <div class="example-label">1. Тернарный <code>условие ? a : b</code></div>
+                    <pre><code><span class="comment">// Тернарный — сокращённый if/else в виде выражения (возвращает значение).
+// Синтаксис: условие ? значение_если_true : значение_если_false</span>
+
+<span class="variable">$age</span> = <span class="number">18</span>;
+<span class="variable">$status</span> = <span class="variable">$age</span> >= <span class="number">18</span> ? <span class="string">'adult'</span> : <span class="string">'minor'</span>;
+<span class="comment">// $status = 'adult'
+
+// Эквивалентно:
+// if ($age >= 18) { $status = 'adult'; } else { $status = 'minor'; }
+
+// Вложенные — читаются плохо, лучше match:</span>
+<span class="variable">$tier</span> = <span class="variable">$score</span> > <span class="number">90</span> ? <span class="string">'gold'</span> : (<span class="variable">$score</span> > <span class="number">50</span> ? <span class="string">'silver'</span> : <span class="string">'bronze'</span>);</code></pre>
+
+                    <div class="example-label">2. Elvis <code>?:</code> — сокращённый тернарный</div>
+                    <pre><code><span class="comment">// Если средняя часть тернарного — то же что условие, можно её опустить:</span>
+
+<span class="comment">// Длинная форма:</span>
+<span class="variable">$name</span> = <span class="variable">$input</span> ? <span class="variable">$input</span> : <span class="string">'Anonymous'</span>;
+
+<span class="comment">// Elvis (сокращённая):</span>
+<span class="variable">$name</span> = <span class="variable">$input</span> ?: <span class="string">'Anonymous'</span>;
+<span class="comment">// Если $input истинно — вернёт $input, иначе 'Anonymous'.
+
+// ⚠ Работает по TRUTHY: '0', '', 0, null, [] — все вернут 'Anonymous'.
+// Если нужно проверять именно null — используй ??.</span></code></pre>
+
+                    <div class="example-label">3. Null coalescing <code>??</code> (PHP 7+)</div>
+                    <pre><code><span class="comment">// $a ?? $b — вернёт $a, если оно НЕ null (и определено),
+//             иначе $b.
+
+// Отличие от Elvis: ?? проверяет ТОЛЬКО null/undefined,
+// не учитывает '0', '', 0 как пустоту.</span>
+
+<span class="variable">$page</span> = <span class="variable">$_GET</span>[<span class="string">'page'</span>] ?? <span class="number">1</span>;
+<span class="comment">// Если $_GET['page'] = '0' → $page = '0' (НЕ 1!)
+// Если $_GET['page'] не задан → $page = 1.
+
+// Цепочки:</span>
+<span class="variable">$value</span> = <span class="variable">$config</span>[<span class="string">'override'</span>] ?? <span class="variable">$config</span>[<span class="string">'default'</span>] ?? <span class="string">'fallback'</span>;
+<span class="comment">// первое непустое значение, по цепочке.
+
+// ??= — присвоение если null (PHP 7.4+):</span>
+<span class="variable">$config</span>[<span class="string">'timeout'</span>] ??= <span class="number">30</span>;
+<span class="comment">// если ключа нет / null — положит 30. Иначе оставит как есть.</span></code></pre>
+
+                    <div class="example-label">4. Nullsafe <code>?-&gt;</code> (PHP 8+)</div>
+                    <pre><code><span class="comment">// Цепочка обращений к свойствам/методам, безопасная для null.
+// Если любая часть цепочки null — вся выражение возвращает null,
+// БЕЗ Error и без NullPointerException.</span>
+
+<span class="comment">// Без nullsafe — стандартная проверка:</span>
+<span class="variable">$avatar</span> = (<span class="variable">$user</span> !== <span class="keyword">null</span> &amp;&amp; <span class="variable">$user</span>-><span class="variable">profile</span> !== <span class="keyword">null</span>)
+    ? <span class="variable">$user</span>-><span class="variable">profile</span>-><span class="variable">avatar</span>
+    : <span class="keyword">null</span>;
+
+<span class="comment">// С nullsafe — короче:</span>
+<span class="variable">$avatar</span> = <span class="variable">$user</span>?-><span class="variable">profile</span>?-><span class="variable">avatar</span>;
+<span class="comment">// Если $user null → весь результат null.
+// Если $user-&gt;profile null → результат null.
+// Иначе — значение avatar.
+
+// ⚠ Работает только на ЧТЕНИЕ. Нельзя писать через ?->:
+// $user?->profile = $p;   // SYNTAX ERROR</span></code></pre>
+
+                    <div class="example-label">Сводная таблица — что выбрать</div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Оператор</th><th>Версия</th><th>Что проверяет</th><th>Когда применять</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>? :</code> (тернарный)</td><td>любая</td><td>Truthy/falsy условие</td><td>Простой выбор из двух значений</td></tr>
+                            <tr><td><code>?:</code> (Elvis)</td><td>5.3+</td><td>Truthy левого операнда</td><td>«Значение или дефолт» когда дефолт нужен для всех falsy</td></tr>
+                            <tr><td><code>??</code></td><td>7.0+</td><td><strong>Только</strong> null / undefined</td><td>«Значение или дефолт» когда <code>0</code>/<code>''</code> — валидные значения</td></tr>
+                            <tr><td><code>??=</code></td><td>7.4+</td><td>null / undefined</td><td>Лениво задать дефолт в массиве настроек</td></tr>
+                            <tr><td><code>?-&gt;</code></td><td>8.0+</td><td>null в середине цепочки</td><td>Цепочка обращений к опциональным объектам</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="remember-box">
+                        <strong>Главный вопрос на собесе:</strong> в чём разница <code>?:</code> и <code>??</code>?
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><code>?:</code> срабатывает на <strong>любое falsy</strong> (<code>0</code>, <code>''</code>, <code>'0'</code>, <code>null</code>, <code>[]</code>).</li>
+                            <li><code>??</code> срабатывает <strong>ТОЛЬКО на <code>null</code> или undefined ключ</strong>.</li>
+                            <li>Для дефолтов из <code>$_GET</code> / API → используй <code>??</code> (иначе <code>?page=0</code> заменится на дефолт).</li>
+                            <li>Для дефолтов «когда строка непустая» → <code>?:</code> ок.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Двоеточие <code>:</code> — все контексты использования</h3>
+                    <div class="content-block">
+                        Символ <code>:</code> встречается в PHP в <strong>5 разных контекстах</strong>. Главный — return type declaration в функциях. На собесе спрашивают «что значит <code>: float</code>» — точный ответ ниже.
+                    </div>
+
+                    <div class="example-label">1. Return type declaration — двоеточие перед типом</div>
+                    <pre><code><span class="keyword">function</span> <span class="function">calculate</span>(<span class="keyword">int</span> <span class="variable">$a</span>, <span class="keyword">int</span> <span class="variable">$b</span>): <span class="keyword">float</span>
+{
+    <span class="keyword">return</span> <span class="variable">$a</span> * <span class="variable">$b</span> / <span class="number">2</span>;
+}
+<span class="comment">//                                     ↑
+//                              двоеточие перед типом
+
+// : float означает: "эта функция ОБЯЗАНА вернуть float
+// (число с плавающей точкой)".
+
+// Если функция вернёт другой тип, PHP попытается привести:
+//   return 42       → 42.0  ✓ (int → float)
+//   return "3.14"   → 3.14  ✓ (numeric string → float)
+//   return "abc"    → TypeError ❌
+
+// Со strict_types=1 автоматического приведения нет —
+// возврат int вместо float тоже выбросит TypeError.</span></code></pre>
+
+                    <div class="example-label">Поддерживаемые return type-hints</div>
+                    <table class="data-table">
+                        <thead><tr><th>Тип</th><th>Что означает</th><th>Версия</th></tr></thead>
+                        <tbody>
+                            <tr><td><code>: void</code></td><td>Функция НИЧЕГО не возвращает (нельзя <code>return $x</code>)</td><td>7.1+</td></tr>
+                            <tr><td><code>: int</code> / <code>: float</code> / <code>: string</code> / <code>: bool</code> / <code>: array</code></td><td>Скалярные / массив</td><td>7.0+</td></tr>
+                            <tr><td><code>: ?int</code></td><td>Nullable: int или null</td><td>7.1+</td></tr>
+                            <tr><td><code>: self</code> / <code>: static</code></td><td>Возврат текущего класса (для fluent)</td><td>7.0+ / 8.0+</td></tr>
+                            <tr><td><code>: User</code></td><td>Объект класса <code>User</code></td><td>7.0+</td></tr>
+                            <tr><td><code>: iterable</code></td><td>array или объект <code>Traversable</code></td><td>7.1+</td></tr>
+                            <tr><td><code>: never</code></td><td>Функция НЕ возвращает управление (throw / exit)</td><td>8.1+</td></tr>
+                            <tr><td><code>: int|string</code> (union)</td><td>Несколько типов на выбор</td><td>8.0+</td></tr>
+                            <tr><td><code>: Countable&amp;Iterator</code> (intersection)</td><td>Реализует ВСЕ перечисленные</td><td>8.1+</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="example-label">2-5. Другие контексты двоеточия</div>
+                    <pre><code><span class="comment">// 2. Альтернативный синтаксис if/foreach/while — для Blade-like шаблонов</span>
+&lt;?<span class="keyword">php</span> <span class="keyword">if</span> (<span class="variable">$user</span>): ?&gt;
+    &lt;p&gt;Hello, &lt;?= <span class="variable">$user</span>-&gt;<span class="variable">name</span> ?&gt;&lt;/p&gt;
+&lt;?<span class="keyword">php</span> <span class="keyword">else</span>: ?&gt;
+    &lt;p&gt;Please log in.&lt;/p&gt;
+&lt;?<span class="keyword">php</span> <span class="keyword">endif</span>; ?&gt;
+<span class="comment">// Аналогично: foreach: endforeach;  while: endwhile;  switch: endswitch;
+
+// 3. switch / case</span>
+<span class="keyword">switch</span> (<span class="variable">$status</span>) {
+    <span class="keyword">case</span> <span class="number">200</span>: <span class="keyword">echo</span> <span class="string">'OK'</span>; <span class="keyword">break</span>;
+    <span class="keyword">default</span>: <span class="keyword">echo</span> <span class="string">'unknown'</span>;
+}
+
+<span class="comment">// 4. Тернарный оператор — двоеточие разделяет true/false ветки</span>
+<span class="variable">$x</span> = <span class="variable">$age</span> >= <span class="number">18</span> ? <span class="string">'adult'</span> : <span class="string">'minor'</span>;
+<span class="comment">//                            ↑ это двоеточие, не return type
+
+// 5. Двойное двоеточие :: (scope resolution) — это уже ДРУГОЙ оператор:</span>
+<span class="function">User</span>::<span class="constant">MAX_AGE</span>;        <span class="comment">// константа класса</span>
+<span class="function">User</span>::<span class="function">create</span>(...);    <span class="comment">// статический метод</span>
+<span class="keyword">parent</span>::<span class="function">__construct</span>(); <span class="comment">// вызов родительского метода
+// ↑ это два символа подряд (T_PAAMAYIM_NEKUDOTAYIM), не одинарное :</span></code></pre>
+
+                    <div class="remember-box">
+                        <strong>Главное:</strong> когда видишь <code>:</code> в функции — это <strong>return type</strong>. <code>: void</code> = ничего не возвращает, <code>: float</code> = float, <code>: ?int</code> = int или null. Двоеточие — <strong>метка типа возврата</strong>, не оператор.
+                    </div>
+                </div>
+
+                <div class="subsection">
                     <h3 class="subsection-title">strict_types Декларация</h3>
                     <div class="content-block">
                         <strong>strict_types=1</strong> требует точное совпадение типов при передаче аргументов. Это должно быть первым оператором в файле!
@@ -4641,6 +4907,106 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
             <!-- SECTION 9: ERROR HANDLING -->
             <div id="errors" class="section">
                 <h2 class="section-title">9. Обработка ошибок</h2>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Разбор <code>throw new InvalidArgumentException(...)</code> построчно</h3>
+                    <div class="content-block">
+                        Эта конструкция объединяет 4 концепции PHP. Если разобрать каждое слово — становится очевидно, что код делает и почему.
+                    </div>
+
+                    <div class="example-label">Что значит каждое слово</div>
+                    <pre><code><span class="keyword">throw</span> <span class="keyword">new</span> <span class="function">InvalidArgumentException</span>(<span class="string">'Numeric expected'</span>);
+<span class="comment">//  ↑     ↑              ↑                                ↑
+//  1     2              3                                4
+
+// 1. throw  — оператор "выбросить исключение"
+//             Останавливает нормальное выполнение и передаёт управление
+//             ближайшему catch-блоку выше по стеку. Если catch нет —
+//             необработанное исключение → fatal error, скрипт умирает.
+
+// 2. new    — оператор создания объекта (см. раздел 4 "ООП")
+//             Создаёт ЭКЗЕМПЛЯР указанного класса. throw принимает
+//             только объекты-исключения, не классы и не строки.
+
+// 3. InvalidArgumentException — встроенный класс PHP, потомок Exception.
+//             По соглашению выбрасывается когда аргумент функции/метода
+//             имеет неправильный тип или значение. Сигнализирует
+//             "программист передал плохие данные".
+
+// 4. 'Numeric expected' — аргумент конструктора (сообщение об ошибке).
+//             Произвольная строка, доступна потом через $e->getMessage().
+//             Можно дополнительно передать код ошибки и предыдущее исключение:
+//             new InvalidArgumentException($msg, $code, $previousException)</span></code></pre>
+
+                    <div class="example-label">Полный поток: throw → try/catch/finally</div>
+                    <pre><code><span class="keyword">function</span> <span class="function">calculate</span>(<span class="variable">$amount</span>, <span class="variable">$quantity</span>): <span class="keyword">float</span>
+{
+    <span class="keyword">if</span> (!<span class="function">is_numeric</span>(<span class="variable">$amount</span>) || !<span class="function">is_numeric</span>(<span class="variable">$quantity</span>)) {
+        <span class="comment">// ← throw остановит функцию, никакого return уже не будет</span>
+        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="function">InvalidArgumentException</span>(<span class="string">'Numeric expected'</span>);
+    }
+    <span class="keyword">return</span> (<span class="keyword">float</span>)<span class="variable">$amount</span> * (<span class="keyword">float</span>)<span class="variable">$quantity</span>;
+}
+
+<span class="keyword">try</span> {
+    <span class="comment">// Код который МОЖЕТ выбросить исключение</span>
+    <span class="keyword">echo</span> <span class="function">calculate</span>(<span class="string">'abc'</span>, <span class="number">5</span>);  <span class="comment">// бросит исключение
+                                  // — следующая строка НЕ выполнится</span>
+    <span class="keyword">echo</span> <span class="string">"Этот код не выполнится"</span>;
+} <span class="keyword">catch</span> (<span class="function">InvalidArgumentException</span> <span class="variable">$e</span>) {
+    <span class="comment">// Сюда попадаем если throw сработал.
+    // $e — пойманный объект исключения, у него методы:
+    //   $e->getMessage()  — наше "Numeric expected"
+    //   $e->getFile()     — файл где брошено
+    //   $e->getLine()     — строка
+    //   $e->getTrace()    — стек вызовов
+    //   $e->getCode()     — код ошибки (опц.)</span>
+    <span class="keyword">echo</span> <span class="string">"Ошибка: "</span> . <span class="variable">$e</span>-><span class="function">getMessage</span>();
+} <span class="keyword">finally</span> {
+    <span class="comment">// finally выполнится ВСЕГДА:
+    // — после try (если исключения не было)
+    // — после catch (если было обработано)
+    // — даже если в catch новый throw (перед его дальнейшим распространением)
+    // Используется для очистки ресурсов (закрыть файл, отпустить блокировку).</span>
+    <span class="keyword">echo</span> <span class="string">"Финал"</span>;
+}</code></pre>
+
+                    <div class="content-block" style="background:#EFF6FF;border-left:3px solid #3B82F6;padding:14px 18px;margin:10px 0;border-radius:4px">
+                        <strong>Зачем выбрасывать исключение вместо <code>return false</code> или <code>echo "error"</code>?</strong>
+                        <ul style="margin:6px 0 0 20px;line-height:1.7">
+                            <li><strong>Невозможно проигнорировать</strong> — <code>return false</code> вызывающий может забыть проверить. Исключение либо ловят, либо весь скрипт падает.</li>
+                            <li><strong>Разделение нормального и аварийного пути</strong> — основной поток функции остаётся чистым (<code>return $result</code>), исключения уходят в <code>catch</code> отдельно.</li>
+                            <li><strong>Контекст ошибки</strong> — кроме сообщения автоматически сохраняется стек вызовов: где, в каком файле, в какой строке, кто вызвал.</li>
+                            <li><strong>Иерархия — можно ловить по типу</strong> — <code>catch (InvalidArgumentException)</code> отдельно от <code>catch (DatabaseException)</code>. Разная реакция на разные ошибки.</li>
+                        </ul>
+                    </div>
+
+                    <div class="example-label">Встроенные классы исключений — что когда выбрасывать</div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Класс</th><th>Когда выбрасывать</th><th>Пример</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>InvalidArgumentException</code></td><td>Плохой аргумент — тип или значение</td><td>В <code>calculate()</code> пришла строка вместо числа</td></tr>
+                            <tr><td><code>OutOfRangeException</code></td><td>Индекс вне границ</td><td>Доступ к <code>$arr[100]</code> в массиве из 10</td></tr>
+                            <tr><td><code>LengthException</code></td><td>Неверная длина строки/массива</td><td>Пароль короче 8 символов</td></tr>
+                            <tr><td><code>RuntimeException</code></td><td>Сбой во время выполнения (не баг)</td><td>API не отвечает, БД недоступна</td></tr>
+                            <tr><td><code>LogicException</code></td><td>Программная ошибка (баг)</td><td>Метод вызван в неправильном порядке</td></tr>
+                            <tr><td><code>DomainException</code></td><td>Значение вне допустимого набора</td><td>Передан статус <code>'unknown'</code>, ожидались <code>active/paused</code></td></tr>
+                            <tr><td><code>UnexpectedValueException</code></td><td>Полученное значение не соответствует ожиданиям</td><td>API вернул JSON вместо XML</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="remember-box">
+                        <strong>Правило большого пальца:</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>throw</strong> — для аварийных ситуаций, которые не часть нормального выполнения.</li>
+                            <li><strong>return false / null</strong> — для нормального «не нашлось»: <code>User::find($id)</code> при отсутствии возвращает <code>null</code>, это не повод для throw.</li>
+                            <li><strong>Имя класса исключения = тип проблемы</strong>. На собесе спрашивают разницу <code>InvalidArgumentException</code> vs <code>RuntimeException</code> — первое значит «программист передал плохие данные», второе значит «среда подвела (БД упала)».</li>
+                            <li><strong>Не лови <code>Exception</code> огульно</strong> — лови конкретный тип. Иначе скроешь баги, которые надо чинить.</li>
+                        </ul>
+                    </div>
+                </div>
 
                 <div class="subsection">
                     <h3 class="subsection-title">Exception Hierarchy</h3>
