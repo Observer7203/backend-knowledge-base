@@ -3302,8 +3302,218 @@ static::  → ПОЛИМОРФНО: берёт из класса, через к�
 <span class="keyword">echo</span> <span class="variable">$user</span>-><span class="variable">email</span>;  <span class="comment">// ERROR - protected</span>
 <span class="keyword">echo</span> <span class="variable">$user</span>-><span class="variable">password</span>;  <span class="comment">// ERROR - private</span></code></pre>
 
+                    <div class="example-label">Как видимость выглядит в <code>var_dump</code></div>
+                    <pre><code><span class="function">var_dump</span>(<span class="variable">$user</span>);
+
+<span class="comment">// Вывод:
+//   object(User)#1 (3) {
+//     ["name"]=> string(5) "Alice"                    ← public, обычное имя
+//     ["email":protected]=> string(11) "alice@ex.com" ← protected помечен
+//     ["password":"User":private]=> string(6) "secret" ← private + ИМЯ КЛАССА
+//   }
+
+// Формат ключа в var_dump:
+//   "имя"                    — public
+//   "имя":protected          — protected
+//   "имя":"ИмяКласса":private — private (привязан к конкретному классу!)</span></code></pre>
+
+                    <div class="content-block" style="background:#EFF6FF;border-left:3px solid #3B82F6;padding:14px 18px;margin:10px 0;border-radius:4px">
+                        <strong>Почему у <code>private</code> в формате есть имя класса?</strong>
+                        <p style="margin:6px 0 0">Потому что приватные свойства <strong>привязаны к конкретному классу</strong>, не к экземпляру. Если <code>Admin extends User</code> и у обоих есть <code>private $id</code> — это <strong>два разных свойства</strong> с одним именем. <code>var_dump</code> покажет оба: <code>["id":"User":private]</code> и <code>["id":"Admin":private]</code>. Поэтому имя класса в формате — обязательно.</p>
+                    </div>
+
                     <div class="remember-box">
-                        Используй protected для данных которые должны быть доступны подклассам. Используй private для внутреннего состояния класса. Это важно для инкапсуляции и безопасности!
+                        <strong>Связь с (array)$object:</strong> когда кастишь объект в массив через <code>(array)$user</code>, получаешь те же ключи, но с <strong>null-байтами</strong>: <code>"\0*\0email"</code> (protected) и <code>"\0User\0password"</code> (private). Подробно — в разделе 1, подсекция «(array)$object с разной видимостью». <code>var_dump</code> показывает в человекочитаемой нотации (<code>:protected</code>, <code>:"Class":private</code>), а внутри объекта PHP хранит именно через null-байты.
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Типизированные свойства (PHP 7.4+)</h3>
+                    <div class="content-block">
+                        С PHP 7.4 свойства можно типизировать прямо в объявлении. До этого тип проверялся только в сеттерах/конструкторе вручную. После — PHP сам выкинет TypeError при попытке записать неправильный тип.
+                    </div>
+
+                    <div class="example-label">Синтаксис: видимость + тип + имя + дефолт</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">User</span>
+{
+    <span class="keyword">private</span> <span class="keyword">int</span> <span class="variable">$id</span>;                    <span class="comment">// без дефолта — должен быть инициализирован до доступа</span>
+    <span class="keyword">private</span> <span class="keyword">string</span> <span class="variable">$name</span> = <span class="string">'unknown'</span>;    <span class="comment">// с дефолтом</span>
+    <span class="keyword">private</span> ?<span class="keyword">int</span> <span class="variable">$age</span> = <span class="keyword">null</span>;             <span class="comment">// nullable (?int = int|null)</span>
+    <span class="keyword">private</span> <span class="keyword">array</span> <span class="variable">$items</span> = [];              <span class="comment">// массив, дефолт — пустой</span>
+    <span class="keyword">private</span> <span class="function">DateTime</span> <span class="variable">$createdAt</span>;            <span class="comment">// объект</span>
+    <span class="keyword">private</span> <span class="keyword">readonly</span> <span class="keyword">int</span> <span class="variable">$constId</span>;       <span class="comment">// readonly (PHP 8.1+): записать можно ОДИН раз</span>
+}</code></pre>
+
+                    <div class="example-label">⚠ Ловушка: доступ до инициализации</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">User</span>
+{
+    <span class="keyword">private</span> <span class="keyword">int</span> <span class="variable">$id</span>;  <span class="comment">// нет дефолта</span>
+}
+
+<span class="variable">$user</span> = <span class="keyword">new</span> <span class="function">User</span>();
+<span class="keyword">echo</span> <span class="variable">$user</span>-><span class="variable">id</span>;
+<span class="comment">// Error: Typed property User::$id must not be accessed before initialization
+
+// Без типа было бы просто null (warning), но с типом — fatal Error.
+// Решение: задать дефолт ИЛИ инициализировать в конструкторе.</span></code></pre>
+
+                    <div class="remember-box">
+                        <strong>Правило:</strong> с типизированными свойствами <strong>либо ставь дефолт</strong> (<code>$x = 0</code>, <code>$arr = []</code>), <strong>либо обязательно инициализируй в конструкторе</strong>. Иначе runtime ошибка при первом доступе. Это не баг — это явная семантика «свойство объявлено но не задано».
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Naming conventions (PSR-12) — что писать с большой буквы</h3>
+                    <div class="content-block">
+                        Стандарт PSR-12 — общепринятый в Laravel, Symfony, всех приличных PHP-проектах. PHP сам **case-insensitive** к именам функций и методов (<code>$user->AddItem()</code> и <code>$user->addItem()</code> одинаково работают), но IDE / линтер / collega на code review подсветят несоответствие стандарту.
+                    </div>
+
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Что</th><th>Стиль</th><th>Пример</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Класс / Интерфейс / Trait / Enum</td><td><strong>PascalCase</strong></td><td><code>User</code>, <code>OrderRepository</code>, <code>PaymentInterface</code>, <code>HasFactory</code></td></tr>
+                            <tr><td>Метод / функция</td><td><strong>camelCase</strong></td><td><code>addItem()</code>, <code>getTotal()</code>, <code>findByEmail()</code></td></tr>
+                            <tr><td>Свойство / переменная</td><td><strong>camelCase</strong></td><td><code>$items</code>, <code>$totalAmount</code>, <code>$createdAt</code></td></tr>
+                            <tr><td>Константа класса</td><td><strong>UPPER_SNAKE</strong></td><td><code>MAX_ITEMS</code>, <code>STATUS_ACTIVE</code></td></tr>
+                            <tr><td>Файл с классом</td><td><strong>PascalCase</strong> (как класс)</td><td><code>User.php</code>, <code>OrderRepository.php</code></td></tr>
+                            <tr><td>Namespace</td><td><strong>PascalCase</strong> по сегментам</td><td><code>App\Models</code>, <code>Illuminate\Support</code></td></tr>
+                            <tr><td>Маршрут / URL</td><td><strong>kebab-case</strong></td><td><code>/user-profile</code>, <code>/order-details/{id}</code></td></tr>
+                            <tr><td>База: таблица / колонка</td><td><strong>snake_case</strong></td><td><code>users</code>, <code>created_at</code>, <code>email_verified_at</code></td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="example-label">Типичные ошибки которые увидишь на code review</div>
+                    <pre><code><span class="comment">// ❌ Метод в PascalCase — путают с классом</span>
+<span class="keyword">public</span> <span class="keyword">function</span> <span class="function">AddItem</span>(<span class="variable">$item</span>) {}
+
+<span class="comment">// ✓ Метод в camelCase</span>
+<span class="keyword">public</span> <span class="keyword">function</span> <span class="function">addItem</span>(<span class="variable">$item</span>) {}
+
+
+<span class="comment">// ❌ Метод множественного числа когда добавляет ОДНО</span>
+<span class="keyword">public</span> <span class="keyword">function</span> <span class="function">addItems</span>(<span class="variable">$item</span>) {}
+
+<span class="comment">// ✓ Соответствие имени и действия</span>
+<span class="keyword">public</span> <span class="keyword">function</span> <span class="function">addItem</span>(<span class="variable">$item</span>) {}      <span class="comment">// один</span>
+<span class="keyword">public</span> <span class="keyword">function</span> <span class="function">addItems</span>(<span class="keyword">array</span> <span class="variable">$items</span>) {} <span class="comment">// несколько</span>
+
+
+<span class="comment">// ❌ Класс в lowercase</span>
+<span class="keyword">class</span> <span class="function">user</span> {}
+
+<span class="comment">// ✓ Класс в PascalCase</span>
+<span class="keyword">class</span> <span class="function">User</span> {}</code></pre>
+
+                    <div class="remember-box">
+                        <strong>На собесе:</strong> если назовёшь метод PascalCase или класс lowercase — это **первый звоночек что код не пишешь в production**. Не сразу зарежут, но запомнят. Инструмент защиты — <strong>php-cs-fixer</strong> или <strong>laravel-pint</strong> автоматически приведёт к PSR-12 при коммите.
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">⚠ <code>echo</code> — языковая конструкция, не функция</h3>
+                    <div class="content-block">
+                        <code>echo</code> в PHP — это <strong>языковая конструкция</strong> (как <code>if</code>, <code>return</code>, <code>break</code>), а не функция. Поэтому со скобками вокруг аргумента она ведёт себя необычно — и это источник тонких багов.
+                    </div>
+
+                    <div class="example-label">Правильный синтаксис</div>
+                    <pre><code><span class="keyword">echo</span> <span class="string">"Hello"</span>;                <span class="comment">// ✓ без скобок</span>
+<span class="keyword">echo</span> <span class="string">"a"</span>, <span class="string">"b"</span>, <span class="string">"c"</span>;          <span class="comment">// ✓ несколько аргументов через запятую</span>
+<span class="keyword">echo</span> <span class="variable">$user</span>-><span class="function">summary</span>();      <span class="comment">// ✓ цепочка методов — БЕЗ скобок</span></code></pre>
+
+                    <div class="example-label">Ловушка: <code>echo($x)->method()</code> работает «случайно»</div>
+                    <pre><code><span class="comment">// Это часто пишут думая что echo — функция:</span>
+<span class="keyword">echo</span>(<span class="variable">$user</span>)-><span class="function">summary</span>();
+
+<span class="comment">// PHP парсит это как:
+//   echo  ( ($user)->summary() );
+//        ↑ echo принимает ОДНО выражение
+//          ($user) — это просто группировка
+//          ->summary() — вызов метода на User объекте
+//          результат: строка → echo выводит
+
+// Работает СЛУЧАЙНО. Но если попробовать несколько аргументов:</span>
+<span class="keyword">echo</span>(<span class="variable">$a</span>, <span class="variable">$b</span>);
+<span class="comment">// Parse error! Скобки заставляют PHP интерпретировать как функцию,
+// которая не принимает несколько аргументов через запятую.
+
+// Без скобок — работает:</span>
+<span class="keyword">echo</span> <span class="variable">$a</span>, <span class="variable">$b</span>;  <span class="comment">// ✓</span></code></pre>
+
+                    <div class="example-label">Различие <code>echo</code> и <code>print</code></div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Что</th><th><code>echo</code></th><th><code>print</code></th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Тип</td><td>Языковая конструкция</td><td>Языковая конструкция</td></tr>
+                            <tr><td>Возвращает</td><td>Ничего (void)</td><td>Всегда <code>1</code> (можно использовать в выражении)</td></tr>
+                            <tr><td>Несколько аргументов</td><td>✅ <code>echo $a, $b, $c</code></td><td>❌ только один</td></tr>
+                            <tr><td>Скорость</td><td>Чуть быстрее</td><td>Чуть медленнее (из-за return)</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="remember-box">
+                        <strong>Правило:</strong> для вывода используй <code>echo</code> <strong>без скобок</strong>. Для вывода объекта через метод — <code>echo $obj-&gt;method();</code>. Скобки вокруг <code>echo</code> создают иллюзию функции и могут сломать код через год (например, при добавлении второго аргумента).
+                    </div>
+                </div>
+
+                <div class="subsection">
+                    <h3 class="subsection-title">Aggregate Root — паттерн «инкапсулированное состояние»</h3>
+                    <div class="content-block">
+                        Когда у класса есть <strong>private $items / $children / $orders</strong> и единственный способ их менять — через свои методы (<code>addItem()</code>, <code>removeItem()</code>), это паттерн <strong>Aggregate Root</strong> из DDD. Класс владеет коллекцией и защищает её инварианты.
+                    </div>
+
+                    <div class="example-label">Шаблон Aggregate Root</div>
+                    <pre><code><span class="keyword">final class</span> <span class="function">ShoppingCart</span>
+{
+    <span class="keyword">private</span> <span class="keyword">array</span> <span class="variable">$items</span> = [];          <span class="comment">// ← ИНКАПСУЛИРОВАННОЕ состояние</span>
+
+    <span class="comment">// ─── Команды: МЕНЯЮТ состояние, возвращают void ───</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">addItem</span>(<span class="function">Item</span> <span class="variable">$item</span>): <span class="keyword">void</span>
+    {
+        <span class="comment">// инварианты проверяются ЗДЕСЬ — не дать положить дубль/невалидное</span>
+        <span class="keyword">if</span> (<span class="function">count</span>(<span class="variable">$this</span>-><span class="variable">items</span>) >= <span class="number">50</span>) {
+            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="function">DomainException</span>(<span class="string">'Cart full'</span>);
+        }
+        <span class="variable">$this</span>-><span class="variable">items</span>[] = <span class="variable">$item</span>;
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">removeItem</span>(<span class="keyword">int</span> <span class="variable">$index</span>): <span class="keyword">void</span>
+    {
+        <span class="function">unset</span>(<span class="variable">$this</span>-><span class="variable">items</span>[<span class="variable">$index</span>]);
+        <span class="variable">$this</span>-><span class="variable">items</span> = <span class="function">array_values</span>(<span class="variable">$this</span>-><span class="variable">items</span>);  <span class="comment">// переиндексация</span>
+    }
+
+    <span class="comment">// ─── Query: ЧИТАЮТ состояние, не меняют ───</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">total</span>(): <span class="keyword">float</span>
+    {
+        <span class="keyword">return</span> <span class="function">array_sum</span>(<span class="function">array_map</span>(
+            <span class="keyword">fn</span>(<span class="function">Item</span> <span class="variable">$i</span>): <span class="keyword">float</span> => <span class="variable">$i</span>-><span class="function">price</span>(),
+            <span class="variable">$this</span>-><span class="variable">items</span>
+        ));
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">isEmpty</span>(): <span class="keyword">bool</span>
+    {
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">items</span> === [];
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">itemCount</span>(): <span class="keyword">int</span>
+    {
+        <span class="keyword">return</span> <span class="function">count</span>(<span class="variable">$this</span>-><span class="variable">items</span>);
+    }
+}</code></pre>
+
+                    <div class="remember-box">
+                        <strong>3 признака правильного Aggregate Root:</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>State в private</strong> — никто снаружи не может написать <code>$cart-&gt;items[] = $bad</code> в обход проверок.</li>
+                            <li><strong>Commands vs Queries разделены</strong> (CQS): команды меняют состояние и возвращают <code>void</code>, queries только читают и возвращают данные.</li>
+                            <li><strong>Инварианты защищены</strong> — проверки внутри команд (<code>count &lt; max</code>, валидация и т.п.), не дают создать «невалидное» состояние.</li>
+                        </ul>
+                        <p style="margin:10px 0 0">На собесе на middle+ спросят «как ты защищаешь инварианты» — этот паттерн и есть ответ. См. также KB_5 Architecture → DDD basics.</p>
                     </div>
                 </div>
 
