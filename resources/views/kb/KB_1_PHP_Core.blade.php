@@ -2252,6 +2252,49 @@ enum Status: string {
                         — Если массив не пустой → начальное значение участвует в первом вычислении (<code>0 + 1 = 1</code> в нашем примере).<br>
                         Без начального значения по умолчанию — <code>null</code>, что часто ломает callback (<code>null + 1</code> = warning + 1).
                     </div>
+
+                    <div class="example-label">⚡ Когда НЕ нужен array_reduce — есть встроенные функции</div>
+                    <pre><code><span class="comment">// Для типовых операций PHP предоставляет специализированные функции —
+// они короче, читаемее и БЫСТРЕЕ array_reduce (реализованы на C).</span>
+
+<span class="comment">// ❌ Избыточно — переизобретаешь array_sum:</span>
+<span class="variable">$sum</span> = <span class="function">array_reduce</span>(<span class="variable">$numbers</span>, <span class="keyword">fn</span>(<span class="variable">$c</span>, <span class="variable">$i</span>) => <span class="variable">$c</span> + <span class="variable">$i</span>, <span class="number">0</span>);
+
+<span class="comment">// ✅ Идиоматично:</span>
+<span class="variable">$sum</span> = <span class="function">array_sum</span>(<span class="variable">$numbers</span>);
+
+<span class="comment">// Полный список:</span>
+<span class="function">array_sum</span>(<span class="variable">$arr</span>);              <span class="comment">// сумма</span>
+<span class="function">array_product</span>(<span class="variable">$arr</span>);          <span class="comment">// произведение</span>
+<span class="function">count</span>(<span class="variable">$arr</span>);                  <span class="comment">// количество элементов</span>
+<span class="function">max</span>(<span class="variable">$arr</span>);                    <span class="comment">// максимум</span>
+<span class="function">min</span>(<span class="variable">$arr</span>);                    <span class="comment">// минимум</span>
+<span class="function">array_unique</span>(<span class="variable">$arr</span>);           <span class="comment">// убрать дубли</span>
+<span class="function">implode</span>(<span class="string">','</span>, <span class="variable">$arr</span>);            <span class="comment">// склеить в строку</span>
+
+<span class="comment">// Среднее (avg) встроенной нет, но просто:</span>
+<span class="variable">$avg</span> = <span class="function">array_sum</span>(<span class="variable">$arr</span>) / <span class="function">count</span>(<span class="variable">$arr</span>);  <span class="comment">// защити count > 0!</span></code></pre>
+
+                    <div class="example-label">Когда нужен array_reduce</div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Задача</th><th>Использовать</th><th>Почему</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Сумма</td><td><code>array_sum($arr)</code></td><td>Встроено, быстро, читаемо</td></tr>
+                            <tr><td>Произведение</td><td><code>array_product($arr)</code></td><td>Встроено</td></tr>
+                            <tr><td>Max / Min</td><td><code>max($arr)</code> / <code>min($arr)</code></td><td>Встроено</td></tr>
+                            <tr><td>Среднее (avg)</td><td><code>array_sum / count</code></td><td>Двух функций достаточно</td></tr>
+                            <tr><td>Сумма + count + avg <strong>за один проход</strong></td><td><code>array_reduce</code></td><td>1 итерация вместо 2-3</td></tr>
+                            <tr><td>Построить assoc <code>[id =&gt; name]</code></td><td><code>array_reduce</code> или <code>array_column</code></td><td>Reduce — гибче, column — короче</td></tr>
+                            <tr><td>Сложная агрегация (sum чётных + max нечётных)</td><td><code>array_reduce</code></td><td>Своя логика в callback</td></tr>
+                            <tr><td>Любая нестандартная свёртка</td><td><code>array_reduce</code></td><td>Универсальный инструмент</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="remember-box">
+                        <strong>Правило для собеса:</strong> когда видишь задачу «свернуть массив в одно значение» — сначала проверь, есть ли встроенная функция. Если есть (<code>sum</code>/<code>product</code>/<code>max</code>/<code>min</code>/<code>count</code>) — используй её. <code>array_reduce</code> — это <strong>универсальный fallback</strong> для случаев когда встроенной нет или нужно несколько метрик за один проход.
+                    </div>
                 </div>
 
                 <div class="subsection">
