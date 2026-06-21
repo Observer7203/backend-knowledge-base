@@ -1888,6 +1888,47 @@ $                  — конец строки: после доменной зо
     <span class="number">5</span>      =&gt; <span class="string">'пятый'</span>,   <span class="comment">// ключ может быть числом</span>
 ];</code></pre>
 
+                    <div class="content-block" style="background:#FEF3C7;border-left:3px solid #F59E0B;padding:14px 18px;margin:10px 0;border-radius:4px">
+                        <strong>⚠ Частая ошибка: путают <code>=&gt;</code> внутри литерала vs <code>=</code> при добавлении в массив.</strong>
+                        <p style="margin:8px 0 0">Это <strong>два разных синтаксиса</strong> для разных операций:</p>
+                    </div>
+
+                    <div class="example-label">Различие: создание массива vs добавление элемента</div>
+                    <pre><code><span class="comment">// ─── Создание массива (литерал) — внутри [...] нужен => ───</span>
+<span class="variable">$arr</span> = [<span class="string">'name'</span> =&gt; <span class="string">'Иван'</span>, <span class="string">'age'</span> =&gt; <span class="number">30</span>];
+
+<span class="comment">// ─── Добавление элемента в существующий массив — снаружи [...] нужен = ───</span>
+<span class="variable">$arr</span>[<span class="string">'email'</span>] = <span class="string">'ivan@x.kz'</span>;       <span class="comment">// ✓ ключ в [], значение через =</span>
+<span class="variable">$arr</span>[<span class="number">5</span>] = <span class="string">'пять'</span>;                 <span class="comment">// ✓</span>
+
+<span class="comment">// ─── ❌ Синтаксические ошибки ───</span>
+<span class="variable">$arr</span>[<span class="string">'name'</span> =&gt; <span class="string">'Иван'</span>];        <span class="comment">// SYNTAX ERROR: внутри [] только ключ</span>
+<span class="variable">$arr</span>[<span class="string">'name'</span>] =&gt; <span class="string">'Иван'</span>;        <span class="comment">// SYNTAX ERROR: => не оператор присваивания</span></code></pre>
+
+                    <div class="example-label">Сводная таблица — где какой оператор</div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Конструкция</th><th>Что делает</th><th>Валидно?</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>[1, 2, 3]</code></td><td>Литерал массива без ключей</td><td>✅</td></tr>
+                            <tr><td><code>['a' =&gt; 1, 'b' =&gt; 2]</code></td><td>Литерал с ключами (<code>=&gt;</code> ВНУТРИ <code>[]</code>)</td><td>✅</td></tr>
+                            <tr><td><code>$arr[$key] = $value</code></td><td>Присваивание элементу (<code>=</code> СНАРУЖИ <code>[]</code>)</td><td>✅</td></tr>
+                            <tr><td><code>$arr[] = $value</code></td><td>Добавление в конец (PHP сам генерит ключ)</td><td>✅</td></tr>
+                            <tr><td><code>$arr[$key] =&gt; $value</code></td><td>Попытка использовать <code>=&gt;</code> как оператор присваивания</td><td>❌ syntax error</td></tr>
+                            <tr><td><code>$arr[$key =&gt; $value]</code></td><td>Попытка втиснуть пару в индексатор</td><td>❌ syntax error</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="remember-box">
+                        <strong>Запомнить одной строкой:</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>Внутри <code>[ ]</code> при создании литерала</strong> → пишется <code>=&gt;</code> (связка ключ-значение).</li>
+                            <li><strong>Снаружи <code>[ ]</code> при добавлении/изменении</strong> → пишется <code>=</code> (присваивание).</li>
+                        </ul>
+                        <p style="margin:10px 0 0">Типичный кейс в <code>array_reduce</code>: <code>$carry[$user['id']] = $user['name']</code> — добавляем элемент в накапливаемый массив <code>$carry</code>. Не <code>$carry[$user['id'] =&gt; $user['name']]</code> — это попытка создать литерал внутри индексатора, что синтаксически невозможно.</p>
+                    </div>
+
                     <div class="example-label">2. foreach — перебор с ключами</div>
                     <pre><code><span class="keyword">foreach</span> (<span class="variable">$arr</span> <span class="keyword">as</span> <span class="variable">$key</span> =&gt; <span class="variable">$value</span>) {
     <span class="keyword">echo</span> <span class="string">"<span class="variable">$key</span> => <span class="variable">$value</span>"</span>;
