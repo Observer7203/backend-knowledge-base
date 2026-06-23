@@ -3460,6 +3460,118 @@ static::  → ПОЛИМОРФНО: берёт из класса, через к�
                 </div>
 
                 <div class="subsection">
+                    <h3 class="subsection-title">Глоссарий: Инкапсуляция, Инвариант, DDD, Aggregate Root</h3>
+                    <div class="content-block">
+                        Эти 4 термина часто путают, особенно <strong>«инкапсуляция = private»</strong>. На самом деле это разные уровни абстракции: язык → принцип → паттерн → методология. Разберём по уровням.
+                    </div>
+
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Термин</th><th>Уровень</th><th>Определение</th><th>Пример</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>private</strong> / protected / readonly</td>
+                                <td>Инструмент языка</td>
+                                <td>Модификаторы видимости PHP, технически запрещающие доступ извне.</td>
+                                <td><code>private array $items = []</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Encapsulation</strong> (инкапсуляция)</td>
+                                <td>Принцип ООП</td>
+                                <td>Объект <strong>сам управляет своим состоянием</strong>. Внутренние данные скрыты, доступ только через методы. <code>private</code> — один из способов, не единственный.</td>
+                                <td>Контролируемый <code>addItem($x)</code> вместо прямой записи в массив</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Invariant</strong> (инвариант)</td>
+                                <td>Бизнес-правило</td>
+                                <td>Условие, которое <strong>всегда</strong> должно соблюдаться у объекта (до операции, во время, после). Защищается инкапсуляцией.</td>
+                                <td>«Корзина не может содержать &gt; 50 товаров»</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Aggregate Root</strong></td>
+                                <td>Паттерн DDD</td>
+                                <td>Корневой класс группы связанных сущностей. <strong>Единственная точка входа</strong> для изменений всего агрегата.</td>
+                                <td><code>Order</code> владеет <code>OrderItem[]</code>; менять <code>OrderItem</code> можно только через <code>Order</code></td>
+                            </tr>
+                            <tr>
+                                <td><strong>DDD</strong> (Domain-Driven Design)</td>
+                                <td>Методология</td>
+                                <td>Подход к проектированию сложных систем, где модель отражает <strong>бизнес-домен</strong>, а не структуру БД. Включает паттерны: Entity, Value Object, Aggregate, Repository, Domain Service.</td>
+                                <td>Класс <code>Order</code> с методами <code>place()</code>, <code>cancel()</code> вместо CRUD-таблиц</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="content-block" style="background:#EFF6FF;border-left:3px solid #3B82F6;padding:14px 18px;margin:10px 0;border-radius:4px">
+                        <strong>Главный вопрос: «крутится ли всё вокруг <code>private</code>?»</strong>
+                        <p style="margin:6px 0 0"><strong>Нет.</strong> <code>private</code> — это <strong>популярный инструмент</strong> для реализации инкапсуляции в PHP, но не сама инкапсуляция.</p>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li>В Python нет «настоящего» <code>private</code>, но инкапсуляция реализуется через соглашение <code>_underscore</code> и <code>property</code> декораторы.</li>
+                            <li>В Go нет ключевого слова <code>private</code> — используется регистр имени (lowercase = пакетная видимость).</li>
+                            <li>В PHP можно использовать <code>readonly</code> (PHP 8.1+) — свойство публично читается, но запись запрещена. Тоже инкапсуляция.</li>
+                        </ul>
+                        <p style="margin:10px 0 0"><strong>Правильно сказать:</strong> «<code>private</code> — это удобный инструмент защиты состояния, а инкапсуляция — это <em>ответственность класса самому управлять своим состоянием</em>». Без понимания инвариантов <code>private</code> бесполезен.</p>
+                    </div>
+
+                    <div class="example-label">Контрпример: <code>private</code> есть, инкапсуляция слабая</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Cart</span>
+{
+    <span class="keyword">private</span> <span class="keyword">array</span> <span class="variable">$items</span> = [];
+
+    <span class="comment">// ❌ Геттер возвращает ССЫЛКУ на массив — внешний код может менять</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> &<span class="function">getItems</span>(): <span class="keyword">array</span>
+    {
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">items</span>;
+    }
+}
+
+<span class="variable">$cart</span> = <span class="keyword">new</span> <span class="function">Cart</span>();
+<span class="variable">$items</span> = &<span class="variable">$cart</span>-><span class="function">getItems</span>();
+<span class="variable">$items</span>[] = <span class="string">'обход проверок!'</span>;
+<span class="comment">// $items в Cart изменён напрямую, addItem() обойдён.
+// private есть, но инвариант не защищён → инкапсуляция СЛАБАЯ.</span></code></pre>
+
+                    <div class="example-label">Aggregate Root в реальном коде Laravel</div>
+                    <pre><code><span class="keyword">final class</span> <span class="function">Order</span>
+{
+    <span class="keyword">private</span> <span class="keyword">array</span> <span class="variable">$items</span> = [];
+
+    <span class="comment">// ─── Команды защищают инварианты ───</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">addItem</span>(<span class="function">Item</span> <span class="variable">$item</span>): <span class="keyword">void</span>
+    {
+        <span class="comment">// Инвариант 1: не больше 100 товаров</span>
+        <span class="keyword">if</span> (<span class="function">count</span>(<span class="variable">$this</span>-><span class="variable">items</span>) >= <span class="number">100</span>) {
+            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="function">DomainException</span>(<span class="string">'Лимит товаров'</span>);
+        }
+
+        <span class="comment">// Инвариант 2: товар должен быть в каталоге</span>
+        <span class="keyword">if</span> (!<span class="variable">$item</span>-><span class="function">isAvailable</span>()) {
+            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="function">DomainException</span>(<span class="string">'Товар недоступен'</span>);
+        }
+
+        <span class="variable">$this</span>-><span class="variable">items</span>[] = <span class="variable">$item</span>;
+    }
+
+    <span class="comment">// ─── Query возвращает COPY, не reference ───</span>
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">items</span>(): <span class="keyword">array</span>
+    {
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">items</span>;  <span class="comment">// PHP передаст копию (CoW для массивов)</span>
+    }
+}</code></pre>
+
+                    <div class="remember-box">
+                        <strong>3 признака настоящего Aggregate Root:</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>1. Encapsulation</strong> — состояние private, нет обхода через геттеры по ссылке.</li>
+                            <li><strong>2. Invariants</strong> — проверки внутри команд явно защищают бизнес-правила.</li>
+                            <li><strong>3. Transactional boundary</strong> — один <code>save()</code> атомарно сохраняет весь агрегат (Order + все OrderItem за раз).</li>
+                        </ul>
+                        <p style="margin:10px 0 0"><strong>Cross-ref:</strong> подробнее про DDD, паттерны Entity / Value Object / Repository — <a href="/KB_5_Architecture#sec-architectural" style="color:#1D4ED8">KB_5 Architecture → DDD basics</a>.</p>
+                    </div>
+                </div>
+
+                <div class="subsection">
                     <h3 class="subsection-title">Aggregate Root — паттерн «инкапсулированное состояние»</h3>
                     <div class="content-block">
                         Когда у класса есть <strong>private $items / $children / $orders</strong> и единственный способ их менять — через свои методы (<code>addItem()</code>, <code>removeItem()</code>), это паттерн <strong>Aggregate Root</strong> из DDD. Класс владеет коллекцией и защищает её инварианты.
