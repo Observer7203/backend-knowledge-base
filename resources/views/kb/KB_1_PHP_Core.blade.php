@@ -2087,7 +2087,81 @@ enum Status: string {
 <span class="variable">$a</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
 <span class="variable">$b</span> = [<span class="number">10</span>, <span class="number">20</span>, <span class="number">30</span>];
 <span class="variable">$result</span> = <span class="function">array_map</span>(<span class="keyword">fn</span>(<span class="variable">$x</span>, <span class="variable">$y</span>) => <span class="variable">$x</span> + <span class="variable">$y</span>, <span class="variable">$a</span>, <span class="variable">$b</span>);
-<span class="comment">// [11, 22, 33]</span></code></pre>
+<span class="comment">// [11, 22, 33]
+// При разной длине массивов — берётся длина САМОГО ДЛИННОГО,
+// недостающие элементы дополняются null (часто источник багов).</span></code></pre>
+
+                    <div class="example-label">Поведение с ключами — тонкость</div>
+                    <pre><code><span class="comment">// 1. Один массив + ассоциативный → КЛЮЧИ СОХРАНЯЮТСЯ</span>
+<span class="variable">$users</span> = [<span class="string">'a'</span> => <span class="number">100</span>, <span class="string">'b'</span> => <span class="number">200</span>];
+<span class="variable">$doubled</span> = <span class="function">array_map</span>(<span class="keyword">fn</span>(<span class="variable">$n</span>) => <span class="variable">$n</span> * <span class="number">2</span>, <span class="variable">$users</span>);
+<span class="comment">// ['a' => 200, 'b' => 400] — ключи a, b сохранились
+
+// 2. Несколько массивов → КЛЮЧИ СБРАСЫВАЮТСЯ на 0, 1, 2...</span>
+<span class="variable">$result</span> = <span class="function">array_map</span>(<span class="keyword">fn</span>(<span class="variable">$x</span>, <span class="variable">$y</span>) => <span class="variable">$x</span> + <span class="variable">$y</span>, [<span class="string">'a'</span> => <span class="number">1</span>], [<span class="string">'b'</span> => <span class="number">2</span>]);
+<span class="comment">// [0 => 3] — оба ключа потеряны!
+
+// 3. callback = null + один массив → ПРОСТО КОПИРУЕТ значения</span>
+<span class="variable">$copy</span> = <span class="function">array_map</span>(<span class="keyword">null</span>, [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>]);
+<span class="comment">// [1, 2, 3]
+
+// 4. callback = null + несколько массивов → ZIP (склейка попарно)</span>
+<span class="variable">$zipped</span> = <span class="function">array_map</span>(<span class="keyword">null</span>, [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>], [<span class="string">'a'</span>, <span class="string">'b'</span>, <span class="string">'c'</span>]);
+<span class="comment">// [[1,'a'], [2,'b'], [3,'c']] — как Python zip()</span></code></pre>
+
+                    <div class="example-label">Эквивалент через foreach (что под капотом)</div>
+                    <pre><code><span class="comment">// array_map "под капотом":</span>
+<span class="variable">$result</span> = [];
+<span class="keyword">foreach</span> (<span class="variable">$numbers</span> <span class="keyword">as</span> <span class="variable">$key</span> => <span class="variable">$value</span>) {
+    <span class="variable">$result</span>[<span class="variable">$key</span>] = <span class="variable">$callback</span>(<span class="variable">$value</span>);
+}
+
+<span class="comment">// Когда foreach лучше:
+//   — нужны побочные эффекты (логирование, запись в БД)
+//   — внутри тела > 1 строки кода
+//   — нужно прервать цикл (break/continue) — у array_map нельзя</span></code></pre>
+
+                    <div class="example-label">array_map + array_sum vs array_reduce — какой выбрать</div>
+                    <pre><code><span class="comment">// Вариант 1: array_map + array_sum (2 прохода по массиву)</span>
+<span class="variable">$total</span> = <span class="function">array_sum</span>(<span class="function">array_map</span>(
+    <span class="keyword">fn</span>(<span class="function">Item</span> <span class="variable">$i</span>) => <span class="variable">$i</span>-><span class="function">price</span>(),
+    <span class="variable">$this</span>-><span class="variable">items</span>
+));
+
+<span class="comment">// Вариант 2: array_reduce (1 проход)</span>
+<span class="variable">$total</span> = <span class="function">array_reduce</span>(
+    <span class="variable">$this</span>-><span class="variable">items</span>,
+    <span class="keyword">fn</span>(<span class="keyword">float</span> <span class="variable">$carry</span>, <span class="function">Item</span> <span class="variable">$i</span>) => <span class="variable">$carry</span> + <span class="variable">$i</span>-><span class="function">price</span>(),
+    <span class="number">0.0</span>
+);
+
+<span class="comment">// На малых данных (≤ 1000) разницы нет — выбирай по читаемости.
+// На больших — reduce 2× быстрее (1 проход + нет промежуточного массива).</span></code></pre>
+
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Сценарий</th><th>Лучший выбор</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Просто преобразовать массив (новый из старого)</td><td><code>array_map</code></td></tr>
+                            <tr><td>Свернуть в одно значение (sum/max/build assoc)</td><td><code>array_reduce</code></td></tr>
+                            <tr><td>map + sum/max/min</td><td><strong>Сразу <code>array_reduce</code></strong> (1 проход)</td></tr>
+                            <tr><td>Простая сумма чисел</td><td><code>array_sum</code> (не нужны map/reduce)</td></tr>
+                            <tr><td>Побочные эффекты (log/insert)</td><td><code>foreach</code></td></tr>
+                            <tr><td>Нужен <code>break</code> / прерывание</td><td><code>foreach</code> (у <code>array_map</code> нельзя)</td></tr>
+                            <tr><td>Изменить массив in-place (по ссылке)</td><td><code>array_walk</code> с <code>&amp;$item</code></td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="remember-box">
+                        <strong>Главные ловушки <code>array_map</code>:</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>Ключи теряются при multi-array</strong> — если работаешь с assoc-массивом, проверь что используешь один массив.</li>
+                            <li><strong>Разная длина массивов</strong> → дополняется <code>null</code>. Если ожидал что массив будет короче — баг.</li>
+                            <li><strong>Нельзя прервать</strong> — `break` не работает. Если нужно остановить итерацию — <code>foreach</code> или генератор.</li>
+                            <li><strong>Создаёт промежуточный массив</strong> — для дальнейшего <code>sum/max</code> предпочти <code>array_reduce</code>.</li>
+                        </ul>
+                    </div>
                 </div>
 
                 <div class="subsection">
