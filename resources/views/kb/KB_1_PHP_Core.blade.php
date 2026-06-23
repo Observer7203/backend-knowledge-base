@@ -3627,6 +3627,76 @@ static::  → ПОЛИМОРФНО: берёт из класса, через к�
                         </ul>
                         <p style="margin:10px 0 0">На собесе на middle+ спросят «как ты защищаешь инварианты» — этот паттерн и есть ответ. См. также KB_5 Architecture → DDD basics.</p>
                     </div>
+
+                    <div class="example-label">Derived value: Cached vs Computed — два пути для <code>total()</code></div>
+                    <pre><code><span class="comment">// ─── Подход 1: Cached / Materialized — хранить и обновлять ───</span>
+<span class="keyword">final class</span> <span class="function">CartCached</span>
+{
+    <span class="keyword">private</span> <span class="keyword">array</span> <span class="variable">$items</span> = [];
+    <span class="keyword">private</span> <span class="keyword">float</span> <span class="variable">$total</span> = <span class="number">0.0</span>;  <span class="comment">// ← храним сумму</span>
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">addItem</span>(<span class="function">Item</span> <span class="variable">$item</span>): <span class="keyword">void</span>
+    {
+        <span class="variable">$this</span>-><span class="variable">items</span>[] = <span class="variable">$item</span>;
+        <span class="variable">$this</span>-><span class="variable">total</span> += <span class="variable">$item</span>-><span class="function">price</span>();  <span class="comment">// синхронизируем</span>
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">removeItem</span>(<span class="keyword">int</span> <span class="variable">$i</span>): <span class="keyword">void</span>
+    {
+        <span class="variable">$this</span>-><span class="variable">total</span> -= <span class="variable">$this</span>-><span class="variable">items</span>[<span class="variable">$i</span>]-><span class="function">price</span>();  <span class="comment">// НЕ ЗАБЫТЬ</span>
+        <span class="function">unset</span>(<span class="variable">$this</span>-><span class="variable">items</span>[<span class="variable">$i</span>]);
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">total</span>(): <span class="keyword">float</span>
+    {
+        <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">total</span>;  <span class="comment">// O(1) — мгновенно</span>
+    }
+}
+
+<span class="comment">// ─── Подход 2: Computed / Derived — считать каждый раз ───</span>
+<span class="keyword">final class</span> <span class="function">CartComputed</span>
+{
+    <span class="keyword">private</span> <span class="keyword">array</span> <span class="variable">$items</span> = [];
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">addItem</span>(<span class="function">Item</span> <span class="variable">$item</span>): <span class="keyword">void</span>
+    {
+        <span class="variable">$this</span>-><span class="variable">items</span>[] = <span class="variable">$item</span>;
+    }
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">total</span>(): <span class="keyword">float</span>
+    {
+        <span class="comment">// O(n) — проходим по items каждый вызов</span>
+        <span class="keyword">return</span> <span class="function">array_sum</span>(<span class="function">array_map</span>(
+            <span class="keyword">fn</span>(<span class="function">Item</span> <span class="variable">$i</span>): <span class="keyword">float</span> => <span class="variable">$i</span>-><span class="function">price</span>(),
+            <span class="variable">$this</span>-><span class="variable">items</span>
+        ));
+    }
+}</code></pre>
+
+                    <div class="example-label">Trade-off — что выбрать</div>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Аспект</th><th>Cached (хранить)</th><th>Computed (считать)</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>Чтение total()</td><td><strong>O(1)</strong> ⚡</td><td>O(n) — пройти весь массив</td></tr>
+                            <tr><td>Запись (add/remove)</td><td>O(1) + обновить total</td><td>O(1)</td></tr>
+                            <tr><td>Риск рассинхрона</td><td><strong>⚠ ВЫСОКИЙ</strong> — добавили метод <code>updatePrice()</code> и забыли пересчитать total → баг</td><td>✅ <strong>Нет</strong> — total всегда актуален</td></tr>
+                            <tr><td>Сложность кода</td><td>Выше — синхронизация в каждом mutator</td><td>Ниже — одно место расчёта</td></tr>
+                            <tr><td>Тестируемость</td><td>Хуже — скрытое state</td><td>Лучше — pure function</td></tr>
+                            <tr><td>Sserialization</td><td>В JSON попадёт «лишний» total</td><td>Только items, total на лету</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="remember-box">
+                        <strong>Правило большого пальца:</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li><strong>Начинай с Computed</strong> — проще, безопаснее, баги типа «забыл обновить» невозможны.</li>
+                            <li><strong>Перепиши на Cached</strong> только когда профайлер показал что <code>total()</code> вызывается тысячи раз и это узкое место.</li>
+                            <li><strong>Гибрид (lazy cache):</strong> поле <code>private ?float $cachedTotal = null</code>. В <code>total()</code> если null — считаем и кэшируем. В <code>addItem/removeItem</code> сбрасываем <code>$cachedTotal = null</code>. Получаем O(1) на повторных чтениях + автоматическую инвалидацию.</li>
+                        </ul>
+                        <p style="margin:10px 0 0"><strong>Анти-паттерн:</strong> <code>$total = $items $item++</code> — синтаксически невалидно. PHP не имеет «магической связки» массив+оператор. Каждая операция явная: <code>$this-&gt;items[] = $item;</code> и (опционально) <code>$this-&gt;total += $item-&gt;price();</code>.</p>
+                    </div>
                 </div>
 
                 <div class="subsection">
