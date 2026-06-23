@@ -2911,6 +2911,79 @@ enum Status: string {
                 </div>
 
                 <div class="subsection">
+                    <h3 class="subsection-title">Когда писать <code>$</code>, а когда нет — все формы доступа к свойствам</h3>
+                    <div class="content-block">
+                        Главная путаница новичков в PHP: <strong>«почему <code>private $items</code> с долларом, а <code>$this->items</code> без?»</strong>. PHP имеет 5 разных синтаксических форм работы с именем свойства/переменной. Разберём каждую.
+                    </div>
+
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Форма</th><th>Что это</th><th>Где используется</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>$items</code></td><td>Локальная переменная</td><td>Внутри функции/метода. Существует только в этом scope.</td></tr>
+                            <tr><td><code>private array $items = []</code></td><td><strong>Объявление</strong> свойства класса</td><td>Тело класса. <code>$</code> здесь — часть имени переменной.</td></tr>
+                            <tr><td><code>$this->items</code></td><td><strong>Доступ</strong> к свойству объекта</td><td>Внутри нестатического метода. <code>$</code> только у <code>$this</code>, у <code>items</code> нет.</td></tr>
+                            <tr><td><code>$this->$varName</code></td><td><strong>Variable property</strong> — имя свойства в переменной</td><td>Редкая магия / опасный паттерн. Если <code>$varName = 'items'</code>, то <code>$this-&gt;$varName</code> = <code>$this-&gt;items</code>.</td></tr>
+                            <tr><td><code>self::$items</code></td><td>Static свойство</td><td>Внутри методов класса. У static свойств <code>$</code> остаётся (отличие от обычных!).</td></tr>
+                            <tr><td><code>items</code> (без <code>$</code> и без <code>-&gt;</code>)</td><td><strong>Константа</strong></td><td>PHP ищет <code>const items</code>. Если нет — warning + строка <code>'items'</code> (deprecated, в PHP 8.0 → Error).</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="example-label">Все 6 форм в одном файле</div>
+                    <pre><code><span class="keyword">class</span> <span class="function">Cart</span>
+{
+    <span class="keyword">private</span> <span class="keyword">array</span> <span class="variable">$items</span> = [];           <span class="comment">// 1. ОБЪЯВЛЕНИЕ — $ есть (часть синтаксиса)</span>
+    <span class="keyword">public static</span> <span class="keyword">int</span> <span class="variable">$totalCarts</span> = <span class="number">0</span>;     <span class="comment">// 2. static — $ есть и тут</span>
+
+    <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">addItem</span>(<span class="function">Item</span> <span class="variable">$item</span>): <span class="keyword">void</span>
+    {
+        <span class="variable">$this</span>-><span class="variable">items</span>[] = <span class="variable">$item</span>;          <span class="comment">// 3. ДОСТУП — items БЕЗ $ (после ->)</span>
+
+        <span class="keyword">self</span>::<span class="variable">$totalCarts</span>++;             <span class="comment">// 4. static — $ ОСТАЁТСЯ после ::</span>
+
+        <span class="variable">$localCount</span> = <span class="function">count</span>(<span class="variable">$this</span>-><span class="variable">items</span>);  <span class="comment">// 5. локальная переменная — $ есть</span>
+
+        <span class="comment">// 6. Variable property — магия (редко)</span>
+        <span class="variable">$field</span> = <span class="string">'items'</span>;
+        <span class="keyword">echo</span> <span class="function">count</span>(<span class="variable">$this</span>-><span class="variable">$field</span>);     <span class="comment">// = $this->items, два $ намеренно</span>
+    }
+}</code></pre>
+
+                    <div class="content-block" style="background:#EFF6FF;border-left:3px solid #3B82F6;padding:14px 18px;margin:10px 0;border-radius:4px">
+                        <strong>Почему <code>items</code> без <code>$</code> после <code>-&gt;</code> — логика языка</strong>
+                        <p style="margin:6px 0 0">У <code>$this</code> уже есть <code>$</code> — это переменная, ссылающаяся на объект. Дальше идёт <strong>оператор <code>-&gt;</code></strong>, который говорит PHP: «следующий идентификатор — это имя свойства/метода объекта». Имя свойства — это просто <strong>идентификатор</strong> (как имя функции <code>str_contains</code>), <code>$</code> не нужен.</p>
+                        <p style="margin:8px 0 0"><strong>Аналогия:</strong></p>
+                        <ul style="margin:6px 0 0 20px;line-height:1.7">
+                            <li><code>strlen('hello')</code> — имя функции <code>strlen</code> без <code>$</code> (это идентификатор)</li>
+                            <li><code>$this-&gt;items</code> — имя свойства <code>items</code> без <code>$</code> (это идентификатор)</li>
+                            <li><code>self::$count</code> — у static <code>$</code> остаётся (исторически, для отличия от константы класса <code>self::COUNT</code>)</li>
+                        </ul>
+                    </div>
+
+                    <div class="content-block" style="background:#FEE2E2;border-left:3px solid #DC2626;padding:14px 18px;margin:10px 0;border-radius:4px">
+                        <strong>⚠ Классическая ловушка: <code>$this-&gt;$field</code> с двумя <code>$</code></strong>
+                        <p style="margin:6px 0 0">Это <strong>не опечатка, а variable property</strong> — обращение к свойству, имя которого хранится в переменной <code>$field</code>.</p>
+                        <pre style="background:#1F2937;color:#F3F4F6;padding:10px 14px;border-radius:4px;font-size:12px;margin:8px 0;overflow-x:auto"><span style="color:#A5B4FC">$this-&gt;items</span>     <span style="color:#9CA3AF">// обращение к свойству items</span>
+<span style="color:#FCA5A5">$this-&gt;$items</span>    <span style="color:#9CA3AF">// variable property — ищет свойство с именем из $items
+                  // (если $items = 'name', то это = $this-&gt;name)</span></pre>
+                        <p style="margin:8px 0 0"><strong>В реальном коде встречается редко</strong> (динамические DTO, рефлексия). 99% случаев — это <strong>опечатка</strong>: программист случайно написал лишний <code>$</code>. Поведение: если переменная не определена / содержит несуществующее имя — fatal error.</p>
+                    </div>
+
+                    <div class="remember-box">
+                        <strong>Запомнить таблицей-мнемоникой:</strong>
+                        <ul style="margin:8px 0 0 20px;line-height:1.7">
+                            <li>Объявление свойства: <code>private $x</code> → <code>$</code> ЕСТЬ</li>
+                            <li>Доступ через объект: <code>$this-&gt;x</code> → <code>$</code> НЕТ (после <code>-&gt;</code>)</li>
+                            <li>Доступ к static: <code>self::$x</code> → <code>$</code> ЕСТЬ (после <code>::</code>)</li>
+                            <li>Через переменную (variable property): <code>$this-&gt;$x</code> → ДВА <code>$</code> — редко, обычно опечатка</li>
+                            <li>Локальная переменная в методе: <code>$x</code> → <code>$</code> ЕСТЬ (это обычная переменная)</li>
+                        </ul>
+                        <p style="margin:10px 0 0"><strong>На собесе спросят:</strong> «что значит <code>$this-&gt;$x</code> с двумя долларами?» — это variable property. 90% разработчиков забывают про это.</p>
+                    </div>
+                </div>
+
+                <div class="subsection">
                     <h3 class="subsection-title">Static, self, static:: — классовые члены</h3>
                     <div class="content-block">
                         <strong>Static</strong> (статические свойства и методы) принадлежат <strong>самому классу</strong>, а не отдельным объектам. Они существуют в единственном экземпляре независимо от того, сколько объектов создано. Вызываются через оператор <code>::</code> без <code>new</code>.
