@@ -121,6 +121,7 @@ ul.bullets strong{color:var(--text);}
   <a class="nav-item active" onclick="showSection('overview',this)"><i data-lucide="info"></i> О разделе</a>
 
   <div class="nav-group-label">Основы</div>
+  <a class="nav-item" onclick="showSection('db-types',this)"><i data-lucide="database"></i> Типы БД: SQL / NoSQL / OLAP</a>
   <a class="nav-item" onclick="showSection('relational',this)"><i data-lucide="table-2"></i> Реляционная модель</a>
   <a class="nav-item" onclick="showSection('types',this)"><i data-lucide="braces"></i> Типы данных</a>
   <a class="nav-item" onclick="showSection('ddl',this)"><i data-lucide="file-plus"></i> DDL: CREATE/ALTER</a>
@@ -199,6 +200,152 @@ ul.bullets strong{color:var(--text);}
       <tr><td><strong>Продвинуто</strong></td><td>Окна, CTE, отличия MySQL/Postgres, PDO в PHP</td></tr>
       <tr><td><strong>Практика</strong></td><td>Сквозная оптимизация запроса: от 4 секунд до 40 мс</td></tr>
     </table>
+  </div>
+</div>
+
+<div id="sec-db-types" class="section">
+  <div class="section-title">Типы баз данных: SQL / NoSQL / OLTP / OLAP</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-triangle"></i> Развеиваем путаницу</div>
+    <p class="text">Часто путают три ортогональных признака: <strong>модель данных</strong> (реляционная / документная / key-value / графовая), <strong>ориентация хранения</strong> (строчная / колоночная) и <strong>назначение</strong> (OLTP оперативные транзакции / OLAP аналитика). Это <em>независимые оси</em> — одна БД может быть «реляционная + строчная + OLTP» (PostgreSQL), другая «реляционная + колоночная + OLAP» (ClickHouse), третья «документная + строчная + OLTP» (MongoDB).</p>
+    <div class="pitfall"><strong>Реляционная ≠ key-value.</strong> Key-value — это NoSQL-модель, где на один ключ приходится одно значение (например, <code>user:1 → "{name:Alice}"</code>). Реляционная модель — таблицы со строками и столбцами + связи через foreign key + SQL как язык запросов. У них разные назначения.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="table-2"></i> Ось 1: Модель данных</div>
+
+    <table class="data-table">
+      <tr><th>Модель</th><th>Как хранит</th><th>Кто</th><th>Когда применять</th></tr>
+      <tr>
+        <td><strong>Реляционная (SQL)</strong></td>
+        <td>Таблицы + строки + связи FK. Строгая схема.</td>
+        <td>PostgreSQL, MySQL, SQLite, MariaDB, Oracle, SQL Server</td>
+        <td>По умолчанию. Транзакции, связанные данные, отчёты.</td>
+      </tr>
+      <tr>
+        <td><strong>Документная (NoSQL)</strong></td>
+        <td>JSON/BSON документы в коллекциях. Схема гибкая.</td>
+        <td>MongoDB, CouchDB, Firestore</td>
+        <td>Данные с изменчивой структурой, вложенные объекты без JOIN.</td>
+      </tr>
+      <tr>
+        <td><strong>Key-Value (NoSQL)</strong></td>
+        <td>Ключ → значение (обычно строка/JSON). Никакой схемы.</td>
+        <td>Redis, DynamoDB, Memcached, Riak</td>
+        <td>Кеш, сессии, счётчики, rate limiting, очереди.</td>
+      </tr>
+      <tr>
+        <td><strong>Column-family (NoSQL)</strong></td>
+        <td>Разреженные таблицы с миллионами колонок, sharding.</td>
+        <td>Cassandra, HBase, ScyllaDB</td>
+        <td>Огромные объёмы, писать чаще чем читать (логи, метрики).</td>
+      </tr>
+      <tr>
+        <td><strong>Graph (NoSQL)</strong></td>
+        <td>Узлы + рёбра со свойствами. Обход графа.</td>
+        <td>Neo4j, ArangoDB, TigerGraph, AWS Neptune</td>
+        <td>Соцсети, рекомендации, fraud detection.</td>
+      </tr>
+      <tr>
+        <td><strong>Time-series</strong></td>
+        <td>Оптимизирована под append-only с timestamp.</td>
+        <td>InfluxDB, TimescaleDB, Prometheus</td>
+        <td>Метрики, IoT, финансовые тики.</td>
+      </tr>
+      <tr>
+        <td><strong>Search-engine</strong></td>
+        <td>Инвертированные индексы для полнотекстового поиска.</td>
+        <td>Elasticsearch, Meilisearch, OpenSearch</td>
+        <td>Поиск, аналитика логов, автодополнение.</td>
+      </tr>
+      <tr>
+        <td><strong>Vector</strong></td>
+        <td>Многомерные векторы для similarity search.</td>
+        <td>Pinecone, Weaviate, Milvus, pgvector</td>
+        <td>Semantic search, embeddings, RAG для LLM.</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="rows-3"></i> Ось 2: Ориентация хранения — строчная vs колоночная</div>
+    <p class="text">Даже среди реляционных БД (одна и та же модель — таблицы) физическое хранение может быть разным. Это <strong>не про модель данных</strong>, а про то, как байты лежат на диске.</p>
+
+    <div class="card">
+      <h3><i data-lucide="table"></i> Row-oriented (строчная) — MySQL, PostgreSQL</h3>
+      <p class="text">Одна строка лежит на диске подряд: <code>[id=1|name='Alice'|email='a@x.kz'|age=25]</code>. Идеально когда нужны <strong>все поля одной строки</strong>: <code>SELECT * FROM users WHERE id=1</code>.</p>
+    </div>
+
+    <div class="card">
+      <h3><i data-lucide="columns-3"></i> Column-oriented (колоночная) — ClickHouse, Redshift, BigQuery, Snowflake, DuckDB</h3>
+      <p class="text">Каждая колонка хранится отдельно: <code>[1,2,3,...]</code> для id, <code>['Alice','Bob','Cena',...]</code> для name. Идеально для <strong>агрегаций по одному-двум полям через миллионы строк</strong>: <code>SELECT AVG(age) FROM users</code> — читает только колонку <code>age</code>, минуя все остальные.</p>
+    </div>
+
+    <table class="data-table">
+      <tr><th>Аспект</th><th>Row-oriented</th><th>Column-oriented</th></tr>
+      <tr><td>Чтение <code>SELECT *</code> одной строки</td><td>⚡ 1 seek</td><td>N seeks (по одному на колонку)</td></tr>
+      <tr><td>Агрегация <code>SUM/AVG</code> одной колонки</td><td>Читает ВСЕ колонки</td><td>⚡ Читает только нужную</td></tr>
+      <tr><td>INSERT одной строки</td><td>⚡ Быстро</td><td>Медленнее (запись в N файлов)</td></tr>
+      <tr><td>UPDATE / DELETE</td><td>⚡ Норм</td><td>Дорого (некоторые вообще запрещают)</td></tr>
+      <tr><td>Сжатие</td><td>Хуже (разные типы вперемешку)</td><td>⚡ Отличное (одинаковые данные подряд)</td></tr>
+      <tr><td>Индексы нужны часто?</td><td>Да, много</td><td>Реже — скан быстрый</td></tr>
+      <tr><td>Типичная задача</td><td>OLTP (транзакции)</td><td>OLAP (аналитика)</td></tr>
+    </table>
+
+    <div class="pitfall"><strong>ClickHouse — реляционная колоночная БД.</strong> Умеет SQL с JOIN, GROUP BY, но заточена под аналитику. Для веб-приложения (заказы, юзеры) она плохой выбор — INSERT одной строки в 100 раз медленнее MySQL. Используй для: аналитики логов, метрик, dashboard'ов с миллиардами строк.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="split"></i> Ось 3: Назначение — OLTP vs OLAP</div>
+    <table class="data-table">
+      <tr><th></th><th>OLTP (Online Transaction Processing)</th><th>OLAP (Online Analytical Processing)</th></tr>
+      <tr><td>Что делает</td><td>Оперативные транзакции: заказы, юзеры, платежи</td><td>Аналитика: отчёты, dashboards, BI</td></tr>
+      <tr><td>Запись / чтение</td><td>Много мелких транзакций (create order)</td><td>Мало запросов, но огромных (SUM за год)</td></tr>
+      <tr><td>Модель данных</td><td>Нормализованная (3NF)</td><td>Денормализованная (star / snowflake schema)</td></tr>
+      <tr><td>Обычно</td><td>Row-oriented (MySQL, PostgreSQL)</td><td>Column-oriented (ClickHouse, Redshift)</td></tr>
+      <tr><td>Индексы</td><td>Много, часто</td><td>Мало (полный скан быстрый)</td></tr>
+      <tr><td>Пользователи</td><td>Сайт, приложение</td><td>Аналитики, менеджеры, BI-tools</td></tr>
+      <tr><td>Пример</td><td><code>INSERT INTO orders VALUES(...)</code></td><td><code>SELECT month, SUM(amount) FROM orders GROUP BY month</code></td></tr>
+    </table>
+
+    <div class="pitfall"><strong>На практике часто держат обе.</strong> OLTP-база (PostgreSQL) — production. Ночью данные ETL-скриптом переливают в OLAP (ClickHouse / Snowflake). Аналитики смотрят отчёты в OLAP без нагрузки на прод.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="sparkles"></i> Специальные категории</div>
+
+    <div class="card">
+      <h3><i data-lucide="scale"></i> NewSQL — распределенная реляционная</h3>
+      <p class="text">CockroachDB, YugabyteDB, TiDB, Google Spanner. Реляционная модель + SQL + ACID + горизонтальное масштабирование (шардирование). Появились когда MySQL/PostgreSQL стали упираться в один сервер. Дороже и сложнее классических.</p>
+    </div>
+
+    <div class="card">
+      <h3><i data-lucide="hard-drive"></i> Embedded — в процесс приложения</h3>
+      <p class="text">SQLite, LevelDB, RocksDB, DuckDB. Живут в файле рядом с приложением, без сетевого сервера. SQLite — самая распространённая БД в мире (каждый iPhone, Android, браузер). Идеально для локального dev, mobile, тестов, KB как у нас.</p>
+    </div>
+
+    <div class="card">
+      <h3><i data-lucide="link-2"></i> Гибриды — PostgreSQL как «универсал»</h3>
+      <p class="text">Современный PostgreSQL умеет одновременно: реляционные таблицы + <code>JSONB</code> (документная модель) + <code>hstore</code> (key-value) + <code>full-text search</code> + <code>pgvector</code> (векторный поиск) + <code>PostGIS</code> (гео). В 90% проектов PostgreSQL закрывает всё — не нужно 5 разных БД.</p>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="check-circle-2"></i> Правило выбора</div>
+    <table class="data-table">
+      <tr><th>Задача</th><th>Что брать</th></tr>
+      <tr><td>Веб-приложение / e-commerce / любой стандартный проект</td><td><strong>PostgreSQL</strong> или MySQL</td></tr>
+      <tr><td>Кеш, сессии, счётчики, очереди</td><td><strong>Redis</strong></td></tr>
+      <tr><td>Данные без чёткой схемы, вложенные документы</td><td>MongoDB (или JSONB в PostgreSQL)</td></tr>
+      <tr><td>Аналитика на миллиарды строк, dashboards</td><td>ClickHouse / BigQuery / Snowflake</td></tr>
+      <tr><td>Полнотекстовый поиск, автодополнение</td><td>Elasticsearch / Meilisearch (или FTS в PG)</td></tr>
+      <tr><td>Соц.граф, рекомендации</td><td>Neo4j</td></tr>
+      <tr><td>Метрики, IoT, финансовые тики</td><td>InfluxDB / TimescaleDB</td></tr>
+      <tr><td>Semantic search для LLM</td><td>pgvector / Pinecone / Weaviate</td></tr>
+      <tr><td>Mobile app, embedded, KB, dev-локалка</td><td>SQLite</td></tr>
+    </table>
+    <div class="remember-box"><strong>На собесе спросят:</strong> «SQL vs NoSQL когда что». Правильный ответ — <em>«зависит от паттерна доступа»</em>. NoSQL быстрее для конкретной модели, но реляционная гибче. Начинай с PostgreSQL — переходи на NoSQL только когда конкретный кейс требует.</div>
   </div>
 </div>
 
