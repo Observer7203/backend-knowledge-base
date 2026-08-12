@@ -122,6 +122,7 @@ ul.bullets strong{color:var(--text);}
 
   <div class="nav-group-label">Ядро</div>
   <a class="nav-item" onclick="showSection('lifecycle',this)"><i data-lucide="rotate-cw"></i> Request Lifecycle</a>
+  <a class="nav-item" onclick="showSection('bootstrap-deep',this)"><i data-lucide="package"></i> Bootstrap: providers &amp; app.php</a>
   <a class="nav-item" onclick="showSection('routing',this)"><i data-lucide="route"></i> Routing</a>
   <a class="nav-item" onclick="showSection('middleware',this)"><i data-lucide="filter"></i> Middleware</a>
   <a class="nav-item" onclick="showSection('validation',this)"><i data-lucide="check-circle"></i> Validation &amp; FormRequest</a>
@@ -386,6 +387,233 @@ ul.bullets strong{color:var(--text);}
     <div class="pitfall"><strong>6. Логи в <code>storage/logs/laravel.log</code> при больших объёмах.</strong> Один файл, отсутствует ротация по умолчанию — за неделю несколько ГБ. Используйте <code>daily</code> канал или внешний агрегатор.</div>
     <div class="pitfall"><strong>7. Утечка в обработчике exception.</strong> Кастомный <code>Handler::render</code> может вернуть response, но забыть закрыть транзакцию или освободить ресурс. <code>Handler::report</code> и <code>render</code> разделены неспроста: report для логов, render для ответа клиенту.</div>
     <div class="pitfall"><strong>8. Lifecycle в Octane.</strong> Bootstrap-фаза в Octane выполняется один раз на воркер. Состояние, оставленное в singleton'ах между запросами, утечёт. Подробно — в разделе Octane.</div>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════════════════
+     BOOTSTRAP DEEP — отдельный раздел про providers, app.php, autowiring
+     ═════════════════════════════════════════════════════════════════════════ -->
+<div id="sec-bootstrap-deep" class="section">
+  <div class="section-title">Bootstrap: providers.php &amp; app.php — глубоко</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-triangle"></i> Важная поправка про Laravel 11+</div>
+    <p class="text">Список провайдеров лежит <strong>не</strong> в <code>bootstrap/app.php</code>, а в отдельном файле <code>bootstrap/providers.php</code>. Это просто массив:</p>
+    <pre><code><span class="c-comment">// bootstrap/providers.php</span>
+<span class="c-key">return</span> [
+    <span class="c-type">App</span>\<span class="c-type">Providers</span>\<span class="c-type">AppServiceProvider</span>::<span class="c-key">class</span>,
+    <span class="c-type">App</span>\<span class="c-type">Providers</span>\<span class="c-type">HorizonServiceProvider</span>::<span class="c-key">class</span>,
+];</code></pre>
+    <p class="text">В <code>bootstrap/app.php</code> тоже есть метод <code>withProviders()</code>, но он для особых случаев (например, подгрузить провайдеры из другой директории). Дефолтный путь — <code>providers.php</code>.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="settings"></i> Провайдер — тот, кто объясняет контейнеру, как собрать сервис</div>
+    <pre><code><span class="c-comment">// app/Providers/SmsServiceProvider.php</span>
+<span class="c-key">class</span> <span class="c-type">SmsServiceProvider</span> <span class="c-key">extends</span> <span class="c-type">ServiceProvider</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">register</span>(): <span class="c-key">void</span>
+    {
+        <span class="c-key">$this</span>-&gt;<span class="c-var">app</span>-&gt;<span class="c-fn">singleton</span>(<span class="c-type">SmsSender</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-var">$app</span>) {
+            <span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">MobizonSender</span>(
+                <span class="c-fn">config</span>(<span class="c-str">'services.mobizon.key'</span>),
+                <span class="c-var">$app</span>-&gt;<span class="c-fn">make</span>(<span class="c-type">HttpClient</span>::<span class="c-key">class</span>),
+            );
+        });
+    }
+}</code></pre>
+    <p class="text">Тут нет логики. Ни одной SMS не отправлено. Это <strong>инструкция</strong>: «когда кто-то попросит <code>SmsSender</code> — вот рецепт, как его собрать».</p>
+
+    <div class="subsection-title" style="margin-top:14px"><i data-lucide="help-circle"></i> Зачем эта прослойка вообще нужна</div>
+    <p class="text">Смотри на конструктор <code>MobizonSender</code>. Ему нужен <code>string $apiKey</code>. Контейнер про строки ничего не знает — он не может угадать, какую строку туда подставить. <strong>Автоматика ломается.</strong></p>
+    <p class="text">Плюс <code>SmsSender</code> — <strong>интерфейс</strong>. Его вообще нельзя инстанцировать, <code>new SmsSender()</code> невозможен.</p>
+    <p class="text">Поэтому и нужен провайдер: он закрывает оба этих пробела.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="arrow-right-circle"></i> Что происходит в коде дальше</div>
+    <pre><code><span class="c-key">class</span> <span class="c-type">OrderController</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">private</span> <span class="c-type">SmsSender</span> <span class="c-var">$sms</span>) {}   <span class="c-comment">// просит интерфейс</span>
+
+    <span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>)
+    {
+        <span class="c-var">$order</span> = <span class="c-type">Order</span>::<span class="c-fn">create</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>());
+        <span class="c-key">$this</span>-&gt;<span class="c-var">sms</span>-&gt;<span class="c-fn">send</span>(<span class="c-var">$order</span>-&gt;<span class="c-var">phone</span>, <span class="c-str">"Заказ №{$order-&gt;id} принят"</span>);
+    }
+}</code></pre>
+    <p class="text">Контроллер просит <code>SmsSender</code>. Контейнер лезет в свой реестр, находит запись, которую положил туда провайдер, выполняет замыкание, отдаёт готовый <code>MobizonSender</code>.</p>
+    <div class="tip">
+      Представь: при старте приложения нужно выполнить, скажем, 200 подготовительных действий. Свалить их в один файл — каша. Поэтому Laravel говорит: разложи по классам, каждый класс = один блок подготовки, и дай мне список этих классов.
+    </div>
+    <p class="text">Если провайдер не зарегистрирован в <code>bootstrap/providers.php</code> — его <code>register()</code> никогда не выполнится, в реестре пусто, и ты получишь:</p>
+    <pre><code><span class="c-comment">Target [App\Contracts\SmsSender] is not instantiable.</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="minus-circle"></i> Когда провайдер вообще НЕ нужен</div>
+    <pre><code><span class="c-comment">// app/Services/OrderService.php</span>
+<span class="c-key">class</span> <span class="c-type">OrderService</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+        <span class="c-key">private</span> <span class="c-type">OrderRepository</span> <span class="c-var">$repo</span>,     <span class="c-comment">// конкретный класс</span>
+        <span class="c-key">private</span> <span class="c-type">SmsSender</span> <span class="c-var">$sms</span>,             <span class="c-comment">// интерфейс, но он уже забинден выше</span>
+    ) {}
+
+    <span class="c-key">public function</span> <span class="c-fn">complete</span>(<span class="c-type">Order</span> <span class="c-var">$order</span>): <span class="c-key">void</span>
+    {
+        <span class="c-key">$this</span>-&gt;<span class="c-var">repo</span>-&gt;<span class="c-fn">markCompleted</span>(<span class="c-var">$order</span>);
+        <span class="c-key">$this</span>-&gt;<span class="c-var">sms</span>-&gt;<span class="c-fn">send</span>(<span class="c-var">$order</span>-&gt;<span class="c-var">phone</span>, <span class="c-str">'Заказ выполнен'</span>);
+    }
+}</code></pre>
+    <p class="text">Это тоже сервис. Но <strong>регистрировать его нигде не надо</strong> — контейнер соберёт его сам: <code>OrderRepository</code> это конкретный класс (autowiring справится), <code>SmsSender</code> уже описан провайдером.</p>
+    <p class="text">Просто пишешь в контроллере <code>public function __construct(private OrderService $service)</code> — и всё работает. Ноль конфигурации.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> Финальный контраст: Сервис vs Провайдер</div>
+    <table class="data-table">
+      <thead><tr><th></th><th>Сервис</th><th>Провайдер</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Что делает</strong></td><td>Бизнес-логику</td><td>Настраивает контейнер</td></tr>
+        <tr><td><strong>Когда выполняется</strong></td><td>Когда ты его вызвал</td><td>Один раз при старте приложения, всегда</td></tr>
+        <tr><td><strong>Сколько раз в проекте</strong></td><td>Десятки-сотни классов</td><td>Обычно 1-5</td></tr>
+        <tr><td><strong>Где лежит</strong></td><td><code>app/Services</code>, <code>app/Actions</code>, где угодно</td><td><code>app/Providers</code></td></tr>
+        <tr><td><strong>Регистрация</strong></td><td>Не нужна (autowiring)</td><td>Обязательна, в <code>bootstrap/providers.php</code></td></tr>
+        <tr><td><strong>Нужен, если...</strong></td><td>Есть логика, которую надо где-то держать</td><td>Контейнер сам не догадается, как собрать объект</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="zap"></i> Что вообще НЕ надо нигде регистрировать</div>
+    <p class="text">Большая часть классов подключается сама, и это главное, что стоит понять:</p>
+    <table class="data-table">
+      <thead><tr><th>Что</th><th>Как находится</th></tr></thead>
+      <tbody>
+        <tr><td>Контроллеры</td><td>По имени в роуте + autowiring контейнера</td></tr>
+        <tr><td>Модели Eloquent</td><td>Просто <code>new User</code> / через контейнер</td></tr>
+        <tr><td>Middleware-классы</td><td>Указываешь в роуте или в <code>withMiddleware()</code></td></tr>
+        <tr><td>Jobs, Events, Listeners, Notifications</td><td>Автодискавери по неймспейсу</td></tr>
+        <tr><td>Form Requests</td><td>Type-hint в методе контроллера</td></tr>
+        <tr><td>Console-команды</td><td>Автосканирование <code>app/Console/Commands</code></td></tr>
+        <tr><td>Миграции, сидеры, фабрики</td><td>По конвенции путей</td></tr>
+        <tr><td>Policies</td><td>Автодискавери по имени (<code>Post</code> → <code>PostPolicy</code>)</td></tr>
+      </tbody>
+    </table>
+    <p class="text">Работает это на конвенциях + Composer autoload (PSR-4). Composer знает, что <code>App\</code> → <code>app/</code>, поэтому <code>App\Services\OrderService</code> находится по пути <code>app/Services/OrderService.php</code> без единой строчки конфига.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="key"></i> Почему тогда провайдеры — исключение</div>
+    <p class="text">Ключевая разница: у всех перечисленных выше классов есть <strong>триггер</strong>, по которому Laravel понимает, когда их создавать. Роут пришёл → создай контроллер. Событие вылетело → найди слушателя.</p>
+    <p class="text">У провайдера триггера нет. Провайдер — это код, который должен выполниться <strong>безусловно</strong>, на каждом старте приложения, до всего остального. Laravel не может «догадаться», что тебе нужно зарегистрировать биндинг — он должен получить явный список: вот эти классы прогони через <code>register()</code>, потом через <code>boot()</code>.</p>
+    <p class="text">Плюс <strong>порядок важен</strong>: <code>register()</code> у всех провайдеров вызывается раньше, чем <code>boot()</code> у любого из них — именно поэтому в <code>register()</code> нельзя дёргать чужие сервисы. Автодискавери такой порядок не гарантирует.</p>
+    <div class="tip">
+      <strong>Побочный бонус</strong> явного списка: провайдер можно закомментировать одной строкой и вырубить целый блок функциональности.
+    </div>
+    <p class="text"><strong>Пакеты из vendor</strong> свои провайдеры регистрируют сами — через <code>extra.laravel.providers</code> в своём <code>composer.json</code> (package auto-discovery). Поэтому после <code>composer require</code> обычно ничего руками прописывать не надо.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="settings-2"></i> Что реально настраивается в <code>bootstrap/app.php</code></div>
+    <p class="text">Полная картина методов:</p>
+    <pre><code><span class="c-key">return</span> <span class="c-type">Application</span>::<span class="c-fn">configure</span>(<span class="c-var">basePath</span>: <span class="c-fn">dirname</span>(<span class="c-fn">__DIR__</span>))
+    -&gt;<span class="c-fn">withRouting</span>(...)
+    -&gt;<span class="c-fn">withMiddleware</span>(...)
+    -&gt;<span class="c-fn">withExceptions</span>(...)
+    -&gt;<span class="c-fn">withCommands</span>(...)
+    -&gt;<span class="c-fn">withSchedule</span>(...)
+    -&gt;<span class="c-fn">withEvents</span>(...)
+    -&gt;<span class="c-fn">withBindings</span>(...)
+    -&gt;<span class="c-fn">withSingletons</span>(...)
+    -&gt;<span class="c-fn">withProviders</span>(...)
+    -&gt;<span class="c-fn">create</span>();</code></pre>
+    <p class="text">Основные, которые реально трогают в проектах:</p>
+
+    <div class="card">
+      <h3>1. <code>withRouting()</code> — точки входа</h3>
+      <pre><code>-&gt;<span class="c-fn">withRouting</span>(
+    <span class="c-var">web</span>:      <span class="c-fn">__DIR__</span>.<span class="c-str">'/../routes/web.php'</span>,
+    <span class="c-var">api</span>:      <span class="c-fn">__DIR__</span>.<span class="c-str">'/../routes/api.php'</span>,
+    <span class="c-var">commands</span>: <span class="c-fn">__DIR__</span>.<span class="c-str">'/../routes/console.php'</span>,
+    <span class="c-var">health</span>:   <span class="c-str">'/up'</span>,                    <span class="c-comment">// готовый эндпоинт для healthcheck</span>
+    <span class="c-var">apiPrefix</span>: <span class="c-str">'api/v1'</span>,
+    <span class="c-var">then</span>: <span class="c-key">function</span> () {               <span class="c-comment">// свои файлы роутов</span>
+        <span class="c-type">Route</span>::<span class="c-fn">middleware</span>(<span class="c-str">'web'</span>)
+            -&gt;<span class="c-fn">prefix</span>(<span class="c-str">'admin'</span>)
+            -&gt;<span class="c-fn">group</span>(<span class="c-fn">base_path</span>(<span class="c-str">'routes/admin.php'</span>));
+    },
+)</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>2. <code>withMiddleware()</code> — глобальный конвейер запроса</h3>
+      <pre><code>-&gt;<span class="c-fn">withMiddleware</span>(<span class="c-key">function</span> (<span class="c-type">Middleware</span> <span class="c-var">$middleware</span>) {
+    <span class="c-var">$middleware</span>-&gt;<span class="c-fn">append</span>(<span class="c-type">SetLocale</span>::<span class="c-key">class</span>);              <span class="c-comment">// в конец глобального стека</span>
+    <span class="c-var">$middleware</span>-&gt;<span class="c-fn">prepend</span>(<span class="c-type">TrustProxies</span>::<span class="c-key">class</span>);          <span class="c-comment">// в начало</span>
+    <span class="c-var">$middleware</span>-&gt;<span class="c-fn">web</span>(<span class="c-var">append</span>: [<span class="c-type">EnsureProfileComplete</span>::<span class="c-key">class</span>]);  <span class="c-comment">// в группу web</span>
+    <span class="c-var">$middleware</span>-&gt;<span class="c-fn">api</span>(<span class="c-var">prepend</span>: [<span class="c-type">ForceJsonResponse</span>::<span class="c-key">class</span>]);
+    <span class="c-var">$middleware</span>-&gt;<span class="c-fn">alias</span>([<span class="c-str">'admin'</span> =&gt; <span class="c-type">AdminOnly</span>::<span class="c-key">class</span>]);  <span class="c-comment">// короткое имя для роутов</span>
+    <span class="c-var">$middleware</span>-&gt;<span class="c-fn">remove</span>(<span class="c-type">ValidateCsrfToken</span>::<span class="c-key">class</span>);      <span class="c-comment">// выкинуть дефолтный</span>
+    <span class="c-var">$middleware</span>-&gt;<span class="c-fn">throttleApi</span>(<span class="c-str">'60,1'</span>);
+    <span class="c-var">$middleware</span>-&gt;<span class="c-fn">trustProxies</span>(<span class="c-var">at</span>: <span class="c-str">'*'</span>);
+    <span class="c-var">$middleware</span>-&gt;<span class="c-fn">validateCsrfTokens</span>(<span class="c-var">except</span>: [<span class="c-str">'webhooks/*'</span>]);
+})</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>3. <code>withExceptions()</code> — что делать с ошибками</h3>
+      <pre><code>-&gt;<span class="c-fn">withExceptions</span>(<span class="c-key">function</span> (<span class="c-type">Exceptions</span> <span class="c-var">$exceptions</span>) {
+    <span class="c-var">$exceptions</span>-&gt;<span class="c-fn">dontReport</span>(<span class="c-type">BusinessRuleException</span>::<span class="c-key">class</span>);
+
+    <span class="c-var">$exceptions</span>-&gt;<span class="c-fn">render</span>(<span class="c-key">function</span> (<span class="c-type">ModelNotFoundException</span> <span class="c-var">$e</span>, <span class="c-type">Request</span> <span class="c-var">$request</span>) {
+        <span class="c-key">if</span> (<span class="c-var">$request</span>-&gt;<span class="c-fn">expectsJson</span>()) {
+            <span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">json</span>([<span class="c-str">'message'</span> =&gt; <span class="c-str">'Не найдено'</span>], <span class="c-num">404</span>);
+        }
+    });
+
+    <span class="c-var">$exceptions</span>-&gt;<span class="c-fn">report</span>(<span class="c-key">function</span> (<span class="c-type">PaymentFailed</span> <span class="c-var">$e</span>) {
+        <span class="c-type">Sentry</span>::<span class="c-fn">captureException</span>(<span class="c-var">$e</span>);
+    });
+
+    <span class="c-var">$exceptions</span>-&gt;<span class="c-fn">context</span>(<span class="c-key">fn</span> () =&gt; [<span class="c-str">'tenant_id'</span> =&gt; <span class="c-fn">tenant</span>()?-&gt;<span class="c-var">id</span>]);
+})</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>4. <code>withSchedule()</code> — крон-задачи</h3>
+      <pre><code>-&gt;<span class="c-fn">withSchedule</span>(<span class="c-key">function</span> (<span class="c-type">Schedule</span> <span class="c-var">$schedule</span>) {
+    <span class="c-var">$schedule</span>-&gt;<span class="c-fn">command</span>(<span class="c-str">'reports:daily'</span>)-&gt;<span class="c-fn">dailyAt</span>(<span class="c-str">'03:00'</span>);
+})</code></pre>
+      <p class="text">Хотя чаще их пишут в <code>routes/console.php</code>.</p>
+    </div>
+
+    <div class="card">
+      <h3>5. <code>withBindings()</code> / <code>withSingletons()</code> — быстрые биндинги без провайдера</h3>
+      <pre><code>-&gt;<span class="c-fn">withSingletons</span>([
+    <span class="c-type">PaymentGateway</span>::<span class="c-key">class</span> =&gt; <span class="c-type">StripeGateway</span>::<span class="c-key">class</span>,
+])</code></pre>
+      <p class="text">Удобно для мелочи, но для чего-то серьёзного всё равно лучше провайдер — там есть <code>boot()</code> и логика группируется по смыслу.</p>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="map"></i> Итоговая карта: куда что класть</div>
+    <table class="data-table">
+      <thead><tr><th>Место</th><th>Что там</th></tr></thead>
+      <tbody>
+        <tr><td><code>bootstrap/app.php</code></td><td>Конфигурация ядра: middleware, роуты, обработка исключений</td></tr>
+        <tr><td><code>bootstrap/providers.php</code></td><td>Список провайдеров</td></tr>
+        <tr><td><code>config/*.php</code></td><td>Значения: параметры БД, кеша, почты, сторонних сервисов</td></tr>
+        <tr><td><code>.env</code></td><td>Секреты и то, что различается между dev/prod</td></tr>
+        <tr><td><code>routes/*.php</code></td><td>Маршруты</td></tr>
+        <tr><td>Всё остальное в <code>app/</code></td><td>Само подхватывается по PSR-4 и конвенциям</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box">
+      <strong>Мнемоника (обычно заходит на собесе):</strong> <code>bootstrap/</code> отвечает на вопрос «<em>как собрать</em> приложение», <code>config/</code> — «<em>с какими параметрами</em> оно работает».
+    </div>
   </div>
 </div>
 
