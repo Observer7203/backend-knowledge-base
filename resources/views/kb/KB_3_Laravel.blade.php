@@ -215,6 +215,44 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="file-code"></i> Пример <code>bootstrap/app.php</code> (Laravel 11+)</div>
+    <p class="text">С Laravel 11 конфигурация приложения переехала из <code>app/Http/Kernel.php</code>, <code>app/Console/Kernel.php</code> и <code>app/Exceptions/Handler.php</code> в один декларативный файл <code>bootstrap/app.php</code>.</p>
+    <pre><code><span class="c-key">return</span> <span class="c-type">Application</span>::<span class="c-fn">configure</span>(<span class="c-var">basePath</span>: <span class="c-fn">dirname</span>(<span class="c-fn">__DIR__</span>))
+    -&gt;<span class="c-fn">withRouting</span>(
+        <span class="c-var">web</span>:      <span class="c-fn">__DIR__</span>.<span class="c-str">'/../routes/web.php'</span>,
+        <span class="c-var">api</span>:      <span class="c-fn">__DIR__</span>.<span class="c-str">'/../routes/api.php'</span>,
+        <span class="c-var">commands</span>: <span class="c-fn">__DIR__</span>.<span class="c-str">'/../routes/console.php'</span>,
+        <span class="c-var">health</span>:   <span class="c-str">'/up'</span>,
+    )
+    -&gt;<span class="c-fn">withMiddleware</span>(<span class="c-key">function</span> (<span class="c-type">Middleware</span> <span class="c-var">$middleware</span>) {
+        <span class="c-var">$middleware</span>-&gt;<span class="c-fn">append</span>(<span class="c-type">EnsureUserIsActive</span>::<span class="c-key">class</span>);
+        <span class="c-var">$middleware</span>-&gt;<span class="c-fn">alias</span>([<span class="c-str">'admin'</span> =&gt; <span class="c-type">AdminOnly</span>::<span class="c-key">class</span>]);
+    })
+    -&gt;<span class="c-fn">withExceptions</span>(<span class="c-key">function</span> (<span class="c-type">Exceptions</span> <span class="c-var">$exceptions</span>) {
+        <span class="c-var">$exceptions</span>-&gt;<span class="c-fn">render</span>(<span class="c-key">function</span> (<span class="c-type">ApiException</span> <span class="c-var">$e</span>) {
+            <span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">json</span>([<span class="c-str">'error'</span> =&gt; <span class="c-var">$e</span>-&gt;<span class="c-fn">getMessage</span>()], <span class="c-num">422</span>);
+        });
+    })
+    -&gt;<span class="c-fn">create</span>();</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px"><i data-lucide="check-square"></i> Что тут происходит</div>
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>Что настраивает</th></tr></thead>
+      <tbody>
+        <tr><td><code>configure(basePath: ...)</code></td><td>Стартует построение <code>Application</code>. <code>basePath</code> — корень проекта.</td></tr>
+        <tr><td><code>withRouting</code></td><td>Пути к файлам маршрутов: <code>web</code> (с сессией/CSRF), <code>api</code> (без), <code>commands</code> (artisan). <code>health: '/up'</code> — авто-эндпоинт для healthcheck.</td></tr>
+        <tr><td><code>withMiddleware</code></td><td>Регистрирует глобальные middleware, группы и алиасы. Пример: <code>append()</code> добавляет в конец глобального стека; <code>alias()</code> создаёт короткое имя для роутов.</td></tr>
+        <tr><td><code>withExceptions</code></td><td>Кастомная обработка исключений. Пример: <code>ApiException</code> → JSON-ответ 422.</td></tr>
+        <tr><td><code>create()</code></td><td>Финализирует и возвращает готовый <code>Application</code>. Дальше его подхватит <code>public/index.php</code>.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="remember-box">
+      <strong>Отличие Laravel 11+ от 10 и ниже:</strong> раньше эти настройки лежали в 3 разных файлах (<code>Http/Kernel.php</code>, <code>Console/Kernel.php</code>, <code>Exceptions/Handler.php</code>). Теперь всё в одном месте — <code>bootstrap/app.php</code> — как декларативная цепочка вызовов.
+    </div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="list"></i> Этапы цикла</div>
     <div class="card"><h3>1. <code>public/index.php</code> — точка входа</h3><p class="text">Веб-сервер (nginx/Apache/built-in artisan serve) направляет любой URL в <code>public/index.php</code>. Этот файл загружает автозагрузчик Composer и <code>bootstrap/app.php</code>, который создаёт экземпляр <code>Application</code> (наследник IoC-контейнера).</p></div>
     <div class="card"><h3>2. Bootstrap: <code>bootstrap/app.php</code></h3><p class="text">Конфигурируется ядро: список middleware, провайдеров, обработчик исключений, маршруты. В Laravel 11 это стало декларативной API в одном файле (раньше — отдельные классы в <code>app/Http/Kernel.php</code>).</p></div>
