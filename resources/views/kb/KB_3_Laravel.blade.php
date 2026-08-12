@@ -250,6 +250,89 @@ ul.bullets strong{color:var(--text);}
     <div class="remember-box">
       <strong>Отличие Laravel 11+ от 10 и ниже:</strong> раньше эти настройки лежали в 3 разных файлах (<code>Http/Kernel.php</code>, <code>Console/Kernel.php</code>, <code>Exceptions/Handler.php</code>). Теперь всё в одном месте — <code>bootstrap/app.php</code> — как декларативная цепочка вызовов.
     </div>
+
+    <div class="subsection-title" style="margin-top:14px"><i data-lucide="info"></i> Термины, которые встретились выше</div>
+
+    <div class="card">
+      <h3>DI (Dependency Injection)</h3>
+      <p class="text"><strong>Внедрение зависимостей</strong> — зависимости не создаются <em>внутри</em> класса, а передаются <em>извне</em>. Класс перестаёт «знать», как строить свои сервисы — он их только принимает и использует.</p>
+      <pre><code><span class="c-comment">// ❌ Без DI — класс сам создаёт зависимость</span>
+<span class="c-key">class</span> <span class="c-type">UserService</span> {
+    <span class="c-key">public function</span> <span class="c-fn">save</span>() {
+        <span class="c-var">$db</span> = <span class="c-key">new</span> <span class="c-type">PDO</span>(<span class="c-str">'mysql:...'</span>);   <span class="c-comment">// жёстко привязан к PDO</span>
+        <span class="c-var">$db</span>-&gt;<span class="c-fn">exec</span>(...);
+    }
+}
+
+<span class="c-comment">// ✓ С DI — зависимость передаётся снаружи</span>
+<span class="c-key">class</span> <span class="c-type">UserService</span> {
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">private</span> <span class="c-type">PDO</span> <span class="c-var">$db</span>) {}
+    <span class="c-key">public function</span> <span class="c-fn">save</span>() {
+        <span class="c-key">$this</span>-&gt;<span class="c-var">db</span>-&gt;<span class="c-fn">exec</span>(...);
+    }
+}</code></pre>
+      <p class="text">Laravel-контейнер сам разрешает эти зависимости при вызове: увидит <code>PDO $db</code> в конструкторе → сам создаст или подставит singleton. Подробнее — в KB_13 Service Container.</p>
+    </div>
+
+    <div class="card">
+      <h3>Декларативный vs Императивный</h3>
+      <table class="data-table">
+        <thead><tr><th></th><th>Императивный</th><th>Декларативный</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Что описываешь</strong></td>
+            <td><em>Как</em> сделать — пошаговые инструкции</td>
+            <td><em>Что</em> хочешь получить — фреймворк решает как</td>
+          </tr>
+          <tr>
+            <td><strong>Кто собирает</strong></td>
+            <td>Ты — руками через <code>new</code>, <code>if</code>, циклы</td>
+            <td>Фреймворк — по твоей конфигурации</td>
+          </tr>
+          <tr>
+            <td><strong>Пример</strong></td>
+            <td><code>for ($i=0;$i&lt;10;$i++) echo $i;</code></td>
+            <td><code>SELECT * FROM users WHERE age &gt; 18</code></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="text"><strong>Пример в Laravel:</strong> старый Laravel 10 требовал императивно править 3 файла — регистрируй middleware в <code>$middleware</code>, обработчик в <code>Handler::register()</code>. Laravel 11+ — декларативно: «мои middleware — вот эти, мои исключения — вот такие», а <em>как</em> это подключить — забота фреймворка.</p>
+    </div>
+
+    <div class="card">
+      <h3>Провайдеры (Service Providers)</h3>
+      <p class="text">Классы, где ты <strong>регистрируешь свои сервисы</strong> в контейнере и <strong>бутстрапишь</strong> их. Два ключевых метода:</p>
+      <ul style="line-height:1.9;margin:6px 0 0 20px">
+        <li><code>register()</code> — <strong>только биндинги</strong> в контейнер: <code>$this-&gt;app-&gt;bind(PaymentGateway::class, StripeGateway::class)</code>. Никаких обращений к другим сервисам — они могут быть ещё не зарегистрированы.</li>
+        <li><code>boot()</code> — вызывается, когда <strong>всё зарегистрировано</strong>: сюда вешаешь Blade-директивы, observers, policies, кастомные валидаторы, макросы для коллекций/query builder.</li>
+      </ul>
+      <pre><code><span class="c-key">class</span> <span class="c-type">AppServiceProvider</span> <span class="c-key">extends</span> <span class="c-type">ServiceProvider</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">register</span>(): <span class="c-key">void</span>
+    {
+        <span class="c-comment">// Только биндинги — другие сервисы ещё могут быть не готовы</span>
+        <span class="c-key">$this</span>-&gt;<span class="c-var">app</span>-&gt;<span class="c-fn">bind</span>(<span class="c-type">PaymentGateway</span>::<span class="c-key">class</span>, <span class="c-type">StripeGateway</span>::<span class="c-key">class</span>);
+        <span class="c-key">$this</span>-&gt;<span class="c-var">app</span>-&gt;<span class="c-fn">singleton</span>(<span class="c-type">Cache</span>::<span class="c-key">class</span>, <span class="c-key">fn</span>() =&gt; <span class="c-key">new</span> <span class="c-type">RedisCache</span>());
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">boot</span>(): <span class="c-key">void</span>
+    {
+        <span class="c-comment">// Всё зарегистрировано — можно вешать хуки, макросы, директивы</span>
+        <span class="c-type">Blade</span>::<span class="c-fn">directive</span>(<span class="c-str">'money'</span>, <span class="c-key">fn</span>(<span class="c-var">$amount</span>) =&gt; <span class="c-str">"&lt;?= number_format($amount, 2) ?&gt;"</span>);
+        <span class="c-type">User</span>::<span class="c-fn">observe</span>(<span class="c-type">UserObserver</span>::<span class="c-key">class</span>);
+        <span class="c-type">Validator</span>::<span class="c-fn">extend</span>(<span class="c-str">'phone_kz'</span>, [<span class="c-type">PhoneRule</span>::<span class="c-key">class</span>, <span class="c-str">'validate'</span>]);
+    }
+}</code></pre>
+      <div class="remember-box">
+        <strong>Laravel 11+:</strong> список провайдеров переехал в <code>bootstrap/providers.php</code> (раньше — массив <code>'providers'</code> в <code>config/app.php</code>). Пример:
+        <pre style="margin-top:8px"><code><span class="c-comment">// bootstrap/providers.php</span>
+<span class="c-key">return</span> [
+    <span class="c-type">App</span>\<span class="c-type">Providers</span>\<span class="c-type">AppServiceProvider</span>::<span class="c-key">class</span>,
+    <span class="c-type">App</span>\<span class="c-type">Providers</span>\<span class="c-type">PaymentServiceProvider</span>::<span class="c-key">class</span>,
+];</code></pre>
+      </div>
+      <p class="text"><strong>Порядок выполнения:</strong> Laravel сначала вызывает <code>register()</code> у ВСЕХ провайдеров, затем <code>boot()</code> у ВСЕХ. Отсюда правило «в register — только биндинги, в boot — всё что использует другие сервисы».</p>
+    </div>
   </div>
 
   <div class="subsection">
