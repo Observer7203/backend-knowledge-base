@@ -139,6 +139,9 @@ pre code{color:#ABB2BF;font-family:'JetBrains Mono','Fira Code',Consolas,monospa
 
   <div class="nav-group-label">Сводка</div>
   <a class="nav-item" onclick="showSection('cheatsheet',this)"><i data-lucide="bookmark"></i> Шпаргалка</a>
+
+  <div class="nav-group-label">Глубже</div>
+  <a class="nav-item" onclick="showSection('under-hood',this)"><i data-lucide="cpu"></i> Под капотом: PHP за хелперами</a>
 </div>
 
 <div class="main">
@@ -1596,6 +1599,264 @@ php artisan optimize:clear
 
   <div class="info-box success">
     <strong>Эта шпаргалка покрывает 95% повседневной работы.</strong> Сохраните в закладки — обращайтесь при написании любого контроллера или сервиса.
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     UNDER THE HOOD — PHP за Laravel-хелперами
+     ════════════════════════════════════════════════════════════════ -->
+<div id="sec-under-hood" class="section">
+  <div class="section-title">Под капотом: PHP за Laravel-хелперами</div>
+  <p class="text">Каждый Laravel-хелпер — обёртка над стандартными PHP-функциями. Знать «внутренности» полезно на собеседовании и когда нужно понять, почему что-то работает не так. Ниже — таблицы «Laravel → чистый PHP» для основных категорий.</p>
+
+  <!-- ─────── Строки Str ─────── -->
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="type"></i> Строки (Str::)</div>
+    <table class="data-table">
+      <thead><tr><th>Laravel</th><th>Что делает под капотом (PHP)</th></tr></thead>
+      <tbody>
+        <tr><td><code>Str::contains($haystack, $needle)</code></td><td>PHP 8+: <code>str_contains($haystack, $needle)</code></td></tr>
+        <tr><td><code>Str::startsWith($str, $prefix)</code></td><td>PHP 8+: <code>str_starts_with($str, $prefix)</code></td></tr>
+        <tr><td><code>Str::endsWith($str, $suffix)</code></td><td>PHP 8+: <code>str_ends_with($str, $suffix)</code></td></tr>
+        <tr><td><code>Str::upper($str)</code></td><td><code>mb_strtoupper($str, 'UTF-8')</code> (не <code>strtoupper</code> — та ломает кириллицу)</td></tr>
+        <tr><td><code>Str::lower($str)</code></td><td><code>mb_strtolower($str, 'UTF-8')</code></td></tr>
+        <tr><td><code>Str::length($str)</code></td><td><code>mb_strlen($str, 'UTF-8')</code></td></tr>
+        <tr><td><code>Str::limit($str, 30)</code></td><td><code>mb_strlen($str) &gt; 30 ? mb_substr($str, 0, 30) . '...' : $str</code></td></tr>
+        <tr><td><code>Str::replace($search, $replace, $subject)</code></td><td><code>str_replace($search, $replace, $subject)</code></td></tr>
+        <tr><td><code>Str::random(32)</code></td><td><code>substr(bin2hex(random_bytes(16)), 0, 32)</code> (upgrade — <code>base64</code>)</td></tr>
+        <tr><td><code>Str::slug('Привет мир!')</code></td><td>Транслитерация (<code>Transliterator</code>/<code>iconv</code>) → <code>preg_replace('/[^A-Za-z0-9-]/', '-', ...)</code> → <code>strtolower</code></td></tr>
+        <tr><td><code>Str::camel('user_name')</code></td><td><code>lcfirst(str_replace(' ', '', ucwords(str_replace(['_','-'], ' ', $str))))</code></td></tr>
+        <tr><td><code>Str::snake('userName')</code></td><td><code>strtolower(preg_replace('/(.)(?=[A-Z])/', '$1_', $str))</code></td></tr>
+        <tr><td><code>Str::kebab('userName')</code></td><td>Как <code>snake</code>, но с <code>-</code> вместо <code>_</code></td></tr>
+        <tr><td><code>Str::title('hello world')</code></td><td><code>mb_convert_case($str, MB_CASE_TITLE, 'UTF-8')</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─────── Массивы Arr ─────── -->
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="list"></i> Массивы (Arr::)</div>
+    <table class="data-table">
+      <thead><tr><th>Laravel</th><th>PHP под капотом</th></tr></thead>
+      <tbody>
+        <tr><td><code>Arr::get($arr, 'a.b.c', $default)</code></td><td>Рекурсия: <code>explode('.', $key)</code> → цикл с <code>isset($arr[$part])</code> → возврат <code>$default</code>, если хоть где нет</td></tr>
+        <tr><td><code>Arr::has($arr, 'a.b')</code></td><td>Аналогично <code>get</code>, но возвращает <code>bool</code></td></tr>
+        <tr><td><code>Arr::set($arr, 'a.b', $val)</code></td><td><code>explode('.')</code> → создание вложенных массивов через <code>&amp;</code> reference</td></tr>
+        <tr><td><code>Arr::forget($arr, 'a.b')</code></td><td>Как <code>set</code>, но в конце <code>unset()</code></td></tr>
+        <tr><td><code>Arr::only($arr, ['a','b'])</code></td><td><code>array_intersect_key($arr, array_flip($keys))</code></td></tr>
+        <tr><td><code>Arr::except($arr, ['a','b'])</code></td><td><code>array_diff_key($arr, array_flip($keys))</code></td></tr>
+        <tr><td><code>Arr::pluck($arr, 'name')</code></td><td><code>array_column($arr, 'name')</code></td></tr>
+        <tr><td><code>Arr::flatten($arr)</code></td><td>Рекурсивный <code>foreach</code>: если элемент массив — <code>array_merge($result, flatten($item))</code></td></tr>
+        <tr><td><code>Arr::wrap($val)</code></td><td><code>is_array($val) ? $val : ($val === null ? [] : [$val])</code></td></tr>
+        <tr><td><code>Arr::first($arr, $callback)</code></td><td><code>foreach + if $callback($v) return $v</code></td></tr>
+        <tr><td><code>Arr::random($arr)</code></td><td><code>$arr[array_rand($arr)]</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─────── Коллекции ─────── -->
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layers"></i> Collections</div>
+    <p class="text">Collection — это класс-обёртка над массивом. <code>collect([1,2,3])</code> = <code>new \Illuminate\Support\Collection([1,2,3])</code>. Каждый метод либо использует нативную функцию PHP, либо делает свой <code>foreach</code>.</p>
+    <table class="data-table">
+      <thead><tr><th>Laravel</th><th>PHP-эквивалент</th></tr></thead>
+      <tbody>
+        <tr><td><code>collect($arr)</code></td><td><code>new Collection($arr)</code> — просто обёртка</td></tr>
+        <tr><td><code>-&gt;map($fn)</code></td><td><code>array_map($fn, $arr)</code></td></tr>
+        <tr><td><code>-&gt;filter($fn)</code></td><td><code>array_filter($arr, $fn)</code></td></tr>
+        <tr><td><code>-&gt;reduce($fn, $init)</code></td><td><code>array_reduce($arr, $fn, $init)</code></td></tr>
+        <tr><td><code>-&gt;pluck('name')</code></td><td><code>array_column($arr, 'name')</code></td></tr>
+        <tr><td><code>-&gt;keys()</code> / <code>-&gt;values()</code></td><td><code>array_keys($arr)</code> / <code>array_values($arr)</code></td></tr>
+        <tr><td><code>-&gt;sum()</code></td><td><code>array_sum($arr)</code></td></tr>
+        <tr><td><code>-&gt;avg()</code></td><td><code>array_sum($arr) / count($arr)</code></td></tr>
+        <tr><td><code>-&gt;count()</code></td><td><code>count($arr)</code></td></tr>
+        <tr><td><code>-&gt;contains($val)</code></td><td><code>in_array($val, $arr, true)</code> или foreach + callback</td></tr>
+        <tr><td><code>-&gt;groupBy('field')</code></td><td>Свой <code>foreach</code>: <code>$grouped[$item[$field]][] = $item</code></td></tr>
+        <tr><td><code>-&gt;sortBy('age')</code></td><td><code>usort($arr, fn($a,$b) =&gt; $a['age'] &lt;=&gt; $b['age'])</code></td></tr>
+        <tr><td><code>-&gt;chunk(3)</code></td><td><code>array_chunk($arr, 3)</code></td></tr>
+        <tr><td><code>-&gt;flatten()</code></td><td>Рекурсивный обход через foreach</td></tr>
+        <tr><td><code>-&gt;toArray()</code></td><td>Возвращает исходный массив (для вложенных Collections — рекурсивно)</td></tr>
+        <tr><td><code>-&gt;toJson()</code></td><td><code>json_encode($arr)</code></td></tr>
+      </tbody>
+    </table>
+    <div class="tip">
+      Collection — <strong>immutable-стиль</strong>: методы возвращают новую Collection, не мутируют исходную. Отличие от нативных PHP-функций типа <code>sort()</code> которые мутируют массив.
+    </div>
+  </div>
+
+  <!-- ─────── Даты (Carbon) ─────── -->
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="calendar"></i> Даты (Carbon)</div>
+    <p class="text">Carbon — обёртка над встроенным PHP-классом <code>DateTime</code> / <code>DateTimeImmutable</code>. Всё что делает Carbon — можно сделать нативно.</p>
+    <table class="data-table">
+      <thead><tr><th>Laravel</th><th>PHP-эквивалент</th></tr></thead>
+      <tbody>
+        <tr><td><code>now()</code></td><td><code>new DateTime()</code> с timezone из <code>config('app.timezone')</code></td></tr>
+        <tr><td><code>today()</code></td><td><code>new DateTime('today')</code> — сегодня в 00:00:00</td></tr>
+        <tr><td><code>$date-&gt;addDays(5)</code></td><td><code>$date-&gt;modify('+5 days')</code> или <code>$date-&gt;add(new DateInterval('P5D'))</code></td></tr>
+        <tr><td><code>$date-&gt;subHours(2)</code></td><td><code>$date-&gt;modify('-2 hours')</code></td></tr>
+        <tr><td><code>$date-&gt;format('Y-m-d')</code></td><td><code>$date-&gt;format('Y-m-d')</code> — идентично, Carbon наследует</td></tr>
+        <tr><td><code>Carbon::parse('2026-01-15')</code></td><td><code>new DateTime('2026-01-15')</code> или <code>DateTime::createFromFormat(...)</code></td></tr>
+        <tr><td><code>$a-&gt;diffInDays($b)</code></td><td><code>$a-&gt;diff($b)-&gt;days</code></td></tr>
+        <tr><td><code>$date-&gt;diffForHumans()</code></td><td>Свой алгоритм: <code>diff()</code> + локализация («2 часа назад»)</td></tr>
+        <tr><td><code>$date-&gt;toDateTimeString()</code></td><td><code>$date-&gt;format('Y-m-d H:i:s')</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─────── Auth / Session ─────── -->
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="user-check"></i> Session & Auth</div>
+    <table class="data-table">
+      <thead><tr><th>Laravel</th><th>PHP-эквивалент</th></tr></thead>
+      <tbody>
+        <tr><td><code>session('key')</code></td><td>Драйвер решает: <code>file</code> → <code>$_SESSION['key']</code> после <code>session_start()</code>; <code>redis</code> → <code>Redis::get("session:$id:key")</code></td></tr>
+        <tr><td><code>session(['k' =&gt; $v])</code></td><td><code>$_SESSION['k'] = $v</code> (для file-драйвера)</td></tr>
+        <tr><td><code>session()-&gt;flash('msg', 'ok')</code></td><td><code>$_SESSION['_flash']['msg'] = 'ok'</code>, автоочистка на след. запросе</td></tr>
+        <tr><td><code>bcrypt($password)</code></td><td><code>password_hash($password, PASSWORD_BCRYPT, ['rounds' =&gt; 10])</code></td></tr>
+        <tr><td><code>Hash::check($pass, $hash)</code></td><td><code>password_verify($pass, $hash)</code></td></tr>
+        <tr><td><code>auth()-&gt;user()</code></td><td>Guard → сессия/токен → <code>User::find($id)</code> (кешируется в память запроса)</td></tr>
+        <tr><td><code>auth()-&gt;check()</code></td><td><code>!is_null($this-&gt;user())</code></td></tr>
+        <tr><td><code>auth()-&gt;id()</code></td><td><code>$_SESSION['login_user_web_...'] ?? null</code></td></tr>
+        <tr><td><code>csrf_token()</code></td><td><code>$_SESSION['_token']</code> (генерируется как <code>Str::random(40)</code> при старте)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─────── Ответы / Redirect ─────── -->
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="send"></i> Responses & Redirects</div>
+    <table class="data-table">
+      <thead><tr><th>Laravel</th><th>PHP-эквивалент</th></tr></thead>
+      <tbody>
+        <tr><td><code>response('Hello', 200)</code></td><td><code>http_response_code(200); echo 'Hello';</code></td></tr>
+        <tr><td><code>response()-&gt;json($data)</code></td><td><code>header('Content-Type: application/json'); echo json_encode($data);</code></td></tr>
+        <tr><td><code>response()-&gt;json($data, 422)</code></td><td>+ <code>http_response_code(422)</code></td></tr>
+        <tr><td><code>redirect('/home')</code></td><td><code>header('Location: /home'); exit;</code></td></tr>
+        <tr><td><code>redirect()-&gt;route('users.show', $id)</code></td><td><code>header('Location: ' . url_by_route_name(...)); exit;</code></td></tr>
+        <tr><td><code>back()</code></td><td><code>header('Location: ' . $_SERVER['HTTP_REFERER']); exit;</code></td></tr>
+        <tr><td><code>abort(404)</code></td><td><code>throw new HttpException(404)</code> → exception handler → рендер 404-view</td></tr>
+        <tr><td><code>abort_if($cond, 403)</code></td><td><code>if ($cond) throw new HttpException(403);</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─────── Debug / Env / Config ─────── -->
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="bug"></i> Debug, Config, Env</div>
+    <table class="data-table">
+      <thead><tr><th>Laravel</th><th>PHP-эквивалент</th></tr></thead>
+      <tbody>
+        <tr><td><code>dd($var)</code></td><td>Обёртка: <code>Symfony\VarDumper::dump($var); die();</code> (расширенный <code>var_dump</code>)</td></tr>
+        <tr><td><code>dump($var)</code></td><td>То же, но без <code>die()</code></td></tr>
+        <tr><td><code>env('APP_KEY')</code></td><td><code>getenv('APP_KEY') ?: $_ENV['APP_KEY'] ?? $_SERVER['APP_KEY']</code> (через vlucas/phpdotenv)</td></tr>
+        <tr><td><code>config('app.name')</code></td><td><code>Arr::get($configArray, 'app.name')</code> где <code>$configArray</code> собран из <code>config/*.php</code></td></tr>
+        <tr><td><code>collect($arr)</code></td><td><code>new Collection($arr)</code></td></tr>
+        <tr><td><code>optional($obj)-&gt;method()</code></td><td>PHP 8+: <code>$obj?-&gt;method()</code> (nullsafe operator)</td></tr>
+        <tr><td><code>tap($val, fn($v) =&gt; $v-&gt;save())</code></td><td>Вызов callback + возврат оригинала: <code>$fn($val); return $val;</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─────── Валидация ─────── -->
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="check-square"></i> Validation правила</div>
+    <table class="data-table">
+      <thead><tr><th>Laravel правило</th><th>PHP под капотом</th></tr></thead>
+      <tbody>
+        <tr><td><code>required</code></td><td>Значение не <code>null</code>, не <code>''</code>, не пустой массив/файл</td></tr>
+        <tr><td><code>email</code></td><td><code>filter_var($val, FILTER_VALIDATE_EMAIL) !== false</code></td></tr>
+        <tr><td><code>url</code></td><td><code>filter_var($val, FILTER_VALIDATE_URL)</code></td></tr>
+        <tr><td><code>ip</code>/<code>ipv4</code>/<code>ipv6</code></td><td><code>filter_var($val, FILTER_VALIDATE_IP)</code> с флагами</td></tr>
+        <tr><td><code>numeric</code></td><td><code>is_numeric($val)</code></td></tr>
+        <tr><td><code>integer</code></td><td><code>filter_var($val, FILTER_VALIDATE_INT) !== false</code></td></tr>
+        <tr><td><code>boolean</code></td><td><code>in_array($val, [true, false, 1, 0, '1', '0'], true)</code></td></tr>
+        <tr><td><code>json</code></td><td><code>json_decode($val) !== null &amp;&amp; json_last_error() === JSON_ERROR_NONE</code></td></tr>
+        <tr><td><code>date</code></td><td><code>strtotime($val) !== false</code></td></tr>
+        <tr><td><code>regex:/pattern/</code></td><td><code>preg_match($pattern, $val)</code></td></tr>
+        <tr><td><code>min:3</code>, <code>max:10</code></td><td>Для строк — <code>mb_strlen</code>; для чисел — <code>&gt;=</code>/<code>&lt;=</code>; для массивов — <code>count</code>; для файлов — размер в KB</td></tr>
+        <tr><td><code>unique:users,email</code></td><td><code>DB::table('users')-&gt;where('email', $val)-&gt;count() === 0</code></td></tr>
+        <tr><td><code>exists:categories,id</code></td><td><code>DB::table('categories')-&gt;where('id', $val)-&gt;exists()</code></td></tr>
+        <tr><td><code>mimes:jpg,png</code></td><td><code>finfo_file(...)</code> или <code>$file-&gt;getMimeType()</code> → сравнение</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ─────── Eloquent Query ─────── -->
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="database"></i> Eloquent → SQL под капотом</div>
+    <p class="text">Каждый Eloquent-метод в итоге строит SQL и выполняет через PDO.</p>
+    <table class="data-table">
+      <thead><tr><th>Laravel</th><th>SQL (примерно)</th><th>PHP (упрощённо)</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>User::find(5)</code></td>
+          <td><code>SELECT * FROM users WHERE id = 5 LIMIT 1</code></td>
+          <td><code>$pdo-&gt;prepare(...)-&gt;execute([5])-&gt;fetch(PDO::FETCH_ASSOC)</code></td>
+        </tr>
+        <tr>
+          <td><code>User::where('active', 1)-&gt;get()</code></td>
+          <td><code>SELECT * FROM users WHERE active = 1</code></td>
+          <td>PDO + <code>fetchAll(PDO::FETCH_ASSOC)</code> → hydration в объекты <code>User</code></td>
+        </tr>
+        <tr>
+          <td><code>User::pluck('email')</code></td>
+          <td><code>SELECT email FROM users</code></td>
+          <td>PDO + <code>fetchAll(PDO::FETCH_COLUMN)</code></td>
+        </tr>
+        <tr>
+          <td><code>User::whereIn('id', [1,2,3])-&gt;get()</code></td>
+          <td><code>SELECT * FROM users WHERE id IN (?, ?, ?)</code></td>
+          <td>PDO prepared с массивом плейсхолдеров</td>
+        </tr>
+        <tr>
+          <td><code>User::paginate(10)</code></td>
+          <td>2 запроса: <code>COUNT(*)</code> + <code>SELECT ... LIMIT 10 OFFSET N</code></td>
+          <td>2 PDO вызова + расчёт страниц</td>
+        </tr>
+        <tr>
+          <td><code>User::with('posts')-&gt;get()</code></td>
+          <td><code>SELECT * FROM users</code>, потом <code>SELECT * FROM posts WHERE user_id IN (...)</code> — <strong>2 запроса</strong> вместо N+1</td>
+          <td>PDO + hydration + подставление связей вручную по <code>foreign_key</code></td>
+        </tr>
+        <tr>
+          <td><code>User::firstOrFail()</code></td>
+          <td><code>SELECT ... LIMIT 1</code></td>
+          <td>PDO fetch, если <code>null</code> — <code>throw new ModelNotFoundException</code></td>
+        </tr>
+        <tr>
+          <td><code>$user-&gt;save()</code></td>
+          <td><code>INSERT</code> если новый, <code>UPDATE</code> если существует</td>
+          <td>PDO prepared + <code>lastInsertId()</code></td>
+        </tr>
+        <tr>
+          <td><code>$user-&gt;delete()</code></td>
+          <td><code>DELETE FROM users WHERE id = ?</code></td>
+          <td>PDO prepared execute</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="tip">
+      Проверить <strong>сгенерированный SQL</strong> в Tinker: <code>User::where('active', 1)-&gt;toSql()</code> — вернёт строку запроса. Или <code>DB::enableQueryLog()</code> + <code>DB::getQueryLog()</code> для реального выполненного SQL с параметрами.
+    </div>
+  </div>
+
+  <!-- ─────── Routing / URL ─────── -->
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="route"></i> Routing & URL</div>
+    <table class="data-table">
+      <thead><tr><th>Laravel</th><th>PHP-эквивалент</th></tr></thead>
+      <tbody>
+        <tr><td><code>route('users.show', 5)</code></td><td>Поиск роута в реестре по имени + подстановка параметров в pattern → полный URL</td></tr>
+        <tr><td><code>url('/foo')</code></td><td>Конкатенация: <code>$request-&gt;getSchemeAndHttpHost() . '/foo'</code></td></tr>
+        <tr><td><code>asset('css/app.css')</code></td><td><code>url() + '/css/app.css'</code>, с учётом <code>ASSET_URL</code> для CDN</td></tr>
+        <tr><td><code>view('users.show', ['user' =&gt; $u])</code></td><td>Blade-компилятор: <code>.blade.php</code> → скомпилированный PHP в <code>storage/framework/views/*.php</code> → <code>include</code> + <code>extract($data)</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="remember-box">
+    <strong>Итог:</strong> Laravel = красивая обёртка над стандартным PHP. Каждый хелпер разбирается на 1-3 нативные функции. Знание «внутренностей» ценится на собеседовании и помогает быстро дебажить: если <code>Str::slug()</code> сработал странно — сразу ясно, что искать в <code>Transliterator</code>/<code>iconv</code>; если <code>with()</code> сделал 100 запросов — не сработала eager-загрузка через <code>whereIn</code>.
   </div>
 </div>
 
