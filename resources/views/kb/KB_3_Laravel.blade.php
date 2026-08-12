@@ -208,6 +208,13 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="terminal"></i> Что такое «Bootstrap»</div>
+    <p class="text"><strong>Bootstrap</strong> = «загрузка / инициализация». Термин из идиомы <em>«pull yourself up by your bootstraps»</em> — «поднять себя за шнурки собственных ботинок». В контексте фреймворка это код, который выполняется <strong>до того</strong>, как приложение начнёт обрабатывать запрос.</p>
+    <p class="text">Bootstrap собирает объект <code>Application</code> (DI-контейнер), регистрирует сервис-провайдеры, читает конфиги, вешает middleware — и только потом отдаёт управление роутеру.</p>
+    <p class="text"><strong>Точка входа:</strong> <code>public/index.php</code> → подключает <code>bootstrap/app.php</code> → получает готовое приложение → <code>$app-&gt;handle($request)</code>.</p>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="list"></i> Этапы цикла</div>
     <div class="card"><h3>1. <code>public/index.php</code> — точка входа</h3><p class="text">Веб-сервер (nginx/Apache/built-in artisan serve) направляет любой URL в <code>public/index.php</code>. Этот файл загружает автозагрузчик Composer и <code>bootstrap/app.php</code>, который создаёт экземпляр <code>Application</code> (наследник IoC-контейнера).</p></div>
     <div class="card"><h3>2. Bootstrap: <code>bootstrap/app.php</code></h3><p class="text">Конфигурируется ядро: список middleware, провайдеров, обработчик исключений, маршруты. В Laravel 11 это стало декларативной API в одном файле (раньше — отдельные классы в <code>app/Http/Kernel.php</code>).</p></div>
