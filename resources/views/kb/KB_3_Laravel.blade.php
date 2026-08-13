@@ -337,6 +337,44 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="cpu"></i> Что такое Kernel (Ядро)</div>
+    <p class="text"><strong>Ядро (Kernel)</strong> в Laravel — центральный диспетчер, через который проходят все запросы к приложению. Как «дирижёр оркестра», который решает, какие инструменты (middleware, сервис-провайдеры, маршруты) должны быть задействованы для обработки каждого конкретного запроса.</p>
+    <table class="data-table">
+      <thead><tr><th>Kernel</th><th>Для чего</th><th>Где живёт (Laravel 11+)</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>Http\Kernel</code></td>
+          <td>Обрабатывает <strong>HTTP-запросы</strong> (браузер, API). Пропускает через глобальные middleware → Router → Controller → назад через middleware → Response.</td>
+          <td>Конфигурируется в <code>bootstrap/app.php</code> через <code>withMiddleware()</code>. Раньше был файл <code>app/Http/Kernel.php</code>.</td>
+        </tr>
+        <tr>
+          <td><code>Console\Kernel</code></td>
+          <td>Обрабатывает <strong>консольные команды</strong> (artisan). Регистрирует команды, расписание (schedule).</td>
+          <td>Через <code>withCommands()</code> и <code>withSchedule()</code>. Раньше — <code>app/Console/Kernel.php</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="text"><strong>Единая точка входа:</strong> любой запрос (веб / API / артизан) сначала попадает в соответствующий Kernel, а тот уже раскидывает: bootstrappers (загрузка env/config/facades/providers) → middleware pipeline → роутер → обработчик → ответ.</p>
+    <pre><code><span class="c-comment">// public/index.php — упрощённо</span>
+<span class="c-var">$app</span> = <span class="c-key">require</span> <span class="c-fn">__DIR__</span> . <span class="c-str">'/../bootstrap/app.php'</span>;
+
+<span class="c-var">$kernel</span>   = <span class="c-var">$app</span>-&gt;<span class="c-fn">make</span>(<span class="c-type">Illuminate</span>\<span class="c-type">Contracts</span>\<span class="c-type">Http</span>\<span class="c-type">Kernel</span>::<span class="c-key">class</span>);
+<span class="c-var">$response</span> = <span class="c-var">$kernel</span>-&gt;<span class="c-fn">handle</span>(<span class="c-var">$request</span> = <span class="c-type">Request</span>::<span class="c-fn">capture</span>());   <span class="c-comment">// ← вход</span>
+<span class="c-var">$response</span>-&gt;<span class="c-fn">send</span>();                                            <span class="c-comment">// отправить браузеру</span>
+<span class="c-var">$kernel</span>-&gt;<span class="c-fn">terminate</span>(<span class="c-var">$request</span>, <span class="c-var">$response</span>);                    <span class="c-comment">// пост-обработка</span></code></pre>
+    <div class="remember-box">
+      <strong>Что Kernel делает конкретно:</strong>
+      <ol style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Прогоняет <strong>bootstrappers</strong> (загрузка <code>.env</code>, конфигов, фасадов, регистрация сервис-провайдеров)</li>
+        <li>Строит <strong>pipeline из глобальных middleware</strong> (<code>TrustProxies</code>, <code>HandleCors</code>, <code>TrimStrings</code>…)</li>
+        <li>Передаёт запрос в <strong>Router</strong>, тот применяет middleware маршрута и вызывает обработчик</li>
+        <li>Получает <code>Response</code>, прогоняет обратно через middleware (для пост-обработки)</li>
+        <li>Возвращает наружу — <code>public/index.php</code> его <code>send()</code> и вызывает <code>terminate()</code></li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="list"></i> Этапы цикла</div>
     <div class="card"><h3>1. <code>public/index.php</code> — точка входа</h3><p class="text">Веб-сервер (nginx/Apache/built-in artisan serve) направляет любой URL в <code>public/index.php</code>. Этот файл загружает автозагрузчик Composer и <code>bootstrap/app.php</code>, который создаёт экземпляр <code>Application</code> (наследник IoC-контейнера).</p></div>
     <div class="card"><h3>2. Bootstrap: <code>bootstrap/app.php</code></h3><p class="text">Конфигурируется ядро: список middleware, провайдеров, обработчик исключений, маршруты. В Laravel 11 это стало декларативной API в одном файле (раньше — отдельные классы в <code>app/Http/Kernel.php</code>).</p></div>
