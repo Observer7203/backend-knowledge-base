@@ -339,37 +339,98 @@ ul.bullets strong{color:var(--text);}
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="cpu"></i> Что такое Kernel (Ядро)</div>
     <p class="text"><strong>Ядро (Kernel)</strong> в Laravel — центральный диспетчер, через который проходят все запросы к приложению. Как «дирижёр оркестра», который решает, какие инструменты (middleware, сервис-провайдеры, маршруты) должны быть задействованы для обработки каждого конкретного запроса.</p>
+
+    <h4 style="margin:16px 0 8px;font-size:14px;font-weight:700"><i data-lucide="split" style="width:14px;height:14px;vertical-align:-2px"></i> Два типа ядер</h4>
+    <p class="text">В Laravel существует два ядра, каждое отвечает за свой тип входящих запросов.</p>
+
+    <div class="card">
+      <h3>1. HTTP-ядро — <code>Illuminate\Foundation\Http\Kernel</code></h3>
+      <p><strong>Назначение:</strong> обрабатывает все веб-запросы, поступающие через <code>public/index.php</code>.</p>
+      <p><strong>Точка входа:</strong> <code>public/index.php</code> вызывает метод <code>handleRequest()</code> у <code>Application</code> (Laravel 11+), который внутри дёргает <code>Http\Kernel::handle($request)</code>.</p>
+      <pre><code><span class="c-comment">// public/index.php (Laravel 11+)</span>
+<span class="c-var">$app</span> = <span class="c-key">require</span> <span class="c-fn">__DIR__</span>.<span class="c-str">'/../bootstrap/app.php'</span>;
+<span class="c-var">$app</span>-&gt;<span class="c-fn">handleRequest</span>(<span class="c-type">Request</span>::<span class="c-fn">capture</span>());</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>2. Консольное ядро — <code>Illuminate\Foundation\Console\Kernel</code></h3>
+      <p><strong>Назначение:</strong> обрабатывает все команды Artisan, запускаемые из терминала (<code>php artisan migrate</code>, <code>php artisan queue:work</code>, etc).</p>
+      <p><strong>Точка входа:</strong> файл <code>artisan</code> в корне проекта вызывает метод <code>handleCommand()</code>.</p>
+      <pre><code><span class="c-comment">// artisan (Laravel 11+)</span>
+<span class="c-var">$app</span> = <span class="c-key">require_once</span> <span class="c-fn">__DIR__</span>.<span class="c-str">'/bootstrap/app.php'</span>;
+<span class="c-var">$status</span> = <span class="c-var">$app</span>-&gt;<span class="c-fn">handleCommand</span>(<span class="c-key">new</span> <span class="c-type">ArgvInput</span>);
+<span class="c-key">exit</span>(<span class="c-var">$status</span>);</code></pre>
+    </div>
+
+    <h4 style="margin:20px 0 8px;font-size:14px;font-weight:700"><i data-lucide="settings" style="width:14px;height:14px;vertical-align:-2px"></i> ⚙️ Основные задачи ядра</h4>
+    <p class="text">Независимо от типа, ядро выполняет <strong>две ключевые функции</strong>.</p>
+
+    <div class="card">
+      <h3>1. Запуск загрузчиков (Bootstrappers)</h3>
+      <p>Перед обработкой запроса ядро выполняет серию подготовительных задач:</p>
+      <ul style="margin:6px 0 0 20px;line-height:1.7;color:var(--text2)">
+        <li>Настройка <strong>обработки ошибок</strong> — регистрирует Whoops / Handler</li>
+        <li>Настройка <strong>логирования</strong> — конфигурация каналов Monolog</li>
+        <li>Определение <strong>окружения</strong> — читает <code>APP_ENV</code> из <code>.env</code> (<code>local</code>, <code>production</code>, <code>testing</code>)</li>
+        <li>🔥 Загрузка <strong>всех сервис-провайдеров</strong> — самый важный шаг: они регистрируют и настраивают базу данных, очереди, валидацию, маршрутизацию, кеш и всё остальное</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>2. Управление промежуточным слоем (Middleware)</h3>
+      <p>Ядро отвечает за то, чтобы запрос прошёл через <strong>стек middleware</strong> до того, как попадёт в контроллер. Эти middleware решают критически важные задачи, общие для всех или многих запросов:</p>
+      <ul style="margin:6px 0 0 20px;line-height:1.7;color:var(--text2)">
+        <li>Чтение и запись <strong>HTTP-сессий</strong> (<code>StartSession</code>)</li>
+        <li>Проверка <strong>CSRF-токена</strong> для защиты от межсайтовых подделок запросов (<code>ValidateCsrfToken</code>)</li>
+        <li>Проверка, не находится ли приложение в <strong>режиме обслуживания</strong> (<code>PreventRequestsDuringMaintenance</code>)</li>
+        <li>Trim пробелов, конвертация пустых строк в null, обработка CORS, доверие прокси, шифрование cookies</li>
+      </ul>
+    </div>
+
+    <h4 style="margin:20px 0 8px;font-size:14px;font-weight:700"><i data-lucide="table" style="width:14px;height:14px;vertical-align:-2px"></i> Сравнительная таблица</h4>
     <table class="data-table">
-      <thead><tr><th>Kernel</th><th>Для чего</th><th>Где живёт (Laravel 11+)</th></tr></thead>
+      <thead><tr><th></th><th>HTTP Kernel</th><th>Console Kernel</th></tr></thead>
       <tbody>
         <tr>
-          <td><code>Http\Kernel</code></td>
-          <td>Обрабатывает <strong>HTTP-запросы</strong> (браузер, API). Пропускает через глобальные middleware → Router → Controller → назад через middleware → Response.</td>
-          <td>Конфигурируется в <code>bootstrap/app.php</code> через <code>withMiddleware()</code>. Раньше был файл <code>app/Http/Kernel.php</code>.</td>
+          <td><strong>Класс</strong></td>
+          <td><code>Illuminate\Foundation\Http\Kernel</code></td>
+          <td><code>Illuminate\Foundation\Console\Kernel</code></td>
         </tr>
         <tr>
-          <td><code>Console\Kernel</code></td>
-          <td>Обрабатывает <strong>консольные команды</strong> (artisan). Регистрирует команды, расписание (schedule).</td>
-          <td>Через <code>withCommands()</code> и <code>withSchedule()</code>. Раньше — <code>app/Console/Kernel.php</code>.</td>
+          <td><strong>Точка входа</strong></td>
+          <td><code>public/index.php</code> → <code>handleRequest()</code></td>
+          <td><code>artisan</code> → <code>handleCommand()</code></td>
+        </tr>
+        <tr>
+          <td><strong>Что обрабатывает</strong></td>
+          <td>HTTP-запросы: браузер, API, webhooks</td>
+          <td>CLI-команды: <code>migrate</code>, <code>queue:work</code>, cron</td>
+        </tr>
+        <tr>
+          <td><strong>Middleware</strong></td>
+          <td>Полный стек (CSRF, session, cors, throttle...)</td>
+          <td>Нет (нет HTTP-запроса)</td>
+        </tr>
+        <tr>
+          <td><strong>Регистрация в L11+</strong></td>
+          <td><code>withMiddleware()</code> в <code>bootstrap/app.php</code></td>
+          <td><code>withCommands()</code>, <code>withSchedule()</code></td>
+        </tr>
+        <tr>
+          <td><strong>Особая фаза</strong></td>
+          <td><code>terminate()</code> после отправки ответа клиенту</td>
+          <td>Возвращает exit-code для shell</td>
         </tr>
       </tbody>
     </table>
-    <p class="text"><strong>Единая точка входа:</strong> любой запрос (веб / API / артизан) сначала попадает в соответствующий Kernel, а тот уже раскидывает: bootstrappers (загрузка env/config/facades/providers) → middleware pipeline → роутер → обработчик → ответ.</p>
-    <pre><code><span class="c-comment">// public/index.php — упрощённо</span>
-<span class="c-var">$app</span> = <span class="c-key">require</span> <span class="c-fn">__DIR__</span> . <span class="c-str">'/../bootstrap/app.php'</span>;
 
-<span class="c-var">$kernel</span>   = <span class="c-var">$app</span>-&gt;<span class="c-fn">make</span>(<span class="c-type">Illuminate</span>\<span class="c-type">Contracts</span>\<span class="c-type">Http</span>\<span class="c-type">Kernel</span>::<span class="c-key">class</span>);
-<span class="c-var">$response</span> = <span class="c-var">$kernel</span>-&gt;<span class="c-fn">handle</span>(<span class="c-var">$request</span> = <span class="c-type">Request</span>::<span class="c-fn">capture</span>());   <span class="c-comment">// ← вход</span>
-<span class="c-var">$response</span>-&gt;<span class="c-fn">send</span>();                                            <span class="c-comment">// отправить браузеру</span>
-<span class="c-var">$kernel</span>-&gt;<span class="c-fn">terminate</span>(<span class="c-var">$request</span>, <span class="c-var">$response</span>);                    <span class="c-comment">// пост-обработка</span></code></pre>
     <div class="remember-box">
-      <strong>Что Kernel делает конкретно:</strong>
+      <strong>Общее у обоих:</strong>
       <ol style="margin:6px 0 0 20px;line-height:1.7">
-        <li>Прогоняет <strong>bootstrappers</strong> (загрузка <code>.env</code>, конфигов, фасадов, регистрация сервис-провайдеров)</li>
-        <li>Строит <strong>pipeline из глобальных middleware</strong> (<code>TrustProxies</code>, <code>HandleCors</code>, <code>TrimStrings</code>…)</li>
-        <li>Передаёт запрос в <strong>Router</strong>, тот применяет middleware маршрута и вызывает обработчик</li>
-        <li>Получает <code>Response</code>, прогоняет обратно через middleware (для пост-обработки)</li>
-        <li>Возвращает наружу — <code>public/index.php</code> его <code>send()</code> и вызывает <code>terminate()</code></li>
+        <li>Запускают bootstrappers (env, config, facades, service providers)</li>
+        <li>Регистрируют exception handler</li>
+        <li>Отдают управление роутеру / командному диспетчеру</li>
+        <li>После обработки — вызывают <code>terminate()</code> для пост-хуков</li>
       </ol>
     </div>
   </div>
