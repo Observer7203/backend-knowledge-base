@@ -339,8 +339,9 @@
 
   @endverbatim
   @php
-      $modulePages   = ($pagesByGroup['Modules'] ?? collect());
-      $advancedPages = ($pagesByGroup['Advanced'] ?? collect());
+      $modulePages       = ($pagesByGroup['Modules'] ?? collect());
+      $additionalPages   = ($pagesByGroup['Дополнительно'] ?? collect());
+      $advancedPages     = ($pagesByGroup['Advanced'] ?? collect());
   @endphp
 
   {{-- ── Modules ── --}}
@@ -348,6 +349,21 @@
     <div class="section-title">База Знаний — Модули</div>
     <div class="grid">
       @foreach($modulePages as $page)
+        <a class="card" href="{{ url('/' . $page->slug) }}">
+          <div class="badge {{ $page->badge_class ?? 'badge-program' }}">{{ $page->badge }}</div>
+          <div class="card-icon {{ $page->icon_class ?? 'ic-purple' }}"><i data-lucide="{{ $page->icon }}"></i></div>
+          <h3>{!! $page->title !!}</h3>
+          <p>{{ $page->description }}</p>
+        </a>
+      @endforeach
+    </div>
+  @endif
+
+  {{-- ── Дополнительно ── --}}
+  @if($additionalPages->isNotEmpty())
+    <div class="section-title" style="margin-top:40px;">Дополнительно</div>
+    <div class="grid">
+      @foreach($additionalPages as $page)
         <a class="card" href="{{ url('/' . $page->slug) }}">
           <div class="badge {{ $page->badge_class ?? 'badge-program' }}">{{ $page->badge }}</div>
           <div class="card-icon {{ $page->icon_class ?? 'ic-purple' }}"><i data-lucide="{{ $page->icon }}"></i></div>
