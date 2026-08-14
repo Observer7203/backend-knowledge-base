@@ -876,6 +876,119 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="book-marked"></i> Route Binding + виды обработчиков — детально</div>
+
+    <div class="card">
+      <h3>Implicit Binding (неявная привязка)</h3>
+      <p>Laravel сам догадывается, как найти модель по ID в URL. Указываешь в параметре роута имя переменной, совпадающее с именем модели, и Laravel делает <code>Model::find($id)</code>. Если не находит — автоматически 404.</p>
+<pre><code><span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}'</span>, <span class="c-key">function</span> (<span class="c-type">User</span> <span class="c-var">$user</span>) {
+    <span class="c-key">return</span> <span class="c-var">$user</span>;   <span class="c-comment">// Laravel сам вызывает User::find($user)</span>
+});</code></pre>
+      <p>По умолчанию ищет по <strong>первичному ключу</strong> (<code>id</code>). Чтобы искать по другому полю (например, <code>slug</code>) — либо в модели определить <code>getRouteKeyName()</code>, либо передать в параметре <code>{user:slug}</code>.</p>
+<pre><code><span class="c-comment">// Способ 1: параметр в URL</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user:slug}'</span>, <span class="c-key">fn</span> (<span class="c-type">User</span> <span class="c-var">$user</span>) =&gt; <span class="c-var">$user</span>);
+
+<span class="c-comment">// Способ 2: на уровне модели — глобально</span>
+<span class="c-key">class</span> <span class="c-type">User</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">getRouteKeyName</span>(): <span class="c-key">string</span>
+    {
+        <span class="c-key">return</span> <span class="c-str">'slug'</span>;
+    }
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Explicit Binding (явная привязка)</h3>
+      <p>Ты сам говоришь, как именно доставать модель. Нужно, если логика сложнее чем просто <code>find()</code>: мультитенантность, скоуп по владельцу, дополнительные условия.</p>
+<pre><code><span class="c-comment">// В RouteServiceProvider::boot() или bootstrap/app.php (L11)</span>
+<span class="c-type">Route</span>::<span class="c-fn">bind</span>(<span class="c-str">'user'</span>, <span class="c-key">function</span> (<span class="c-var">$value</span>) {
+    <span class="c-key">return</span> <span class="c-type">User</span>::<span class="c-fn">where</span>(<span class="c-str">'tenant_id'</span>, <span class="c-fn">auth</span>()-&gt;<span class="c-fn">id</span>())
+               -&gt;<span class="c-fn">where</span>(<span class="c-str">'id'</span>, <span class="c-var">$value</span>)
+               -&gt;<span class="c-fn">firstOrFail</span>();
+});
+
+<span class="c-comment">// Теперь при каждом /users/{user} — используется твоя логика</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}'</span>, <span class="c-key">fn</span> (<span class="c-type">User</span> <span class="c-var">$user</span>) =&gt; <span class="c-var">$user</span>);
+<span class="c-comment">// Юзер чужого tenant → 404</span></code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Scoped Bindings (привязка с контекстом)</h3>
+      <p>Частный случай implicit binding, но с <strong>дополнительным условием</strong>: модель ищется в рамках отношения с другой моделью. Пример: у пользователя есть посты. URL <code>/users/{user}/posts/{post}</code>. Без scoped binding Laravel найдёт пост по slug <em>глобально</em>, даже если он не принадлежит этому пользователю.</p>
+<pre><code><span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}/posts/{post:slug}'</span>, <span class="c-key">function</span> (<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>) {
+    <span class="c-key">return</span> <span class="c-var">$post</span>;
+})-&gt;<span class="c-fn">scopeBindings</span>();
+<span class="c-comment">// С scopeBindings() Laravel строит запрос через отношение $user-&gt;posts():
+// Post::where('user_id', $user-&gt;id)-&gt;where('slug', $post)-&gt;firstOrFail()
+// Если поста с таким slug у данного пользователя нет — 404</span></code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Closure Routes (замыкание вместо контроллера)</h3>
+      <p>Closure — анонимная функция, которая прямо в роуте обрабатывает запрос. Удобно для быстрых тестов, health-check эндпоинтов, роутов на 1 строчку.</p>
+<pre><code><span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/hello'</span>, <span class="c-key">function</span> () {
+    <span class="c-key">return</span> <span class="c-str">'Hello, world!'</span>;
+});</code></pre>
+      <div class="pitfall">
+        <strong>⚠ Не кешируются</strong> командой <code>php artisan route:cache</code> — closure нельзя сериализовать. В production их лучше избегать или заменять на контроллеры/invokable-классы.
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Invokable Classes (инвокабельные классы)</h3>
+      <p>Классы с единственным методом <code>__invoke()</code>. Используются как обработчики роута вместо контроллеров с несколькими методами. Выглядит чище для простых действий (Single Action Controllers).</p>
+<pre><code><span class="c-comment">// app/Http/Controllers/ShowProfile.php</span>
+<span class="c-key">class</span> <span class="c-type">ShowProfile</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__invoke</span>(<span class="c-var">$id</span>)
+    {
+        <span class="c-key">return</span> <span class="c-fn">view</span>(<span class="c-str">'profile'</span>, [<span class="c-str">'user'</span> =&gt; <span class="c-type">User</span>::<span class="c-fn">findOrFail</span>(<span class="c-var">$id</span>)]);
+    }
+}
+
+<span class="c-comment">// routes/web.php</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/profile/{id}'</span>, <span class="c-type">ShowProfile</span>::<span class="c-key">class</span>);
+<span class="c-comment">// Laravel сам создаст экземпляр и вызовет __invoke()
+// ✓ Кешируется при route:cache (не содержит closure)</span></code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Signed Routes (подписанные маршруты)</h3>
+      <p>URL с добавленной криптографической подписью (хеш) — защищает параметры от подмены. Используются для подтверждения email, ссылок для сброса пароля, magic login.</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Support</span>\<span class="c-type">Facades</span>\<span class="c-type">URL</span>;
+
+<span class="c-comment">// Создаёшь подписанный URL</span>
+<span class="c-var">$url</span> = <span class="c-type">URL</span>::<span class="c-fn">signedRoute</span>(<span class="c-str">'verify'</span>, [<span class="c-str">'user'</span> =&gt; <span class="c-num">1</span>]);
+<span class="c-comment">// https://yourapp.com/verify?user=1&signature=abc123...</span>
+
+<span class="c-comment">// Временный (с истечением) — предпочтительно для magic-link</span>
+<span class="c-var">$url</span> = <span class="c-type">URL</span>::<span class="c-fn">temporarySignedRoute</span>(<span class="c-str">'verify'</span>, <span class="c-fn">now</span>()-&gt;<span class="c-fn">addMinutes</span>(<span class="c-num">15</span>), [<span class="c-str">'user'</span> =&gt; <span class="c-num">1</span>]);
+
+<span class="c-comment">// В роуте применяешь middleware signed</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/verify'</span>, <span class="c-key">function</span> (<span class="c-type">Request</span> <span class="c-var">$request</span>) {
+    <span class="c-comment">// Подпись валидна, параметры не подменены</span>
+})-&gt;<span class="c-fn">name</span>(<span class="c-str">'verify'</span>)-&gt;<span class="c-fn">middleware</span>(<span class="c-str">'signed'</span>);
+<span class="c-comment">// Если кто-то изменит user=1 на user=2 — подпись невалидна, middleware вернёт 403</span></code></pre>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="table"></i> Итоговая таблица — коротко о каждом термине</div>
+    <table class="data-table">
+      <thead><tr><th>Термин</th><th>Суть</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Implicit binding</strong></td><td>Автоматический поиск модели по ID из URL. Laravel сам делает <code>Model::find()</code> и кидает 404 если нет.</td></tr>
+        <tr><td><strong>Explicit binding</strong></td><td>Твоя кастомная логика поиска модели, регистрируется через <code>Route::bind()</code> в провайдере или <code>bootstrap/app.php</code>.</td></tr>
+        <tr><td><strong>Scoped binding</strong></td><td>Implicit binding + дополнительное условие через отношение — чтобы нельзя было достать чужую запись. Активируется <code>-&gt;scopeBindings()</code>.</td></tr>
+        <tr><td><strong>Closure route</strong></td><td>Роут с обработчиком в виде анонимной функции. Просто, но не кешируется <code>route:cache</code>.</td></tr>
+        <tr><td><strong>Invokable class</strong></td><td>Класс с методом <code>__invoke()</code> — альтернатива контроллеру с одним действием. Кешируется.</td></tr>
+        <tr><td><strong>Signed route</strong></td><td>URL с криптоподписью, защищает параметры от подмены. Проверяется middleware <code>signed</code>.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
     <div class="pitfall"><strong>1. Closure-маршруты ломают <code>route:cache</code>.</strong> На проде с кешем закрытий routing не закешируется. Используйте контроллеры или invokable классы.</div>
     <div class="pitfall"><strong>2. Конфликт маршрутов.</strong> <code>/users/{user}</code> и <code>/users/me</code> — первый поймает <code>me</code> как параметр. Объявляйте конкретные маршруты <strong>раньше</strong> параметризованных.</div>
