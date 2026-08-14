@@ -1122,6 +1122,89 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layers"></i> Глобальные middleware — стандартный набор Laravel</div>
+
+    <p class="text"><strong>Что такое глобальные middleware.</strong> Глобальные middleware применяются к каждому HTTP-запросу, независимо от маршрута. Они выполняются <em>до</em> групповых (<code>web</code>, <code>api</code>) и маршрутных (<code>-&gt;middleware('...')</code>). В Laravel 11+ регистрируются в <code>bootstrap/app.php</code> через <code>-&gt;withMiddleware(...)</code>, в более старых версиях — в свойстве <code>$middleware</code> класса <code>app/Http/Kernel.php</code>.</p>
+
+    <p class="text">Стандартный набор, включённый по умолчанию, состоит из семи middleware. Ниже — назначение каждого из них.</p>
+
+    <p class="text"><strong>TrustProxies.</strong> Настраивает доверенные прокси-серверы (например, Nginx, Cloudflare, AWS ELB). Исправляет заголовки <code>X-Forwarded-*</code>, чтобы Laravel правильно определял реальный IP-адрес клиента, протокол (https/http) и хост, если приложение работает за обратным прокси.</p>
+
+    <p class="text"><strong>HandleCors.</strong> Обрабатывает CORS-заголовки (Cross-Origin Resource Sharing). Добавляет в ответы <code>Access-Control-Allow-Origin</code>, <code>Access-Control-Allow-Methods</code> и др., а также автоматически отвечает на OPTIONS-запросы (preflight). Конфигурация — в <code>config/cors.php</code>.</p>
+
+    <p class="text"><strong>PreventRequestsDuringMaintenance.</strong> Проверяет, включён ли режим обслуживания (флаг <code>down</code>). Если да — возвращает страницу «503 Service Unavailable» (или кастомное представление) для всех запросов, кроме IP-адресов, разрешённых в <code>php artisan down --allow=...</code>.</p>
+
+    <p class="text"><strong>ValidatePostSize.</strong> Проверяет, не превышает ли размер входящего POST-запроса максимально допустимый лимит, заданный в <code>php.ini</code> (<code>post_max_size</code> и <code>upload_max_filesize</code>). Если превышает — прерывает запрос с ошибкой.</p>
+
+    <p class="text"><strong>TrimStrings.</strong> Автоматически обрезает пробелы в начале и конце всех входящих строковых полей (<code>$request-&gt;all()</code>), кроме полей, перечисленных в свойстве <code>$except</code> (например, пароли, чтобы не обрезать пробелы, если они значимы).</p>
+
+    <p class="text"><strong>ConvertEmptyStringsToNull.</strong> Преобразует пустые строки (<code>''</code>) в <code>null</code> во всех входящих данных запроса. Это помогает единообразно работать с отсутствующими значениями в БД (особенно для полей, которые могут быть <code>NULL</code>).</p>
+
+    <p class="text"><strong>TrustHosts (обычно закомментирован).</strong> Ограничивает допустимые значения заголовка <code>Host</code>, чтобы предотвратить атаки подделки хоста. По умолчанию отключён, но может быть активирован для продакшена.</p>
+
+    <p class="text"><strong>Порядок выполнения.</strong> Глобальные middleware выполняются в том порядке, в котором они перечислены в массиве. Это важно, потому что, например, <code>TrimStrings</code> и <code>ConvertEmptyStringsToNull</code> должны отработать до того, как данные попадут в контроллер.</p>
+
+    <p class="text"><strong>Полный пример</strong> <code>bootstrap/app.php</code> со всеми стандартными глобальными middleware (для Laravel 11+):</p>
+<pre><code>&lt;?<span class="c-key">php</span>
+
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Foundation</span>\<span class="c-type">Application</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Foundation</span>\<span class="c-type">Configuration</span>\<span class="c-type">Middleware</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">HandleCors</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Foundation</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">ValidatePostSize</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Foundation</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">ConvertEmptyStringsToNull</span>;
+<span class="c-key">use</span> <span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">TrimStrings</span>;
+<span class="c-key">use</span> <span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">TrustProxies</span>;
+<span class="c-key">use</span> <span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">PreventRequestsDuringMaintenance</span>;
+<span class="c-comment">// use Illuminate\Foundation\Http\Middleware\TrustHosts; // обычно закомментирован</span>
+
+<span class="c-key">return</span> <span class="c-type">Application</span>::<span class="c-fn">configure</span>(<span class="c-var">basePath</span>: <span class="c-fn">dirname</span>(<span class="c-fn">__DIR__</span>))
+    -&gt;<span class="c-fn">withRouting</span>(
+        <span class="c-var">web</span>:      <span class="c-fn">__DIR__</span>.<span class="c-str">'/../routes/web.php'</span>,
+        <span class="c-var">api</span>:      <span class="c-fn">__DIR__</span>.<span class="c-str">'/../routes/api.php'</span>,
+        <span class="c-var">commands</span>: <span class="c-fn">__DIR__</span>.<span class="c-str">'/../routes/console.php'</span>,
+        <span class="c-var">health</span>:   <span class="c-str">'/up'</span>,
+    )
+    -&gt;<span class="c-fn">withMiddleware</span>(<span class="c-key">function</span> (<span class="c-type">Middleware</span> <span class="c-var">$middleware</span>) {
+        <span class="c-comment">// Глобальные middleware — применяются к каждому запросу.
+        // Порядок важен: они выполняются сверху вниз.</span>
+        <span class="c-var">$middleware</span>-&gt;<span class="c-fn">append</span>([
+            <span class="c-type">TrustProxies</span>::<span class="c-key">class</span>,                       <span class="c-comment">// доверенные прокси (IP, протокол)</span>
+            <span class="c-type">HandleCors</span>::<span class="c-key">class</span>,                         <span class="c-comment">// CORS-заголовки и OPTIONS</span>
+            <span class="c-type">PreventRequestsDuringMaintenance</span>::<span class="c-key">class</span>,   <span class="c-comment">// проверка режима обслуживания</span>
+            <span class="c-type">ValidatePostSize</span>::<span class="c-key">class</span>,                   <span class="c-comment">// проверка размера POST-запроса</span>
+            <span class="c-type">TrimStrings</span>::<span class="c-key">class</span>,                        <span class="c-comment">// обрезка пробелов (кроме исключённых)</span>
+            <span class="c-type">ConvertEmptyStringsToNull</span>::<span class="c-key">class</span>,          <span class="c-comment">// пустые строки → null</span>
+        ]);
+
+        <span class="c-comment">// TrustHosts — ограничение допустимых хостов (по умолчанию отключён):
+        // $middleware-&gt;trustHosts(at: ['example.com', '*.example.com']);
+
+        // Свой глобальный middleware:
+        // $middleware-&gt;append(MyCustomGlobalMiddleware::class);</span>
+    })
+    -&gt;<span class="c-fn">withExceptions</span>(<span class="c-key">function</span> (<span class="c-var">$exceptions</span>) {
+        <span class="c-comment">//</span>
+    })
+    -&gt;<span class="c-fn">create</span>();</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="table" style="width:14px;height:14px"></i> Сводная таблица назначений</div>
+    <table class="data-table">
+      <thead><tr><th>Класс</th><th>Назначение</th></tr></thead>
+      <tbody>
+        <tr><td><code>TrustProxies</code></td><td>Корректирует IP, протокол и хост, если приложение за прокси (Nginx, Cloudflare).</td></tr>
+        <tr><td><code>HandleCors</code></td><td>Добавляет CORS-заголовки и отвечает на OPTIONS-запросы. Настройки в <code>config/cors.php</code>.</td></tr>
+        <tr><td><code>PreventRequestsDuringMaintenance</code></td><td>Если сайт в режиме обслуживания (<code>php artisan down</code>), возвращает 503 для всех, кроме разрешённых IP.</td></tr>
+        <tr><td><code>ValidatePostSize</code></td><td>Проверяет, что размер POST-данных не превышает лимиты PHP (<code>post_max_size</code>, <code>upload_max_filesize</code>).</td></tr>
+        <tr><td><code>TrimStrings</code></td><td>Обрезает пробелы с начала и конца всех строковых полей ввода (кроме перечисленных в <code>$except</code>).</td></tr>
+        <tr><td><code>ConvertEmptyStringsToNull</code></td><td>Превращает пустые строки (<code>''</code>) в <code>null</code> — удобно для БД с nullable-полями.</td></tr>
+        <tr><td><code>TrustHosts</code></td><td>Ограничивает допустимые значения заголовка <code>Host</code> — защита от атак подделки хоста.</td></tr>
+      </tbody>
+    </table>
+
+    <p class="text"><strong>Если нужно изменить порядок или список.</strong> Метод <code>$middleware-&gt;append(...)</code> добавляет в конец списка. <code>$middleware-&gt;prepend(...)</code> — в начало. <code>$middleware-&gt;use([...])</code> полностью заменяет список глобальных middleware — используйте осторожно, потому что можно случайно отключить стандартную обработку CORS, trim, maintenance mode и других критичных вещей.</p>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="globe"></i> CORS — практический разбор для middleware</div>
 
     <p class="text"><strong>Что такое CORS.</strong> CORS (Cross-Origin Resource Sharing) — механизм, который позволяет веб-страницам, загруженным с одного домена (origin), запрашивать ресурсы с другого домена, отличного от того, с которого была загружена страница. Без CORS браузеры блокируют такие запросы из соображений безопасности.</p>
