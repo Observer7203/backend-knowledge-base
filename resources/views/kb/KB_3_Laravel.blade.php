@@ -1205,6 +1205,100 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="group"></i> Кастомизация middleware-групп (web / api)</div>
+
+    <p class="text"><strong>Что такое группы.</strong> Middleware-группы — это наборы middleware, которые применяются к маршрутам, объединённым в группы (обычно через <code>Route::group(['middleware' =&gt; 'web'])</code> или автоматически в <code>routes/web.php</code> и <code>routes/api.php</code>). Группы позволяют не перечислять каждый middleware в каждом маршруте, а применять их оптом.</p>
+
+    <p class="text"><strong>Где регистрируются.</strong> В Laravel 11+ — в файле <code>bootstrap/app.php</code> с помощью метода <code>-&gt;withMiddleware()</code>. В Laravel 10 и ниже — в классе <code>App\Http\Kernel</code> в свойстве <code>$middlewareGroups</code>.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="table" style="width:14px;height:14px"></i> Стандартные группы по умолчанию</div>
+    <table class="data-table">
+      <thead><tr><th>Группа</th><th>Назначение</th><th>Входящие middleware (стандарт)</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>web</code></td>
+          <td>Для веб-интерфейса (с сессиями, CSRF, куками)</td>
+          <td><code>EncryptCookies</code>, <code>AddQueuedCookiesToResponse</code>, <code>StartSession</code>, <code>ShareErrorsFromSession</code>, <code>VerifyCsrfToken</code>, <code>SubstituteBindings</code></td>
+        </tr>
+        <tr>
+          <td><code>api</code></td>
+          <td>Для API-маршрутов (без сессий, с ограничениями)</td>
+          <td><code>throttle:api</code>, <code>SubstituteBindings</code> (иногда добавляют <code>EnsureFrontendRequestsAreStateful</code> для Sanctum)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="text"><strong>Кастомизация в <code>bootstrap/app.php</code> (Laravel 11+).</strong> В <code>bootstrap/app.php</code> вы можете добавлять или удалять middleware из существующих групп, а также создавать свои.</p>
+<pre><code>&lt;?<span class="c-key">php</span>
+
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Foundation</span>\<span class="c-type">Application</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Foundation</span>\<span class="c-type">Configuration</span>\<span class="c-type">Middleware</span>;
+<span class="c-key">use</span> <span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">LogRequest</span>;
+<span class="c-key">use</span> <span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">CheckApiVersion</span>;
+
+<span class="c-key">return</span> <span class="c-type">Application</span>::<span class="c-fn">configure</span>(<span class="c-var">basePath</span>: <span class="c-fn">dirname</span>(<span class="c-fn">__DIR__</span>))
+    -&gt;<span class="c-fn">withRouting</span>(
+        <span class="c-var">web</span>:      <span class="c-fn">__DIR__</span>.<span class="c-str">'/../routes/web.php'</span>,
+        <span class="c-var">api</span>:      <span class="c-fn">__DIR__</span>.<span class="c-str">'/../routes/api.php'</span>,
+        <span class="c-var">commands</span>: <span class="c-fn">__DIR__</span>.<span class="c-str">'/../routes/console.php'</span>,
+        <span class="c-var">health</span>:   <span class="c-str">'/up'</span>,
+    )
+    -&gt;<span class="c-fn">withMiddleware</span>(<span class="c-key">function</span> (<span class="c-type">Middleware</span> <span class="c-var">$middleware</span>) {
+        <span class="c-comment">// 1. Добавление своих middleware в группу web (в конец)</span>
+        <span class="c-var">$middleware</span>-&gt;<span class="c-fn">web</span>(<span class="c-var">append</span>: [
+            <span class="c-type">LogRequest</span>::<span class="c-key">class</span>,
+        ]);
+
+        <span class="c-comment">// 2. Добавление в группу api (в начало)</span>
+        <span class="c-var">$middleware</span>-&gt;<span class="c-fn">api</span>(<span class="c-var">prepend</span>: [
+            <span class="c-type">CheckApiVersion</span>::<span class="c-key">class</span>,      <span class="c-comment">// проверка Accept-Version</span>
+        ]);
+
+        <span class="c-comment">// 3. Полностью переопределить группу — заменить стандартные:
+        // $middleware-&gt;web(use: [ /* новый список */ ]);</span>
+
+        <span class="c-comment">// 4. Создание собственной группы</span>
+        <span class="c-var">$middleware</span>-&gt;<span class="c-fn">group</span>(<span class="c-str">'custom'</span>, [
+            <span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">CustomMiddleware</span>::<span class="c-key">class</span>,
+        ]);
+
+        <span class="c-comment">// 5. Удаление из группы напрямую не поддерживается,
+        //    но можно переопределить через use, например убрать throttle из api:
+        // $middleware-&gt;api(use: [
+        //     Illuminate\Routing\Middleware\SubstituteBindings::class,
+        // ]);</span>
+    })
+    -&gt;<span class="c-fn">withExceptions</span>(<span class="c-key">function</span> (<span class="c-var">$exceptions</span>) {
+        <span class="c-comment">//</span>
+    })
+    -&gt;<span class="c-fn">create</span>();</code></pre>
+
+    <p class="text"><strong>Аналогично для Laravel 10 и ниже.</strong> В <code>app/Http/Kernel.php</code> редактируется свойство <code>$middlewareGroups</code>:</p>
+<pre><code><span class="c-key">protected</span> <span class="c-var">$middlewareGroups</span> = [
+    <span class="c-str">'web'</span> =&gt; [
+        \<span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">EncryptCookies</span>::<span class="c-key">class</span>,
+        \<span class="c-type">Illuminate</span>\<span class="c-type">Cookie</span>\<span class="c-type">Middleware</span>\<span class="c-type">AddQueuedCookiesToResponse</span>::<span class="c-key">class</span>,
+        \<span class="c-type">Illuminate</span>\<span class="c-type">Session</span>\<span class="c-type">Middleware</span>\<span class="c-type">StartSession</span>::<span class="c-key">class</span>,
+        <span class="c-comment">// ... стандартные ...</span>
+        \<span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">LogRequest</span>::<span class="c-key">class</span>,   <span class="c-comment">// добавляем свой</span>
+    ],
+
+    <span class="c-str">'api'</span> =&gt; [
+        \<span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">CheckApiVersion</span>::<span class="c-key">class</span>,   <span class="c-comment">// в начало</span>
+        \<span class="c-type">Laravel</span>\<span class="c-type">Sanctum</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">EnsureFrontendRequestsAreStateful</span>::<span class="c-key">class</span>,
+        <span class="c-str">'throttle:api'</span>,
+        \<span class="c-type">Illuminate</span>\<span class="c-type">Routing</span>\<span class="c-type">Middleware</span>\<span class="c-type">SubstituteBindings</span>::<span class="c-key">class</span>,
+    ],
+];</code></pre>
+
+    <p class="text"><strong>Важные нюансы.</strong> Порядок важен — middleware выполняются в том порядке, в котором перечислены в массиве. Например, <code>StartSession</code> должен быть до <code>VerifyCsrfToken</code>, иначе CSRF не сможет прочитать токен из сессии. Группы можно использовать в маршрутах: <code>Route::middleware('web')-&gt;group(...)</code> или <code>Route::group(['middleware' =&gt; ['web', 'auth']], ...)</code>. Если вы переопределяете группу через <code>use</code>, вы <em>теряете</em> все стандартные middleware — будьте внимательны, обычно лучше использовать <code>append</code>/<code>prepend</code>. Для API-группы часто добавляют <code>throttle</code> с лимитами, а также <code>EnsureFrontendRequestsAreStateful</code> для SPA-авторизации через Sanctum.</p>
+
+    <div class="remember-box">
+      <strong>Итог.</strong> Группы кастомизируются в <code>bootstrap/app.php</code> (Laravel 11+) или в <code>Kernel.php</code> (Laravel ≤10). Используйте методы <code>web()</code>, <code>api()</code> и <code>group()</code> для добавления своих middleware в существующие или новые группы. Изменения в группах применяются ко всем маршрутам, которые используют эту группу.
+    </div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="globe"></i> CORS — практический разбор для middleware</div>
 
     <p class="text"><strong>Что такое CORS.</strong> CORS (Cross-Origin Resource Sharing) — механизм, который позволяет веб-страницам, загруженным с одного домена (origin), запрашивать ресурсы с другого домена, отличного от того, с которого была загружена страница. Без CORS браузеры блокируют такие запросы из соображений безопасности.</p>
