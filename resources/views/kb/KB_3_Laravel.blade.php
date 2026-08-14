@@ -139,6 +139,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('middleware','mw-pitfalls',this)">Особые случаи</a>
     <a class="nav-subitem" onclick="showSub('middleware','mw-global',this)">Глобальные middleware</a>
     <a class="nav-subitem" onclick="showSub('middleware','mw-groups',this)">Кастомизация групп web/api</a>
+    <a class="nav-subitem" onclick="showSub('middleware','mw-aliases',this)">Middleware Aliases</a>
     <a class="nav-subitem" onclick="showSub('middleware','mw-cors',this)">CORS</a>
   </div>
   <a class="nav-item" onclick="showSection('validation',this)"><i data-lucide="check-circle"></i> Validation &amp; FormRequest</a>
@@ -1323,6 +1324,122 @@ ul.bullets strong{color:var(--text);}
     <div class="remember-box">
       <strong>Итог.</strong> Группы кастомизируются в <code>bootstrap/app.php</code> (Laravel 11+) или в <code>Kernel.php</code> (Laravel ≤10). Используйте методы <code>web()</code>, <code>api()</code> и <code>group()</code> для добавления своих middleware в существующие или новые группы. Изменения в группах применяются ко всем маршрутам, которые используют эту группу.
     </div>
+  </div>
+
+  <div class="subsection" id="mw-aliases">
+    <div class="subsection-title"><i data-lucide="tag"></i> Middleware Aliases (псевдонимы)</div>
+
+    <p class="text"><strong>Что это.</strong> Middleware Aliases — это короткие имена для классов middleware. Они нужны, чтобы в роутах писать не полное имя класса, а краткий alias — например <code>'auth'</code> вместо <code>\App\Http\Middleware\Authenticate::class</code>.</p>
+
+    <p class="text"><strong>Где объявляются.</strong> В зависимости от версии Laravel место отличается:</p>
+    <table class="data-table">
+      <thead><tr><th>Версия</th><th>Файл</th><th>Свойство / метод</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Laravel 11+</td>
+          <td><code>bootstrap/app.php</code></td>
+          <td><code>$middleware-&gt;alias([...])</code> внутри <code>withMiddleware()</code></td>
+        </tr>
+        <tr>
+          <td>Laravel 10 и ниже</td>
+          <td><code>app/Http/Kernel.php</code></td>
+          <td>Свойство <code>protected $middlewareAliases = [...]</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="text"><strong>Как объявляются в Laravel 11+</strong> (в <code>bootstrap/app.php</code>):</p>
+<pre><code>&lt;?<span class="c-key">php</span>
+
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Foundation</span>\<span class="c-type">Application</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Foundation</span>\<span class="c-type">Configuration</span>\<span class="c-type">Middleware</span>;
+<span class="c-key">use</span> <span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">RoleMiddleware</span>;
+<span class="c-key">use</span> <span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">CheckAge</span>;
+
+<span class="c-key">return</span> <span class="c-type">Application</span>::<span class="c-fn">configure</span>(<span class="c-var">basePath</span>: <span class="c-fn">dirname</span>(<span class="c-fn">__DIR__</span>))
+    -&gt;<span class="c-fn">withRouting</span>(
+        <span class="c-var">web</span>: <span class="c-fn">__DIR__</span>.<span class="c-str">'/../routes/web.php'</span>,
+        <span class="c-comment">// ...</span>
+    )
+    -&gt;<span class="c-fn">withMiddleware</span>(<span class="c-key">function</span> (<span class="c-type">Middleware</span> <span class="c-var">$middleware</span>) {
+        <span class="c-comment">// Регистрируем алиасы</span>
+        <span class="c-var">$middleware</span>-&gt;<span class="c-fn">alias</span>([
+            <span class="c-str">'role'</span> =&gt; <span class="c-type">RoleMiddleware</span>::<span class="c-key">class</span>,
+            <span class="c-str">'age'</span>  =&gt; <span class="c-type">CheckAge</span>::<span class="c-key">class</span>,
+        ]);
+    })
+    -&gt;<span class="c-fn">withExceptions</span>(<span class="c-key">function</span> (<span class="c-var">$exceptions</span>) { <span class="c-comment">//</span> })
+    -&gt;<span class="c-fn">create</span>();</code></pre>
+
+    <p class="text"><strong>Как объявляются в Laravel 10 и ниже</strong> (в <code>app/Http/Kernel.php</code>):</p>
+<pre><code>&lt;?<span class="c-key">php</span>
+
+<span class="c-key">namespace</span> <span class="c-type">App</span>\<span class="c-type">Http</span>;
+
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Foundation</span>\<span class="c-type">Http</span>\<span class="c-type">Kernel</span> <span class="c-key">as</span> <span class="c-type">HttpKernel</span>;
+<span class="c-key">use</span> <span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">RoleMiddleware</span>;
+<span class="c-key">use</span> <span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">CheckAge</span>;
+
+<span class="c-key">class</span> <span class="c-type">Kernel</span> <span class="c-key">extends</span> <span class="c-type">HttpKernel</span>
+{
+    <span class="c-comment">// ...</span>
+
+    <span class="c-key">protected</span> <span class="c-var">$middlewareAliases</span> = [
+        <span class="c-str">'auth'</span>             =&gt; \<span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">Authenticate</span>::<span class="c-key">class</span>,
+        <span class="c-str">'auth.basic'</span>       =&gt; \<span class="c-type">Illuminate</span>\<span class="c-type">Auth</span>\<span class="c-type">Middleware</span>\<span class="c-type">AuthenticateWithBasicAuth</span>::<span class="c-key">class</span>,
+        <span class="c-str">'cache.headers'</span>    =&gt; \<span class="c-type">Illuminate</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">SetCacheHeaders</span>::<span class="c-key">class</span>,
+        <span class="c-str">'can'</span>              =&gt; \<span class="c-type">Illuminate</span>\<span class="c-type">Auth</span>\<span class="c-type">Middleware</span>\<span class="c-type">Authorize</span>::<span class="c-key">class</span>,
+        <span class="c-str">'guest'</span>            =&gt; \<span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">RedirectIfAuthenticated</span>::<span class="c-key">class</span>,
+        <span class="c-str">'password.confirm'</span> =&gt; \<span class="c-type">Illuminate</span>\<span class="c-type">Auth</span>\<span class="c-type">Middleware</span>\<span class="c-type">RequirePassword</span>::<span class="c-key">class</span>,
+        <span class="c-str">'signed'</span>           =&gt; \<span class="c-type">Illuminate</span>\<span class="c-type">Routing</span>\<span class="c-type">Middleware</span>\<span class="c-type">ValidateSignature</span>::<span class="c-key">class</span>,
+        <span class="c-str">'throttle'</span>         =&gt; \<span class="c-type">Illuminate</span>\<span class="c-type">Routing</span>\<span class="c-type">Middleware</span>\<span class="c-type">ThrottleRequests</span>::<span class="c-key">class</span>,
+        <span class="c-str">'verified'</span>         =&gt; \<span class="c-type">Illuminate</span>\<span class="c-type">Auth</span>\<span class="c-type">Middleware</span>\<span class="c-type">EnsureEmailIsVerified</span>::<span class="c-key">class</span>,
+
+        <span class="c-comment">// Свои алиасы — сюда:</span>
+        <span class="c-str">'role'</span> =&gt; <span class="c-type">RoleMiddleware</span>::<span class="c-key">class</span>,
+        <span class="c-str">'age'</span>  =&gt; <span class="c-type">CheckAge</span>::<span class="c-key">class</span>,
+    ];
+}</code></pre>
+
+    <p class="text"><strong>Как использовать алиас в роуте.</strong> После регистрации алиаса просто указываете его в <code>-&gt;middleware()</code>:</p>
+<pre><code><span class="c-comment">// routes/web.php или routes/api.php</span>
+
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/admin'</span>, [<span class="c-type">AdminController</span>::<span class="c-key">class</span>, <span class="c-str">'index'</span>])
+    -&gt;<span class="c-fn">middleware</span>([<span class="c-str">'auth'</span>, <span class="c-str">'role:admin'</span>]);   <span class="c-comment">// auth и role — это алиасы</span>
+
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/restricted'</span>, <span class="c-key">function</span> () {
+    <span class="c-key">return</span> <span class="c-str">'Только для взрослых'</span>;
+})-&gt;<span class="c-fn">middleware</span>(<span class="c-str">'age:18'</span>);              <span class="c-comment">// алиас age с параметром</span></code></pre>
+
+    <p class="text"><strong>Важные нюансы:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Алиасы с параметрами работают так же, как и с полными именами классов: <code>'role:admin'</code> передаст параметр <code>admin</code> в метод <code>handle()</code> middleware.</li>
+      <li>Встроенные алиасы (<code>auth</code>, <code>guest</code>, <code>verified</code>, <code>throttle</code> и др.) уже зарегистрированы по умолчанию — их не нужно объявлять вручную.</li>
+      <li>Если алиас не зарегистрирован, Laravel выдаст ошибку <code>Target class [alias] does not exist</code>.</li>
+      <li>В Laravel 11 файла <code>Kernel.php</code> больше нет — вся конфигурация middleware перенесена в <code>bootstrap/app.php</code>.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="table" style="width:14px;height:14px"></i> Итог сравнения по версиям</div>
+    <table class="data-table">
+      <thead><tr><th>Действие</th><th>Laravel 11+</th><th>Laravel ≤10</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Где</strong></td>
+          <td><code>bootstrap/app.php</code></td>
+          <td><code>app/Http/Kernel.php</code></td>
+        </tr>
+        <tr>
+          <td><strong>Как</strong></td>
+          <td><code>$middleware-&gt;alias(['alias' =&gt; Class::class])</code></td>
+          <td><code>protected $middlewareAliases = ['alias' =&gt; Class::class]</code></td>
+        </tr>
+        <tr>
+          <td><strong>Использование</strong></td>
+          <td><code>-&gt;middleware('alias')</code></td>
+          <td><code>-&gt;middleware('alias')</code></td>
+        </tr>
+      </tbody>
+    </table>
   </div>
 
   <div class="subsection" id="mw-cors">
