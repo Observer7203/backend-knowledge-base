@@ -409,6 +409,72 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-triangle"></i> Важное различие: DI vs DIP</div>
+    <p class="text">
+      <strong>DI (Dependency Injection)</strong> — это <strong>конкретный паттерн</strong>: способ предоставления объекту его зависимостей извне вместо создания их внутри через <code>new</code>.
+    </p>
+    <p class="text">
+      <strong>DIP (Dependency Inversion Principle)</strong> — это <strong>принцип из SOLID</strong>: модули должны зависеть от абстракций (интерфейсов), а не от конкретных классов.
+    </p>
+    <div class="remember-box">
+      <strong>🔥 DI сам по себе не гарантирует соблюдение DIP.</strong> Если вы внедряете конкретный класс, а не его интерфейс — это <strong>DI, но DIP нарушен</strong>. Класс всё ещё жёстко привязан к конкретной реализации, просто через конструктор вместо <code>new</code>.
+    </div>
+
+    <p class="text"><strong>Три стадии на PHP (Laravel-стиль):</strong></p>
+    <pre><code><span class="c-comment">// ❌ Нарушены оба принципа: создание зависимости внутри</span>
+<span class="c-key">class</span> <span class="c-type">OrderService</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">process</span>()
+    {
+        <span class="c-var">$gateway</span> = <span class="c-key">new</span> <span class="c-type">PayPalGateway</span>();   <span class="c-comment">// жёсткая привязка</span>
+        <span class="c-var">$gateway</span>-&gt;<span class="c-fn">charge</span>();
+    }
+}</code></pre>
+
+    <pre><code><span class="c-comment">// ⚠ DI есть, но DIP нарушен: внедряем конкретный класс</span>
+<span class="c-key">class</span> <span class="c-type">OrderService</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">private</span> <span class="c-type">PayPalGateway</span> <span class="c-var">$gateway</span>) {}
+    <span class="c-comment">// Тесты уже возможны (можно подсунуть mock),
+    // но контроллер знает про конкретный PayPal.
+    // Смена на Stripe = правка type-hint во всех местах.</span>
+}</code></pre>
+
+    <pre><code><span class="c-comment">// ✅ DI + DIP соблюдены: внедряем абстракцию</span>
+<span class="c-key">interface</span> <span class="c-type">PaymentGatewayInterface</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">charge</span>(): <span class="c-type">ChargeResult</span>;
+}
+
+<span class="c-key">class</span> <span class="c-type">PayPalGateway</span> <span class="c-key">implements</span> <span class="c-type">PaymentGatewayInterface</span> { <span class="c-comment">/* ... */</span> }
+<span class="c-key">class</span> <span class="c-type">StripeGateway</span> <span class="c-key">implements</span> <span class="c-type">PaymentGatewayInterface</span> { <span class="c-comment">/* ... */</span> }
+
+<span class="c-key">class</span> <span class="c-type">OrderService</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">private</span> <span class="c-type">PaymentGatewayInterface</span> <span class="c-var">$gateway</span>) {}
+    <span class="c-comment">// Класс не знает про PayPal / Stripe.
+    // Замена реализации — 1 строчка в провайдере.</span>
+}
+
+<span class="c-comment">// В провайдере — выбор реализации в одном месте:</span>
+<span class="c-var">$this</span>-&gt;<span class="c-var">app</span>-&gt;<span class="c-fn">bind</span>(<span class="c-type">PaymentGatewayInterface</span>::<span class="c-key">class</span>, <span class="c-type">StripeGateway</span>::<span class="c-key">class</span>);</code></pre>
+
+    <table class="data-table">
+      <thead><tr><th></th><th>❌ new внутри</th><th>⚠ DI + конкретный класс</th><th>✅ DI + интерфейс</th></tr></thead>
+      <tbody>
+        <tr><td><strong>DI</strong></td><td>Нет</td><td>Да</td><td>Да</td></tr>
+        <tr><td><strong>DIP</strong></td><td>Нет</td><td>Нет</td><td>Да</td></tr>
+        <tr><td><strong>Тестируемость</strong></td><td>Требует боевого API</td><td>Можно подсунуть mock через контейнер</td><td>Любая реализация интерфейса</td></tr>
+        <tr><td><strong>Смена провайдера</strong></td><td>Править везде где <code>new</code></td><td>Править type-hint во всех местах</td><td>Одна строка в провайдере</td></tr>
+      </tbody>
+    </table>
+
+    <p class="text">
+      В Laravel <strong>контейнер помогает автоматически разрешать зависимости</strong>, но <strong>выбор абстракций (интерфейсов) остаётся за разработчиком</strong> — именно это и есть следование DIP. Контейнер не заставит вас использовать интерфейс — он лишь предоставляет удобный механизм биндинга, который вы можете использовать правильно (интерфейс → реализация) или неправильно (конкретный класс → сам себя).
+    </p>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="hammer"></i> Сквозной пример: переход от прямой зависимости к DI</div>
     <p class="text">Рассмотрим эволюцию класса от тесной связи с конкретной реализацией к гибкому DI через интерфейс. Видимое улучшение происходит в трёх измерениях: тестируемость, заменяемость, читаемость.</p>
 
