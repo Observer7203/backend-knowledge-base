@@ -140,6 +140,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('middleware','mw-global',this)">Глобальные middleware</a>
     <a class="nav-subitem" onclick="showSub('middleware','mw-groups',this)">Кастомизация групп web/api</a>
     <a class="nav-subitem" onclick="showSub('middleware','mw-aliases',this)">Middleware Aliases</a>
+    <a class="nav-subitem" onclick="showSub('middleware','mw-params',this)">Параметризованный middleware</a>
     <a class="nav-subitem" onclick="showSub('middleware','mw-cors',this)">CORS</a>
   </div>
   <a class="nav-item" onclick="showSection('validation',this)"><i data-lucide="check-circle"></i> Validation &amp; FormRequest</a>
@@ -1440,6 +1441,128 @@ ul.bullets strong{color:var(--text);}
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <div class="subsection" id="mw-params">
+    <div class="subsection-title"><i data-lucide="sliders"></i> Параметризованный middleware — throttle:60,1 и подобные</div>
+
+    <p class="text"><strong>Что это.</strong> Параметризованный middleware — это middleware, которое принимает дополнительные параметры в строке вызова, например <code>'throttle:60,1'</code>. Эти параметры передаются в метод <code>handle()</code> после <code>$next</code> как переменное число аргументов (<code>...$params</code>).</p>
+
+    <p class="text"><strong>Как это работает внутри.</strong> В классе middleware метод <code>handle</code> имеет такую сигнатуру:</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-var">$request</span>, <span class="c-type">Closure</span> <span class="c-var">$next</span>, ...<span class="c-var">$params</span>)
+{
+    <span class="c-comment">// $params — массив переданных параметров
+    // для 'throttle:60,1' это будет [60, 1]</span>
+}</code></pre>
+    <p class="text">При вызове <code>-&gt;middleware('throttle:60,1')</code> Laravel парсит строку: разделяет её по двоеточию (отделяя имя middleware от параметров) и запятым (между параметрами), после чего передаёт значения как отдельные аргументы.</p>
+
+    <p class="text"><strong>Как использовать в роутах:</strong></p>
+<pre><code><span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/api/data'</span>, [<span class="c-type">DataController</span>::<span class="c-key">class</span>, <span class="c-str">'index'</span>])
+    -&gt;<span class="c-fn">middleware</span>(<span class="c-str">'throttle:60,1'</span>);   <span class="c-comment">// 60 запросов в минуту</span>
+
+<span class="c-comment">// Несколько middleware сразу — через массив</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/admin/dashboard'</span>, <span class="c-type">DashboardController</span>::<span class="c-key">class</span>)
+    -&gt;<span class="c-fn">middleware</span>([<span class="c-str">'auth:sanctum'</span>, <span class="c-str">'throttle:60,1'</span>, <span class="c-str">'verified'</span>]);</code></pre>
+
+    <p class="text"><strong>Где настраивается throttle.</strong> Стандартный <code>ThrottleRequests</code> уже зарегистрирован в алиасах под именем <code>throttle</code>. Его параметры можно задавать двумя способами:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Напрямую в роуте</strong> — как в примере выше (<code>throttle:60,1</code>).</li>
+      <li><strong>Через именованные лимиты</strong> — в файле <code>app/Http/Kernel.php</code> (для Laravel ≤10) или через <code>bootstrap/app.php</code> (Laravel 11+) можно определить глобальные лимиты для групп API и использовать их как <code>throttle:api</code>.</li>
+    </ul>
+
+    <p class="text"><strong>Именованные лимиты в Laravel ≤10</strong> — в <code>App\Providers\RouteServiceProvider</code>:</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Cache</span>\<span class="c-type">RateLimiting</span>\<span class="c-type">Limit</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Support</span>\<span class="c-type">Facades</span>\<span class="c-type">RateLimiter</span>;
+
+<span class="c-key">protected function</span> <span class="c-fn">configureRateLimiting</span>()
+{
+    <span class="c-type">RateLimiter</span>::<span class="c-fn">for</span>(<span class="c-str">'api'</span>, <span class="c-key">function</span> (<span class="c-var">$request</span>) {
+        <span class="c-key">return</span> <span class="c-type">Limit</span>::<span class="c-fn">perMinute</span>(<span class="c-num">60</span>)
+            -&gt;<span class="c-fn">by</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">user</span>()?-&gt;<span class="c-var">id</span> ?: <span class="c-var">$request</span>-&gt;<span class="c-fn">ip</span>());
+    });
+}</code></pre>
+
+    <p class="text"><strong>Именованные лимиты в Laravel 11+</strong> — через <code>bootstrap/app.php</code>:</p>
+<pre><code>-&gt;<span class="c-fn">withRouting</span>(
+    <span class="c-var">api</span>: <span class="c-fn">__DIR__</span>.<span class="c-str">'/../routes/api.php'</span>,
+    <span class="c-comment">// ...</span>
+    <span class="c-var">using</span>: <span class="c-key">function</span> () {
+        <span class="c-type">RateLimiter</span>::<span class="c-fn">for</span>(<span class="c-str">'api'</span>, <span class="c-key">fn</span> (<span class="c-var">$request</span>) =&gt;
+            <span class="c-type">Limit</span>::<span class="c-fn">perMinute</span>(<span class="c-num">60</span>)-&gt;<span class="c-fn">by</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">user</span>()?-&gt;<span class="c-var">id</span> ?: <span class="c-var">$request</span>-&gt;<span class="c-fn">ip</span>())
+        );
+    }
+)</code></pre>
+    <p class="text">Тогда в роуте достаточно писать <code>'throttle:api'</code> — будет использоваться заданный лимит.</p>
+
+    <p class="text"><strong>Создание своего параметризованного middleware.</strong> Класс <code>CheckAge</code> с двумя параметрами (<code>$minAge</code> и опциональный <code>$maxAge</code>):</p>
+<pre><code><span class="c-key">namespace</span> <span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>;
+
+<span class="c-key">use</span> <span class="c-type">Closure</span>;
+
+<span class="c-key">class</span> <span class="c-type">CheckAge</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-var">$request</span>, <span class="c-type">Closure</span> <span class="c-var">$next</span>, <span class="c-var">$minAge</span>, <span class="c-var">$maxAge</span> = <span class="c-key">null</span>)
+    {
+        <span class="c-var">$age</span> = <span class="c-var">$request</span>-&gt;<span class="c-fn">input</span>(<span class="c-str">'age'</span>);
+        <span class="c-key">if</span> (<span class="c-var">$age</span> &lt; <span class="c-var">$minAge</span> || (<span class="c-var">$maxAge</span> &amp;&amp; <span class="c-var">$age</span> &gt; <span class="c-var">$maxAge</span>)) {
+            <span class="c-fn">abort</span>(<span class="c-num">403</span>, <span class="c-str">'Возраст не подходит.'</span>);
+        }
+        <span class="c-key">return</span> <span class="c-var">$next</span>(<span class="c-var">$request</span>);
+    }
+}</code></pre>
+
+    <p class="text">Зарегистрируйте алиас — в <code>bootstrap/app.php</code> (Laravel 11+) или в <code>Kernel.php</code> (Laravel ≤10):</p>
+<pre><code><span class="c-comment">// Laravel 11+</span>
+-&gt;<span class="c-fn">withMiddleware</span>(<span class="c-key">function</span> (<span class="c-type">Middleware</span> <span class="c-var">$middleware</span>) {
+    <span class="c-var">$middleware</span>-&gt;<span class="c-fn">alias</span>([
+        <span class="c-str">'age'</span> =&gt; \<span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">CheckAge</span>::<span class="c-key">class</span>,
+    ]);
+})
+
+<span class="c-comment">// Laravel ≤10</span>
+<span class="c-key">protected</span> <span class="c-var">$middlewareAliases</span> = [
+    <span class="c-comment">// ...</span>
+    <span class="c-str">'age'</span> =&gt; \<span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">CheckAge</span>::<span class="c-key">class</span>,
+];</code></pre>
+
+    <p class="text">Используйте в роуте — параметры идут после двоеточия через запятую, в порядке аргументов метода <code>handle</code>:</p>
+<pre><code><span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/adults-only'</span>, <span class="c-key">function</span> () {
+    <span class="c-key">return</span> <span class="c-str">'Добро пожаловать!'</span>;
+})-&gt;<span class="c-fn">middleware</span>(<span class="c-str">'age:18,30'</span>);   <span class="c-comment">// minAge=18, maxAge=30</span></code></pre>
+
+    <p class="text"><strong>Особенности throttle:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Стандартный <code>throttle</code> использует кеш (по умолчанию <code>file</code>) для подсчёта количества запросов.</li>
+      <li>Можно передавать два параметра: <code>throttle:attempts,decayMinutes</code>.</li>
+      <li>Если опустить параметры, будет использоваться значение по умолчанию (обычно 60 и 1), но лучше явно указывать.</li>
+      <li>Для API-роутов часто используют <code>throttle:api</code>, где лимит настраивается централизованно, чтобы не дублировать число в каждом роуте.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="table" style="width:14px;height:14px"></i> Итоговая таблица</div>
+    <table class="data-table">
+      <thead><tr><th>Действие</th><th>Где регистрируется</th><th>Как использовать</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Параметризованный middleware</td>
+          <td>В алиасах (<code>$middlewareAliases</code> или <code>bootstrap/app.php</code>)</td>
+          <td><code>-&gt;middleware('alias:param1,param2')</code></td>
+        </tr>
+        <tr>
+          <td>Стандартный throttle</td>
+          <td>Уже зарегистрирован</td>
+          <td><code>'throttle:60,1'</code> или <code>'throttle:api'</code> (с настройкой через <code>RateLimiter</code>)</td>
+        </tr>
+        <tr>
+          <td>Кастомный параметризованный</td>
+          <td>Регистрируете свой класс и алиас</td>
+          <td><code>'age:18,30'</code> — параметры придут в <code>handle()</code> как <code>$minAge, $maxAge</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="remember-box">
+      <strong>Главное правило:</strong> параметры передаются в метод <code>handle</code> в том порядке, в котором они перечислены через запятую после двоеточия.
+    </div>
   </div>
 
   <div class="subsection" id="mw-cors">
