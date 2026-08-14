@@ -1120,6 +1120,60 @@ ul.bullets strong{color:var(--text);}
     <div class="pitfall"><strong>7. Middleware ловит session, для API не нужно.</strong> <code>StartSession</code> в API-группе — лишняя нагрузка. По умолчанию в группе <code>api</code> session отключена; если включили — выключите.</div>
     <div class="pitfall"><strong>8. Утечка состояния в Octane.</strong> Middleware-инстанс переиспользуется между запросами в Octane. Свойства middleware с per-request состоянием утекут. Не храните состояние; всё — через параметры handle.</div>
   </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="globe"></i> CORS — практический разбор для middleware</div>
+
+    <p class="text"><strong>Что такое CORS.</strong> CORS (Cross-Origin Resource Sharing) — механизм, который позволяет веб-страницам, загруженным с одного домена (origin), запрашивать ресурсы с другого домена, отличного от того, с которого была загружена страница. Без CORS браузеры блокируют такие запросы из соображений безопасности.</p>
+
+    <p class="text"><strong>Почему он нужен.</strong> Браузеры реализуют политику одного источника (Same-Origin Policy). Она запрещает скриптам на странице выполнять HTTP-запросы к другому источнику (домену, порту или протоколу), если только сервер явно не разрешит это с помощью CORS-заголовков. Пример: ваш фронтенд работает на <code>https://myfrontend.com</code>, а API — на <code>https://api.myapp.com</code>. Если фронтенд попытается отправить AJAX-запрос на API, браузер заблокирует его, потому что источники разные. Чтобы разрешить, API должен вернуть заголовок <code>Access-Control-Allow-Origin: https://myfrontend.com</code>.</p>
+
+    <p class="text"><strong>Как работает CORS.</strong> Для простого запроса (GET, POST с некоторыми Content-Type) браузер сам добавляет заголовок <code>Origin: https://myfrontend.com</code>. Если сервер в ответе вернёт <code>Access-Control-Allow-Origin: https://myfrontend.com</code> (или <code>*</code>), браузер разрешит запрос.</p>
+
+    <p class="text">Для сложных запросов (PATCH, DELETE, с кастомными заголовками, с <code>Content-Type: application/json</code>) браузер сначала отправляет предварительный запрос (Preflight) методом OPTIONS, чтобы узнать, разрешён ли основной запрос. Сервер должен ответить заголовками <code>Access-Control-Allow-Origin</code>, <code>Access-Control-Allow-Methods</code> (какие HTTP-методы разрешены), <code>Access-Control-Allow-Headers</code> (какие заголовки можно передавать), <code>Access-Control-Max-Age</code> (сколько кешировать ответ preflight). Если сервер не отвечает на OPTIONS или отвечает без нужных заголовков, браузер блокирует основной запрос.</p>
+
+    <p class="text"><strong>Настройка в Laravel.</strong> В Laravel управление CORS вынесено в конфигурацию и middleware. Файл конфигурации <code>config/cors.php</code> (по умолчанию есть в Laravel 7+, в более ранних нужно установить пакет <code>fruitcake/laravel-cors</code>):</p>
+<pre><code><span class="c-key">return</span> [
+    <span class="c-str">'paths'</span> =&gt; [<span class="c-str">'api/*'</span>, <span class="c-str">'sanctum/csrf-cookie'</span>],   <span class="c-comment">// пути, для которых применяется CORS</span>
+    <span class="c-str">'allowed_methods'</span>         =&gt; [<span class="c-str">'*'</span>],       <span class="c-comment">// или ['GET', 'POST', ...]</span>
+    <span class="c-str">'allowed_origins'</span>         =&gt; [<span class="c-str">'https://myfrontend.com'</span>, <span class="c-str">'http://localhost:3000'</span>],
+    <span class="c-str">'allowed_origins_patterns'</span>=&gt; [],
+    <span class="c-str">'allowed_headers'</span>         =&gt; [<span class="c-str">'*'</span>],
+    <span class="c-str">'exposed_headers'</span>         =&gt; [],
+    <span class="c-str">'max_age'</span>                =&gt; <span class="c-num">0</span>,
+    <span class="c-str">'supports_credentials'</span>   =&gt; <span class="c-key">false</span>,
+];</code></pre>
+
+    <p class="text">Далее middleware — в глобальный стек <code>App\Http\Kernel</code> (или в <code>bootstrap/app.php</code> для Laravel 11+) добавляется <code>\App\Http\Middleware\HandleCors::class</code> (или из пакета). Он автоматически обрабатывает OPTIONS-запросы и добавляет нужные заголовки в ответы. Важно понимать: CORS настраивается на стороне сервера. Если ваш API обслуживается Laravel, вам нужно правильно сконфигурировать его, чтобы браузер разрешал кросс-доменные запросы.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="alert-circle" style="width:14px;height:14px"></i> Типичные ошибки и их решение</div>
+    <table class="data-table">
+      <thead><tr><th>Ошибка в консоли браузера</th><th>Причина</th><th>Решение</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>No 'Access-Control-Allow-Origin' header is present</code></td>
+          <td>Сервер не вернул разрешающий заголовок</td>
+          <td>Добавить <code>allowed_origins</code> с доменом фронтенда</td>
+        </tr>
+        <tr>
+          <td><code>Request header field X-Requested-With is not allowed by Access-Control-Allow-Headers</code></td>
+          <td>В preflight сервер не разрешил кастомный заголовок</td>
+          <td>Указать его в <code>allowed_headers</code></td>
+        </tr>
+        <tr>
+          <td><code>Method DELETE is not allowed by Access-Control-Allow-Methods</code></td>
+          <td>Метод не разрешён</td>
+          <td>Добавить <code>DELETE</code> в <code>allowed_methods</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="remember-box">
+      <strong>Важно помнить.</strong> CORS — это браузерная защита; она не мешает запросам из Postman, curl или мобильных приложений. Для публичных API часто используют <code>allowed_origins = ['*']</code>, но это небезопасно для API, работающих с авторизацией — с credentials-режимом такую настройку использовать нельзя. При включении <code>credentials: true</code> (например, для отправки cookies) нельзя ставить <code>*</code> в <code>allowed_origins</code> — нужно указывать конкретный домен и добавить <code>supports_credentials =&gt; true</code>.
+    </div>
+
+    <p class="text"><strong>Итог.</strong> CORS — это механизм, который даёт веб-приложениям возможность безопасно запрашивать данные с других доменов, при этом сервер должен явно разрешить такие запросы через специальные HTTP-заголовки. В Laravel настройка CORS сводится к редактированию <code>config/cors.php</code> и подключению соответствующего middleware.</p>
+  </div>
 </div>
 
 <div id="sec-validation" class="section">
