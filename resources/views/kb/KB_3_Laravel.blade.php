@@ -26,6 +26,10 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,sa
 .sidebar-back svg{width:14px;height:14px;}
 .sidebar-title{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:10px;padding-bottom:12px;border-bottom:1px solid var(--border);}
 .nav-group-label{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;padding:10px 12px 4px;}
+.nav-subgroup{margin:2px 0 4px 22px;border-left:1px solid var(--border);padding-left:8px;}
+.nav-subitem{display:block;padding:5px 8px;color:var(--text2);text-decoration:none;font-size:12px;cursor:pointer;border-radius:5px;transition:all 0.15s;}
+.nav-subitem:hover{background:var(--bg);color:var(--primary);}
+.nav-subitem.active{color:var(--primary);font-weight:600;background:var(--primary-light,#EFF2F5);}
 .nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:2px;color:var(--text2);text-decoration:none;border-radius:8px;cursor:pointer;transition:all 0.18s;font-size:13px;font-weight:500;border:1px solid transparent;}
 .nav-item svg{width:14px;height:14px;flex-shrink:0;}
 .nav-item:hover{background:var(--bg);color:var(--primary);border-color:var(--border);}
@@ -125,6 +129,18 @@ ul.bullets strong{color:var(--text);}
   <a class="nav-item" onclick="showSection('bootstrap-deep',this)"><i data-lucide="package"></i> Bootstrap: providers &amp; app.php</a>
   <a class="nav-item" onclick="showSection('routing',this)"><i data-lucide="route"></i> Routing</a>
   <a class="nav-item" onclick="showSection('middleware',this)"><i data-lucide="filter"></i> Middleware</a>
+  <div class="nav-subgroup">
+    <a class="nav-subitem" onclick="showSub('middleware','mw-purpose',this)">Назначение</a>
+    <a class="nav-subitem" onclick="showSub('middleware','mw-types',this)">Виды и порядок</a>
+    <a class="nav-subitem" onclick="showSub('middleware','mw-chain',this)">Как работает цепочка + $next</a>
+    <a class="nav-subitem" onclick="showSub('middleware','mw-reverse',this)">Обратный проход</a>
+    <a class="nav-subitem" onclick="showSub('middleware','mw-terminate',this)">Фаза terminate</a>
+    <a class="nav-subitem" onclick="showSub('middleware','mw-practice',this)">Практика: пример кода</a>
+    <a class="nav-subitem" onclick="showSub('middleware','mw-pitfalls',this)">Особые случаи</a>
+    <a class="nav-subitem" onclick="showSub('middleware','mw-global',this)">Глобальные middleware</a>
+    <a class="nav-subitem" onclick="showSub('middleware','mw-groups',this)">Кастомизация групп web/api</a>
+    <a class="nav-subitem" onclick="showSub('middleware','mw-cors',this)">CORS</a>
+  </div>
   <a class="nav-item" onclick="showSection('validation',this)"><i data-lucide="check-circle"></i> Validation &amp; FormRequest</a>
 
   <div class="nav-group-label">Данные</div>
@@ -1003,12 +1019,12 @@ ul.bullets strong{color:var(--text);}
 
 <div id="sec-middleware" class="section">
   <div class="section-title">Middleware</div>
-  <div class="subsection">
+  <div class="subsection" id="mw-purpose">
     <div class="subsection-title"><i data-lucide="book-open"></i> Назначение</div>
     <p class="text">Middleware — слой между HTTP-запросом и обработчиком. Каждый middleware может: (а) изменить запрос, (б) вернуть ответ напрямую (не доходя до controller), (в) вмешаться в response после controller, (г) сделать дорогую работу после отправки ответа (<code>terminate</code>). Это основа кросс-cutting concerns: аутентификация, CORS, rate limiting, логирование, локализация.</p>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="mw-types">
     <div class="subsection-title"><i data-lucide="list"></i> Виды и порядок</div>
     <div class="card"><h3>Global</h3><p class="text">Применяются ко всем запросам. Регистрируются в <code>bootstrap/app.php</code> (Laravel 11+) или <code>app/Http/Kernel.php::$middleware</code>. Типичные: <code>TrustProxies</code>, <code>HandleCors</code>, <code>TrimStrings</code>.</p></div>
     <div class="card"><h3>Group (web / api)</h3><p class="text">Применяются ко всем маршрутам группы. <code>web</code>: session, CSRF, cookies. <code>api</code>: throttle, без session. Группы кастомизируются через <code>$middlewareGroups</code>.</p></div>
@@ -1017,7 +1033,7 @@ ul.bullets strong{color:var(--text);}
     <div class="card"><h3><code>terminate</code></h3><p class="text">Метод вызывается <em>после</em> отправки response клиенту. Здесь дорогая работа (логи в БД, отправка метрик), не влияющая на TTFB. Работает только под FPM с <code>fastcgi_finish_request</code>.</p></div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="mw-chain">
     <div class="subsection-title"><i data-lucide="git-fork"></i> Как работает цепочка middleware</div>
     <p class="text">Каждый middleware в Laravel — это <strong>слой</strong>, через который проходит запрос. Все middleware собраны в <strong>конвейер (Pipeline)</strong>. Схематично:</p>
 <pre><code><span class="c-comment">// Упрощённо</span>
@@ -1041,7 +1057,7 @@ ul.bullets strong{color:var(--text);}
 }</code></pre>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="mw-reverse">
     <div class="subsection-title"><i data-lucide="undo-2"></i> Зачем нужен обратный проход (код после <code>$next</code>)</div>
     <p class="text">После того как запрос прошёл все middleware и достиг контроллера, тот возвращает ответ. Теперь ответ «поднимается» обратно по цепочке — каждый middleware получает уже готовый <code>$response</code> и может его модифицировать.</p>
     <p class="text"><strong>Основные сценарии обратного прохода:</strong></p>
@@ -1057,7 +1073,7 @@ ul.bullets strong{color:var(--text);}
     </div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="mw-terminate">
     <div class="subsection-title"><i data-lucide="fast-forward"></i> Фаза <code>terminate</code> — что это и зачем</div>
     <p class="text">Некоторые middleware реализуют метод <code>terminate()</code>:</p>
 <pre><code><span class="c-key">public function</span> <span class="c-fn">terminate</span>(<span class="c-var">$request</span>, <span class="c-var">$response</span>)
@@ -1090,7 +1106,7 @@ ul.bullets strong{color:var(--text);}
     </div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="mw-practice">
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика: middleware с проверкой и логированием</div>
 <pre><code><span class="c-key">final class</span> <span class="c-type">EnsureFeatureEnabled</span>
 {
@@ -1109,7 +1125,7 @@ ul.bullets strong{color:var(--text);}
 </code></pre>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="mw-pitfalls">
     <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
     <div class="pitfall"><strong>1. Изменение request в <code>handle</code>.</strong> <code>$request-&gt;merge(['foo' =&gt; 'bar'])</code> работает, но следующие middleware и controller получат изменённый объект. Это может ломать тесты, ожидающие исходный запрос.</div>
     <div class="pitfall"><strong>2. Возврат response из <code>handle</code> без <code>$next</code>.</strong> Если middleware вернул response, дальнейшие middleware и controller не выполняются — это используется для редиректов, авторизации. Удобно, но легко создать «невидимый» branch в логике.</div>
@@ -1121,7 +1137,7 @@ ul.bullets strong{color:var(--text);}
     <div class="pitfall"><strong>8. Утечка состояния в Octane.</strong> Middleware-инстанс переиспользуется между запросами в Octane. Свойства middleware с per-request состоянием утекут. Не храните состояние; всё — через параметры handle.</div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="mw-global">
     <div class="subsection-title"><i data-lucide="layers"></i> Глобальные middleware — стандартный набор Laravel</div>
 
     <p class="text"><strong>Что такое глобальные middleware.</strong> Глобальные middleware применяются к каждому HTTP-запросу, независимо от маршрута. Они выполняются <em>до</em> групповых (<code>web</code>, <code>api</code>) и маршрутных (<code>-&gt;middleware('...')</code>). В Laravel 11+ регистрируются в <code>bootstrap/app.php</code> через <code>-&gt;withMiddleware(...)</code>, в более старых версиях — в свойстве <code>$middleware</code> класса <code>app/Http/Kernel.php</code>.</p>
@@ -1201,10 +1217,15 @@ ul.bullets strong{color:var(--text);}
       </tbody>
     </table>
 
-    <p class="text"><strong>Если нужно изменить порядок или список.</strong> Метод <code>$middleware-&gt;append(...)</code> добавляет в конец списка. <code>$middleware-&gt;prepend(...)</code> — в начало. <code>$middleware-&gt;use([...])</code> полностью заменяет список глобальных middleware — используйте осторожно, потому что можно случайно отключить стандартную обработку CORS, trim, maintenance mode и других критичных вещей.</p>
+    <p class="text"><strong>Если нужно изменить порядок или список:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>$middleware-&gt;append(...)</code> — добавляет в конец списка</li>
+      <li><code>$middleware-&gt;prepend(...)</code> — добавляет в начало</li>
+      <li><code>$middleware-&gt;use([...])</code> — полностью заменяет список глобальных middleware. Используйте осторожно: можно случайно отключить стандартную обработку CORS, trim, maintenance mode и других критичных вещей.</li>
+    </ul>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="mw-groups">
     <div class="subsection-title"><i data-lucide="group"></i> Кастомизация middleware-групп (web / api)</div>
 
     <p class="text"><strong>Что такое группы.</strong> Middleware-группы — это наборы middleware, которые применяются к маршрутам, объединённым в группы (обычно через <code>Route::group(['middleware' =&gt; 'web'])</code> или автоматически в <code>routes/web.php</code> и <code>routes/api.php</code>). Группы позволяют не перечислять каждый middleware в каждом маршруте, а применять их оптом.</p>
@@ -1291,14 +1312,20 @@ ul.bullets strong{color:var(--text);}
     ],
 ];</code></pre>
 
-    <p class="text"><strong>Важные нюансы.</strong> Порядок важен — middleware выполняются в том порядке, в котором перечислены в массиве. Например, <code>StartSession</code> должен быть до <code>VerifyCsrfToken</code>, иначе CSRF не сможет прочитать токен из сессии. Группы можно использовать в маршрутах: <code>Route::middleware('web')-&gt;group(...)</code> или <code>Route::group(['middleware' =&gt; ['web', 'auth']], ...)</code>. Если вы переопределяете группу через <code>use</code>, вы <em>теряете</em> все стандартные middleware — будьте внимательны, обычно лучше использовать <code>append</code>/<code>prepend</code>. Для API-группы часто добавляют <code>throttle</code> с лимитами, а также <code>EnsureFrontendRequestsAreStateful</code> для SPA-авторизации через Sanctum.</p>
+    <p class="text"><strong>Важные нюансы:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Порядок важен</strong> — middleware выполняются в том порядке, в котором перечислены в массиве. Например, <code>StartSession</code> должен быть до <code>VerifyCsrfToken</code>, иначе CSRF не сможет прочитать токен из сессии.</li>
+      <li><strong>Группы в маршрутах</strong> — <code>Route::middleware('web')-&gt;group(...)</code> или <code>Route::group(['middleware' =&gt; ['web', 'auth']], ...)</code>.</li>
+      <li><strong><code>use</code> удаляет стандартные</strong> — если вы переопределяете группу через <code>use</code>, вы теряете все дефолтные middleware. Обычно лучше <code>append</code>/<code>prepend</code>.</li>
+      <li><strong>API-специфика</strong> — часто добавляют <code>throttle</code> с лимитами, а также <code>EnsureFrontendRequestsAreStateful</code> для SPA-авторизации через Sanctum.</li>
+    </ul>
 
     <div class="remember-box">
       <strong>Итог.</strong> Группы кастомизируются в <code>bootstrap/app.php</code> (Laravel 11+) или в <code>Kernel.php</code> (Laravel ≤10). Используйте методы <code>web()</code>, <code>api()</code> и <code>group()</code> для добавления своих middleware в существующие или новые группы. Изменения в группах применяются ко всем маршрутам, которые используют эту группу.
     </div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="mw-cors">
     <div class="subsection-title"><i data-lucide="globe"></i> CORS — практический разбор для middleware</div>
 
     <p class="text"><strong>Что такое CORS.</strong> CORS (Cross-Origin Resource Sharing) — механизм, который позволяет веб-страницам, загруженным с одного домена (origin), запрашивать ресурсы с другого домена, отличного от того, с которого была загружена страница. Без CORS браузеры блокируют такие запросы из соображений безопасности.</p>
@@ -1307,7 +1334,14 @@ ul.bullets strong{color:var(--text);}
 
     <p class="text"><strong>Как работает CORS.</strong> Для простого запроса (GET, POST с некоторыми Content-Type) браузер сам добавляет заголовок <code>Origin: https://myfrontend.com</code>. Если сервер в ответе вернёт <code>Access-Control-Allow-Origin: https://myfrontend.com</code> (или <code>*</code>), браузер разрешит запрос.</p>
 
-    <p class="text">Для сложных запросов (PATCH, DELETE, с кастомными заголовками, с <code>Content-Type: application/json</code>) браузер сначала отправляет предварительный запрос (Preflight) методом OPTIONS, чтобы узнать, разрешён ли основной запрос. Сервер должен ответить заголовками <code>Access-Control-Allow-Origin</code>, <code>Access-Control-Allow-Methods</code> (какие HTTP-методы разрешены), <code>Access-Control-Allow-Headers</code> (какие заголовки можно передавать), <code>Access-Control-Max-Age</code> (сколько кешировать ответ preflight). Если сервер не отвечает на OPTIONS или отвечает без нужных заголовков, браузер блокирует основной запрос.</p>
+    <p class="text">Для сложных запросов (PATCH, DELETE, с кастомными заголовками, с <code>Content-Type: application/json</code>) браузер сначала отправляет предварительный запрос (Preflight) методом OPTIONS, чтобы узнать, разрешён ли основной запрос. Сервер должен ответить заголовками:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>Access-Control-Allow-Origin</code></li>
+      <li><code>Access-Control-Allow-Methods</code> — какие HTTP-методы разрешены</li>
+      <li><code>Access-Control-Allow-Headers</code> — какие заголовки можно передавать</li>
+      <li><code>Access-Control-Max-Age</code> — сколько кешировать ответ preflight</li>
+    </ul>
+    <p class="text">Если сервер не отвечает на OPTIONS или отвечает без нужных заголовков, браузер блокирует основной запрос.</p>
 
     <p class="text"><strong>Настройка в Laravel.</strong> В Laravel управление CORS вынесено в конфигурацию и middleware. Файл конфигурации <code>config/cors.php</code> (по умолчанию есть в Laravel 7+, в более ранних нужно установить пакет <code>fruitcake/laravel-cors</code>):</p>
 <pre><code><span class="c-key">return</span> [
@@ -1966,10 +2000,31 @@ lucide.createIcons();
 function showSection(id, el) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelectorAll('.nav-subitem').forEach(n => n.classList.remove('active'));
   const sec = document.getElementById('sec-' + id);
   if (sec) sec.classList.add('active');
   if (el) el.classList.add('active');
   window.scrollTo(0, 0);
+  lucide.createIcons();
+}
+
+function showSub(sectionId, anchorId, el) {
+  // Активируем секцию (если ещё не активна) без сброса подсветки sub-item
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-subitem').forEach(n => n.classList.remove('active'));
+  const sec = document.getElementById('sec-' + sectionId);
+  if (sec) sec.classList.add('active');
+  // Подсветить родительский nav-item
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const parentNav = document.querySelector(`.nav-item[onclick*="showSection('${sectionId}'"]`);
+  if (parentNav) parentNav.classList.add('active');
+  // Подсветить подпункт и скроллить
+  if (el) el.classList.add('active');
+  const anchor = document.getElementById(anchorId);
+  if (anchor) {
+    // Небольшая задержка чтобы секция успела показаться
+    setTimeout(() => anchor.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  }
   lucide.createIcons();
 }
 </script>
