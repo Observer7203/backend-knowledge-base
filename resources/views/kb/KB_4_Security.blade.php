@@ -665,18 +665,73 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="subsection">
-    <div class="subsection-title"><i data-lucide="hammer"></i> Практика: config/cors.php</div>
+    <div class="subsection-title"><i data-lucide="hammer"></i> Практика: config/cors.php + middleware</div>
+    <p class="text">Классический пример: фронтенд на <code>https://myfrontend.com</code>, API на <code>https://api.myapp.com</code>. Без CORS браузер заблокирует AJAX-запрос. Чтобы разрешить, API должен вернуть <code>Access-Control-Allow-Origin: https://myfrontend.com</code>.</p>
+
+    <p class="text"><strong>1. Конфиг</strong> — <code>config/cors.php</code> (в Laravel 7+ уже есть, для более старых нужен пакет <code>fruitcake/laravel-cors</code>):</p>
 <pre><code><span class="c-key">return</span> [
-    <span class="c-str">'paths'</span> =&gt; [<span class="c-str">'api/*'</span>, <span class="c-str">'sanctum/csrf-cookie'</span>],
+    <span class="c-str">'paths'</span> =&gt; [<span class="c-str">'api/*'</span>, <span class="c-str">'sanctum/csrf-cookie'</span>],   <span class="c-comment">// пути, для которых применяется CORS</span>
     <span class="c-str">'allowed_methods'</span>      =&gt; [<span class="c-str">'GET'</span>, <span class="c-str">'POST'</span>, <span class="c-str">'PUT'</span>, <span class="c-str">'PATCH'</span>, <span class="c-str">'DELETE'</span>],
-    <span class="c-str">'allowed_origins'</span>      =&gt; [<span class="c-str">'https://app.example.com'</span>], <span class="c-comment">// явно, не '*'</span>
+    <span class="c-str">'allowed_origins'</span>      =&gt; [<span class="c-str">'https://myfrontend.com'</span>, <span class="c-str">'http://localhost:3000'</span>],
     <span class="c-str">'allowed_origins_patterns'</span> =&gt; [],
     <span class="c-str">'allowed_headers'</span>      =&gt; [<span class="c-str">'*'</span>],
     <span class="c-str">'exposed_headers'</span>      =&gt; [],
-    <span class="c-str">'max_age'</span>             =&gt; <span class="c-num">3600</span>,  <span class="c-comment">// кеш preflight</span>
-    <span class="c-str">'supports_credentials'</span>=&gt; <span class="c-key">true</span>,  <span class="c-comment">// для cookie-auth</span>
-];
-</code></pre>
+    <span class="c-str">'max_age'</span>             =&gt; <span class="c-num">3600</span>,   <span class="c-comment">// кеш preflight</span>
+    <span class="c-str">'supports_credentials'</span>=&gt; <span class="c-key">true</span>,   <span class="c-comment">// для cookie-auth (Sanctum SPA)</span>
+];</code></pre>
+
+    <p class="text"><strong>2. Middleware</strong> — в глобальный стек. В Laravel 10 — <code>App\Http\Kernel::$middleware</code>. В Laravel 11+ — в <code>bootstrap/app.php</code>:</p>
+<pre><code><span class="c-comment">// bootstrap/app.php (Laravel 11+)</span>
+-&gt;<span class="c-fn">withMiddleware</span>(<span class="c-key">function</span> (<span class="c-type">Middleware</span> <span class="c-var">$middleware</span>) {
+    <span class="c-var">$middleware</span>-&gt;<span class="c-fn">api</span>(<span class="c-var">prepend</span>: [
+        <span class="c-type">Illuminate</span>\<span class="c-type">Http</span>\<span class="c-type">Middleware</span>\<span class="c-type">HandleCors</span>::<span class="c-key">class</span>,
+    ]);
+})</code></pre>
+    <p class="text">Middleware автоматически обрабатывает OPTIONS-запросы (preflight) и добавляет нужные заголовки в ответы.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-circle"></i> Типичные ошибки в консоли браузера</div>
+    <table class="data-table">
+      <thead><tr><th>Ошибка в консоли</th><th>Причина</th><th>Решение</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>No 'Access-Control-Allow-Origin' header is present</code></td>
+          <td>Сервер не вернул разрешающий заголовок</td>
+          <td>Добавить <code>allowed_origins</code> с доменом фронтенда</td>
+        </tr>
+        <tr>
+          <td><code>Request header field X-Requested-With is not allowed by Access-Control-Allow-Headers</code></td>
+          <td>В preflight сервер не разрешил кастомный заголовок</td>
+          <td>Указать его в <code>allowed_headers</code></td>
+        </tr>
+        <tr>
+          <td><code>Method DELETE is not allowed by Access-Control-Allow-Methods</code></td>
+          <td>Метод не разрешён</td>
+          <td>Добавить <code>DELETE</code> в <code>allowed_methods</code></td>
+        </tr>
+        <tr>
+          <td><code>The value of the 'Access-Control-Allow-Origin' header must not be the wildcard '*' when the request's credentials mode is 'include'</code></td>
+          <td>Клиент шлёт cookies (<code>credentials: 'include'</code>) — <code>*</code> запрещён</td>
+          <td>Указать конкретный домен в <code>allowed_origins</code> + <code>supports_credentials =&gt; true</code></td>
+        </tr>
+        <tr>
+          <td><code>Preflight response is not successful</code></td>
+          <td>Сервер не отвечает на OPTIONS (403/404/500)</td>
+          <td>Проверить что <code>HandleCors</code> middleware реально в стеке + путь в <code>paths</code></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="info"></i> Важно помнить</div>
+    <div class="remember-box">
+      <strong>CORS — это браузерная защита.</strong> Она <strong>не мешает</strong> запросам из Postman, curl, мобильных приложений или серверных скриптов. Эти клиенты игнорируют <code>Access-Control-*</code> заголовки. CORS — только для JS в браузере.
+    </div>
+    <div class="pitfall">
+      <strong>allowed_origins = ['*'] можно только для публичных read-only API.</strong> Для API с авторизацией — <strong>нельзя</strong>. Плюс <code>*</code> несовместимо с <code>supports_credentials => true</code> — при cookie-auth нужно указывать конкретные домены.
+    </div>
   </div>
 
   <div class="subsection">
