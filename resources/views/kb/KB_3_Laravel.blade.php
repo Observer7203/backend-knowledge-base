@@ -757,6 +757,89 @@ ul.bullets strong{color:var(--text);}
       <strong>Мнемоника (обычно заходит на собесе):</strong> <code>bootstrap/</code> отвечает на вопрос «<em>как собрать</em> приложение», <code>config/</code> — «<em>с какими параметрами</em> оно работает».
     </div>
   </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="split"></i> Где чьё место: Middleware vs Service Provider</div>
+    <p class="text">Обе сущности «подключаются к жизненному циклу», но решают разные задачи. Важно не путать: провайдер — про <em>подготовку приложения</em>, middleware — про <em>обработку конкретного запроса</em>.</p>
+    <table class="data-table">
+      <thead><tr><th>Сущность</th><th>Когда выполняется</th><th>Что делает</th><th>Пример</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Middleware</strong></td>
+          <td>На <strong>каждый HTTP-запрос</strong> — в цепочке до и после контроллера</td>
+          <td>Обрабатывает входящий запрос и исходящий ответ (модифицирует, проверяет, логирует)</td>
+          <td>Проверка CSRF, CORS, сжатие ответа (gzip), логирование времени, throttle rate limit</td>
+        </tr>
+        <tr>
+          <td><strong>Service Provider</strong></td>
+          <td>Один раз при старте приложения (<code>register()</code> + <code>boot()</code> для каждого запроса, но <em>до</em> роутинга)</td>
+          <td>Регистрирует сервисы в контейнере, загружает маршруты, события, observers, конфиги, Blade-директивы, макросы</td>
+          <td><code>EventServiceProvider</code>, <code>RouteServiceProvider</code>, кастомный провайдер для платёжного шлюза</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="tip">
+      <strong>Быстрый тест:</strong> нужно ли что-то делать <em>только для этого запроса</em>? — Middleware. Нужно ли <em>настроить приложение</em> так, чтобы потом все запросы работали правильно? — Provider.
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="order-lower-first"></i> Service Providers: <code>register()</code> и <code>boot()</code> подробно</div>
+    <p class="text">В Laravel каждый провайдер имеет два ключевых метода, которые вызываются в <strong>строгом порядке</strong>.</p>
+
+    <div class="card">
+      <h3><code>register()</code> — только привязки в контейнер</h3>
+      <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+        <li>Здесь <strong>запрещено</strong> использовать какие-либо другие сервисы (БД, кеш, конфиги, роутинг) — они ещё не загружены.</li>
+        <li>Единственное, что можно — это <code>$this-&gt;app-&gt;bind(...)</code> или <code>$this-&gt;app-&gt;singleton(...)</code>.</li>
+        <li>Выполняется <strong>для всех провайдеров</strong> (в порядке их перечисления) <em>прежде чем</em> у какого-либо провайдера вызовется <code>boot()</code>.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3><code>boot()</code> — всё остальное</h3>
+      <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+        <li>Здесь уже <strong>зарегистрированы все провайдеры</strong>, поэтому можно использовать любые сервисы.</li>
+        <li>Маршруты, события, Blade-директивы, observers, валидационные правила, макросы для Collection / Query Builder, gate policies.</li>
+        <li>Выполняется <strong>после того</strong>, как у всех провайдеров отработал <code>register()</code>.</li>
+      </ul>
+    </div>
+
+    <p class="text"><strong>Почему порядок именно такой — пример:</strong></p>
+<pre><code><span class="c-comment">// Provider A</span>
+<span class="c-key">class</span> <span class="c-type">LoggerServiceProvider</span> <span class="c-key">extends</span> <span class="c-type">ServiceProvider</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">register</span>(): <span class="c-key">void</span>
+    {
+        <span class="c-comment">// Биндим интерфейс к реализации</span>
+        <span class="c-var">$this</span>-&gt;<span class="c-var">app</span>-&gt;<span class="c-fn">bind</span>(<span class="c-type">LoggerInterface</span>::<span class="c-key">class</span>, <span class="c-type">FileLogger</span>::<span class="c-key">class</span>);
+    }
+}
+
+<span class="c-comment">// Provider B</span>
+<span class="c-key">class</span> <span class="c-type">AuditServiceProvider</span> <span class="c-key">extends</span> <span class="c-type">ServiceProvider</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">boot</span>(<span class="c-type">LoggerInterface</span> <span class="c-var">$logger</span>): <span class="c-key">void</span>
+    {
+        <span class="c-comment">// Пытаемся использовать LoggerInterface, забинденный в Provider A.
+        // Работает, ПОТОМУ ЧТО:
+        //   1. У ВСЕХ провайдеров сначала выполнился register()
+        //   2. Только потом Laravel начал вызывать boot()
+        // Если бы порядок был другой (register+boot по одному провайдеру),
+        // Provider B мог бы попытаться использовать LoggerInterface
+        // раньше чем Provider A его забиндил → ошибка.</span>
+        <span class="c-var">$logger</span>-&gt;<span class="c-fn">info</span>(<span class="c-str">'Audit provider booted'</span>);
+    }
+}</code></pre>
+
+    <div class="remember-box">
+      <strong>Ключевое правило:</strong> «<em>сначала весь register(), потом весь boot()</em>» — гарантирует что к моменту <code>boot()</code> любого провайдера все биндинги от других провайдеров уже доступны. Никогда не обращайтесь к другим сервисам из <code>register()</code>.
+    </div>
+
+    <div class="pitfall">
+      <strong>⚠ Типичная ошибка:</strong> вызвать <code>Route::get(...)</code> или <code>DB::table(...)</code> в <code>register()</code>. Роутер и БД ещё не зарегистрированы → <code>BindingResolutionException</code> или тихая поломка. Всё что использует другие сервисы — только в <code>boot()</code>.
+    </div>
+  </div>
 </div>
 
 <div id="sec-routing" class="section">
