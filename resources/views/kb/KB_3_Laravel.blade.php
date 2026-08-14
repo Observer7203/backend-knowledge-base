@@ -362,7 +362,7 @@ ul.bullets strong{color:var(--text);}
 <span class="c-key">exit</span>(<span class="c-var">$status</span>);</code></pre>
     </div>
 
-    <h4 style="margin:20px 0 8px;font-size:14px;font-weight:700"><i data-lucide="settings" style="width:14px;height:14px;vertical-align:-2px"></i> ⚙️ Основные задачи ядра</h4>
+    <h4 style="margin:20px 0 8px;font-size:14px;font-weight:700"><i data-lucide="settings" style="width:14px;height:14px;vertical-align:-2px"></i>  Основные задачи ядра</h4>
     <p class="text">Независимо от типа, ядро выполняет <strong>две ключевые функции</strong>.</p>
 
     <div class="card">
@@ -372,7 +372,7 @@ ul.bullets strong{color:var(--text);}
         <li>Настройка <strong>обработки ошибок</strong> — регистрирует Whoops / Handler</li>
         <li>Настройка <strong>логирования</strong> — конфигурация каналов Monolog</li>
         <li>Определение <strong>окружения</strong> — читает <code>APP_ENV</code> из <code>.env</code> (<code>local</code>, <code>production</code>, <code>testing</code>)</li>
-        <li>🔥 Загрузка <strong>всех сервис-провайдеров</strong> — самый важный шаг: они регистрируют и настраивают базу данных, очереди, валидацию, маршрутизацию, кеш и всё остальное</li>
+        <li> Загрузка <strong>всех сервис-провайдеров</strong> — самый важный шаг: они регистрируют и настраивают базу данных, очереди, валидацию, маршрутизацию, кеш и всё остальное</li>
       </ul>
     </div>
 
@@ -445,6 +445,49 @@ ul.bullets strong{color:var(--text);}
     <div class="card"><h3>6. Router: подбор маршрута</h3><p class="text">Router находит маршрут по методу + URL, прогоняет через middleware группы (web/api), затем route-specific middleware. Привязки моделей (route model binding) разрешаются на этом шаге.</p></div>
     <div class="card"><h3>7. Controller / Closure</h3><p class="text">Вызывается обработчик с разрешёнными зависимостями через контейнер. Возвращает <code>Response</code> или то, что фреймворк превратит в Response (массив → JSON, view → HTML, модель → JSON).</p></div>
     <div class="card"><h3>8. Pipeline в обратном порядке + <code>terminate</code></h3><p class="text">Response поднимается обратно по middleware (теперь после <code>$next($request)</code>). После отправки клиенту вызываются <code>terminate</code> у middleware, поддерживающих такую фазу — здесь делается долгая работа (логирование, аналитика), не влияющая на время ответа.</p></div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> Эволюция <code>public/index.php</code>: Laravel 10 vs 11+</div>
+    <p class="text">Точка входа для веб-запросов эволюционировала между версиями. Смысл тот же (запрос → ядро → ответ → клиент), но синтаксис в Laravel 11 стал значительно лаконичнее.</p>
+
+    <div class="card">
+      <h3>Laravel 10 и ниже — явное создание ядра</h3>
+      <p>Здесь виден полный цикл: получить ядро из контейнера, передать ему запрос, отправить ответ, вызвать <code>terminate()</code>.</p>
+<pre><code><span class="c-comment">// public/index.php</span>
+
+<span class="c-var">$kernel</span> = <span class="c-var">$app</span>-&gt;<span class="c-fn">make</span>(<span class="c-type">Illuminate</span>\<span class="c-type">Contracts</span>\<span class="c-type">Http</span>\<span class="c-type">Kernel</span>::<span class="c-key">class</span>);
+
+<span class="c-var">$response</span> = <span class="c-var">$kernel</span>-&gt;<span class="c-fn">handle</span>(
+    <span class="c-var">$request</span> = <span class="c-type">Illuminate</span>\<span class="c-type">Http</span>\<span class="c-type">Request</span>::<span class="c-fn">capture</span>()
+);
+
+<span class="c-var">$response</span>-&gt;<span class="c-fn">send</span>();
+
+<span class="c-var">$kernel</span>-&gt;<span class="c-fn">terminate</span>(<span class="c-var">$request</span>, <span class="c-var">$response</span>);</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Laravel 11+ — цепочка вызовов через <code>handleRequest()</code></h3>
+      <p>С Laravel 11 код в <code>index.php</code> стал ещё более лаконичным. Вместо явного создания ядра и вызова <code>handle()</code> используется «цепочка» вызовов, которая заканчивается методом <code>handleRequest()</code>.</p>
+<pre><code><span class="c-comment">// public/index.php</span>
+
+(<span class="c-key">require_once</span> <span class="c-fn">__DIR__</span>.<span class="c-str">'/../bootstrap/app.php'</span>)
+    -&gt;<span class="c-fn">handleRequest</span>(<span class="c-type">Request</span>::<span class="c-fn">capture</span>());</code></pre>
+      <p>Метод <code>handleRequest()</code> внутри <code>Application</code> сам делает то же самое: получает Kernel из контейнера, передаёт запрос, отправляет ответ, вызывает <code>terminate</code>. Просто скрыто под красивую цепочку.</p>
+    </div>
+
+    <div class="remember-box">
+      В обоих случаях результат один и тот же: запрос передаётся в ядро для дальнейшей обработки, а полученный ответ отправляется клиенту. Разница только в уровне абстракции — Laravel 11 прячет boilerplate внутрь фреймворка.
+    </div>
+
+    <p class="text"><strong>Аналогично для <code>artisan</code> (консольные команды):</strong></p>
+<pre><code><span class="c-comment">// artisan — Laravel 11+</span>
+
+<span class="c-var">$status</span> = (<span class="c-key">require_once</span> <span class="c-fn">__DIR__</span>.<span class="c-str">'/bootstrap/app.php'</span>)
+    -&gt;<span class="c-fn">handleCommand</span>(<span class="c-key">new</span> <span class="c-type">Symfony</span>\<span class="c-type">Component</span>\<span class="c-type">Console</span>\<span class="c-type">Input</span>\<span class="c-type">ArgvInput</span>);
+
+<span class="c-key">exit</span>(<span class="c-var">$status</span>);</code></pre>
   </div>
 
   <div class="subsection">

@@ -417,7 +417,7 @@ ul.bullets strong{color:var(--text);}
       <strong>DIP (Dependency Inversion Principle)</strong> — это <strong>принцип из SOLID</strong>: модули должны зависеть от абстракций (интерфейсов), а не от конкретных классов.
     </p>
     <div class="remember-box">
-      <strong>🔥 DI сам по себе не гарантирует соблюдение DIP.</strong> Если вы внедряете конкретный класс, а не его интерфейс — это <strong>DI, но DIP нарушен</strong>. Класс всё ещё жёстко привязан к конкретной реализации, просто через конструктор вместо <code>new</code>.
+      <strong> DI сам по себе не гарантирует соблюдение DIP.</strong> Если вы внедряете конкретный класс, а не его интерфейс — это <strong>DI, но DIP нарушен</strong>. Класс всё ещё жёстко привязан к конкретной реализации, просто через конструктор вместо <code>new</code>.
     </div>
 
     <p class="text"><strong>Три стадии на PHP (Laravel-стиль):</strong></p>

@@ -64,3 +64,6 @@ Homestead.yaml
 /resources/views/kb/KB_8_MegaRega.blade.php
 /resources/views/kb/KB_15_Career_Paths.blade.php
 /database/seeders/KbPagesSeederPrivate.php
+
+# Private KB pages — deployed to prod but not in public git
+resources/views/kb/KB_16_JavaScript_jQuery.blade.php

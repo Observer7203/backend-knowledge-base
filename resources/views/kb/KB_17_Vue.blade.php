@@ -82,7 +82,7 @@ pre code{background:transparent;color:inherit;padding:0;border-radius:0;font-siz
   <a href="/" class="sidebar-back">← На главную</a>
   <div class="sidebar-title">Vue.js — база</div>
 
-  <a class="nav-item active" onclick="showSection('overview',this)">📋 Обзор</a>
+  <a class="nav-item active" onclick="showSection('overview',this)"> Обзор</a>
 
   <div class="nav-group-label">Основы</div>
   <a class="nav-item" onclick="showSection('setup',this)">Установка + подключение</a>
@@ -739,7 +739,7 @@ npm run dev</code></pre>
       <thead><tr><th>Composition API</th><th>Options API</th><th>Когда вызывается</th></tr></thead>
       <tbody>
         <tr><td><code>onBeforeMount</code></td><td><code>beforeMount</code></td><td>Перед добавлением в DOM</td></tr>
-        <tr><td><code>onMounted</code></td><td><code>mounted</code></td><td>🔥 После добавления в DOM (можно работать с DOM, делать API-запросы)</td></tr>
+        <tr><td><code>onMounted</code></td><td><code>mounted</code></td><td> После добавления в DOM (можно работать с DOM, делать API-запросы)</td></tr>
         <tr><td><code>onBeforeUpdate</code></td><td><code>beforeUpdate</code></td><td>Перед перерисовкой из-за изменения данных</td></tr>
         <tr><td><code>onUpdated</code></td><td><code>updated</code></td><td>После перерисовки</td></tr>
         <tr><td><code>onBeforeUnmount</code></td><td><code>beforeUnmount</code></td><td>Перед удалением из DOM (очистка timer, listener, subscription)</td></tr>
@@ -772,7 +772,7 @@ npm run dev</code></pre>
 });
 
 <span class="c-fn">onUnmounted</span>(() =&gt; {
-    <span class="c-comment">// 🔥 Обязательно очищаем таймеры / listeners чтобы не было утечек памяти</span>
+    <span class="c-comment">//  Обязательно очищаем таймеры / listeners чтобы не было утечек памяти</span>
     <span class="c-fn">clearInterval</span>(<span class="c-var">intervalId</span>);
     <span class="c-fn">window</span>.<span class="c-fn">removeEventListener</span>(<span class="c-str">'resize'</span>, <span class="c-fn">handleResize</span>);
 });
@@ -1370,7 +1370,7 @@ npm run dev</code></pre>
 
 <span class="c-key">const</span> <span class="c-var">http</span> = axios.<span class="c-fn">create</span>({
     <span class="c-var">baseURL</span>: <span class="c-str">'http://localhost:8000'</span>,
-    <span class="c-var">withCredentials</span>: <span class="c-key">true</span>,     <span class="c-comment">// 🔥 обязательно! cookies с запросами</span>
+    <span class="c-var">withCredentials</span>: <span class="c-key">true</span>,     <span class="c-comment">//  обязательно! cookies с запросами</span>
     <span class="c-var">withXSRFToken</span>: <span class="c-key">true</span>,        <span class="c-comment">// axios 1.6+: авто-добавление X-XSRF-TOKEN</span>
 });
 
