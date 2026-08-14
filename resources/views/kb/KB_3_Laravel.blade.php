@@ -822,6 +822,79 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-fork"></i> Как работает цепочка middleware</div>
+    <p class="text">Каждый middleware в Laravel — это <strong>слой</strong>, через который проходит запрос. Все middleware собраны в <strong>конвейер (Pipeline)</strong>. Схематично:</p>
+<pre><code><span class="c-comment">// Упрощённо</span>
+<span class="c-var">$request</span> → middleware1 → middleware2 → middleware3 → контроллер → ответ</code></pre>
+    <p class="text">Каждый middleware получает два аргумента: <code>$request</code> и замыкание <code>$next</code>. Когда вы вызываете <code>$next($request)</code>, вы говорите: «передай запрос следующему middleware в цепочке».</p>
+<pre><code><span class="c-key">final class</span> <span class="c-type">ExampleMiddleware</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>, <span class="c-type">Closure</span> <span class="c-var">$next</span>): <span class="c-type">Response</span>
+    {
+        <span class="c-comment">// ── Код ДО $next: выполнится на пути к контроллеру ──</span>
+        <span class="c-var">$start</span> = <span class="c-fn">microtime</span>(<span class="c-key">true</span>);
+
+        <span class="c-var">$response</span> = <span class="c-var">$next</span>(<span class="c-var">$request</span>);   <span class="c-comment">// ← передать дальше по цепочке</span>
+
+        <span class="c-comment">// ── Код ПОСЛЕ $next: выполнится на обратном пути ──</span>
+        <span class="c-var">$duration</span> = <span class="c-fn">microtime</span>(<span class="c-key">true</span>) - <span class="c-var">$start</span>;
+        <span class="c-var">$response</span>-&gt;<span class="c-fn">headers</span>-&gt;<span class="c-fn">set</span>(<span class="c-str">'X-Duration'</span>, <span class="c-var">$duration</span>);
+
+        <span class="c-key">return</span> <span class="c-var">$response</span>;
+    }
+}</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="undo-2"></i> Зачем нужен обратный проход (код после <code>$next</code>)</div>
+    <p class="text">После того как запрос прошёл все middleware и достиг контроллера, тот возвращает ответ. Теперь ответ «поднимается» обратно по цепочке — каждый middleware получает уже готовый <code>$response</code> и может его модифицировать.</p>
+    <p class="text"><strong>Основные сценарии обратного прохода:</strong></p>
+    <ul style="line-height:1.9;margin-left:20px;color:var(--text2)">
+      <li><strong>Добавление HTTP-заголовков</strong> — CORS, кеширование (<code>Cache-Control</code>), безопасность (<code>X-Frame-Options</code>, <code>Strict-Transport-Security</code>).</li>
+      <li><strong>Сжатие ответа</strong> — gzip / brotli перед отправкой.</li>
+      <li><strong>Логирование времени выполнения</strong> — засекли время до <code>$next</code>, вычли после.</li>
+      <li><strong>Преобразование формата</strong> — например, JSON → XML, или обёртка ответа в <code>{ data: ..., meta: ... }</code>.</li>
+      <li><strong>Обработка ошибок</strong> — если в контроллере выброшено исключение, middleware может перехватить его через <code>try/catch</code> и вернуть красивый JSON вместо стандартной страницы 500.</li>
+    </ul>
+    <div class="remember-box">
+      <strong>Ключевое:</strong> без обратного прохода все эти задачи пришлось бы делать <em>до</em> <code>$next</code> — а это невозможно, потому что ответ ещё не сгенерирован. Обратный проход даёт middleware второй шанс уже с готовым response.
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="fast-forward"></i> Фаза <code>terminate</code> — что это и зачем</div>
+    <p class="text">Некоторые middleware реализуют метод <code>terminate()</code>:</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">terminate</span>(<span class="c-var">$request</span>, <span class="c-var">$response</span>)
+{
+    <span class="c-comment">// Тяжёлая работа: логирование в БД, аналитика, очистка ресурсов</span>
+}</code></pre>
+    <p class="text"><strong>Важнейшая особенность:</strong> <code>terminate</code> вызывается <strong>после того, как ответ уже отправлен клиенту</strong>. Это значит, что время выполнения этого метода <strong>не влияет на скорость загрузки страницы для пользователя</strong>.</p>
+
+    <p class="text"><strong>Зачем это нужно:</strong></p>
+    <ul style="line-height:1.9;margin-left:20px;color:var(--text2)">
+      <li>Логирование деталей запроса — запись в БД (медленная операция).</li>
+      <li>Отправка метрик в мониторинговые системы (Prometheus, Datadog, Sentry).</li>
+      <li>Закрытие соединений, очистка временных файлов.</li>
+      <li>Всё, что требует времени, но не критично для пользователя.</li>
+    </ul>
+
+    <h4 style="margin:14px 0 8px;font-size:14px;font-weight:700">Как это работает технически</h4>
+    <p class="text">В <strong>PHP-FPM</strong> (и некоторых других SAPI) есть возможность выполнить код после отправки ответа. Laravel использует механизм <code>fastcgi_finish_request()</code> (если доступен) или просто вызывает <code>terminate</code> синхронно после <code>$response-&gt;send()</code>.</p>
+    <table class="data-table">
+      <thead><tr><th>SAPI</th><th>Как работает <code>terminate</code></th><th>Пользователь ждёт?</th></tr></thead>
+      <tbody>
+        <tr><td>PHP-FPM (nginx/apache prod)</td><td>Асинхронно через <code>fastcgi_finish_request()</code> — response уходит клиенту, PHP-процесс продолжает работать</td><td>❌ Нет</td></tr>
+        <tr><td>Apache mod_php</td><td>Обычно синхронно — <code>fastcgi_finish_request()</code> недоступен</td><td>✅ Да</td></tr>
+        <tr><td><code>php artisan serve</code> (built-in)</td><td>Синхронно — нет асинхронности</td><td>✅ Да</td></tr>
+        <tr><td>Laravel Octane (Swoole/RoadRunner)</td><td>Свои события <code>RequestTerminated</code>, поведение зависит от драйвера</td><td>Обычно нет</td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall">
+      <strong>⚠</strong> На <code>artisan serve</code> и в тестах <code>terminate</code> удлиняет ответ — не полагайтесь на «незаметность» тяжёлой работы. В production под FPM всё нормально.
+    </div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика: middleware с проверкой и логированием</div>
 <pre><code><span class="c-key">final class</span> <span class="c-type">EnsureFeatureEnabled</span>
 {
