@@ -144,6 +144,15 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('middleware','mw-cors',this)">CORS</a>
   </div>
   <a class="nav-item" onclick="showSection('validation',this)"><i data-lucide="check-circle"></i> Validation &amp; FormRequest</a>
+  <div class="nav-subgroup">
+    <a class="nav-subitem" onclick="showSub('validation','val-purpose',this)">Зачем нужна валидация</a>
+    <a class="nav-subitem" onclick="showSub('validation','val-what',this)">Что валидируют</a>
+    <a class="nav-subitem" onclick="showSub('validation','val-lifecycle',this)">Место в цикле запроса</a>
+    <a class="nav-subitem" onclick="showSub('validation','val-formrequest',this)">Компоненты FormRequest</a>
+    <a class="nav-subitem" onclick="showSub('validation','val-compare',this)">FormRequest vs inline vs Validator::make</a>
+    <a class="nav-subitem" onclick="showSub('validation','val-practice',this)">Практика: пример кода</a>
+    <a class="nav-subitem" onclick="showSub('validation','val-pitfalls',this)">Особые случаи</a>
+  </div>
 
   <div class="nav-group-label">Данные</div>
   <a class="nav-item" onclick="showSection('eloquent',this)"><i data-lucide="database"></i> Eloquent (базовое)</a>
@@ -1629,12 +1638,58 @@ ul.bullets strong{color:var(--text);}
 
 <div id="sec-validation" class="section">
   <div class="section-title">Validation и FormRequest</div>
-  <div class="subsection">
-    <div class="subsection-title"><i data-lucide="book-open"></i> Назначение</div>
-    <p class="text">Валидация — первая линия защиты данных. Laravel предлагает три уровня: inline (<code>$request-&gt;validate(...)</code>), <code>Validator::make(...)</code>, и FormRequest как отдельный класс. FormRequest — предпочтительный путь для контроллеров: правила, кастомные сообщения, авторизация и подготовка данных собраны в одном месте, контроллер остаётся тонким.</p>
+  <div class="subsection" id="val-purpose">
+    <div class="subsection-title"><i data-lucide="book-open"></i> Зачем нужна валидация</div>
+    <p class="text">Валидация — это процесс проверки данных, которые приходят от клиента (браузер, мобильное приложение, внешнее API), на соответствие определённым правилам. Это защитный барьер между внешним миром и вашей бизнес-логикой.</p>
+
+    <p class="text"><strong>Основные цели валидации:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Безопасность.</strong> Защита от вредоносных данных (SQL-инъекции, XSS, подделка параметров). Проверяя тип, длину и формат, вы снижаете риск атак.</li>
+      <li><strong>Целостность данных.</strong> Гарантия, что в базу попадут только корректные значения: email действительно является email-адресом, а <code>age</code> — целым числом в разумном диапазоне.</li>
+      <li><strong>Удобство пользователя.</strong> Если пользователь ошибся в форме, вы можете сразу показать понятное сообщение, а не отдавать непонятный сбой.</li>
+      <li><strong>Соблюдение бизнес-правил.</strong> Например, заказ должен содержать хотя бы один товар, скидка не может быть больше 50%. Это логика приложения, которую тоже проверяют на уровне валидации.</li>
+    </ul>
+
+    <p class="text">Laravel предлагает три уровня валидации: inline (<code>$request-&gt;validate(...)</code>), <code>Validator::make(...)</code>, и FormRequest как отдельный класс. FormRequest — предпочтительный путь для контроллеров: правила, кастомные сообщения, авторизация и подготовка данных собраны в одном месте, контроллер остаётся тонким.</p>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="val-what">
+    <div class="subsection-title"><i data-lucide="target"></i> Что именно валидируют</div>
+    <p class="text">В веб-приложениях чаще всего валидируют:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Входящие данные запроса</strong> — параметры URL (<code>/users/{id}</code>), query-строку (<code>?page=2</code>), тело POST/PUT/PATCH-запроса (JSON, form-data, x-www-form-urlencoded).</li>
+      <li><strong>Загруженные файлы</strong> — размер, тип MIME, наличие вирусов, размерности изображения.</li>
+      <li><strong>Данные сессии/куки</strong> — реже, обычно уже проверены middleware и не требуют явной валидации.</li>
+      <li><strong>Внешние данные</strong> — от сторонних API. Иногда их тоже проверяют перед использованием, если формат может измениться.</li>
+    </ul>
+    <p class="text">Валидация выполняется до контроллера (через FormRequest), либо внутри контроллера через <code>$request-&gt;validate()</code>. Вы определяете правила для каждого поля, и если данные не проходят проверку, Laravel автоматически возвращает ответ с ошибками: редирект назад для веб-форм или JSON со статусом <strong>422 Unprocessable Entity</strong> для API-запросов.</p>
+  </div>
+
+  <div class="subsection" id="val-lifecycle">
+    <div class="subsection-title"><i data-lucide="rotate-cw"></i> Место валидации в жизненном цикле запроса</div>
+    <p class="text">FormRequest подключается к контроллеру через внедрение зависимости (type-hint) в методе контроллера. Валидация происходит <strong>до вызова метода контроллера</strong>, на этапе разрешения зависимостей, сразу после того, как запрос прошёл все middleware.</p>
+
+    <p class="text"><strong>Полная цепочка запроса до момента валидации:</strong></p>
+    <ol style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Входящий запрос → <code>public/index.php</code> → Ядро (Kernel).</li>
+      <li>Глобальные middleware (<code>TrustProxies</code>, <code>HandleCors</code>, <code>TrimStrings</code> и др.).</li>
+      <li>Групповые middleware (<code>web</code> или <code>api</code>) — сессии, CSRF, throttle и т.д.</li>
+      <li>Маршрутные middleware (указанные в <code>-&gt;middleware(...)</code>).</li>
+      <li>Диспетчер роутера определяет контроллер и метод.</li>
+      <li>Контейнер DI начинает разрешать зависимости для метода контроллера.</li>
+      <li>Если среди параметров есть FormRequest — контейнер создаёт его экземпляр.</li>
+      <li>В процессе создания <strong>автоматически запускается валидация</strong> (через интерфейс <code>ValidatesWhenResolved</code>).</li>
+      <li>Если валидация провалена — выбрасывается <code>ValidationException</code>, которое перехватывается и превращается в ответ 422 Unprocessable Entity (или редирект с ошибками для веб-запросов).</li>
+      <li>Если валидация успешна — экземпляр FormRequest передаётся в контроллер, выполнение продолжается.</li>
+      <li>Контроллер получает уже провалидированные данные и выполняет бизнес-логику.</li>
+    </ol>
+
+    <div class="remember-box">
+      <strong>Ключевое:</strong> валидация происходит <em>до</em> начала выполнения контроллера, на этапе разрешения зависимостей в контейнере. Это удобно — в контроллере вы уже уверены в корректности данных. Технически это достигается тем, что <code>FormRequest</code> реализует интерфейс <code>ValidatesWhenResolved</code>, и контейнер после создания вызывает у него метод <code>validateResolved()</code>.
+    </div>
+  </div>
+
+  <div class="subsection" id="val-formrequest">
     <div class="subsection-title"><i data-lucide="list"></i> Компоненты FormRequest</div>
     <div class="card"><h3><code>authorize()</code></h3><p class="text">Возвращает bool. Если false — 403 без обращения к контроллеру. Сюда — авторизация на уровне действия (не аутентификация: для неё middleware).</p></div>
     <div class="card"><h3><code>rules()</code></h3><p class="text">Массив правил: ключ — имя поля, значение — pipe-string или массив правил. <code>'email' =&gt; ['required', 'email', Rule::unique('users')-&gt;ignore($this-&gt;user)]</code>. Доступ к маршрутным параметрам — через <code>$this-&gt;route('user')</code>.</p></div>
@@ -1644,7 +1699,40 @@ ul.bullets strong{color:var(--text);}
     <div class="card"><h3>Доступ к валидным данным</h3><p class="text"><code>$request-&gt;validated()</code> — только валидные поля. <code>$request-&gt;safe()</code> — то же, но с методами <code>only/except/collect</code>. Не используйте <code>$request-&gt;all()</code> в контроллере после валидации — попадут невалидные поля.</p></div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="val-compare">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> Сравнение способов валидации</div>
+    <table class="data-table">
+      <thead><tr><th>Способ</th><th>Где происходит</th><th>Преимущества</th><th>Недостатки</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>FormRequest</strong></td>
+          <td>До контроллера (на этапе DI)</td>
+          <td>Всё в одном классе, переиспользуемость, чистота контроллера, авторизация и подготовка данных встроены</td>
+          <td>Требуется создавать отдельные классы под каждый endpoint</td>
+        </tr>
+        <tr>
+          <td><strong>Inline</strong> <code>$request-&gt;validate()</code></td>
+          <td>Внутри контроллера</td>
+          <td>Быстро, не требует отдельного класса — удобно для мелких endpoint'ов</td>
+          <td>Загромождает контроллер, сложно переиспользовать между экшенами</td>
+        </tr>
+        <tr>
+          <td><strong><code>Validator::make()</code></strong></td>
+          <td>Где угодно (вручную)</td>
+          <td>Полный контроль, можно использовать не только в контроллерах (jobs, commands, сервисы)</td>
+          <td>Много ручного кода, нужно самому обрабатывать ошибки и решать что делать при провале</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="text"><strong>Важный нюанс.</strong> FormRequest наследуется от <code>Illuminate\Http\Request</code>, поэтому в контроллере вы также можете получать данные через <code>$request-&gt;input()</code>, <code>$request-&gt;file()</code> и т.д. После успешной валидации отфильтрованные данные доступны через <code>validated()</code>. Есть хуки <code>prepareForValidation()</code> для модификации данных <em>перед</em> валидацией и <code>passedValidation()</code> для действий <em>после</em> успешной проверки.</p>
+
+    <div class="remember-box">
+      <strong>Резюме.</strong> FormRequest — рекомендуемый способ для контроллеров: отделяет логику валидации и авторизации от бизнес-логики, делает контроллер тонким, а код — чистым и переиспользуемым. Inline подходит для одноразовых endpoint'ов, <code>Validator::make()</code> — когда валидация нужна вне контроллера.
+    </div>
+  </div>
+
+  <div class="subsection" id="val-practice">
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика: FormRequest с авторизацией и нормализацией</div>
 <pre><code><span class="c-key">final class</span> <span class="c-type">UpdateUserRequest</span> <span class="c-key">extends</span> <span class="c-type">FormRequest</span>
 {
@@ -1686,7 +1774,7 @@ ul.bullets strong{color:var(--text);}
 </code></pre>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="val-pitfalls">
     <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
     <div class="pitfall"><strong>1. <code>$request-&gt;all()</code> вместо <code>validated()</code>.</strong> Получите всё, включая невалидные поля. Mass-assignment на модель — потенциальная дыра безопасности.</div>
     <div class="pitfall"><strong>2. <code>required</code> и пустые строки.</strong> <code>required</code> считает пустую строку валидной. Для строгости — <code>required|string|min:1</code>.</div>
