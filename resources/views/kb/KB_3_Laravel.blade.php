@@ -1730,6 +1730,20 @@ ul.bullets strong{color:var(--text);}
     <div class="remember-box">
       <strong>Резюме.</strong> FormRequest — рекомендуемый способ для контроллеров: отделяет логику валидации и авторизации от бизнес-логики, делает контроллер тонким, а код — чистым и переиспользуемым. Inline подходит для одноразовых endpoint'ов, <code>Validator::make()</code> — когда валидация нужна вне контроллера.
     </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="alert-triangle" style="width:14px;height:14px"></i> Что можно использовать везде, а что только в FormRequest</div>
+    <p class="text"><strong>Саму валидацию</strong> (проверку данных по правилам) можно использовать почти везде — в контроллерах, сервисных классах, jobs, консольных командах, даже в моделях (хотя в моделях не рекомендуется — там место бизнес-логики, а не проверки входа).</p>
+
+    <p class="text">А вот <strong>специфические методы</strong> — это эксклюзивные возможности класса <code>FormRequest</code>. Они <em>не работают</em> в <code>$request-&gt;validate()</code> или <code>Validator::make()</code>:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>authorize()</code> — авторизация до валидации, возврат 403 если false</li>
+      <li><code>rules()</code> — массив правил</li>
+      <li><code>messages()</code> — кастомные сообщения об ошибках</li>
+      <li><code>attributes()</code> — человекочитаемые имена полей</li>
+      <li><code>prepareForValidation()</code> — хук перед валидацией (нормализация данных)</li>
+      <li><code>passedValidation()</code> — хук после успешной валидации</li>
+    </ul>
+    <p class="text">Если нужны эти хуки — только FormRequest. Если нужна просто проверка правил — подойдёт любой из трёх способов.</p>
   </div>
 
   <div class="subsection" id="val-practice">
