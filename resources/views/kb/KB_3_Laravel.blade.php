@@ -2382,6 +2382,55 @@ ul.bullets strong{color:var(--text);}
       <li><strong>JSON-поля</strong> — если храните данные в JSON, работаете с массивами/объектами напрямую, без ручного <code>json_decode</code>.</li>
     </ul>
 
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="alert-triangle" style="width:14px;height:14px"></i> Важно: касты ≠ PHP-приведение типов</div>
+
+    <p class="text">Касты в Laravel — это <strong>не</strong> приведение типов в смысле PHP-оператора <code>(int)</code> или <code>(bool)</code>. Это <strong>преобразование значения при чтении из БД и при записи в БД</strong>. Они не меняют тип переменной в момент присвоения — они меняют то, как значение <em>интерпретируется моделью</em> при доступе к атрибуту.</p>
+
+    <p class="text"><strong>Как это работает на практике.</strong> Допустим, в модели указано:</p>
+<pre><code><span class="c-key">protected</span> <span class="c-var">$casts</span> = [
+    <span class="c-str">'is_active'</span> =&gt; <span class="c-str">'boolean'</span>,
+    <span class="c-str">'meta'</span>      =&gt; <span class="c-str">'array'</span>,
+];</code></pre>
+
+    <p class="text"><strong>При чтении из БД:</strong> поле <code>is_active</code> хранится как <code>tinyint(1)</code> (0 или 1). Когда получаете модель через <code>User::find(1)</code> — Laravel приводит это значение к <code>bool</code>. Поэтому <code>$user-&gt;is_active</code> будет <code>true</code>/<code>false</code>, а не <code>0</code>/<code>1</code>.</p>
+
+    <p class="text"><strong>При записи в БД:</strong> присваиваете <code>$user-&gt;is_active = 'yes'</code> (строка). При <code>$user-&gt;save()</code> Laravel преобразует её в <code>1</code> или <code>0</code> в зависимости от boolean-каста. В БД сохранится <code>1</code>.</p>
+
+    <p class="text"><strong>Пример:</strong></p>
+<pre><code><span class="c-var">$user</span> = <span class="c-key">new</span> <span class="c-type">User</span>();
+<span class="c-var">$user</span>-&gt;<span class="c-var">is_active</span> = <span class="c-str">'anything'</span>;   <span class="c-comment">// это строка, но каст есть</span>
+<span class="c-var">$user</span>-&gt;<span class="c-fn">save</span>();                     <span class="c-comment">// в БД сохранится 1, потому что 'anything' → true</span>
+
+<span class="c-var">$user</span> = <span class="c-type">User</span>::<span class="c-fn">find</span>(<span class="c-num">1</span>);
+<span class="c-fn">var_dump</span>(<span class="c-var">$user</span>-&gt;<span class="c-var">is_active</span>);    <span class="c-comment">// bool(true)</span></code></pre>
+
+    <p class="text"><strong>Тонкий момент.</strong> Каст применяется только при обращении к <strong>атрибуту модели</strong>, а не к переменной. Если сделать <code>$value = $user-&gt;is_active</code>, то <code>$value</code> получит уже bool (потому что доступ к атрибуту вернул bool). Если присвоил значение и сразу прочитал до сохранения — каст уже применится:</p>
+<pre><code><span class="c-var">$user</span>-&gt;<span class="c-var">is_active</span> = <span class="c-num">0</span>;
+<span class="c-fn">var_dump</span>(<span class="c-var">$user</span>-&gt;<span class="c-var">is_active</span>);   <span class="c-comment">// bool(false) — каст сработал сразу</span></code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="git-compare" style="width:14px;height:14px"></i> Сравнение с PHP-приведением</div>
+    <table class="data-table">
+      <thead><tr><th>PHP-приведение (например, <code>(int) $var</code>)</th><th>Laravel Casts</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Меняет тип переменной в момент выполнения</td>
+          <td>Меняет значение при доступе к атрибуту модели</td>
+        </tr>
+        <tr>
+          <td>Глобально для всей программы</td>
+          <td>Ограничено моделью Eloquent</td>
+        </tr>
+        <tr>
+          <td>Не сохраняется в БД автоматически</td>
+          <td>Применяется при сохранении в БД</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="remember-box">
+      <strong>Итог по природе кастов.</strong> Касты — это не оператор приведения, а автоматическое преобразование данных на <em>границе</em> между БД и моделью. Они не меняют тип самой переменной в PHP-смысле, а лишь определяют, как значение будет интерпретироваться при доступе к атрибуту. Удобно чтобы всегда работать с данными в нужном формате, не заботясь о ручном преобразовании.
+    </div>
+
     <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="settings" style="width:14px;height:14px"></i> Кастомные касты (если стандартных мало)</div>
     <p class="text">Для преобразований со сложной логикой реализуйте интерфейс <code>CastsAttributes</code>:</p>
 <pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Contracts</span>\<span class="c-type">Database</span>\<span class="c-type">Eloquent</span>\<span class="c-type">CastsAttributes</span>;
