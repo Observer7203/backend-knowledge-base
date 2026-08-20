@@ -2544,6 +2544,25 @@ ul.bullets strong{color:var(--text);}
     <div class="remember-box">
       <strong>Итог.</strong> <strong>Локальный</strong> скоуп — вызывается вручную (<code>User::active()-&gt;...</code>). <strong>Глобальный</strong> — применяется автоматически ко всем запросам модели. Используйте скоупы для выноса повторяющейся логики фильтрации, чтобы запросы были лаконичнее, а код — поддерживаемее.
     </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="wrench" style="width:14px;height:14px"></i> Что такое <code>Builder $query</code> в параметре скоупа</div>
+
+    <p class="text">В методе скоупа вроде <code>scopePaid(Builder $q)</code> параметр <code>$q</code> — это экземпляр класса <code>Illuminate\Database\Eloquent\Builder</code>. Это тот самый объект-построитель запросов, который позволяет собирать SQL через цепочки методов:</p>
+<pre><code><span class="c-var">$q</span>-&gt;<span class="c-fn">where</span>(...)-&gt;<span class="c-fn">orderBy</span>(...)-&gt;<span class="c-fn">limit</span>(...);</code></pre>
+    <p class="text">Когда вы пишете <code>User::where(...)-&gt;get()</code>, каждый метод возвращает всё тот же <code>Builder</code> (или его модифицированную копию), что позволяет строить запрос пошагово.</p>
+
+    <p class="text"><strong>Зачем он в скоупе.</strong> Скоуп получает этот билдер, чтобы добавить к нему дополнительные условия. После этого билдер возвращается в основной запрос, и выполнение продолжается.</p>
+
+    <p class="text"><strong>Аналогия.</strong> Builder — это чертёж SQL-запроса. Постепенно добавляете детали: <code>WHERE</code>, <code>ORDER BY</code>, <code>LIMIT</code>. Скоуп добавляет свои детали, не создавая новый чертёж, а дополняя существующий.</p>
+
+    <div class="tip">
+      <strong>Уточнение про <code>: void</code>.</strong> В новых версиях Laravel принято указывать возвращаемый тип <code>void</code> у методов-скоупов — метод ничего не возвращает, а только изменяет переданный объект. Объект <code>$q</code> передаётся <em>по ссылке</em>, поэтому все изменения применяются к тому же экземпляру билдера. Писать <code>return $q</code> не нужно.
+<pre style="margin-top:8px"><code><span class="c-key">public function</span> <span class="c-fn">scopePaid</span>(<span class="c-type">Builder</span> <span class="c-var">$q</span>): <span class="c-key">void</span>
+{
+    <span class="c-var">$q</span>-&gt;<span class="c-fn">where</span>(<span class="c-str">'status'</span>, <span class="c-str">'paid'</span>)-&gt;<span class="c-fn">whereNotNull</span>(<span class="c-str">'paid_at'</span>);
+    <span class="c-comment">// return не нужен — $q уже модифицирован</span>
+}</code></pre>
+    </div>
   </div>
 
   <div class="subsection" id="el-accessors">
