@@ -172,6 +172,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('eloquent','el-features',this)">Основные возможности</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-mass-assignment',this)">Mass Assignment ($fillable / $guarded)</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-casts',this)">Casts — типы атрибутов</a>
+    <a class="nav-subitem" onclick="showSub('eloquent','el-scopes',this)">Scopes — переиспользуемые фильтры</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-relations',this)">Связи: hasOne / hasMany / belongsTo / belongsToMany</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-practice',this)">Практика: модель заказа</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-pitfalls',this)">Особые случаи</a>
@@ -2465,6 +2466,71 @@ ul.bullets strong{color:var(--text);}
 
     <div class="remember-box">
       <strong>Резюме.</strong> <code>$casts</code> — простой способ задать типы для атрибутов модели. Поддерживает множество стандартных типов (<code>boolean</code>, <code>integer</code>, <code>float</code>, <code>string</code>, <code>datetime</code>, <code>date</code>, <code>timestamp</code>, <code>array</code>, <code>object</code>, <code>collection</code>, <code>encrypted</code>, <code>enum</code>). Для сложной логики — кастомные касты через <code>CastsAttributes</code>. Делает код чище, а работу с данными — предсказуемой и безопасной.
+    </div>
+  </div>
+
+  <div class="subsection" id="el-scopes">
+    <div class="subsection-title"><i data-lucide="filter"></i> Scopes — переиспользуемые фильтры для запросов</div>
+
+    <p class="text"><strong>Что это.</strong> Scopes — методы в модели, которые позволяют выносить часто используемые условия в отдельные, переиспользуемые куски запросов. Делают код чище, а запросы — более читаемыми.</p>
+
+    <div class="card">
+      <h3>Локальные скоупы (Local Scopes)</h3>
+      <p>Определяются методом с префиксом <code>scope</code>. Например, <code>scopeActive($query)</code>. При вызове возвращают <code>$query</code> с добавленными условиями.</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">User</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">scopeActive</span>(<span class="c-var">$query</span>)
+    {
+        <span class="c-key">return</span> <span class="c-var">$query</span>-&gt;<span class="c-fn">where</span>(<span class="c-str">'status'</span>, <span class="c-str">'active'</span>);
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">scopeRecentlyUpdated</span>(<span class="c-var">$query</span>)
+    {
+        <span class="c-key">return</span> <span class="c-var">$query</span>-&gt;<span class="c-fn">where</span>(<span class="c-str">'updated_at'</span>, <span class="c-str">'&gt;='</span>, <span class="c-fn">now</span>()-&gt;<span class="c-fn">subDays</span>(<span class="c-num">7</span>));
+    }
+}</code></pre>
+      <p>Использование — префикс <code>scope</code> при вызове опускается, скоупы можно цеплять цепочкой:</p>
+<pre><code><span class="c-var">$activeUsers</span>  = <span class="c-type">User</span>::<span class="c-fn">active</span>()-&gt;<span class="c-fn">get</span>();                        <span class="c-comment">// все активные</span>
+<span class="c-var">$recentActive</span> = <span class="c-type">User</span>::<span class="c-fn">active</span>()-&gt;<span class="c-fn">recentlyUpdated</span>()-&gt;<span class="c-fn">get</span>();     <span class="c-comment">// цепочка</span></code></pre>
+      <p>Внутри Laravel просто вызывает метод и добавляет условия в Query Builder.</p>
+    </div>
+
+    <div class="card">
+      <h3>Глобальные скоупы (Global Scopes)</h3>
+      <p>Применяются <strong>автоматически</strong> к каждому запросу модели, без явного указания. Например, всегда исключать удалённые записи (soft delete) или фильтровать по текущему пользователю / тенанту.</p>
+
+      <p>Регистрация глобального скоупа:</p>
+<pre><code><span class="c-comment">// В методе booted() модели</span>
+<span class="c-key">protected static function</span> <span class="c-fn">booted</span>()
+{
+    <span class="c-key">static</span>::<span class="c-fn">addGlobalScope</span>(<span class="c-str">'status'</span>, <span class="c-key">function</span> (<span class="c-var">$query</span>) {
+        <span class="c-var">$query</span>-&gt;<span class="c-fn">where</span>(<span class="c-str">'status'</span>, <span class="c-str">'active'</span>);
+    });
+}</code></pre>
+      <p>Теперь каждый вызов <code>User::all()</code> будет автоматически добавлять <code>where status = 'active'</code>.</p>
+
+      <p>Отключение глобального скоупа:</p>
+<pre><code><span class="c-type">User</span>::<span class="c-fn">withoutGlobalScope</span>(<span class="c-str">'status'</span>)-&gt;<span class="c-fn">get</span>();
+<span class="c-comment">// или</span>
+<span class="c-type">User</span>::<span class="c-fn">withoutGlobalScopes</span>()-&gt;<span class="c-fn">get</span>();</code></pre>
+    </div>
+
+    <p class="text"><strong>Зачем это нужно:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Сухость (DRY):</strong> условия не дублируются в каждом запросе.</li>
+      <li><strong>Читаемость:</strong> <code>User::active()-&gt;get()</code> гораздо понятнее, чем <code>User::where('status', 'active')-&gt;get()</code>.</li>
+      <li><strong>Глобальные скоупы</strong> полезны для многопользовательских систем (например, всегда фильтровать по текущей компании/тенанту).</li>
+    </ul>
+
+    <p class="text"><strong>Важные нюансы:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Локальные скоупы не изменяют существующий экземпляр <code>$query</code>, а возвращают новый с добавленными условиями.</li>
+      <li>Глобальные скоупы могут мешать при выполнении сложных запросов — поэтому их можно отключать через <code>withoutGlobalScope</code> или <code>withoutGlobalScopes</code>.</li>
+      <li>При использовании <code>SoftDeletes</code> уже есть встроенный глобальный скоуп, который отфильтровывает удалённые записи. Обход — <code>withTrashed()</code>, <code>onlyTrashed()</code>.</li>
+    </ul>
+
+    <div class="remember-box">
+      <strong>Итог.</strong> <strong>Локальный</strong> скоуп — вызывается вручную (<code>User::active()-&gt;...</code>). <strong>Глобальный</strong> — применяется автоматически ко всем запросам модели. Используйте скоупы для выноса повторяющейся логики фильтрации, чтобы запросы были лаконичнее, а код — поддерживаемее.
     </div>
   </div>
 
