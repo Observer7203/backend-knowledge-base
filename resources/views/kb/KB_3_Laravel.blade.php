@@ -1762,6 +1762,56 @@ ul.bullets strong{color:var(--text);}
     <div class="remember-box">
       <strong>Итог:</strong> <code>can()</code> — встроенный метод Laravel для проверки прав, использующий политики или gates. Вместе с <code>authorize()</code> в FormRequest он даёт удобный способ централизованно управлять доступом к действиям, не засоряя контроллер.
     </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="check-check" style="width:14px;height:14px"></i> Пример <code>passedValidation()</code> — пост-валидационный хук</div>
+
+    <p class="text">Этот хук вызывается <em>после</em> успешной валидации, но <em>до</em> того, как контроллер получит запрос. Полезен для действий, которые должны произойти только если данные прошли проверку, но не относятся к бизнес-логике самого контроллера — логирование, аудит, отправка событий.</p>
+
+    <p class="text"><strong>Пример: логирование успешной валидации.</strong></p>
+<pre><code><span class="c-key">class</span> <span class="c-type">UpdateUserRequest</span> <span class="c-key">extends</span> <span class="c-type">FormRequest</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">authorize</span>(): <span class="c-key">bool</span>
+    {
+        <span class="c-key">return</span> <span class="c-var">$this</span>-&gt;<span class="c-fn">user</span>()-&gt;<span class="c-fn">can</span>(<span class="c-str">'update'</span>, <span class="c-var">$this</span>-&gt;<span class="c-fn">route</span>(<span class="c-str">'user'</span>));
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">rules</span>(): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> [
+            <span class="c-str">'email'</span> =&gt; <span class="c-str">'required|email|unique:users,email,'</span> . <span class="c-var">$this</span>-&gt;<span class="c-fn">route</span>(<span class="c-str">'user'</span>)-&gt;<span class="c-var">id</span>,
+            <span class="c-str">'name'</span>  =&gt; <span class="c-str">'required|string|max:255'</span>,
+        ];
+    }
+
+    <span class="c-comment">// Этот метод вызывается, если валидация прошла успешно</span>
+    <span class="c-key">protected function</span> <span class="c-fn">passedValidation</span>(): <span class="c-key">void</span>
+    {
+        <span class="c-comment">// Логируем событие (кто и когда пытался обновить профиль)</span>
+        <span class="c-type">Log</span>::<span class="c-fn">info</span>(<span class="c-str">'User profile update validated'</span>, [
+            <span class="c-str">'user_id'</span>     =&gt; <span class="c-var">$this</span>-&gt;<span class="c-fn">user</span>()-&gt;<span class="c-var">id</span>,
+            <span class="c-str">'target_user'</span> =&gt; <span class="c-var">$this</span>-&gt;<span class="c-fn">route</span>(<span class="c-str">'user'</span>)-&gt;<span class="c-var">id</span>,
+            <span class="c-str">'data'</span>        =&gt; <span class="c-var">$this</span>-&gt;<span class="c-fn">validated</span>(),   <span class="c-comment">// доступны только валидные поля</span>
+        ]);
+
+        <span class="c-comment">// Можно отправить событие (например, админу о важном изменении)
+        // event(new UserProfileValidated($this-&gt;user(), $this-&gt;validated()));</span>
+    }
+}</code></pre>
+
+    <p class="text"><strong>Что здесь происходит.</strong> После того как правила проверены и ошибок нет, Laravel автоматически вызывает <code>passedValidation()</code>. Внутри вы имеете доступ ко всем валидным данным через <code>$this-&gt;validated()</code> или <code>$this-&gt;safe()</code>. Выполняются побочные действия — логирование, отправка событий, запись в кеш, уведомления. Эти действия не влияют на ответ контроллера, но выполняются в том же запросе.</p>
+
+    <p class="text"><strong>Важные нюансы:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>passedValidation()</code> не должен возвращать значение (<code>void</code>) — он просто выполняет действия, как и <code>prepareForValidation()</code>.</li>
+      <li>Если нужно <em>модифицировать</em> данные после валидации (например, добавить поле) — можно использовать <code>$this-&gt;merge()</code> и здесь, хотя обычно это делают в <code>prepareForValidation()</code>.</li>
+      <li>В контроллере вы всё равно получите тот же объект <code>$request</code>, который уже содержит все изменения, сделанные в хуках.</li>
+    </ul>
+
+    <p class="text"><strong>Альтернативы.</strong> Вместо <code>passedValidation()</code> можно делать аналогичные действия прямо в контроллере после <code>$request-&gt;validated()</code>. Но вынос их в FormRequest делает контроллер тоньше и централизует логику, связанную именно с этим запросом. Если действия требуют асинхронности (отправка email, тяжёлые вычисления) — лучше использовать события или очереди, а не делать это синхронно в HTTP-запросе.</p>
+
+    <div class="remember-box">
+      <strong>Итог.</strong> <code>passedValidation()</code> — пост-валидационный хук, который выполняется только при успешной проверке. Идеально подходит для логирования, отправки уведомлений, побочных действий, зависящих от валидных данных. Для <em>изменения</em> данных перед валидацией — используйте <code>prepareForValidation()</code>, для <em>реакции</em> на валидные данные — <code>passedValidation()</code>.
+    </div>
   </div>
 
   <div class="subsection" id="val-compare">
