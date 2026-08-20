@@ -170,6 +170,7 @@ ul.bullets strong{color:var(--text);}
   <div class="nav-subgroup">
     <a class="nav-subitem" onclick="showSub('eloquent','el-purpose',this)">Назначение</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-features',this)">Основные возможности</a>
+    <a class="nav-subitem" onclick="showSub('eloquent','el-mass-assignment',this)">Mass Assignment ($fillable / $guarded)</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-relations',this)">Связи: hasOne / hasMany / belongsTo / belongsToMany</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-practice',this)">Практика: модель заказа</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-pitfalls',this)">Особые случаи</a>
@@ -2273,6 +2274,75 @@ ul.bullets strong{color:var(--text);}
     <div class="card"><h3>Scopes</h3><p class="text"><code>scopeActive($q) { $q-&gt;where('status', 'active'); }</code> — переиспользуемые куски запроса. Использование: <code>User::active()-&gt;get()</code>. Глобальные scopes автоматически применяются ко всем запросам модели.</p></div>
     <div class="card"><h3>Accessors / Mutators</h3><p class="text">Laravel 9+: <code>protected function name(): Attribute { return Attribute::make(get: ..., set: ...); }</code> — преобразование при чтении и записи. Кеш через <code>shouldCache()</code>.</p></div>
     <div class="card"><h3>Observers</h3><p class="text">Хуки жизненного цикла: <code>created</code>, <code>updated</code>, <code>deleted</code>, <code>retrieved</code>. Регистрация в Service Provider. Подробно — в KB_12.</p></div>
+  </div>
+
+  <div class="subsection" id="el-mass-assignment">
+    <div class="subsection-title"><i data-lucide="shield-alert"></i> Mass Assignment — <code>$fillable</code> vs <code>$guarded</code></div>
+
+    <p class="text"><strong>Что это.</strong> Mass assignment (массовое присваивание) — это возможность заполнить модель данными из массива одним вызовом:</p>
+<pre><code><span class="c-type">User</span>::<span class="c-fn">create</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">all</span>());   <span class="c-comment">// все поля из запроса</span>
+<span class="c-var">$user</span>-&gt;<span class="c-fn">update</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">all</span>());</code></pre>
+    <p class="text">Это удобно, но <strong>опасно</strong>, если злоумышленник добавит в запрос лишние поля (например, <code>is_admin</code>, <code>role</code>, <code>password</code>). Без защиты он сможет изменить поля, которые не должен был трогать. Для контроля Laravel предоставляет два свойства модели.</p>
+
+    <div class="card">
+      <h3><code>$fillable</code> — белый список (whitelist)</h3>
+      <p>Указывает, какие поля <em>разрешено</em> заполнять массово. Всё остальное игнорируется.</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">User</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-key">protected</span> <span class="c-var">$fillable</span> = [<span class="c-str">'name'</span>, <span class="c-str">'email'</span>, <span class="c-str">'password'</span>];
+}</code></pre>
+      <p>Вызов <code>User::create($request-&gt;all())</code> заполнит только эти три поля. Если в запросе есть <code>is_admin</code> — он будет проигнорирован.</p>
+    </div>
+
+    <div class="card">
+      <h3><code>$guarded</code> — чёрный список (blacklist)</h3>
+      <p>Указывает, какие поля <em>запрещено</em> заполнять массово. Все остальные разрешены.</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">User</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-key">protected</span> <span class="c-var">$guarded</span> = [<span class="c-str">'is_admin'</span>, <span class="c-str">'id'</span>];
+}</code></pre>
+      <p><code>User::create($request-&gt;all())</code> заполнит все поля, кроме <code>is_admin</code> и <code>id</code>.</p>
+    </div>
+
+    <div class="pitfall">
+      <strong>Опасный вариант: <code>$guarded = []</code>.</strong> Если оставить пустой guarded (или не указать ничего в некоторых старых версиях) — <strong>все поля становятся разрешёнными</strong>. Тогда <code>User::create($request-&gt;all())</code> позволит злоумышленнику передать <code>is_admin=1</code> и стать администратором.
+    </div>
+
+    <div class="remember-box">
+      <strong>Лучшая практика:</strong> всегда использовать <code>$fillable</code> с явным перечислением разрешённых полей. <code>$guarded</code> лучше не использовать, чтобы случайно не забыть защитить новое поле при добавлении колонки в таблицу.
+    </div>
+
+    <p class="text"><strong>Пример безопасного использования</strong> — валидация + <code>$fillable</code>:</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>)
+{
+    <span class="c-comment">// 1. Валидация</span>
+    <span class="c-var">$validated</span> = <span class="c-var">$request</span>-&gt;<span class="c-fn">validate</span>([
+        <span class="c-str">'name'</span>     =&gt; <span class="c-str">'required|string'</span>,
+        <span class="c-str">'email'</span>    =&gt; <span class="c-str">'required|email|unique:users'</span>,
+        <span class="c-str">'password'</span> =&gt; <span class="c-str">'required|min:8'</span>,
+        <span class="c-str">'is_admin'</span> =&gt; <span class="c-str">'sometimes|boolean'</span>,   <span class="c-comment">// не дадим через mass assignment</span>
+    ]);
+
+    <span class="c-comment">// 2. Создание — только поля из $fillable</span>
+    <span class="c-var">$user</span> = <span class="c-type">User</span>::<span class="c-fn">create</span>(<span class="c-var">$validated</span>);
+
+    <span class="c-comment">// Или явно ограничить массив:
+    // $user = User::create($request-&gt;only(['name', 'email', 'password']));</span>
+
+    <span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">json</span>(<span class="c-var">$user</span>);
+}
+
+<span class="c-comment">// Update — то же правило</span>
+<span class="c-var">$user</span>-&gt;<span class="c-fn">update</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">only</span>([<span class="c-str">'name'</span>, <span class="c-str">'email'</span>]));</code></pre>
+
+    <p class="text"><strong>Итог правил безопасности:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>$fillable</code> — явное разрешение (рекомендуется).</li>
+      <li><code>$guarded</code> — явное запрещение (используйте с осторожностью, не оставлять пустым).</li>
+      <li>Всегда ограничивайте массив данных, передаваемых в <code>create</code>/<code>update</code>: используйте <code>$request-&gt;validated()</code> (из FormRequest) или <code>$request-&gt;only(...)</code>, а не <code>$request-&gt;all()</code>.</li>
+      <li>Никогда не доверяйте входящим данным без контроля — это фундаментальное правило безопасности.</li>
+      <li>В Laravel 11+ и во всех современных версиях рекомендуется явно указывать <code>$fillable</code>, чтобы избежать случайных уязвимостей.</li>
+    </ul>
   </div>
 
   <div class="subsection" id="el-relations">
