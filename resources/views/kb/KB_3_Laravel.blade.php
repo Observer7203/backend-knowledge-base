@@ -2503,11 +2503,22 @@ ul.bullets strong{color:var(--text);}
 <pre><code><span class="c-comment">// В методе booted() модели</span>
 <span class="c-key">protected static function</span> <span class="c-fn">booted</span>()
 {
-    <span class="c-key">static</span>::<span class="c-fn">addGlobalScope</span>(<span class="c-str">'status'</span>, <span class="c-key">function</span> (<span class="c-var">$query</span>) {
+    <span class="c-key">static</span>::<span class="c-fn">addGlobalScope</span>(<span class="c-str">'active'</span>, <span class="c-key">function</span> (<span class="c-var">$query</span>) {
         <span class="c-var">$query</span>-&gt;<span class="c-fn">where</span>(<span class="c-str">'status'</span>, <span class="c-str">'active'</span>);
     });
 }</code></pre>
-      <p>Теперь каждый вызов <code>User::all()</code> будет автоматически добавлять <code>where status = 'active'</code>.</p>
+
+      <p><strong>Автоматически применяется ко ВСЕМ типам запросов</strong> — <code>all()</code>, <code>find()</code>, <code>where()</code>, любые цепочки. Не нужно указывать его явно, он добавляется сам:</p>
+<pre><code><span class="c-comment">// Все эти запросы автоматически получат WHERE status = 'active'</span>
+<span class="c-type">User</span>::<span class="c-fn">all</span>();
+<span class="c-comment">// SQL:  SELECT * FROM users WHERE status = 'active'</span>
+
+<span class="c-type">User</span>::<span class="c-fn">find</span>(<span class="c-num">5</span>);
+<span class="c-comment">// SQL:  SELECT * FROM users WHERE status = 'active' AND id = 5</span>
+
+<span class="c-type">User</span>::<span class="c-fn">where</span>(<span class="c-str">'age'</span>, <span class="c-num">30</span>)-&gt;<span class="c-fn">get</span>();
+<span class="c-comment">// SQL:  SELECT * FROM users WHERE status = 'active' AND age = 30</span></code></pre>
+      <p>То есть ты даже не указываешь глобальный скоуп явно — он применяется сам, во всех запросах модели.</p>
 
       <p>Отключение глобального скоупа:</p>
 <pre><code><span class="c-type">User</span>::<span class="c-fn">withoutGlobalScope</span>(<span class="c-str">'status'</span>)-&gt;<span class="c-fn">get</span>();
