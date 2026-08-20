@@ -173,6 +173,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('eloquent','el-mass-assignment',this)">Mass Assignment ($fillable / $guarded)</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-casts',this)">Casts — типы атрибутов</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-scopes',this)">Scopes — переиспользуемые фильтры</a>
+    <a class="nav-subitem" onclick="showSub('eloquent','el-accessors',this)">Accessors / Mutators</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-relations',this)">Связи: hasOne / hasMany / belongsTo / belongsToMany</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-practice',this)">Практика: модель заказа</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-pitfalls',this)">Особые случаи</a>
@@ -2542,6 +2543,133 @@ ul.bullets strong{color:var(--text);}
 
     <div class="remember-box">
       <strong>Итог.</strong> <strong>Локальный</strong> скоуп — вызывается вручную (<code>User::active()-&gt;...</code>). <strong>Глобальный</strong> — применяется автоматически ко всем запросам модели. Используйте скоупы для выноса повторяющейся логики фильтрации, чтобы запросы были лаконичнее, а код — поддерживаемее.
+    </div>
+  </div>
+
+  <div class="subsection" id="el-accessors">
+    <div class="subsection-title"><i data-lucide="function-square"></i> Accessors и Mutators — преобразование на входе и выходе</div>
+
+    <p class="text"><strong>Что это.</strong> Accessors и Mutators — методы в модели, которые позволяют преобразовывать атрибуты <strong>при чтении</strong> (accessor) и <strong>при записи</strong> (mutator). Работают на уровне модели, автоматически применяются при обращении к атрибуту через <code>$user-&gt;name</code>.</p>
+
+    <div class="card">
+      <h3>Accessor (геттер) — преобразование при чтении</h3>
+      <p>Позволяет изменить значение поля, когда вы получаете его из модели. Синтаксис Laravel 9+ через <code>Attribute::make()</code>:</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Database</span>\<span class="c-type">Eloquent</span>\<span class="c-type">Casts</span>\<span class="c-type">Attribute</span>;
+
+<span class="c-key">class</span> <span class="c-type">User</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-comment">// Получаем полное имя: first_name + last_name</span>
+    <span class="c-key">protected function</span> <span class="c-fn">fullName</span>(): <span class="c-type">Attribute</span>
+    {
+        <span class="c-key">return</span> <span class="c-type">Attribute</span>::<span class="c-fn">make</span>(
+            <span class="c-var">get</span>: <span class="c-key">fn</span> (<span class="c-var">$value</span>, <span class="c-var">$attributes</span>)
+                =&gt; <span class="c-var">$attributes</span>[<span class="c-str">'first_name'</span>] . <span class="c-str">' '</span> . <span class="c-var">$attributes</span>[<span class="c-str">'last_name'</span>]
+        );
+    }
+
+    <span class="c-comment">// Приводим поле status к человекочитаемому виду</span>
+    <span class="c-key">protected function</span> <span class="c-fn">statusText</span>(): <span class="c-type">Attribute</span>
+    {
+        <span class="c-key">return</span> <span class="c-type">Attribute</span>::<span class="c-fn">make</span>(
+            <span class="c-var">get</span>: <span class="c-key">fn</span> (<span class="c-var">$value</span>, <span class="c-var">$attributes</span>) =&gt; <span class="c-key">match</span> (<span class="c-var">$attributes</span>[<span class="c-str">'status'</span>]) {
+                <span class="c-num">0</span>       =&gt; <span class="c-str">'Неактивен'</span>,
+                <span class="c-num">1</span>       =&gt; <span class="c-str">'Активен'</span>,
+                <span class="c-key">default</span> =&gt; <span class="c-str">'Неизвестно'</span>,
+            }
+        );
+    }
+}</code></pre>
+      <p>Использование — обращение по имени метода в snake_case:</p>
+<pre><code><span class="c-var">$user</span> = <span class="c-type">User</span>::<span class="c-fn">find</span>(<span class="c-num">1</span>);
+<span class="c-key">echo</span> <span class="c-var">$user</span>-&gt;<span class="c-var">full_name</span>;    <span class="c-comment">// "Иван Петров"</span>
+<span class="c-key">echo</span> <span class="c-var">$user</span>-&gt;<span class="c-var">status_text</span>;  <span class="c-comment">// "Активен"</span></code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Mutator (сеттер) — преобразование при записи</h3>
+      <p>Позволяет изменить значение перед сохранением в БД:</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">User</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-comment">// Перед сохранением хешируем пароль</span>
+    <span class="c-key">protected function</span> <span class="c-fn">password</span>(): <span class="c-type">Attribute</span>
+    {
+        <span class="c-key">return</span> <span class="c-type">Attribute</span>::<span class="c-fn">make</span>(
+            <span class="c-var">set</span>: <span class="c-key">fn</span> (<span class="c-var">$value</span>) =&gt; <span class="c-fn">bcrypt</span>(<span class="c-var">$value</span>)
+        );
+    }
+
+    <span class="c-comment">// Перед сохранением обрезаем пробелы и приводим к нижнему регистру</span>
+    <span class="c-key">protected function</span> <span class="c-fn">email</span>(): <span class="c-type">Attribute</span>
+    {
+        <span class="c-key">return</span> <span class="c-type">Attribute</span>::<span class="c-fn">make</span>(
+            <span class="c-var">set</span>: <span class="c-key">fn</span> (<span class="c-var">$value</span>) =&gt; <span class="c-fn">strtolower</span>(<span class="c-fn">trim</span>(<span class="c-var">$value</span>))
+        );
+    }
+}</code></pre>
+      <p>Использование:</p>
+<pre><code><span class="c-var">$user</span> = <span class="c-key">new</span> <span class="c-type">User</span>();
+<span class="c-var">$user</span>-&gt;<span class="c-var">password</span> = <span class="c-str">'secret123'</span>;            <span class="c-comment">// будет захеширован при сохранении</span>
+<span class="c-var">$user</span>-&gt;<span class="c-var">email</span>    = <span class="c-str">'  TEST@MAIL.COM '</span>;      <span class="c-comment">// станет 'test@mail.com'</span>
+<span class="c-var">$user</span>-&gt;<span class="c-fn">save</span>();</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Совмещение get и set в одном методе</h3>
+      <p>Можно одновременно определить геттер и сеттер:</p>
+<pre><code><span class="c-key">protected function</span> <span class="c-fn">name</span>(): <span class="c-type">Attribute</span>
+{
+    <span class="c-key">return</span> <span class="c-type">Attribute</span>::<span class="c-fn">make</span>(
+        <span class="c-var">get</span>: <span class="c-key">fn</span> (<span class="c-var">$value</span>) =&gt; <span class="c-fn">ucfirst</span>(<span class="c-var">$value</span>),   <span class="c-comment">// при чтении — с большой буквы</span>
+        <span class="c-var">set</span>: <span class="c-key">fn</span> (<span class="c-var">$value</span>) =&gt; <span class="c-fn">trim</span>(<span class="c-var">$value</span>)         <span class="c-comment">// при записи — убираем пробелы</span>
+    );
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Кеширование через <code>shouldCache()</code></h3>
+      <p>Если аксессор выполняет тяжёлые вычисления (обращение к API, сложная обработка), можно закешировать результат на время жизни запроса:</p>
+<pre><code><span class="c-key">protected function</span> <span class="c-fn">expensiveComputation</span>(): <span class="c-type">Attribute</span>
+{
+    <span class="c-key">return</span> <span class="c-type">Attribute</span>::<span class="c-fn">make</span>(
+        <span class="c-var">get</span>: <span class="c-key">fn</span> () =&gt; <span class="c-var">$this</span>-&gt;<span class="c-fn">runHeavyCalculation</span>(),
+    )-&gt;<span class="c-fn">shouldCache</span>();   <span class="c-comment">// результат сохраняется в памяти на время запроса</span>
+}</code></pre>
+      <p>При повторном обращении к <code>$user-&gt;expensive_computation</code> результат не будет вычисляться заново.</p>
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="archive" style="width:14px;height:14px"></i> Старый синтаксис (до Laravel 9)</div>
+    <p class="text">Раньше использовались методы <code>getXxxAttribute()</code> и <code>setXxxAttribute()</code>:</p>
+<pre><code><span class="c-comment">// Accessor</span>
+<span class="c-key">public function</span> <span class="c-fn">getFullNameAttribute</span>()
+{
+    <span class="c-key">return</span> <span class="c-var">$this</span>-&gt;<span class="c-var">first_name</span> . <span class="c-str">' '</span> . <span class="c-var">$this</span>-&gt;<span class="c-var">last_name</span>;
+}
+
+<span class="c-comment">// Mutator</span>
+<span class="c-key">public function</span> <span class="c-fn">setPasswordAttribute</span>(<span class="c-var">$value</span>)
+{
+    <span class="c-var">$this</span>-&gt;<span class="c-var">attributes</span>[<span class="c-str">'password'</span>] = <span class="c-fn">bcrypt</span>(<span class="c-var">$value</span>);
+}</code></pre>
+    <p class="text">Это всё ещё работает, но новый синтаксис через <code>Attribute::make()</code> предпочтительнее — даёт больше гибкости (кеширование, доступ ко всем атрибутам, объединение get + set в одном методе).</p>
+
+    <p class="text"><strong>Когда использовать:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Accessor</strong> — когда нужно отдавать данные в другом формате, чем в БД (дата в другом формате, объединение полей, статус в виде текста).</li>
+      <li><strong>Mutator</strong> — когда нужно подготовить данные перед сохранением (хеширование, нормализация, очистка).</li>
+      <li><strong>Кеширование</strong> — когда вычисления дорогие или повторяются в течение одного запроса.</li>
+    </ul>
+
+    <div class="pitfall">
+      <strong>Важные нюансы:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Accessors и mutators работают только при обращении к атрибуту через объект модели (<code>$user-&gt;name</code>). Если использовать <code>$user-&gt;getAttributes()</code> или напрямую массив <code>attributes</code> — они не применяются.</li>
+        <li>При массовом присваивании (<code>create</code>, <code>update</code>) мутаторы срабатывают автоматически, если поля переданы через <code>$fillable</code>.</li>
+        <li>Для производительности не используйте аксессоры внутри циклов без кеширования — это может породить много запросов или вычислений.</li>
+      </ul>
+    </div>
+
+    <div class="remember-box">
+      <strong>Итог.</strong> <strong>Accessor</strong> — преобразует значение при чтении. <strong>Mutator</strong> — преобразует значение при записи. <code>Attribute::make()</code> — основной способ в Laravel 9+. <code>shouldCache()</code> — кеширование результата аксессора на время запроса.
     </div>
   </div>
 
