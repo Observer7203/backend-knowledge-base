@@ -171,6 +171,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('eloquent','el-purpose',this)">Назначение</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-features',this)">Основные возможности</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-mass-assignment',this)">Mass Assignment ($fillable / $guarded)</a>
+    <a class="nav-subitem" onclick="showSub('eloquent','el-casts',this)">Casts — типы атрибутов</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-relations',this)">Связи: hasOne / hasMany / belongsTo / belongsToMany</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-practice',this)">Практика: модель заказа</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-pitfalls',this)">Особые случаи</a>
@@ -2343,6 +2344,79 @@ ul.bullets strong{color:var(--text);}
       <li>Никогда не доверяйте входящим данным без контроля — это фундаментальное правило безопасности.</li>
       <li>В Laravel 11+ и во всех современных версиях рекомендуется явно указывать <code>$fillable</code>, чтобы избежать случайных уязвимостей.</li>
     </ul>
+  </div>
+
+  <div class="subsection" id="el-casts">
+    <div class="subsection-title"><i data-lucide="repeat"></i> Casts — типы атрибутов модели</div>
+
+    <p class="text"><strong>Что это.</strong> Casts — простое указание типов для атрибутов модели. В массиве <code>$casts</code> перечисляете, к какому типу приводить каждое поле. Laravel <strong>автоматически преобразует данные при получении из БД и обратно при сохранении</strong>.</p>
+
+    <p class="text"><strong>Как это выглядит:</strong></p>
+<pre><code><span class="c-key">class</span> <span class="c-type">User</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-key">protected</span> <span class="c-var">$casts</span> = [
+        <span class="c-str">'is_active'</span>  =&gt; <span class="c-str">'boolean'</span>,      <span class="c-comment">// в БД tinyint(1) → PHP bool</span>
+        <span class="c-str">'meta'</span>       =&gt; <span class="c-str">'array'</span>,        <span class="c-comment">// JSON в БД → PHP массив</span>
+        <span class="c-str">'paid_at'</span>    =&gt; <span class="c-str">'datetime'</span>,     <span class="c-comment">// строка в БД → Carbon</span>
+        <span class="c-str">'settings'</span>   =&gt; <span class="c-str">'object'</span>,       <span class="c-comment">// JSON → stdClass</span>
+        <span class="c-str">'age'</span>        =&gt; <span class="c-str">'integer'</span>,      <span class="c-comment">// всегда int</span>
+        <span class="c-str">'price'</span>      =&gt; <span class="c-str">'float'</span>,        <span class="c-comment">// всегда float</span>
+        <span class="c-str">'tags'</span>       =&gt; <span class="c-str">'collection'</span>,   <span class="c-comment">// JSON → Collection</span>
+        <span class="c-str">'created_at'</span> =&gt; <span class="c-str">'timestamp'</span>,    <span class="c-comment">// дата → Unix timestamp</span>
+    ];
+}</code></pre>
+
+    <p class="text">Теперь при обращении к этим полям — они уже будут нужного типа:</p>
+<pre><code><span class="c-var">$user</span> = <span class="c-type">User</span>::<span class="c-fn">find</span>(<span class="c-num">1</span>);
+<span class="c-var">$isActive</span> = <span class="c-var">$user</span>-&gt;<span class="c-var">is_active</span>;   <span class="c-comment">// bool (true/false)</span>
+<span class="c-var">$meta</span>     = <span class="c-var">$user</span>-&gt;<span class="c-var">meta</span>;        <span class="c-comment">// массив (не строка JSON)</span>
+<span class="c-var">$paidAt</span>   = <span class="c-var">$user</span>-&gt;<span class="c-var">paid_at</span>;     <span class="c-comment">// Carbon (можно ->diffForHumans())</span>
+<span class="c-var">$settings</span> = <span class="c-var">$user</span>-&gt;<span class="c-var">settings</span>;    <span class="c-comment">// stdClass</span></code></pre>
+    <p class="text">А при сохранении они сами преобразуются обратно в формат БД.</p>
+
+    <p class="text"><strong>Зачем это нужно:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Удобство</strong> — вместо ручного приведения типов в каждом месте, делаете один раз в модели.</li>
+      <li><strong>Безопасность</strong> — всегда знаете, с каким типом работаете.</li>
+      <li><strong>Работа с датами</strong> — автоматически получаете объект <code>Carbon</code>, можно сразу форматировать, сравнивать, вычитать.</li>
+      <li><strong>JSON-поля</strong> — если храните данные в JSON, работаете с массивами/объектами напрямую, без ручного <code>json_decode</code>.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="settings" style="width:14px;height:14px"></i> Кастомные касты (если стандартных мало)</div>
+    <p class="text">Для преобразований со сложной логикой реализуйте интерфейс <code>CastsAttributes</code>:</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Contracts</span>\<span class="c-type">Database</span>\<span class="c-type">Eloquent</span>\<span class="c-type">CastsAttributes</span>;
+
+<span class="c-key">class</span> <span class="c-type">PasswordHashCast</span> <span class="c-key">implements</span> <span class="c-type">CastsAttributes</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">get</span>(<span class="c-var">$model</span>, <span class="c-var">$key</span>, <span class="c-var">$value</span>, <span class="c-var">$attributes</span>)
+    {
+        <span class="c-comment">// из БД → значение для модели</span>
+        <span class="c-key">return</span> <span class="c-var">$value</span>;
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">set</span>(<span class="c-var">$model</span>, <span class="c-var">$key</span>, <span class="c-var">$value</span>, <span class="c-var">$attributes</span>)
+    {
+        <span class="c-comment">// перед сохранением → хешируем</span>
+        <span class="c-key">return</span> <span class="c-fn">bcrypt</span>(<span class="c-var">$value</span>);
+    }
+}</code></pre>
+    <p class="text">В модели:</p>
+<pre><code><span class="c-key">protected</span> <span class="c-var">$casts</span> = [
+    <span class="c-str">'password'</span> =&gt; <span class="c-type">PasswordHashCast</span>::<span class="c-key">class</span>,
+];</code></pre>
+    <p class="text">Теперь при присвоении <code>$user-&gt;password = 'secret'</code> значение автоматически хешируется при сохранении.</p>
+
+    <div class="pitfall">
+      <strong>Чего не стоит делать:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Не путайте <code>$casts</code> с <code>$fillable</code> — это разные вещи. Первое — про типы, второе — про mass assignment.</li>
+        <li>Для <code>array</code>/<code>object</code>/<code>collection</code> полей в БД должен быть тип <code>json</code> (или <code>text</code>). Иначе данные не сохранятся корректно.</li>
+      </ul>
+    </div>
+
+    <div class="remember-box">
+      <strong>Резюме.</strong> <code>$casts</code> — простой способ задать типы для атрибутов модели. Поддерживает множество стандартных типов (<code>boolean</code>, <code>integer</code>, <code>float</code>, <code>string</code>, <code>datetime</code>, <code>date</code>, <code>timestamp</code>, <code>array</code>, <code>object</code>, <code>collection</code>, <code>encrypted</code>, <code>enum</code>). Для сложной логики — кастомные касты через <code>CastsAttributes</code>. Делает код чище, а работу с данными — предсказуемой и безопасной.
+    </div>
   </div>
 
   <div class="subsection" id="el-relations">
