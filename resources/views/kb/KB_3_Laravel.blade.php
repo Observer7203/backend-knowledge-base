@@ -1716,6 +1716,52 @@ ul.bullets strong{color:var(--text);}
     <div class="remember-box">
       <strong>Правило:</strong> если метод <em>отдаёт</em> данные фреймворку — <code>return array/bool</code>. Если <em>меняет</em> состояние объекта — <code>void</code>. Это правило работает не только в FormRequest, но и в целом в объектно-ориентированном дизайне.
     </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="lock" style="width:14px;height:14px"></i> Что такое <code>can()</code> в <code>authorize()</code></div>
+
+    <p class="text">В типичном примере <code>authorize()</code> часто встречается такая проверка:</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">authorize</span>(): <span class="c-key">bool</span>
+{
+    <span class="c-key">return</span> <span class="c-var">$this</span>-&gt;<span class="c-fn">user</span>()-&gt;<span class="c-fn">can</span>(<span class="c-str">'update'</span>, <span class="c-var">$this</span>-&gt;<span class="c-fn">route</span>(<span class="c-str">'user'</span>));
+}</code></pre>
+    <p class="text">Это проверка, может ли текущий аутентифицированный пользователь выполнить действие <code>update</code> над конкретным объектом <code>User</code>. Разбор по частям:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>$this-&gt;user()</code> — возвращает текущего аутентифицированного пользователя (эквивалент <code>auth()-&gt;user()</code>).</li>
+      <li><code>can('update', $user)</code> — вызывает механизм авторизации Laravel, который проверяет, есть ли у этого пользователя право на действие <code>update</code> над переданной моделью.</li>
+      <li><code>$this-&gt;route('user')</code> — получает модель <code>User</code>, автоматически подставленную в маршрут через Route Model Binding. Для маршрута <code>/users/{user}</code> это объект пользователя, найденный по ID.</li>
+    </ul>
+
+    <p class="text"><strong>Откуда берётся логика проверки.</strong> Laravel ищет определение разрешения <code>update</code> для модели <code>User</code> в двух местах:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Политики (Policies)</strong> — классы, группирующие разрешения для конкретной модели. Создаются командой <code>php artisan make:policy UserPolicy</code>. Внутри определяются методы <code>view</code>, <code>create</code>, <code>update</code>, <code>delete</code> и др., каждый возвращает <code>bool</code>.</li>
+      <li><strong>Gates</strong> — замыкания, зарегистрированные в <code>App\Providers\AuthServiceProvider</code> (или в <code>bootstrap/app.php</code> в L11+).</li>
+    </ul>
+
+    <p class="text">Пример политики:</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">UserPolicy</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">update</span>(<span class="c-type">User</span> <span class="c-var">$currentUser</span>, <span class="c-type">User</span> <span class="c-var">$targetUser</span>)
+    {
+        <span class="c-key">return</span> <span class="c-var">$currentUser</span>-&gt;<span class="c-var">id</span> === <span class="c-var">$targetUser</span>-&gt;<span class="c-var">id</span>
+            || <span class="c-var">$currentUser</span>-&gt;<span class="c-fn">isAdmin</span>();
+    }
+}</code></pre>
+    <p class="text">Если такой политики нет — Laravel вернёт <code>false</code> (по умолчанию запрещено).</p>
+
+    <p class="text"><strong>Зачем это нужно в <code>authorize()</code>.</strong> Метод <code>authorize()</code> в FormRequest вызывается <em>до</em> валидации. Если он возвращает <code>false</code> — Laravel сразу возвращает ответ <strong>403 Forbidden</strong>, даже не запуская проверку правил. Это даёт:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Разделение ответственности:</strong> авторизация (кто может делать) и валидация (что можно отправлять) живут отдельно.</li>
+      <li><strong>Не дублировать логику:</strong> проверка прав вынесена в политики, и её можно использовать в контроллерах, Blade-представлениях, middleware.</li>
+      <li><strong>Чистый код:</strong> в контроллере вы уже уверены, что пользователь имеет право на действие, и не пишете лишних <code>if</code>.</li>
+    </ul>
+
+    <div class="pitfall">
+      <strong>Важно:</strong> <code>authorize()</code> — это <em>авторизация</em> (разрешение делать), а не <em>аутентификация</em> (вход в систему). За аутентификацию отвечает middleware <code>auth</code>. В FormRequest <code>$this-&gt;user()</code> вернёт объект только если пользователь уже аутентифицирован — иначе будет ошибка, поэтому ставьте middleware <code>auth</code> на маршрут. Если метод <code>authorize()</code> отсутствует или всегда возвращает <code>true</code> — проверка прав не выполняется вовсе, будьте осторожны.
+    </div>
+
+    <div class="remember-box">
+      <strong>Итог:</strong> <code>can()</code> — встроенный метод Laravel для проверки прав, использующий политики или gates. Вместе с <code>authorize()</code> в FormRequest он даёт удобный способ централизованно управлять доступом к действиям, не засоряя контроллер.
+    </div>
   </div>
 
   <div class="subsection" id="val-compare">
