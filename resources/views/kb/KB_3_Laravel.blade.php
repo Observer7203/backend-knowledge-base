@@ -143,6 +143,17 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('middleware','mw-params',this)">Параметризованный middleware</a>
     <a class="nav-subitem" onclick="showSub('middleware','mw-cors',this)">CORS</a>
   </div>
+  <a class="nav-item" onclick="showSection('http-objects',this)"><i data-lucide="package"></i> HTTP-объекты Laravel</a>
+  <div class="nav-subgroup">
+    <a class="nav-subitem" onclick="showSub('http-objects','ho-overview',this)">Обзор: Symfony HttpFoundation</a>
+    <a class="nav-subitem" onclick="showSub('http-objects','ho-request',this)">Request — входящий запрос</a>
+    <a class="nav-subitem" onclick="showSub('http-objects','ho-response',this)">Response — базовый ответ</a>
+    <a class="nav-subitem" onclick="showSub('http-objects','ho-json',this)">JsonResponse</a>
+    <a class="nav-subitem" onclick="showSub('http-objects','ho-redirect',this)">RedirectResponse (withErrors, withInput)</a>
+    <a class="nav-subitem" onclick="showSub('http-objects','ho-collection',this)">Collection</a>
+    <a class="nav-subitem" onclick="showSub('http-objects','ho-http-client',this)">Http Client Response</a>
+    <a class="nav-subitem" onclick="showSub('http-objects','ho-app',this)">Application (container)</a>
+  </div>
   <a class="nav-item" onclick="showSection('validation',this)"><i data-lucide="check-circle"></i> Validation &amp; FormRequest</a>
   <div class="nav-subgroup">
     <a class="nav-subitem" onclick="showSub('validation','val-purpose',this)">Зачем нужна валидация</a>
@@ -1636,6 +1647,197 @@ ul.bullets strong{color:var(--text);}
   </div>
 </div>
 
+<div id="sec-http-objects" class="section">
+  <div class="section-title">HTTP-объекты Laravel</div>
+
+  <div class="subsection" id="ho-overview">
+    <div class="subsection-title"><i data-lucide="book-open"></i> Обзор: экосистема на Symfony HttpFoundation</div>
+    <p class="text">Все объекты Laravel типа <code>RedirectResponse</code>, <code>Response</code>, <code>Request</code>, <code>JsonResponse</code> — это не просто «шаблоны», а стандартизированные объекты, которые Laravel использует для представления всего, что связано с HTTP-запросом и ответом. Они живут в пространстве имён <code>Illuminate\Http\*</code> и построены на фундаменте <strong>Symfony HttpFoundation Component</strong>. Laravel берёт этот компонент, расширяет его и добавляет свои удобные методы.</p>
+
+    <p class="text"><strong>Ключевые объекты, с которыми работают постоянно:</strong></p>
+    <table class="data-table">
+      <thead><tr><th>Класс</th><th>Что представляет</th></tr></thead>
+      <tbody>
+        <tr><td><code>Illuminate\Http\Request</code></td><td>Входящий HTTP-запрос. Содержит <code>$_GET</code>, <code>$_POST</code>, <code>$_COOKIE</code>, <code>$_FILES</code>, заголовки. Получаете в контроллере: <code>store(Request $request)</code>.</td></tr>
+        <tr><td><code>Illuminate\Http\Response</code></td><td>Базовый HTTP-ответ. Контент + статус + заголовки. Возвращается из контроллера: <code>return response('Hello', 200);</code></td></tr>
+        <tr><td><code>Illuminate\Http\JsonResponse</code></td><td>Специализированный ответ для API. Автопреобразование в JSON и <code>Content-Type: application/json</code>. Пример: <code>return response()-&gt;json(['user' =&gt; $user]);</code></td></tr>
+        <tr><td><code>Illuminate\Http\RedirectResponse</code></td><td>Перенаправление на другой URL. Генерирует HTTP-заголовок <code>Location</code>. Имеет цепочку методов для работы с сессией: <code>withErrors</code>, <code>withInput</code>, <code>with</code>.</td></tr>
+        <tr><td><code>Illuminate\Support\Collection</code></td><td>Не HTTP-объект, но используется повсеместно. Обёртка над массивом с фильтрацией, трансформацией, агрегацией.</td></tr>
+        <tr><td><code>Illuminate\Http\Client\Response</code></td><td>Ответ при <strong>исходящих</strong> HTTP-запросах через <code>Http::get(...)</code>. Тело, заголовки, методы <code>-&gt;json()</code>, <code>-&gt;body()</code>.</td></tr>
+        <tr><td><code>Illuminate\Foundation\Application</code></td><td>Главный объект приложения (контейнер). Регистрация сервисов, разрешение зависимостей, доступ к конфигурации.</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box">
+      Весь этот механизм называется <strong>«Объекты HTTP-запроса и ответа»</strong> (HTTP Request &amp; Response Objects) — стандартный способ представления HTTP-взаимодействия в современных PHP-фреймворках (Laravel, Symfony, Slim).
+    </div>
+  </div>
+
+  <div class="subsection" id="ho-request">
+    <div class="subsection-title"><i data-lucide="download"></i> <code>Illuminate\Http\Request</code> — входящий запрос</div>
+    <p class="text">Представляет входящий HTTP-запрос. Именно его вы получаете в контроллере: <code>public function store(Request $request)</code>.</p>
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>Что делает</th><th>Пример</th></tr></thead>
+      <tbody>
+        <tr><td><code>input($key, $default)</code></td><td>Получить значение поля из GET, POST или JSON</td><td><code>$request-&gt;input('name', 'guest')</code></td></tr>
+        <tr><td><code>all()</code></td><td>Получить все входные данные как массив</td><td><code>$request-&gt;all()</code></td></tr>
+        <tr><td><code>only($keys)</code></td><td>Только указанные поля</td><td><code>$request-&gt;only(['name', 'email'])</code></td></tr>
+        <tr><td><code>except($keys)</code></td><td>Все, кроме указанных</td><td><code>$request-&gt;except(['_token'])</code></td></tr>
+        <tr><td><code>has($key)</code></td><td>Существует ли поле</td><td><code>if ($request-&gt;has('file'))</code></td></tr>
+        <tr><td><code>filled($key)</code></td><td>Существует и не пустое</td><td><code>if ($request-&gt;filled('name'))</code></td></tr>
+        <tr><td><code>file($key)</code></td><td>Получить загруженный файл</td><td><code>$request-&gt;file('avatar')</code></td></tr>
+        <tr><td><code>header($key, $default)</code></td><td>Получить заголовок</td><td><code>$request-&gt;header('Authorization')</code></td></tr>
+        <tr><td><code>ip()</code></td><td>IP-адрес клиента</td><td><code>$request-&gt;ip()</code></td></tr>
+        <tr><td><code>url()</code></td><td>Текущий URL без query</td><td>—</td></tr>
+        <tr><td><code>fullUrl()</code></td><td>Полный URL с query</td><td>—</td></tr>
+        <tr><td><code>method()</code></td><td>HTTP-метод (GET, POST...)</td><td>—</td></tr>
+        <tr><td><code>route($key)</code></td><td>Параметры маршрута</td><td><code>$request-&gt;route('user')</code></td></tr>
+        <tr><td><code>user()</code></td><td>Аутентифицированный пользователь</td><td><code>$request-&gt;user()</code></td></tr>
+        <tr><td><code>validate($rules)</code></td><td>Запустить валидацию, вернуть массив проверенных данных</td><td><code>$request-&gt;validate([...])</code></td></tr>
+        <tr><td><code>merge($data)</code></td><td>Добавить/перезаписать данные (используется в <code>prepareForValidation</code>)</td><td><code>$request-&gt;merge(['foo' =&gt; 'bar'])</code></td></tr>
+        <tr><td><code>replace($data)</code></td><td>Полностью заменить входные данные</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection" id="ho-response">
+    <div class="subsection-title"><i data-lucide="send"></i> <code>Illuminate\Http\Response</code> — базовый ответ</div>
+    <p class="text">Создаётся через хелпер <code>response()</code>. Обычный HTTP-ответ с контентом, статусом и заголовками.</p>
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>Что делает</th><th>Пример</th></tr></thead>
+      <tbody>
+        <tr><td><code>content()</code></td><td>Получить тело ответа</td><td>—</td></tr>
+        <tr><td><code>status()</code></td><td>Получить статус-код</td><td>—</td></tr>
+        <tr><td><code>header($key, $value)</code></td><td>Установить один заголовок</td><td><code>response('Hello')-&gt;header('X-Foo', 'Bar')</code></td></tr>
+        <tr><td><code>withHeaders($headers)</code></td><td>Установить несколько заголовков</td><td><code>-&gt;withHeaders(['X-A' =&gt; '1', 'X-B' =&gt; '2'])</code></td></tr>
+        <tr><td><code>cookie($cookie)</code></td><td>Добавить cookie</td><td><code>-&gt;cookie('name', 'value', 60)</code></td></tr>
+        <tr><td><code>setStatusCode($code)</code></td><td>Установить статус-код</td><td>—</td></tr>
+        <tr><td><code>throwResponse()</code></td><td>Выбросить исключение с этим ответом (редко)</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection" id="ho-json">
+    <div class="subsection-title"><i data-lucide="braces"></i> <code>Illuminate\Http\JsonResponse</code></div>
+    <p class="text">Создаётся через <code>response()-&gt;json($data, $status, $headers)</code>. Автоматически ставит <code>Content-Type: application/json</code>.</p>
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>Что делает</th></tr></thead>
+      <tbody>
+        <tr><td><code>setData($data)</code></td><td>Установить данные, которые будут преобразованы в JSON</td></tr>
+        <tr><td><code>getData($assoc = false)</code></td><td>Получить данные (как объект или массив)</td></tr>
+        <tr><td><code>setStatusCode($code)</code></td><td>Установить HTTP-код</td></tr>
+        <tr><td><code>header($key, $value)</code></td><td>Добавить заголовок</td></tr>
+        <tr><td><code>withHeader($key, $value)</code></td><td>Алиас для <code>header</code></td></tr>
+        <tr><td><code>setEncodingOptions($options)</code></td><td>Опции <code>json_encode</code> (например, <code>JSON_PRETTY_PRINT</code>, <code>JSON_UNESCAPED_UNICODE</code>)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection" id="ho-redirect">
+    <div class="subsection-title"><i data-lucide="corner-up-right"></i> <code>Illuminate\Http\RedirectResponse</code> + <code>withErrors</code> / <code>withInput</code></div>
+
+    <p class="text">Этот объект отвечает за перенаправление пользователя на другой URL. Вместо контента он генерирует HTTP-заголовок <code>Location</code>, который говорит браузеру перейти на новый адрес. Класс предоставляет цепочку удобных методов для работы с сессией во время редиректа.</p>
+
+    <p class="text"><strong>Что такое <code>withErrors()</code> и <code>withInput()</code>.</strong> Это не хелперы (глобальные функции), а <strong>методы объекта <code>RedirectResponse</code></strong>. Они используются для управления данными, которые сохраняются в сессии при редиректе:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>withErrors($validator)</code> — сохраняет ошибки валидации в сессию, чтобы они были доступны на странице, на которую происходит редирект, через переменную <code>$errors</code> в Blade.</li>
+      <li><code>withInput()</code> — сохраняет в сессию введённые пользователем данные из запроса. Позволяет отобразить их обратно в полях формы через хелпер <code>old()</code>, чтобы пользователь не вводил всё заново.</li>
+    </ul>
+
+    <p class="text"><strong>Классический паттерн ручной валидации:</strong></p>
+<pre><code><span class="c-key">if</span> (<span class="c-var">$validator</span>-&gt;<span class="c-fn">fails</span>()) {
+    <span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">back</span>()
+        -&gt;<span class="c-fn">withErrors</span>(<span class="c-var">$validator</span>)   <span class="c-comment">// 1. Сохраняем ошибки в сессию</span>
+        -&gt;<span class="c-fn">withInput</span>();               <span class="c-comment">// 2. Сохраняем введённые данные</span>
+}</code></pre>
+    <p class="text">Что происходит: перенаправляете пользователя обратно на предыдущую страницу, передаёте в сессию ошибки валидации, передаёте в сессию введённые данные. На форме Blade автоматически покажет <code>$errors</code> и <code>old('field')</code>.</p>
+
+    <p class="text"><strong>Отличие от хелперов.</strong> Хелперы — это глобальные функции: <code>old()</code>, <code>session()</code>, <code>redirect()</code>. <code>withErrors()</code> и <code>withInput()</code> — это методы, которые вызываются у объекта редиректа, возвращённого хелпером <code>redirect()</code>. Метод <code>withErrors()</code> может принимать не только валидатор, но и массив с сообщениями или строку.</p>
+
+    <p class="text"><strong>Все ключевые методы RedirectResponse:</strong></p>
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>Что делает</th></tr></thead>
+      <tbody>
+        <tr><td><code>withErrors($provider)</code></td><td>Сохраняет ошибки в сессию. Принимает валидатор, MessageBag или массив.</td></tr>
+        <tr><td><code>withInput()</code></td><td>Сохраняет текущие входные данные в сессию — читаются через <code>old()</code>.</td></tr>
+        <tr><td><code>with($key, $value)</code></td><td>Сохраняет произвольные flash-данные в сессию.</td></tr>
+        <tr><td><code>withCookie($cookie)</code></td><td>Добавляет cookie к ответу.</td></tr>
+        <tr><td><code>header($key, $value)</code></td><td>Добавляет произвольный заголовок к редиректу.</td></tr>
+        <tr><td><code>route($route, $parameters, $status)</code></td><td>Редирект на именованный маршрут.</td></tr>
+        <tr><td><code>action($action, $parameters, $status)</code></td><td>Редирект на экшен контроллера.</td></tr>
+        <tr><td><code>away($url, $status)</code></td><td>Редирект на внешний URL.</td></tr>
+        <tr><td><code>back($status, $headers)</code></td><td>Редирект на предыдущую страницу.</td></tr>
+        <tr><td><code>to($path, $status, $headers)</code></td><td>Редирект на произвольный путь.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection" id="ho-collection">
+    <div class="subsection-title"><i data-lucide="layers"></i> <code>Illuminate\Support\Collection</code></div>
+    <p class="text">Создаётся через <code>collect($array)</code>. Обёртка над массивом с fluent-интерфейсом для фильтрации, трансформации и агрегации.</p>
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>Что делает</th><th>Пример</th></tr></thead>
+      <tbody>
+        <tr><td><code>all()</code></td><td>Все элементы как массив</td><td>—</td></tr>
+        <tr><td><code>map($cb)</code></td><td>Преобразовать каждый элемент</td><td><code>-&gt;map(fn($x) =&gt; $x * 2)</code></td></tr>
+        <tr><td><code>filter($cb)</code></td><td>Отфильтровать элементы</td><td><code>-&gt;filter(fn($x) =&gt; $x &gt; 10)</code></td></tr>
+        <tr><td><code>pluck($key)</code></td><td>Извлечь колонку из вложенных массивов/объектов</td><td><code>-&gt;pluck('name')</code></td></tr>
+        <tr><td><code>first($cb)</code> / <code>last($cb)</code></td><td>Первый / последний элемент</td><td>—</td></tr>
+        <tr><td><code>count()</code></td><td>Количество элементов</td><td>—</td></tr>
+        <tr><td><code>isEmpty()</code> / <code>isNotEmpty()</code></td><td>Проверка пустоты</td><td>—</td></tr>
+        <tr><td><code>toArray()</code> / <code>toJson()</code></td><td>Преобразовать в массив / JSON</td><td>—</td></tr>
+        <tr><td><code>keys()</code> / <code>values()</code></td><td>Получить ключи / сбросить ключи и получить значения</td><td>—</td></tr>
+        <tr><td><code>unique($key)</code></td><td>Убрать дубликаты</td><td>—</td></tr>
+        <tr><td><code>sortBy($cb)</code></td><td>Сортировать</td><td>—</td></tr>
+        <tr><td><code>groupBy($key)</code></td><td>Сгруппировать по ключу</td><td>—</td></tr>
+        <tr><td><code>reduce($cb, $init)</code></td><td>Свернуть в одно значение</td><td>—</td></tr>
+        <tr><td><code>sum($key)</code> / <code>avg($key)</code></td><td>Сумма / среднее</td><td>—</td></tr>
+        <tr><td><code>chunk($size)</code></td><td>Разбить на части</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection" id="ho-http-client">
+    <div class="subsection-title"><i data-lucide="upload"></i> <code>Illuminate\Http\Client\Response</code></div>
+    <p class="text">Возвращается при <strong>исходящих</strong> HTTP-запросах через <code>Http::get(...)</code>, <code>Http::post(...)</code> и т.д. Не путать с <code>Illuminate\Http\Response</code> (там — <em>входящие</em>).</p>
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>Что делает</th><th>Пример</th></tr></thead>
+      <tbody>
+        <tr><td><code>body()</code></td><td>Тело ответа как строка</td><td>—</td></tr>
+        <tr><td><code>json($key, $default)</code></td><td>Разобранный JSON (опционально по ключу)</td><td><code>$response-&gt;json('data')</code></td></tr>
+        <tr><td><code>object()</code></td><td>Вернуть JSON как <code>stdClass</code></td><td>—</td></tr>
+        <tr><td><code>collect($key)</code></td><td>Вернуть JSON как Collection</td><td><code>$response-&gt;collect('items')-&gt;pluck('id')</code></td></tr>
+        <tr><td><code>status()</code></td><td>HTTP-статус код</td><td>—</td></tr>
+        <tr><td><code>ok()</code> / <code>successful()</code></td><td><code>true</code>, если 200–299</td><td>—</td></tr>
+        <tr><td><code>redirect()</code></td><td><code>true</code>, если статус 30x</td><td>—</td></tr>
+        <tr><td><code>clientError()</code> / <code>serverError()</code></td><td><code>true</code>, если 4xx / 5xx</td><td>—</td></tr>
+        <tr><td><code>header($header)</code> / <code>headers()</code></td><td>Заголовок / все заголовки</td><td>—</td></tr>
+        <tr><td><code>cookies()</code></td><td>Объект с куками</td><td>—</td></tr>
+        <tr><td><code>transferStats()</code></td><td>Статистика передачи (время, TLS и т.д.)</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection" id="ho-app">
+    <div class="subsection-title"><i data-lucide="box"></i> <code>Illuminate\Foundation\Application</code> (контейнер)</div>
+    <p class="text">Главный объект приложения. Доступен через <code>app()</code>. Отвечает за разрешение зависимостей и регистрацию сервисов.</p>
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>Что делает</th><th>Пример</th></tr></thead>
+      <tbody>
+        <tr><td><code>make($abstract, $parameters)</code></td><td>Разрешить класс из контейнера</td><td><code>app()-&gt;make(SomeService::class)</code></td></tr>
+        <tr><td><code>bind($abstract, $concrete, $shared)</code></td><td>Зарегистрировать привязку</td><td><code>app()-&gt;bind(Interface::class, Implementation::class)</code></td></tr>
+        <tr><td><code>singleton($abstract, $concrete)</code></td><td>Зарегистрировать синглтон</td><td>—</td></tr>
+        <tr><td><code>instance($abstract, $instance)</code></td><td>Зарегистрировать готовый объект</td><td>—</td></tr>
+        <tr><td><code>call($callback, $parameters)</code></td><td>Вызвать функцию/метод с разрешёнными зависимостями</td><td>—</td></tr>
+        <tr><td><code>environment()</code></td><td>Имя окружения (<code>local</code>, <code>production</code>...)</td><td>—</td></tr>
+        <tr><td><code>runningInConsole()</code></td><td><code>true</code>, если запущено из консоли</td><td>—</td></tr>
+        <tr><td><code>isDownForMaintenance()</code></td><td>Проверить, включён ли режим обслуживания</td><td>—</td></tr>
+        <tr><td><code>configure($name)</code></td><td>Загрузить конфигурационный файл</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p class="text">Подробно про контейнер и DI — см. отдельный раздел <strong>KB_13 Service Container</strong>.</p>
+  </div>
+</div>
+
 <div id="sec-validation" class="section">
   <div class="section-title">Validation и FormRequest</div>
   <div class="subsection" id="val-purpose">
@@ -1973,6 +2175,10 @@ ul.bullets strong{color:var(--text);}
 
     <div class="pitfall">
       <strong>Важное предостережение:</strong> не используйте <code>$request-&gt;all()</code> в контроллере после валидации — в <code>all()</code> могут попасть лишние (невалидные) поля, которые злоумышленник подсунул в запрос. Это открытая mass-assignment уязвимость. Всегда берите только те данные, которые прошли проверку — через <code>validated()</code> или <code>safe()</code>.
+    </div>
+
+    <div class="tip">
+      В примере <code>Validator::make()</code> использованы <code>-&gt;withErrors($validator)-&gt;withInput()</code> — это <strong>не хелперы, а методы объекта <code>RedirectResponse</code></strong>. Подробный разбор в разделе <strong>HTTP-объекты Laravel → RedirectResponse</strong> (см. sidebar).
     </div>
 
     <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="alert-triangle" style="width:14px;height:14px"></i> Что можно использовать везде, а что только в FormRequest</div>
