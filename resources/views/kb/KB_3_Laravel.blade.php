@@ -167,6 +167,13 @@ ul.bullets strong{color:var(--text);}
 
   <div class="nav-group-label">Данные</div>
   <a class="nav-item" onclick="showSection('eloquent',this)"><i data-lucide="database"></i> Eloquent (базовое)</a>
+  <div class="nav-subgroup">
+    <a class="nav-subitem" onclick="showSub('eloquent','el-purpose',this)">Назначение</a>
+    <a class="nav-subitem" onclick="showSub('eloquent','el-features',this)">Основные возможности</a>
+    <a class="nav-subitem" onclick="showSub('eloquent','el-relations',this)">Связи: hasOne / hasMany / belongsTo / belongsToMany</a>
+    <a class="nav-subitem" onclick="showSub('eloquent','el-practice',this)">Практика: модель заказа</a>
+    <a class="nav-subitem" onclick="showSub('eloquent','el-pitfalls',this)">Особые случаи</a>
+  </div>
   <a class="nav-item" onclick="showSection('cache',this)"><i data-lucide="zap"></i> Cache</a>
 
   <div class="nav-group-label">Асинхронность</div>
@@ -2253,12 +2260,12 @@ ul.bullets strong{color:var(--text);}
 
 <div id="sec-eloquent" class="section">
   <div class="section-title">Eloquent — базовое</div>
-  <div class="subsection">
+  <div class="subsection" id="el-purpose">
     <div class="subsection-title"><i data-lucide="book-open"></i> Назначение</div>
     <p class="text">Eloquent — реализация Active Record. Модель = таблица; экземпляр модели = строка. Удобство — мгновенный CRUD без boilerplate. Цена — лёгкость написания неоптимальных запросов (N+1, mass assignment) и сильная связанность бизнес-логики с инфраструктурой. Глубокий разбор (полиморфизм, observers, race conditions, chunk vs cursor) — в KB_12. Здесь — основа и базовые паттерны.</p>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="el-features">
     <div class="subsection-title"><i data-lucide="list"></i> Основные возможности</div>
     <div class="card"><h3>Relations: hasOne / hasMany / belongsTo / belongsToMany</h3><p class="text">Decларация связей в модели. Eloquent создаёт магические геттеры (<code>$user-&gt;orders</code>) и query-методы (<code>$user-&gt;orders()</code>). Первое — collection после lazy load, второе — query builder для дальнейшей фильтрации.</p></div>
     <div class="card"><h3>Mass assignment: <code>$fillable</code> / <code>$guarded</code></h3><p class="text"><code>$fillable</code> — whitelist полей для <code>create</code>/<code>update</code> через массив. <code>$guarded = []</code> — открытый список (опасно). Без правильного списка <code>User::create($request-&gt;all())</code> пропустит <code>is_admin</code> в insert.</p></div>
@@ -2268,7 +2275,142 @@ ul.bullets strong{color:var(--text);}
     <div class="card"><h3>Observers</h3><p class="text">Хуки жизненного цикла: <code>created</code>, <code>updated</code>, <code>deleted</code>, <code>retrieved</code>. Регистрация в Service Provider. Подробно — в KB_12.</p></div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="el-relations">
+    <div class="subsection-title"><i data-lucide="link"></i> Связи Eloquent — примеры всех типов</div>
+    <p class="text">Eloquent позволяет описывать связи между моделями с помощью простых методов. Ниже — примеры для каждого из четырёх основных типов.</p>
+
+    <div class="card">
+      <h3>1. <code>hasOne</code> — один к одному</h3>
+      <p>Модель <code>User</code> имеет один <code>Profile</code>.</p>
+<pre><code><span class="c-comment">// app/Models/User.php</span>
+<span class="c-key">class</span> <span class="c-type">User</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">profile</span>(): <span class="c-type">HasOne</span>
+    {
+        <span class="c-key">return</span> <span class="c-var">$this</span>-&gt;<span class="c-fn">hasOne</span>(<span class="c-type">Profile</span>::<span class="c-key">class</span>);
+    }
+}</code></pre>
+      <p>Использование:</p>
+<pre><code><span class="c-var">$user</span> = <span class="c-type">User</span>::<span class="c-fn">find</span>(<span class="c-num">1</span>);
+<span class="c-var">$profile</span> = <span class="c-var">$user</span>-&gt;<span class="c-var">profile</span>;           <span class="c-comment">// динамическое свойство — экземпляр Profile</span>
+<span class="c-var">$profile</span> = <span class="c-var">$user</span>-&gt;<span class="c-fn">profile</span>()-&gt;<span class="c-fn">first</span>();  <span class="c-comment">// через метод — Query Builder</span></code></pre>
+    </div>
+
+    <div class="card">
+      <h3>2. <code>belongsTo</code> — обратная сторона hasOne / hasMany</h3>
+      <p>Модель <code>Profile</code> принадлежит <code>User</code>.</p>
+<pre><code><span class="c-comment">// app/Models/Profile.php</span>
+<span class="c-key">class</span> <span class="c-type">Profile</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">user</span>(): <span class="c-type">BelongsTo</span>
+    {
+        <span class="c-key">return</span> <span class="c-var">$this</span>-&gt;<span class="c-fn">belongsTo</span>(<span class="c-type">User</span>::<span class="c-key">class</span>);
+    }
+}</code></pre>
+      <p>Использование:</p>
+<pre><code><span class="c-var">$profile</span> = <span class="c-type">Profile</span>::<span class="c-fn">find</span>(<span class="c-num">1</span>);
+<span class="c-var">$user</span> = <span class="c-var">$profile</span>-&gt;<span class="c-var">user</span>;           <span class="c-comment">// объект User</span>
+<span class="c-var">$user</span> = <span class="c-var">$profile</span>-&gt;<span class="c-fn">user</span>()-&gt;<span class="c-fn">first</span>();  <span class="c-comment">// Query Builder</span></code></pre>
+    </div>
+
+    <div class="card">
+      <h3>3. <code>hasMany</code> — один ко многим</h3>
+      <p>Модель <code>User</code> имеет много <code>Post</code>.</p>
+<pre><code><span class="c-comment">// app/Models/User.php</span>
+<span class="c-key">class</span> <span class="c-type">User</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">posts</span>(): <span class="c-type">HasMany</span>
+    {
+        <span class="c-key">return</span> <span class="c-var">$this</span>-&gt;<span class="c-fn">hasMany</span>(<span class="c-type">Post</span>::<span class="c-key">class</span>);
+    }
+}</code></pre>
+      <p>Использование:</p>
+<pre><code><span class="c-var">$user</span> = <span class="c-type">User</span>::<span class="c-fn">find</span>(<span class="c-num">1</span>);
+<span class="c-var">$posts</span> = <span class="c-var">$user</span>-&gt;<span class="c-var">posts</span>;                              <span class="c-comment">// Collection (все посты)</span>
+<span class="c-var">$recent</span> = <span class="c-var">$user</span>-&gt;<span class="c-fn">posts</span>()-&gt;<span class="c-fn">latest</span>()-&gt;<span class="c-fn">limit</span>(<span class="c-num">5</span>)-&gt;<span class="c-fn">get</span>();   <span class="c-comment">// с условиями</span></code></pre>
+    </div>
+
+    <div class="card">
+      <h3>4. <code>belongsToMany</code> — многие ко многим</h3>
+      <p>Модель <code>User</code> может иметь много <code>Role</code>, и наоборот. Используется <strong>промежуточная таблица</strong> <code>role_user</code>.</p>
+<pre><code><span class="c-comment">// app/Models/User.php</span>
+<span class="c-key">class</span> <span class="c-type">User</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">roles</span>(): <span class="c-type">BelongsToMany</span>
+    {
+        <span class="c-comment">// второй параметр — имя pivot-таблицы</span>
+        <span class="c-key">return</span> <span class="c-var">$this</span>-&gt;<span class="c-fn">belongsToMany</span>(<span class="c-type">Role</span>::<span class="c-key">class</span>, <span class="c-str">'role_user'</span>);
+    }
+}
+
+<span class="c-comment">// app/Models/Role.php</span>
+<span class="c-key">class</span> <span class="c-type">Role</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">users</span>(): <span class="c-type">BelongsToMany</span>
+    {
+        <span class="c-key">return</span> <span class="c-var">$this</span>-&gt;<span class="c-fn">belongsToMany</span>(<span class="c-type">User</span>::<span class="c-key">class</span>, <span class="c-str">'role_user'</span>);
+    }
+}</code></pre>
+      <p>Использование:</p>
+<pre><code><span class="c-var">$user</span> = <span class="c-type">User</span>::<span class="c-fn">find</span>(<span class="c-num">1</span>);
+<span class="c-var">$roles</span> = <span class="c-var">$user</span>-&gt;<span class="c-var">roles</span>;                                     <span class="c-comment">// Collection моделей Role</span>
+<span class="c-var">$roles</span> = <span class="c-var">$user</span>-&gt;<span class="c-fn">roles</span>()-&gt;<span class="c-fn">where</span>(<span class="c-str">'name'</span>, <span class="c-str">'admin'</span>)-&gt;<span class="c-fn">get</span>();     <span class="c-comment">// Query Builder</span></code></pre>
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="git-compare" style="width:14px;height:14px"></i> Динамическое свойство vs Query-метод</div>
+    <table class="data-table">
+      <thead><tr><th>Динамическое свойство (<code>$user-&gt;posts</code>)</th><th>Query-метод (<code>$user-&gt;posts()</code>)</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Возвращает Collection — все записи уже загружены</td>
+          <td>Возвращает Query Builder — можно дальше добавлять условия</td>
+        </tr>
+        <tr>
+          <td>Выполняет запрос сразу при обращении к свойству (lazy loading)</td>
+          <td>Запрос выполняется только при вызове <code>get()</code>, <code>first()</code>, <code>paginate()</code></td>
+        </tr>
+        <tr>
+          <td>Удобно для вывода данных в представлениях</td>
+          <td>Удобно для фильтрации, сортировки, пагинации</td>
+        </tr>
+        <tr>
+          <td>Может привести к <strong>N+1 проблеме</strong></td>
+          <td>Позволяет контролировать запросы, использовать <code>with()</code> для eager-загрузки</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="text"><strong>Пример метода для дополнительной фильтрации:</strong></p>
+<pre><code><span class="c-var">$user</span> = <span class="c-type">User</span>::<span class="c-fn">find</span>(<span class="c-num">1</span>);
+<span class="c-var">$recentPosts</span> = <span class="c-var">$user</span>-&gt;<span class="c-fn">posts</span>()
+    -&gt;<span class="c-fn">where</span>(<span class="c-str">'published_at'</span>, <span class="c-str">'&gt;='</span>, <span class="c-fn">now</span>()-&gt;<span class="c-fn">subMonth</span>())
+    -&gt;<span class="c-fn">get</span>();</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="link-2" style="width:14px;height:14px"></i> Промежуточные таблицы (pivot) для <code>belongsToMany</code></div>
+    <p class="text">Для <code>belongsToMany</code> можно получить промежуточные данные через свойство <code>pivot</code>:</p>
+<pre><code><span class="c-var">$user</span> = <span class="c-type">User</span>::<span class="c-fn">find</span>(<span class="c-num">1</span>);
+<span class="c-key">foreach</span> (<span class="c-var">$user</span>-&gt;<span class="c-var">roles</span> <span class="c-key">as</span> <span class="c-var">$role</span>) {
+    <span class="c-key">echo</span> <span class="c-var">$role</span>-&gt;<span class="c-var">pivot</span>-&gt;<span class="c-var">created_at</span>;   <span class="c-comment">// если в pivot есть поле created_at</span>
+}</code></pre>
+    <p class="text">Если нужно достать дополнительные атрибуты pivot — укажите их через <code>withPivot()</code>:</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">roles</span>(): <span class="c-type">BelongsToMany</span>
+{
+    <span class="c-key">return</span> <span class="c-var">$this</span>-&gt;<span class="c-fn">belongsToMany</span>(<span class="c-type">Role</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">withPivot</span>(<span class="c-str">'expires_at'</span>);
+}</code></pre>
+
+    <div class="remember-box">
+      <strong>Итог по типам связей:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><code>hasOne</code> — один к одному</li>
+        <li><code>hasMany</code> — один ко многим</li>
+        <li><code>belongsTo</code> — обратная сторона <code>hasOne</code> или <code>hasMany</code></li>
+        <li><code>belongsToMany</code> — многие ко многим (с pivot-таблицей)</li>
+      </ul>
+      Связи описываются в моделях и дают удобный доступ к связанным данным через динамические свойства (Collection) или Query Builder для сложных запросов. Более сложные типы (<code>hasManyThrough</code>, <code>morphTo</code>, <code>morphMany</code>) — в KB_12 Eloquent Advanced.
+    </div>
+  </div>
+
+  <div class="subsection" id="el-practice">
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика: модель заказа</div>
 <pre><code><span class="c-key">final class</span> <span class="c-type">Order</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
 {
@@ -2304,7 +2446,7 @@ ul.bullets strong{color:var(--text);}
 </code></pre>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="el-pitfalls">
     <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
     <div class="pitfall"><strong>1. <code>$guarded = []</code> в проде.</strong> Открывает все колонки для mass assignment. <code>User::create($request-&gt;all())</code> пропустит <code>is_admin</code> в insert. Используйте явный <code>$fillable</code>.</div>
     <div class="pitfall"><strong>2. <code>save()</code> на свежей коллекции.</strong> <code>$orders = $user-&gt;orders; $orders-&gt;each(fn($o) =&gt; $o-&gt;save())</code> — N запросов вместо одного. Используйте <code>$user-&gt;orders()-&gt;update([...])</code>.</div>
