@@ -1843,7 +1843,136 @@ ul.bullets strong{color:var(--text);}
     <p class="text"><strong>Важный нюанс.</strong> FormRequest наследуется от <code>Illuminate\Http\Request</code>, поэтому в контроллере вы также можете получать данные через <code>$request-&gt;input()</code>, <code>$request-&gt;file()</code> и т.д. После успешной валидации отфильтрованные данные доступны через <code>validated()</code>. Есть хуки <code>prepareForValidation()</code> для модификации данных <em>перед</em> валидацией и <code>passedValidation()</code> для действий <em>после</em> успешной проверки.</p>
 
     <div class="remember-box">
-      <strong>Резюме.</strong> FormRequest — рекомендуемый способ для контроллеров: отделяет логику валидации и авторизации от бизнес-логики, делает контроллер тонким, а код — чистым и переиспользуемым. Inline подходит для одноразовых endpoint'ов, <code>Validator::make()</code> — когда валидация нужна вне контроллера.
+      <strong>Резюме.</strong> FormRequest — рекомендуемый способ для контроллеров: отделяет логику валидации и авторизации от бизнес-логики, делает контроллер тонким, а код — чистым и переиспользуемым. Inline подходит для одноразовых endpoint'ov, <code>Validator::make()</code> — когда валидация нужна вне контроллера.
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="code" style="width:14px;height:14px"></i> Все 3 способа — код и где брать данные</div>
+
+    <p class="text"><strong>1. Inline — <code>$request-&gt;validate()</code></strong></p>
+    <p class="text"><strong>Где:</strong> внутри метода контроллера. <strong>Паттерн:</strong> вызываешь <code>validate()</code> у объекта <code>$request</code>, передаёшь массив правил. <strong>Что на выходе:</strong> если ошибок нет — возвращает массив (<code>array</code>) проверенных данных. Если есть ошибки — автоматически выбрасывает <code>ValidationException</code> (редирект назад для web, JSON 422 для API).</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Http</span>\<span class="c-type">Request</span>;
+
+<span class="c-key">class</span> <span class="c-type">PostController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>)
+    {
+        <span class="c-comment">// 1. Валидация</span>
+        <span class="c-var">$validated</span> = <span class="c-var">$request</span>-&gt;<span class="c-fn">validate</span>([
+            <span class="c-str">'title'</span> =&gt; <span class="c-str">'required|string|max:255'</span>,
+            <span class="c-str">'body'</span>  =&gt; <span class="c-str">'required|string'</span>,
+        ]);
+
+        <span class="c-comment">// 2. Использование данных (массив)</span>
+        <span class="c-type">Post</span>::<span class="c-fn">create</span>(<span class="c-var">$validated</span>);   <span class="c-comment">// ['title' =&gt; '...', 'body' =&gt; '...']</span>
+
+        <span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">route</span>(<span class="c-str">'posts.index'</span>);
+    }
+}</code></pre>
+    <p class="text"><strong>Где брать данные:</strong> переменная <code>$validated</code> (массив).</p>
+
+    <p class="text" style="margin-top:14px"><strong>2. Вручную — <code>Validator::make()</code></strong></p>
+    <p class="text"><strong>Где:</strong> где угодно — контроллер, сервисный класс, команда Artisan, очередь. <strong>Паттерн:</strong> создаёшь экземпляр валидатора через фасад <code>Validator</code>, передаёшь данные и правила. Ошибки не выбрасываются автоматически — их нужно проверять вручную через <code>fails()</code> или <code>validate()</code>.</p>
+
+    <p class="text"><strong>Полная сигнатура</strong> — принимает 4 аргумента: данные, правила, сообщения, атрибуты:</p>
+<pre><code><span class="c-var">$validator</span> = <span class="c-type">Validator</span>::<span class="c-fn">make</span>(<span class="c-var">$data</span>, <span class="c-var">$rules</span>, <span class="c-var">$messages</span>, <span class="c-var">$attributes</span>);
+<span class="c-key">if</span> (<span class="c-var">$validator</span>-&gt;<span class="c-fn">fails</span>()) { <span class="c-comment">/* ... */</span> }
+<span class="c-var">$validated</span> = <span class="c-var">$validator</span>-&gt;<span class="c-fn">validated</span>();</code></pre>
+
+    <p class="text"><strong>Пример 1 — ручная проверка ошибок:</strong></p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Support</span>\<span class="c-type">Facades</span>\<span class="c-type">Validator</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Http</span>\<span class="c-type">Request</span>;
+
+<span class="c-key">class</span> <span class="c-type">UserController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">import</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>)
+    {
+        <span class="c-var">$validator</span> = <span class="c-type">Validator</span>::<span class="c-fn">make</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">all</span>(), [
+            <span class="c-str">'file'</span>    =&gt; <span class="c-str">'required|file|mimes:csv'</span>,
+            <span class="c-str">'columns'</span> =&gt; <span class="c-str">'required|array|min:1'</span>,
+        ]);
+
+        <span class="c-comment">// Проверяем вручную</span>
+        <span class="c-key">if</span> (<span class="c-var">$validator</span>-&gt;<span class="c-fn">fails</span>()) {
+            <span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">back</span>()
+                -&gt;<span class="c-fn">withErrors</span>(<span class="c-var">$validator</span>)
+                -&gt;<span class="c-fn">withInput</span>();
+        }
+
+        <span class="c-comment">// Данные — через validated()</span>
+        <span class="c-var">$validated</span> = <span class="c-var">$validator</span>-&gt;<span class="c-fn">validated</span>();   <span class="c-comment">// массив</span>
+
+        <span class="c-comment">// Логика импорта...</span>
+    }
+}</code></pre>
+
+    <p class="text"><strong>Пример 2 — принудительный выброс исключения</strong> (если хочешь чтобы вело себя как <code>$request-&gt;validate()</code>):</p>
+<pre><code><span class="c-var">$validated</span> = <span class="c-type">Validator</span>::<span class="c-fn">make</span>(<span class="c-var">$data</span>, <span class="c-var">$rules</span>)-&gt;<span class="c-fn">validate</span>();
+<span class="c-comment">// Теперь $validated — массив, либо исключение при ошибке</span></code></pre>
+    <p class="text"><strong>Где брать данные:</strong> <code>$validator-&gt;validated()</code> (массив).</p>
+
+    <p class="text" style="margin-top:14px"><strong>3. Отдельный класс — FormRequest</strong></p>
+    <p class="text"><strong>Где:</strong> создаётся отдельный класс (например, <code>app/Http/Requests/StorePostRequest.php</code>), подключается в контроллере через type-hint. <strong>Паттерн:</strong> валидация и авторизация происходят ДО контроллера (на этапе DI). Если ошибка — контроллер даже не вызывается (редирект или 422). <strong>Что на выходе:</strong> в контроллере вызывается <code>validated()</code> или <code>safe()</code>, которые возвращают массив или объект.</p>
+<pre><code><span class="c-comment">// 1. Класс запроса</span>
+<span class="c-key">class</span> <span class="c-type">StorePostRequest</span> <span class="c-key">extends</span> <span class="c-type">FormRequest</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">authorize</span>() { <span class="c-key">return</span> <span class="c-key">true</span>; }
+
+    <span class="c-key">public function</span> <span class="c-fn">rules</span>() {
+        <span class="c-key">return</span> [
+            <span class="c-str">'title'</span> =&gt; <span class="c-str">'required|string|max:255'</span>,
+            <span class="c-str">'body'</span>  =&gt; <span class="c-str">'required|string'</span>,
+        ];
+    }
+}
+
+<span class="c-comment">// 2. Контроллер</span>
+<span class="c-key">class</span> <span class="c-type">PostController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-comment">// Внедряем FormRequest, а не Request</span>
+    <span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">StorePostRequest</span> <span class="c-var">$request</span>)
+    {
+        <span class="c-comment">// Валидация уже пройдена!
+
+        // Вариант 1: массив проверенных данных</span>
+        <span class="c-var">$data</span> = <span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>();       <span class="c-comment">// array</span>
+
+        <span class="c-comment">// Вариант 2: объект с методами only/except</span>
+        <span class="c-var">$safe</span> = <span class="c-var">$request</span>-&gt;<span class="c-fn">safe</span>();             <span class="c-comment">// Collection-подобный объект</span>
+        <span class="c-var">$only</span> = <span class="c-var">$request</span>-&gt;<span class="c-fn">safe</span>()-&gt;<span class="c-fn">only</span>([<span class="c-str">'title'</span>]);   <span class="c-comment">// ['title' =&gt; '...']</span>
+
+        <span class="c-type">Post</span>::<span class="c-fn">create</span>(<span class="c-var">$data</span>);
+    }
+}</code></pre>
+    <p class="text"><strong>Где брать данные:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>$request-&gt;validated()</code> — массив.</li>
+      <li><code>$request-&gt;safe()</code> — объект (позволяет цепочки <code>-&gt;only()</code>, <code>-&gt;except()</code>, <code>-&gt;all()</code>).</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="table" style="width:14px;height:14px"></i> Итоговая таблица «Где брать данные и ошибки»</div>
+    <table class="data-table">
+      <thead><tr><th>Способ</th><th>Сбор данных</th><th>Обработка ошибок</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Inline (<code>$request-&gt;validate()</code>)</td>
+          <td>Возвращает массив напрямую</td>
+          <td>Автоматически (редирект / JSON 422)</td>
+        </tr>
+        <tr>
+          <td><code>Validator::make()</code></td>
+          <td><code>$validator-&gt;validated()</code> — массив</td>
+          <td>Вручную через <code>fails()</code> или принудительно через <code>-&gt;validate()</code></td>
+        </tr>
+        <tr>
+          <td>FormRequest</td>
+          <td><code>$request-&gt;validated()</code> — массив;<br><code>$request-&gt;safe()</code> — объект</td>
+          <td>Автоматически (до контроллера)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="pitfall">
+      <strong>Важное предостережение:</strong> не используйте <code>$request-&gt;all()</code> в контроллере после валидации — в <code>all()</code> могут попасть лишние (невалидные) поля, которые злоумышленник подсунул в запрос. Это открытая mass-assignment уязвимость. Всегда берите только те данные, которые прошли проверку — через <code>validated()</code> или <code>safe()</code>.
     </div>
 
     <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="alert-triangle" style="width:14px;height:14px"></i> Что можно использовать везде, а что только в FormRequest</div>
