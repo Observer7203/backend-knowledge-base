@@ -1697,6 +1697,25 @@ ul.bullets strong{color:var(--text);}
     <div class="card"><h3><code>prepareForValidation()</code></h3><p class="text">Хук перед валидацией: можно изменить данные запроса (<code>$this-&gt;merge([...])</code>). Полезно для нормализации (trim, lowercase, конвертация типов).</p></div>
     <div class="card"><h3><code>passedValidation()</code></h3><p class="text">Хук после успешной валидации, перед возвратом в контроллер. Здесь — побочные действия, требующие валидных данных (логирование, dispatch event).</p></div>
     <div class="card"><h3>Доступ к валидным данным</h3><p class="text"><code>$request-&gt;validated()</code> — только валидные поля. <code>$request-&gt;safe()</code> — то же, но с методами <code>only/except/collect</code>. Не используйте <code>$request-&gt;all()</code> в контроллере после валидации — попадут невалидные поля.</p></div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="git-branch" style="width:14px;height:14px"></i> Почему <code>prepareForValidation()</code> без <code>return</code>, а остальные с <code>return</code></div>
+    <p class="text">Всё просто: разные методы выполняют разные задачи, и их сигнатуры (возвращаемые типы) отражают их предназначение.</p>
+
+    <p class="text"><strong>Методы с <code>return</code> — это геттеры.</strong> Они возвращают данные, которые Laravel использует, но ничего не меняют — просто отдают информацию:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>authorize()</code> — возвращает <code>bool</code>, чтобы фреймворк понял: разрешено или запрещено действие.</li>
+      <li><code>rules()</code> — возвращает <code>array</code> правил, которые нужно применить к данным.</li>
+      <li><code>messages()</code> — возвращает <code>array</code> кастомных сообщений об ошибках.</li>
+      <li><code>attributes()</code> — возвращает <code>array</code> человекочитаемых имён полей.</li>
+    </ul>
+
+    <p class="text"><strong>Метод <code>prepareForValidation()</code> без <code>return</code> — это действие (mutator).</strong> Он мутирует (изменяет) данные запроса до запуска валидации. Задача — привести данные к нужному виду: обрезать пробелы, привести email к нижнему регистру, преобразовать типы, удалить лишние символы.</p>
+
+    <p class="text">Ему не нужно ничего возвращать, потому что он работает с объектом <code>$this</code> напрямую — изменяет его свойства через <code>$this-&gt;merge()</code> или <code>$this-&gt;replace()</code>. Laravel после вызова <code>prepareForValidation()</code> продолжит работать с тем же объектом <code>$request</code>, но уже с изменёнными данными. Поэтому метод объявлен как <code>void</code> — он не возвращает значение, а выполняет побочное действие.</p>
+
+    <div class="remember-box">
+      <strong>Правило:</strong> если метод <em>отдаёт</em> данные фреймворку — <code>return array/bool</code>. Если <em>меняет</em> состояние объекта — <code>void</code>. Это правило работает не только в FormRequest, но и в целом в объектно-ориентированном дизайне.
+    </div>
   </div>
 
   <div class="subsection" id="val-compare">
