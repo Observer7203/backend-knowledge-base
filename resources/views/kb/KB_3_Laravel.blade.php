@@ -206,6 +206,13 @@ ul.bullets strong{color:var(--text);}
 
   <div class="nav-group-label">Асинхронность</div>
   <a class="nav-item" onclick="showSection('queues',this)"><i data-lucide="list-checks"></i> Queues</a>
+  <div class="nav-subgroup">
+    <a class="nav-subitem" onclick="showSub('queues','q-purpose',this)">Назначение</a>
+    <a class="nav-subitem" onclick="showSub('queues','q-drivers',this)">Драйверы (sync/database/redis/sqs/beanstalkd)</a>
+    <a class="nav-subitem" onclick="showSub('queues','q-features',this)">Возможности (jobs/retry/chains/batches)</a>
+    <a class="nav-subitem" onclick="showSub('queues','q-practice',this)">Практика: job с retry + idempotency</a>
+    <a class="nav-subitem" onclick="showSub('queues','q-pitfalls',this)">Особые случаи</a>
+  </div>
   <a class="nav-item" onclick="showSection('events',this)"><i data-lucide="activity"></i> Events &amp; Listeners</a>
   <a class="nav-item" onclick="showSection('scheduler',this)"><i data-lucide="calendar-clock"></i> Scheduler</a>
 
@@ -3978,14 +3985,90 @@ CACHE_DRIVER=redis</code></pre>
 
 <div id="sec-queues" class="section">
   <div class="section-title">Queues</div>
-  <div class="subsection">
+  <div class="subsection" id="q-purpose">
     <div class="subsection-title"><i data-lucide="book-open"></i> Назначение</div>
     <p class="text">Очереди — механизм отложенного выполнения задач. Web-запрос ставит job в очередь и возвращает ответ; воркер забирает job и исполняет. Это разгружает HTTP-обработчики, обеспечивает retry при сбоях, позволяет масштабировать воркеры независимо. Понимание драйверов, retry-логики, batching и race conditions — обязательно для всего, что выходит за рамки «отправить письмо».</p>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="q-drivers">
+    <div class="subsection-title"><i data-lucide="hard-drive"></i> Драйверы очередей — где хранятся jobs</div>
+
+    <p class="text">Очереди в Laravel позволяют выполнять ресурсоёмкие задачи (отправка писем, обработка изображений, вызов API) <strong>асинхронно</strong>, чтобы не тормозить ответ пользователю. Драйвер определяет, где и как хранятся и обрабатываются задания (jobs). Настраивается через <code>QUEUE_CONNECTION</code> в <code>.env</code>.</p>
+
+    <div class="card">
+      <h3>1. <code>sync</code> — синхронное выполнение (отладка / тесты)</h3>
+      <p>Задание выполняется <strong>немедленно</strong> в том же процессе, что и запрос — не попадает в очередь вообще.</p>
+      <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+        <li>Используется для локальной разработки и тестов, чтобы видеть ошибки сразу.</li>
+        <li>Не подходит для продакшена — блокирует ответ клиенту.</li>
+      </ul>
+<pre><code>QUEUE_CONNECTION=sync</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>2. <code>database</code> — таблица в БД (просто, надёжно)</h3>
+      <p>Задания сохраняются в таблицу <code>jobs</code> в вашей БД (MySQL/PostgreSQL). Работник (<code>php artisan queue:work</code>) периодически забирает новые задания.</p>
+      <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+        <li><strong>Плюсы:</strong> не требует внешних сервисов, легко настраивается.</li>
+        <li><strong>Минусы:</strong> медленнее in-memory решений, создаёт нагрузку на БД.</li>
+      </ul>
+<pre><code>QUEUE_CONNECTION=database
+
+<span class="c-comment"># Создать таблицу jobs (в L11+ обычно уже есть по умолчанию)</span>
+php artisan queue:table
+php artisan migrate</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>3. <code>redis</code> — Redis (быстро, для продакшена)</h3>
+      <p>Использует структуру данных <strong>list</strong> в Redis для хранения заданий.</p>
+      <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+        <li>Очень быстрый, хорошо масштабируется, подходит для высоких нагрузок.</li>
+        <li>Требует установленного и настроенного Redis-сервера.</li>
+        <li>Совместим с <strong>Laravel Horizon</strong> — дашборд + мониторинг очередей.</li>
+      </ul>
+<pre><code>QUEUE_CONNECTION=redis</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>4. <code>sqs</code> — Amazon SQS (облачный)</h3>
+      <p>Использует очередь <strong>AWS Simple Queue Service</strong>. Подходит для приложений, работающих в облаке AWS — высокая надёжность, автомасштабирование.</p>
+      <p>Настройка требует ключей доступа и региона (<code>AWS_ACCESS_KEY_ID</code>, <code>AWS_SECRET_ACCESS_KEY</code>, <code>SQS_QUEUE</code>, <code>AWS_DEFAULT_REGION</code>).</p>
+    </div>
+
+    <div class="card">
+      <h3>5. <code>beanstalkd</code> — легковесный внешний сервис</h3>
+      <p>Использует протокол <strong>Beanstalkd</strong> — очень простой и быстрый. Требует установки и запуска beanstalkd-сервера.</p>
+      <p>Хорош для небольших и средних проектов, где Redis избыточен, но database слишком медленный.</p>
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="git-compare" style="width:14px;height:14px"></i> Как выбрать драйвер</div>
+    <table class="data-table">
+      <thead><tr><th>Сценарий</th><th>Драйвер</th></tr></thead>
+      <tbody>
+        <tr><td>Разработка / тестирование (видеть ошибки сразу)</td><td><code>sync</code></td></tr>
+        <tr><td>Проект без внешних сервисов, малая нагрузка</td><td><code>database</code></td></tr>
+        <tr><td>Проект с высокой нагрузкой, нужна скорость</td><td><code>redis</code> (+ Horizon)</td></tr>
+        <tr><td>Проект в облаке AWS</td><td><code>sqs</code></td></tr>
+        <tr><td>Минимальные требования к инфраструктуре, средний трафик</td><td><code>beanstalkd</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="remember-box">
+      <strong>Ключевое:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Драйвер указывается в <code>.env</code>: <code>QUEUE_CONNECTION=...</code>.</li>
+        <li>Запуск воркера: <code>php artisan queue:work</code> (или <code>queue:listen</code> для разработки — перезапускается при изменении кода).</li>
+        <li>Для каждого драйвера настройки в <code>config/queue.php</code> (соединение, имя очереди, retry, block_for и т.д.).</li>
+        <li>Можно объявить <strong>несколько соединений</strong> и обращаться по имени: <code>Job::dispatch()-&gt;onConnection('redis-fast')</code>.</li>
+      </ul>
+      Очереди — важная часть архитектуры Laravel, позволяющая асинхронно обрабатывать задачи и улучшать отзывчивость приложения.
+    </div>
+  </div>
+
+  <div class="subsection" id="q-features">
     <div class="subsection-title"><i data-lucide="list"></i> Возможности</div>
-    <div class="card"><h3>Драйверы</h3><p class="text"><code>sync</code> — исполнение в текущем процессе (тесты). <code>database</code> — таблица jobs в БД (просто, медленно). <code>redis</code> — Redis-list, быстрый. <code>sqs</code>, <code>beanstalkd</code> — внешние.</p></div>
+    <div class="card"><h3>Драйверы</h3><p class="text"><code>sync</code> — исполнение в текущем процессе (тесты). <code>database</code> — таблица jobs в БД (просто, медленно). <code>redis</code> — Redis-list, быстрый. <code>sqs</code>, <code>beanstalkd</code> — внешние. Подробнее — в подразделе <strong>Драйверы</strong> выше.</p></div>
     <div class="card"><h3>Job-классы</h3><p class="text">Класс с <code>handle()</code> методом. Имплементирует <code>ShouldQueue</code>. Свойства: <code>$tries</code>, <code>$timeout</code>, <code>$maxExceptions</code>, <code>$backoff</code>.</p></div>
     <div class="card"><h3>Retry и backoff</h3><p class="text">При исключении job ставится обратно в очередь до <code>$tries</code> раз. <code>$backoff = [10, 30, 60]</code> — задержки между попытками. После исчерпания — таблица <code>failed_jobs</code>.</p></div>
     <div class="card"><h3>Chains, Batches</h3><p class="text">Chain — последовательное исполнение нескольких jobs (если один упал — остальные не идут). Batch — параллельное с финальным callback, когда все завершились (или хотя бы один упал).</p></div>
@@ -3993,7 +4076,7 @@ CACHE_DRIVER=redis</code></pre>
     <div class="card"><h3>Unique jobs</h3><p class="text"><code>ShouldBeUnique</code> — гарантия, что в очереди не более одного job этого типа с тем же <code>$uniqueId</code>. Защита от двойной постановки.</p></div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="q-practice">
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика: job с retry и idempotency</div>
 <pre><code><span class="c-key">final class</span> <span class="c-type">SendInvoice</span> <span class="c-key">implements</span> <span class="c-type">ShouldQueue</span>
 {
@@ -4025,7 +4108,7 @@ CACHE_DRIVER=redis</code></pre>
 </code></pre>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="q-pitfalls">
     <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
     <div class="pitfall"><strong>1. Job без идемпотентности.</strong> Retry означает, что handle вызовется N раз при сбоях. Если job отправляет письмо без проверки факта — пользователь получит N писем. Делайте handle идемпотентным.</div>
     <div class="pitfall"><strong>2. Передача Eloquent-модели в job.</strong> Модель сериализуется через <code>SerializesModels</code> — в БД хранится <code>['id' =&gt; 42]</code>, а в handle снова загружается через <code>findOrFail</code>. Если строка удалена между постановкой и исполнением — <code>ModelNotFoundException</code>.</div>
