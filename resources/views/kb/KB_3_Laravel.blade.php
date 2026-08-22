@@ -182,6 +182,7 @@ ul.bullets strong{color:var(--text);}
   <a class="nav-item" onclick="showSection('cache',this)"><i data-lucide="zap"></i> Cache</a>
   <div class="nav-subgroup">
     <a class="nav-subitem" onclick="showSub('cache','cache-purpose',this)">Назначение + инвалидация</a>
+    <a class="nav-subitem" onclick="showSub('cache','cache-drivers',this)">Драйверы (file/db/redis/memcached/...)</a>
     <a class="nav-subitem" onclick="showSub('cache','cache-features',this)">Возможности (tags/locks/stores)</a>
     <a class="nav-subitem" onclick="showSub('cache','cache-basics',this)">Базовые операции (put/get/remember/pull)</a>
     <a class="nav-subitem" onclick="showSub('cache','cache-tags',this)">Cache Tags — групповая инвалидация</a>
@@ -3110,6 +3111,76 @@ ul.bullets strong{color:var(--text);}
 
     <div class="tip">
       <strong>Термин: инвалидация.</strong> <strong>Инвалидация</strong> — это процесс объявления данных или объектов недействительными и их последующего удаления или обновления, потому что исходная информация изменилась. В контексте кеша: если в БД изменился <code>User::find(1)</code>, старая закешированная версия становится «недействительной» — её надо удалить (<code>Cache::forget('user:1')</code>) или перезаписать, иначе пользователь будет видеть устаревшие данные. Инвалидация — одна из самых сложных задач в кешировании («There are only two hard things in Computer Science: cache invalidation and naming things»).
+    </div>
+  </div>
+
+  <div class="subsection" id="cache-drivers">
+    <div class="subsection-title"><i data-lucide="hard-drive"></i> Драйверы кеширования — не только Redis</div>
+
+    <p class="text">Redis — это не единственное и даже не стандартное кеширование в Laravel. Это один из многих вариантов (<strong>драйверов</strong>), которые фреймворк поддерживает «из коробки». Laravel предоставляет <strong>единый API</strong> для работы с разными системами хранения — код одинаковый, меняется только конфигурация.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="table" style="width:14px;height:14px"></i> Поддерживаемые драйверы</div>
+    <table class="data-table">
+      <thead><tr><th>Драйвер</th><th>Где хранит</th><th>Когда использовать</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>file</code></td>
+          <td>Файлы на сервере в <code>storage/framework/cache/data</code></td>
+          <td>Самый простой вариант. Локальная разработка, маленькие проекты без внешних сервисов.</td>
+        </tr>
+        <tr>
+          <td><code>database</code></td>
+          <td>Таблица в БД (создаётся через <code>php artisan cache:table</code> + migrate)</td>
+          <td>Когда нельзя поднять Redis/Memcached. В актуальных версиях Laravel (11.x) — по умолчанию.</td>
+        </tr>
+        <tr>
+          <td><code>redis</code></td>
+          <td>In-memory хранилище Redis</td>
+          <td>Продакшен, высокая нагрузка. Богатый функционал: структуры данных, pub/sub, atomic ops.</td>
+        </tr>
+        <tr>
+          <td><code>memcached</code></td>
+          <td>In-memory хранилище Memcached</td>
+          <td>Тоже продакшен. Проще Redis, только ключ-значение — но очень быстрый.</td>
+        </tr>
+        <tr>
+          <td><code>dynamodb</code></td>
+          <td>AWS DynamoDB</td>
+          <td>Проекты в экосистеме Amazon, serverless на Lambda.</td>
+        </tr>
+        <tr>
+          <td><code>array</code></td>
+          <td>Массив PHP в памяти запроса</td>
+          <td>Только для тестов — данные не сохраняются между запросами.</td>
+        </tr>
+        <tr>
+          <td><code>null</code></td>
+          <td>Ничего не сохраняет</td>
+          <td>Драйвер-заглушка. Также для тестов, когда нужно отключить кеширование.</td>
+        </tr>
+        <tr>
+          <td><code>apc</code> / <code>apcu</code></td>
+          <td>PHP APCu (in-memory на процесс)</td>
+          <td>Устаревшие драйверы. Иногда упоминаются в старой документации.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="settings" style="width:14px;height:14px"></i> Какой драйвер по умолчанию</div>
+    <p class="text">Драйвер по умолчанию определяется в файле <code>config/cache.php</code> через переменную окружения <code>CACHE_DRIVER</code>. В разных версиях Laravel настройки по умолчанию могут отличаться, но в актуальных версиях (например, 11.x) по умолчанию используется <code>database</code>.</p>
+<pre><code><span class="c-comment"># .env</span>
+CACHE_DRIVER=redis</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="rocket" style="width:14px;height:14px"></i> Что выбирать в продакшене</div>
+    <p class="text">Для высоконагруженных проектов рекомендуется использовать <strong>in-memory драйверы</strong> — <code>redis</code> или <code>memcached</code>. Они хранят данные в оперативной памяти и дают максимальную скорость.</p>
+    <p class="text">Выбор между Redis и Memcached обычно сводится к тому, что <strong>Redis предлагает более богатый функционал</strong>: поддержку структур данных (списки, хеши, отсортированные множества), pub/sub, atomic locks, persistence — оставаясь при этом очень быстрым. Memcached — минималистичнее, чуть быстрее на простом ключ-значении, но не умеет ничего кроме этого.</p>
+
+    <div class="pitfall">
+      <strong>Ограничение <code>Cache::tags()</code>.</strong> Метод для групповой работы с кешем через теги <strong>работает только с драйверами <code>redis</code> и <code>memcached</code></strong>. При использовании <code>file</code>, <code>database</code> или других драйверов вызов <code>tags()</code> выбросит исключение.
+    </div>
+
+    <div class="remember-box">
+      <strong>Итог.</strong> У вас есть полная свобода выбора — от простого файлового кеша для разработки до высокопроизводительных Redis / Memcached в продакшене. Всё настраивается через конфигурационный файл и переменную окружения <code>CACHE_DRIVER</code>. Единый API <code>Cache::put()</code>/<code>Cache::get()</code> работает одинаково независимо от драйвера — можно менять хранилище без переписывания кода.
     </div>
   </div>
 
