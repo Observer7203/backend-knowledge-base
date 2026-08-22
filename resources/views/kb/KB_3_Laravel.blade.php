@@ -3100,6 +3100,10 @@ ul.bullets strong{color:var(--text);}
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="book-open"></i> Назначение</div>
     <p class="text">Кеш — способ обменять память на CPU/IO. Laravel предлагает единый интерфейс над несколькими бэкендами: <code>file</code>, <code>database</code>, <code>redis</code>, <code>memcached</code>, <code>array</code> (in-memory, для тестов). Понимание различий между бэкендами, паттернов инвалидации и потенциальных race conditions — обязательное знание для middle.</p>
+
+    <div class="tip">
+      <strong>Термин: инвалидация.</strong> <strong>Инвалидация</strong> — это процесс объявления данных или объектов недействительными и их последующего удаления или обновления, потому что исходная информация изменилась. В контексте кеша: если в БД изменился <code>User::find(1)</code>, старая закешированная версия становится «недействительной» — её надо удалить (<code>Cache::forget('user:1')</code>) или перезаписать, иначе пользователь будет видеть устаревшие данные. Инвалидация — одна из самых сложных задач в кешировании («There are only two hard things in Computer Science: cache invalidation and naming things»).
+    </div>
   </div>
 
   <div class="subsection">
