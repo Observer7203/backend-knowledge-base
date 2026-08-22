@@ -184,6 +184,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('cache','cache-purpose',this)">Назначение + инвалидация</a>
     <a class="nav-subitem" onclick="showSub('cache','cache-features',this)">Возможности (tags/locks/stores)</a>
     <a class="nav-subitem" onclick="showSub('cache','cache-basics',this)">Базовые операции (put/get/remember/pull)</a>
+    <a class="nav-subitem" onclick="showSub('cache','cache-tags',this)">Cache Tags — групповая инвалидация</a>
     <a class="nav-subitem" onclick="showSub('cache','cache-pull',this)">pull() — get + forget за один вызов</a>
   </div>
 
@@ -3188,6 +3189,106 @@ ul.bullets strong{color:var(--text);}
         <li><code>pull</code> — прочитать + удалить за один вызов</li>
       </ul>
       Кеш используется для ускорения работы (результаты запросов, сложные вычисления, данные из внешних API) и разгрузки БД.
+    </div>
+  </div>
+
+  <div class="subsection" id="cache-tags">
+    <div class="subsection-title"><i data-lucide="tags"></i> Cache Tags — групповая инвалидация</div>
+
+    <p class="text"><strong>Что это.</strong> Теги позволяют объединять несколько ключей кеша в логические группы и очищать всю группу разом. Удобно, когда у вас много связанных данных (например, все кеши, зависящие от пользователя или заказов).</p>
+
+    <p class="text"><strong>Как использовать:</strong></p>
+<pre><code><span class="c-comment">// Сохраняем значение с тегами</span>
+<span class="c-type">Cache</span>::<span class="c-fn">tags</span>([<span class="c-str">'users'</span>, <span class="c-str">'profile'</span>])-&gt;<span class="c-fn">put</span>(<span class="c-str">'user_123'</span>, <span class="c-var">$userData</span>, <span class="c-num">3600</span>);
+
+<span class="c-comment">// Несколько ключей в одной группе</span>
+<span class="c-type">Cache</span>::<span class="c-fn">tags</span>([<span class="c-str">'orders'</span>])-&gt;<span class="c-fn">put</span>(<span class="c-str">'order_456'</span>, <span class="c-var">$orderData</span>, <span class="c-num">3600</span>);
+<span class="c-type">Cache</span>::<span class="c-fn">tags</span>([<span class="c-str">'orders'</span>, <span class="c-str">'invoices'</span>])-&gt;<span class="c-fn">put</span>(<span class="c-str">'invoice_789'</span>, <span class="c-var">$invoiceData</span>, <span class="c-num">3600</span>);
+
+<span class="c-comment">// Получаем значение по ключу с тегами</span>
+<span class="c-var">$user</span> = <span class="c-type">Cache</span>::<span class="c-fn">tags</span>([<span class="c-str">'users'</span>])-&gt;<span class="c-fn">get</span>(<span class="c-str">'user_123'</span>);
+
+<span class="c-comment">// Очищаем все ключи с тегом 'users'</span>
+<span class="c-type">Cache</span>::<span class="c-fn">tags</span>([<span class="c-str">'users'</span>])-&gt;<span class="c-fn">flush</span>();
+
+<span class="c-comment">// Очищаем несколько тегов сразу</span>
+<span class="c-type">Cache</span>::<span class="c-fn">tags</span>([<span class="c-str">'orders'</span>, <span class="c-str">'invoices'</span>])-&gt;<span class="c-fn">flush</span>();</code></pre>
+
+    <p class="text"><strong>Зачем это нужно:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Групповая инвалидация</strong> — если обновили данные пользователя, можно очистить весь кеш связанный с этим пользователем, не думая о том, какие ключи были созданы.</li>
+      <li><strong>Упрощение управления</strong> — вместо запоминания всех ключей вы просто помечаете их тегами и сбрасываете группу.</li>
+      <li><strong>Повышение производительности</strong> — избавление от устаревших данных без перебора всех ключей по отдельности.</li>
+    </ul>
+
+    <div class="pitfall">
+      <strong>Ограничения:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Работает только с драйверами <strong>Redis</strong> и <strong>Memcached</strong>. Для <code>file</code>, <code>database</code>, <code>array</code> теги не поддерживаются.</li>
+        <li>При использовании <code>Cache::tags()</code> нужен правильный порядок вызовов: сначала <code>tags()</code>, затем <code>put()</code>/<code>get()</code>/<code>flush()</code>.</li>
+        <li>Теги хранятся отдельно от ключей, поэтому инвалидация группы происходит быстро и атомарно.</li>
+      </ul>
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="cpu" style="width:14px;height:14px"></i> Как теги работают под капотом</div>
+
+    <p class="text"><strong>Разберём вызов</strong> <code>Cache::tags(['users', 'profile'])-&gt;put('user_123', $userData, 3600)</code>:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>'user_123'</code> — <strong>строковый ключ</strong>, по которому будете получать данные. Вы сами его придумываете (например, для пользователя с ID = 123 удобно использовать <code>"user_123"</code>).</li>
+      <li><code>$userData</code> — сами данные (массив, объект, строка — что угодно).</li>
+      <li><code>['users', 'profile']</code> — <strong>метки</strong>, которые присваиваются ключу. Хранятся <em>отдельно</em> и позволяют группировать ключи.</li>
+    </ul>
+
+    <p class="text"><strong>Как Laravel понимает связь тегов и ключей.</strong> Под капотом (для Redis/Memcached) Laravel создаёт отдельные структуры:</p>
+    <ol style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Сохраняет основное значение по ключу <code>'user_123'</code> — как обычно.</li>
+      <li>Для каждого тега (<code>users</code> и <code>profile</code>) создаёт список ключей, которые относятся к этому тегу. Например, в Redis есть отдельный ключ <code>"tag:users:keys"</code>, внутри которого хранится список <code>['user_123', 'user_456', ...]</code>.</li>
+      <li>При <code>Cache::tags(['users'])-&gt;flush()</code> Laravel проходит по списку ключей тега <code>users</code> и удаляет их один за другим.</li>
+    </ol>
+    <p class="text">Таким образом, теги не встраиваются в основной ключ — они хранятся отдельно в <strong>индексах</strong>. Поэтому один и тот же ключ можно привязать к нескольким тегам, и он будет удалён при очистке любого из них.</p>
+
+    <p class="text"><strong>Пример с несколькими тегами:</strong></p>
+<pre><code><span class="c-comment">// Сохраняем профиль пользователя с двумя тегами</span>
+<span class="c-type">Cache</span>::<span class="c-fn">tags</span>([<span class="c-str">'users'</span>, <span class="c-str">'profile'</span>])-&gt;<span class="c-fn">put</span>(<span class="c-str">'user_123'</span>, <span class="c-var">$userData</span>, <span class="c-num">3600</span>);
+
+<span class="c-comment">// Сохраняем настройки пользователя только с тегом 'users'</span>
+<span class="c-type">Cache</span>::<span class="c-fn">tags</span>([<span class="c-str">'users'</span>])-&gt;<span class="c-fn">put</span>(<span class="c-str">'user_settings_123'</span>, <span class="c-var">$settings</span>, <span class="c-num">3600</span>);
+
+<span class="c-comment">// Получаем данные (нужно указывать теги, если они были при сохранении)</span>
+<span class="c-var">$profile</span>  = <span class="c-type">Cache</span>::<span class="c-fn">tags</span>([<span class="c-str">'users'</span>])-&gt;<span class="c-fn">get</span>(<span class="c-str">'user_123'</span>);           <span class="c-comment">// работает</span>
+<span class="c-var">$settings</span> = <span class="c-type">Cache</span>::<span class="c-fn">tags</span>([<span class="c-str">'users'</span>])-&gt;<span class="c-fn">get</span>(<span class="c-str">'user_settings_123'</span>);   <span class="c-comment">// работает</span>
+
+<span class="c-comment">// А вот так — вернёт null, ключ хранится в отдельном пространстве:</span>
+<span class="c-comment">// Cache::get('user_123');   // null!</span>
+
+<span class="c-comment">// Очищаем всё с тегом 'users' — удалится и user_123, и user_settings_123</span>
+<span class="c-type">Cache</span>::<span class="c-fn">tags</span>([<span class="c-str">'users'</span>])-&gt;<span class="c-fn">flush</span>();
+
+<span class="c-comment">// Если очистить только 'profile' — удалится только user_123 (у него есть тег profile)</span>
+<span class="c-type">Cache</span>::<span class="c-fn">tags</span>([<span class="c-str">'profile'</span>])-&gt;<span class="c-fn">flush</span>();</code></pre>
+
+    <p class="text"><strong>Практический сценарий — управление кешем пользователя:</strong></p>
+<pre><code><span class="c-comment">// При сохранении разных частей данных пользователя</span>
+<span class="c-type">Cache</span>::<span class="c-fn">tags</span>([<span class="c-str">'user_'</span> . <span class="c-var">$userId</span>])-&gt;<span class="c-fn">put</span>(<span class="c-str">'profile'</span>, <span class="c-var">$profile</span>, <span class="c-num">3600</span>);
+<span class="c-type">Cache</span>::<span class="c-fn">tags</span>([<span class="c-str">'user_'</span> . <span class="c-var">$userId</span>])-&gt;<span class="c-fn">put</span>(<span class="c-str">'settings'</span>, <span class="c-var">$settings</span>, <span class="c-num">3600</span>);
+
+<span class="c-comment">// При обновлении профиля — одним вызовом очищаем всё связанное</span>
+<span class="c-type">Cache</span>::<span class="c-fn">tags</span>([<span class="c-str">'user_'</span> . <span class="c-var">$userId</span>])-&gt;<span class="c-fn">flush</span>();</code></pre>
+
+    <div class="pitfall">
+      <strong>Ключевое.</strong> Если сохранили значение с тегами — получить его можно <em>только</em> через <code>Cache::tags(...)-&gt;get(...)</code>. Обычный <code>Cache::get()</code> без тегов вернёт <code>null</code>, потому что ключ физически хранится в отдельном пространстве.
+    </div>
+
+    <div class="remember-box">
+      <strong>Итог по механике тегов:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Ключ (<code>user_123</code>) — произвольная строка, которую вы придумываете.</li>
+        <li>Теги — отдельные индексы, хранящие списки ключей.</li>
+        <li>При <code>put()</code> Laravel добавляет ключ в индексы тегов.</li>
+        <li>При <code>flush()</code> удаляет все ключи из индекса тега.</li>
+        <li>При <code>get()</code> проверяет наличие ключа в указанном индексе и возвращает данные.</li>
+        <li>Работает только с Redis/Memcached — для file/database теги недоступны.</li>
+      </ul>
     </div>
   </div>
 
