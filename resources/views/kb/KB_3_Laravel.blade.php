@@ -2563,6 +2563,50 @@ ul.bullets strong{color:var(--text);}
     <span class="c-comment">// return не нужен — $q уже модифицирован</span>
 }</code></pre>
     </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="lock" style="width:14px;height:14px"></i> Локальные скоупы работают только на чтение (для построения запросов)</div>
+
+    <p class="text">Локальные скоупы (<code>scopeActive</code>, <code>scopePaid</code> и т.п.) <strong>не используются для установки или изменения данных</strong>. Они предназначены исключительно для фильтрации при <em>выборке</em> данных из БД.</p>
+
+    <p class="text"><strong>Что делают скоупы:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Добавляют условия (<code>where</code>, <code>orderBy</code>, <code>limit</code> и т.д.) в запрос.</li>
+      <li>Возвращают построитель запросов (<code>Builder</code>) с добавленными условиями.</li>
+      <li>Вызываются в цепочке <em>перед</em> финальными методами (<code>get()</code>, <code>first()</code>, <code>paginate()</code>).</li>
+    </ul>
+<pre><code><span class="c-comment">// Скоуп добавляет условие WHERE status = 'active'</span>
+<span class="c-key">public function</span> <span class="c-fn">scopeActive</span>(<span class="c-var">$query</span>)
+{
+    <span class="c-key">return</span> <span class="c-var">$query</span>-&gt;<span class="c-fn">where</span>(<span class="c-str">'status'</span>, <span class="c-str">'active'</span>);
+}
+
+<span class="c-comment">// Использование — только для выборки</span>
+<span class="c-var">$activeUsers</span> = <span class="c-type">User</span>::<span class="c-fn">active</span>()-&gt;<span class="c-fn">get</span>();</code></pre>
+
+    <p class="text"><strong>Для изменения данных при записи используются мутаторы или касты:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Мутатор (setter)</strong> — преобразует значение перед сохранением в БД.</li>
+      <li><strong>Каст</strong> (<code>$casts</code>) — тоже влияет на сохранение (приводит к нужному типу).</li>
+    </ul>
+<pre><code><span class="c-comment">// Мутатор: перед сохранением приводит статус к нижнему регистру</span>
+<span class="c-key">public function</span> <span class="c-fn">setStatusAttribute</span>(<span class="c-var">$value</span>)
+{
+    <span class="c-var">$this</span>-&gt;<span class="c-var">attributes</span>[<span class="c-str">'status'</span>] = <span class="c-fn">strtolower</span>(<span class="c-var">$value</span>);
+}
+
+<span class="c-comment">// Каст: гарантирует, что поле status всегда будет строкой</span>
+<span class="c-key">protected</span> <span class="c-var">$casts</span> = [
+    <span class="c-str">'status'</span> =&gt; <span class="c-str">'string'</span>,
+];</code></pre>
+
+    <div class="remember-box">
+      <strong>Скоупы не имеют отношения к записи:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Не вызываются автоматически при <code>save()</code> или <code>create()</code>.</li>
+        <li>Не влияют на мутаторы или касты.</li>
+        <li>Их задача — только формировать SQL-запросы для <em>чтения</em>.</li>
+      </ul>
+    </div>
   </div>
 
   <div class="subsection" id="el-accessors">
