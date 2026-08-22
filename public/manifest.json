@@ -1,0 +1,26 @@
+{
+    "name": "Backend Knowledge Base",
+    "short_name": "Backend KB",
+    "description": "PHP / Laravel / SQL knowledge for backend interviews",
+    "start_url": "/",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait",
+    "background_color": "#181C32",
+    "theme_color": "#404357",
+    "lang": "ru",
+    "icons": [
+        {
+            "src": "/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any maskable"
+        }
+    ]
+}

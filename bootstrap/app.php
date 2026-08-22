@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Авто-проверка верстки KB-страниц (только local/dev/testing)
         $middleware->web(append: [
             \App\Http\Middleware\KbLayoutChecker::class,
+            \App\Http\Middleware\InjectPwaMeta::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
