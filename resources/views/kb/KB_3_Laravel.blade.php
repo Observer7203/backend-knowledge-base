@@ -4181,6 +4181,53 @@ php artisan migrate</code></pre>
       </ul>
       <strong>Итог.</strong> Job-классы — основа асинхронной обработки в Laravel. Они определяют работу (<code>handle()</code>), а свойства (<code>$tries</code>, <code>$timeout</code>, <code>$backoff</code>) управляют поведением при ошибках, делая систему устойчивой и предсказуемой.
     </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="workflow" style="width:14px;height:14px"></i> Как это работает: асинхронность и параллельность</div>
+
+    <p class="text">Job-классы с интерфейсом <code>ShouldQueue</code> — это <strong>асинхронные задачи</strong>, которые выполняются параллельно, не блокируя основной процесс (поток выполнения, который обрабатывает запрос пользователя).</p>
+
+    <p class="text"><strong>Полный поток выполнения:</strong></p>
+    <ol style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Основной процесс (контроллер, команда) создаёт задачу и вызывает <code>dispatch()</code>.</li>
+      <li>Задача <em>немедленно</em> помещается в очередь (в драйвер: БД, Redis, SQS и т.д.).</li>
+      <li>Основной процесс продолжает выполнение — отправляет ответ пользователю, не дожидаясь завершения задачи.</li>
+      <li>Отдельный воркер (<code>php artisan queue:work</code>) в фоновом режиме забирает задачи из очереди и выполняет их одновременно с другими запросами и другими воркерами.</li>
+    </ol>
+    <p class="text">Таким образом, пока пользователь получает мгновенный ответ, тяжёлая обработка (отправка писем, генерация PDF, импорт данных) происходит за кадром, не замедляя работу приложения.</p>
+
+    <p class="text"><strong>Про параллельность:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Один воркер обрабатывает только <strong>одну задачу за раз</strong>.</li>
+      <li>Чтобы обрабатывать задачи <strong>параллельно</strong>, нужно запустить несколько воркеров (или использовать <code>supervisor</code> для управления процессами).</li>
+      <li>Воркеры могут быть запущены на <strong>разных серверах</strong> — это распределённая обработка.</li>
+    </ul>
+
+    <p class="text"><strong>Пример:</strong></p>
+<pre><code><span class="c-comment">// В контроллере</span>
+<span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>)
+{
+    <span class="c-var">$order</span> = <span class="c-type">Order</span>::<span class="c-fn">create</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>());
+
+    <span class="c-comment">// Отправляем задачу в очередь — займёт миллисекунды</span>
+    <span class="c-type">SendOrderConfirmation</span>::<span class="c-fn">dispatch</span>(<span class="c-var">$order</span>);
+
+    <span class="c-comment">// Ответ пользователю возвращается сразу, без ожидания письма</span>
+    <span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">json</span>([<span class="c-str">'message'</span> =&gt; <span class="c-str">'Order placed, confirmation will be sent'</span>], <span class="c-num">201</span>);
+}</code></pre>
+    <p class="text">Пользователь получает ответ сразу, а письмо отправляется <em>параллельно</em> в фоне.</p>
+
+    <div class="pitfall">
+      <strong>Важно:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><strong>Не все Job-классы асинхронны.</strong> Если не добавить <code>implements ShouldQueue</code>, задача выполняется <em>синхронно</em> прямо в момент <code>dispatch()</code>.</li>
+        <li>Параллельность ограничена количеством запущенных воркеров и настройками очереди (например, <code>php artisan queue:work --queue=high,default</code>).</li>
+        <li>Даже с <strong>одним воркером</strong> задачи выполняются последовательно, но всё равно <em>асинхронно</em> — не блокируют основной процесс. Параллельность — это уже вопрос масштабирования.</li>
+      </ul>
+    </div>
+
+    <div class="remember-box">
+      <strong>Итог по параллельности.</strong> Job-классы с <code>ShouldQueue</code> — способ выполнять тяжёлые операции фоново, не блокируя пользовательские запросы. Обрабатываются параллельно при наличии нескольких воркеров и значительно повышают отзывчивость приложения. Формула: <em>больше воркеров → выше пропускная способность обработки очереди</em>.
+    </div>
   </div>
 
   <div class="subsection" id="q-features">
