@@ -2734,6 +2734,53 @@ ul.bullets strong{color:var(--text);}
     <div class="remember-box">
       <strong>Итог.</strong> <strong>Accessor</strong> — преобразует значение при чтении. <strong>Mutator</strong> — преобразует значение при записи. <code>Attribute::make()</code> — основной способ в Laravel 9+. <code>shouldCache()</code> — кеширование результата аксессора на время запроса.
     </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="filter" style="width:14px;height:14px"></i> Ментальная модель: перехватчики на границе модели</div>
+    <p class="text">Accessor и Mutator удобнее всего представлять как <strong>«перехватчики» данных на границе модели</strong>:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Accessor</strong> берёт сырое значение из БД и возвращает преобразованное — форматирование дат, объединение полей, перевод статусов в текст, приведение типов.</li>
+      <li><strong>Mutator</strong> берёт входящее значение и преобразует его перед сохранением — хеширование, очистка, нормализация, приведение к нужному формату.</li>
+    </ul>
+    <p class="text">Они позволяют централизованно управлять тем, как данные выглядят на выходе и входе, без размазывания логики по контроллерам и представлениям. Типичные применения — объединение полей (<code>first_name + last_name → full_name</code>), хеширование паролей, нормализация email/телефонов, преобразование JSON/массивов, форматирование дат и валют.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="factory" style="width:14px;height:14px"></i> <code>Attribute::make()</code> — статический фабричный метод</div>
+    <p class="text"><code>Attribute::make()</code> — это <strong>статический метод</strong> класса <code>Illuminate\Database\Eloquent\Casts\Attribute</code>. Он создаёт и возвращает экземпляр объекта <code>Attribute</code>, который используется для определения аксессора и/или мутатора.</p>
+    <p class="text"><strong>Как это работает под капотом.</strong> Когда вы пишете:</p>
+<pre><code><span class="c-key">return</span> <span class="c-type">Attribute</span>::<span class="c-fn">make</span>(
+    <span class="c-var">get</span>: <span class="c-key">fn</span> (<span class="c-var">$value</span>, <span class="c-var">$attributes</span>) =&gt; ...,
+    <span class="c-var">set</span>: <span class="c-key">fn</span> (<span class="c-var">$value</span>) =&gt; ...
+);</code></pre>
+    <p class="text">на самом деле происходит вызов статического метода <code>make</code>, который принимает параметры с именами <code>get</code> и <code>set</code> (named arguments, доступные с PHP 8.0). Внутри метод создаёт объект <code>Attribute</code> и возвращает его. Этот объект Laravel сохраняет в кэш модели, и при обращении к атрибуту вызывает соответствующий колбэк.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="zap" style="width:14px;height:14px"></i> Работают автоматически — в контроллере ничего вызывать не надо</div>
+    <p class="text">Вы не вызываете аксессоры и мутаторы отдельно в контроллере. Они срабатывают сами, когда вы обращаетесь к свойству модели или присваиваете значение. Контроллер просто работает с объектом модели, а аксессоры и мутаторы действуют как <em>перехватчики</em>.</p>
+
+    <p class="text"><strong>Как это выглядит в контроллере:</strong></p>
+<pre><code><span class="c-comment">// Модель User с аксессором fullName и мутатором password</span>
+<span class="c-key">class</span> <span class="c-type">UserController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">show</span>(<span class="c-var">$id</span>)
+    {
+        <span class="c-var">$user</span> = <span class="c-type">User</span>::<span class="c-fn">find</span>(<span class="c-var">$id</span>);
+
+        <span class="c-comment">// Аксессор срабатывает автоматически при чтении поля full_name</span>
+        <span class="c-key">return</span> <span class="c-fn">view</span>(<span class="c-str">'profile'</span>, [
+            <span class="c-str">'fullName'</span> =&gt; <span class="c-var">$user</span>-&gt;<span class="c-var">full_name</span>,   <span class="c-comment">// вернёт "Иван Петров"</span>
+        ]);
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>)
+    {
+        <span class="c-var">$user</span> = <span class="c-key">new</span> <span class="c-type">User</span>();
+        <span class="c-var">$user</span>-&gt;<span class="c-var">password</span> = <span class="c-var">$request</span>-&gt;<span class="c-fn">input</span>(<span class="c-str">'password'</span>);   <span class="c-comment">// мутатор хеширует его автоматически</span>
+        <span class="c-var">$user</span>-&gt;<span class="c-fn">save</span>();
+        <span class="c-comment">// $user->password уже захеширован в БД</span>
+    }
+}</code></pre>
+
+    <div class="remember-box">
+      <strong>Где определять и кто вызывает.</strong> Аксессоры и мутаторы определяются только в <strong>модели</strong> (класс <code>User</code>, <code>Post</code> и т.д.). Контроллер просто использует модель — ему не нужно знать о преобразованиях. Всё происходит прозрачно: вы читаете <code>$user-&gt;full_name</code> — а там уже готовая строка.
+    </div>
   </div>
 
   <div class="subsection" id="el-relations">
