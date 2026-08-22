@@ -180,6 +180,12 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('eloquent','el-pitfalls',this)">Особые случаи</a>
   </div>
   <a class="nav-item" onclick="showSection('cache',this)"><i data-lucide="zap"></i> Cache</a>
+  <div class="nav-subgroup">
+    <a class="nav-subitem" onclick="showSub('cache','cache-purpose',this)">Назначение + инвалидация</a>
+    <a class="nav-subitem" onclick="showSub('cache','cache-features',this)">Возможности (tags/locks/stores)</a>
+    <a class="nav-subitem" onclick="showSub('cache','cache-basics',this)">Базовые операции (put/get/remember/pull)</a>
+    <a class="nav-subitem" onclick="showSub('cache','cache-pull',this)">pull() — get + forget за один вызов</a>
+  </div>
 
   <div class="nav-group-label">Асинхронность</div>
   <a class="nav-item" onclick="showSection('queues',this)"><i data-lucide="list-checks"></i> Queues</a>
@@ -3097,7 +3103,7 @@ ul.bullets strong{color:var(--text);}
 
 <div id="sec-cache" class="section">
   <div class="section-title">Cache</div>
-  <div class="subsection">
+  <div class="subsection" id="cache-purpose">
     <div class="subsection-title"><i data-lucide="book-open"></i> Назначение</div>
     <p class="text">Кеш — способ обменять память на CPU/IO. Laravel предлагает единый интерфейс над несколькими бэкендами: <code>file</code>, <code>database</code>, <code>redis</code>, <code>memcached</code>, <code>array</code> (in-memory, для тестов). Понимание различий между бэкендами, паттернов инвалидации и потенциальных race conditions — обязательное знание для middle.</p>
 
@@ -3106,12 +3112,137 @@ ul.bullets strong{color:var(--text);}
     </div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="cache-features">
     <div class="subsection-title"><i data-lucide="list"></i> Возможности</div>
     <div class="card"><h3>Базовые операции</h3><p class="text"><code>Cache::put(key, value, ttl)</code>, <code>get</code>, <code>has</code>, <code>forget</code>, <code>increment</code>, <code>decrement</code>. <code>remember(key, ttl, fn() =&gt; ...)</code> — get или compute.</p></div>
     <div class="card"><h3>Tags (только Redis/Memcached)</h3><p class="text"><code>Cache::tags(['users', 'orders'])-&gt;put(...)</code> — групповая инвалидация: <code>Cache::tags(['users'])-&gt;flush()</code>. Не работает с <code>file</code>/<code>database</code> бэкендами.</p></div>
     <div class="card"><h3>Atomic locks</h3><p class="text"><code>Cache::lock('process-order', 10)-&gt;get(fn() =&gt; ...)</code> — распределённая блокировка. Защищает от двух одновременных обработчиков одной задачи. Lock автоматически освобождается через 10 сек.</p></div>
     <div class="card"><h3>Multiple stores</h3><p class="text">В <code>config/cache.php</code> можно объявить несколько стораджей и использовать по имени: <code>Cache::store('redis-fast')-&gt;put(...)</code>. Полезно для разделения горячего и холодного кеша.</p></div>
+  </div>
+
+  <div class="subsection" id="cache-basics">
+    <div class="subsection-title"><i data-lucide="terminal"></i> Базовые операции с кешем</div>
+    <p class="text">Laravel предоставляет единый интерфейс для работы с кешем через фасад <code>Cache</code>. Ниже основные методы с примерами.</p>
+
+    <div class="card">
+      <h3>1. <code>put()</code> — сохранить значение</h3>
+<pre><code><span class="c-type">Cache</span>::<span class="c-fn">put</span>(<span class="c-str">'key'</span>, <span class="c-str">'value'</span>, <span class="c-var">$ttl</span>);   <span class="c-comment">// $ttl в секундах (или DateTime)</span>
+<span class="c-type">Cache</span>::<span class="c-fn">put</span>(<span class="c-str">'user_1'</span>, <span class="c-var">$user</span>, <span class="c-num">3600</span>);   <span class="c-comment">// на 60 минут</span></code></pre>
+    </div>
+
+    <div class="card">
+      <h3>2. <code>get()</code> — получить значение</h3>
+<pre><code><span class="c-var">$value</span> = <span class="c-type">Cache</span>::<span class="c-fn">get</span>(<span class="c-str">'key'</span>);
+<span class="c-var">$value</span> = <span class="c-type">Cache</span>::<span class="c-fn">get</span>(<span class="c-str">'key'</span>, <span class="c-str">'default'</span>);           <span class="c-comment">// со значением по умолчанию</span>
+<span class="c-var">$value</span> = <span class="c-type">Cache</span>::<span class="c-fn">get</span>(<span class="c-str">'key'</span>, <span class="c-key">fn</span> () =&gt; <span class="c-str">'default'</span>);   <span class="c-comment">// lazy default</span></code></pre>
+    </div>
+
+    <div class="card">
+      <h3>3. <code>has()</code> — проверить существование</h3>
+<pre><code><span class="c-key">if</span> (<span class="c-type">Cache</span>::<span class="c-fn">has</span>(<span class="c-str">'key'</span>)) { <span class="c-comment">/* ... */</span> }</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>4. <code>forget()</code> — удалить</h3>
+<pre><code><span class="c-type">Cache</span>::<span class="c-fn">forget</span>(<span class="c-str">'key'</span>);</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>5. <code>increment()</code> / <code>decrement()</code> — для числовых значений</h3>
+<pre><code><span class="c-type">Cache</span>::<span class="c-fn">increment</span>(<span class="c-str">'counter'</span>);        <span class="c-comment">// +1</span>
+<span class="c-type">Cache</span>::<span class="c-fn">increment</span>(<span class="c-str">'counter'</span>, <span class="c-num">5</span>);     <span class="c-comment">// +5</span>
+<span class="c-type">Cache</span>::<span class="c-fn">decrement</span>(<span class="c-str">'counter'</span>, <span class="c-num">3</span>);     <span class="c-comment">// -3</span></code></pre>
+      <p>Атомарные операции — безопасны в конкурентной среде.</p>
+    </div>
+
+    <div class="card">
+      <h3>6. <code>remember()</code> — получить или вычислить и сохранить</h3>
+<pre><code><span class="c-comment">// Если ключ есть — вернуть.
+// Если нет — выполнить callback, сохранить результат и вернуть.</span>
+<span class="c-var">$users</span> = <span class="c-type">Cache</span>::<span class="c-fn">remember</span>(<span class="c-str">'active_users'</span>, <span class="c-num">3600</span>, <span class="c-key">function</span> () {
+    <span class="c-key">return</span> <span class="c-type">User</span>::<span class="c-fn">active</span>()-&gt;<span class="c-fn">get</span>();   <span class="c-comment">// тяжёлый запрос</span>
+});</code></pre>
+      <p>Есть вариант <code>rememberForever()</code> — без TTL, хранится до явного удаления.</p>
+    </div>
+
+    <div class="card">
+      <h3>7. <code>pull()</code> — получить и удалить за один вызов</h3>
+<pre><code><span class="c-var">$value</span> = <span class="c-type">Cache</span>::<span class="c-fn">pull</span>(<span class="c-str">'key'</span>);   <span class="c-comment">// вернёт значение и удалит ключ</span></code></pre>
+      <p>Подробнее — в отдельной подсекции ниже.</p>
+    </div>
+
+    <div class="card">
+      <h3>8. <code>store()</code> — выбрать другой драйвер</h3>
+<pre><code><span class="c-type">Cache</span>::<span class="c-fn">store</span>(<span class="c-str">'redis'</span>)-&gt;<span class="c-fn">put</span>(...);</code></pre>
+    </div>
+
+    <div class="remember-box">
+      <strong>Итог по методам:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><code>put</code> — запись</li>
+        <li><code>get</code> — чтение</li>
+        <li><code>has</code> — проверка</li>
+        <li><code>forget</code> — удаление</li>
+        <li><code>increment</code> / <code>decrement</code> — атомарный счётчик</li>
+        <li><code>remember</code> — «верни, если есть, а если нет — вычисли и сохрани» (самый удобный)</li>
+        <li><code>pull</code> — прочитать + удалить за один вызов</li>
+      </ul>
+      Кеш используется для ускорения работы (результаты запросов, сложные вычисления, данные из внешних API) и разгрузки БД.
+    </div>
+  </div>
+
+  <div class="subsection" id="cache-pull">
+    <div class="subsection-title"><i data-lucide="download-cloud"></i> <code>pull()</code> — get + forget за один вызов</div>
+
+    <p class="text">Метод <code>pull()</code> делает две вещи одновременно: <strong>возвращает значение по ключу</strong> (если оно существует и не истекло) и <strong>удаляет этот ключ из кеша сразу после извлечения</strong>. Значение при этом сохраняется в переменную и используется в коде — оно не «теряется», просто больше не хранится в кеше.</p>
+
+    <p class="text">Время жизни (TTL) не имеет значения для самого удаления — <code>pull</code> удаляет ключ немедленно, независимо от того, сколько времени оставалось до истечения. Если ключ уже истёк, то <code>pull</code> вернёт <code>null</code> (или значение по умолчанию) и не станет ничего удалять — ключ уже удалён драйвером автоматически.</p>
+
+    <p class="text"><strong>Простой пример:</strong></p>
+<pre><code><span class="c-comment">// Сохраняем значение на 10 минут</span>
+<span class="c-type">Cache</span>::<span class="c-fn">put</span>(<span class="c-str">'temp'</span>, <span class="c-str">'data'</span>, <span class="c-num">600</span>);
+
+<span class="c-comment">// Через 2 минуты делаем pull</span>
+<span class="c-var">$value</span> = <span class="c-type">Cache</span>::<span class="c-fn">pull</span>(<span class="c-str">'temp'</span>);   <span class="c-comment">// 'data' — вернулось, и ключ удалён</span>
+
+<span class="c-comment">// Повторная попытка</span>
+<span class="c-var">$value</span> = <span class="c-type">Cache</span>::<span class="c-fn">get</span>(<span class="c-str">'temp'</span>);    <span class="c-comment">// null — ключа больше нет</span></code></pre>
+
+    <p class="text"><strong>Когда использовать:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Одноразовые данные — например, токен для сброса пароля, код подтверждения. После использования хранить не нужно, чтобы никто не использовал его повторно.</li>
+      <li>Флаги выполнения — например, <code>Cache::pull('import_in_progress')</code>: если существует, значит импорт идёт; после проверки удаляем, чтобы не блокировать следующий запуск.</li>
+      <li>Счётчики-индикаторы — прочитать, использовать для логики, удалить чтобы сбросить.</li>
+      <li>Атомарное чтение с очисткой — гарантирует, что значение будет прочитано и удалено за одну операцию, без гонок между несколькими запросами.</li>
+    </ul>
+
+    <p class="text"><strong>Практический пример — одноразовая ссылка активации:</strong></p>
+<pre><code><span class="c-comment">// Сохраняем одноразовую ссылку для активации</span>
+<span class="c-type">Cache</span>::<span class="c-fn">put</span>(<span class="c-str">'activation_123'</span>, <span class="c-str">'user@mail.com'</span>, <span class="c-num">3600</span>);
+
+<span class="c-comment">// Когда пользователь переходит по ссылке</span>
+<span class="c-var">$email</span> = <span class="c-type">Cache</span>::<span class="c-fn">pull</span>(<span class="c-str">'activation_123'</span>);   <span class="c-comment">// 'user@mail.com'</span>
+
+<span class="c-key">if</span> (<span class="c-var">$email</span>) {
+    <span class="c-comment">// активируем пользователя</span>
+    <span class="c-type">User</span>::<span class="c-fn">where</span>(<span class="c-str">'email'</span>, <span class="c-var">$email</span>)-&gt;<span class="c-fn">update</span>([<span class="c-str">'active'</span> =&gt; <span class="c-key">true</span>]);
+} <span class="c-key">else</span> {
+    <span class="c-comment">// ссылка уже использована или истекла</span>
+}</code></pre>
+    <p class="text">После <code>pull()</code> ключ удалён, и ту же ссылку нельзя использовать повторно.</p>
+
+    <div class="tip">
+      <strong>Важно про поведение:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Если ключ не существует — <code>pull()</code> вернёт <code>null</code> или переданное значение по умолчанию.</li>
+        <li><code>pull()</code> удаляет ключ только если он был найден и активен. Если истёк — считается отсутствующим, удаления не происходит (ключа уже нет).</li>
+        <li>Значение <strong>сохраняется в переменную и используется в коде</strong>. Удаление не мешает использованию — значение уже скопировано.</li>
+      </ul>
+    </div>
+
+    <div class="remember-box">
+      <strong>Итог.</strong> <code>pull()</code> = <code>get()</code> + <code>forget()</code> за один вызов. Не зависит от оставшегося TTL — удаляет сразу после чтения. Полезен для извлечения и очистки одноразовых данных (токены, коды, флаги), чтобы они не могли быть прочитаны повторно.
+    </div>
   </div>
 
   <div class="subsection">
