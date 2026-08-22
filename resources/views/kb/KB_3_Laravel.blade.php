@@ -183,6 +183,7 @@ ul.bullets strong{color:var(--text);}
   <div class="nav-subgroup">
     <a class="nav-subitem" onclick="showSub('cache','cache-purpose',this)">Назначение + инвалидация</a>
     <a class="nav-subitem" onclick="showSub('cache','cache-drivers',this)">Драйверы (file/db/redis/memcached/...)</a>
+    <a class="nav-subitem" onclick="showSub('cache','cache-stores',this)">Multiple Stores — несколько хранилищ</a>
     <a class="nav-subitem" onclick="showSub('cache','cache-features',this)">Возможности (tags/locks/stores)</a>
     <a class="nav-subitem" onclick="showSub('cache','cache-basics',this)">Базовые операции (put/get/remember/pull)</a>
     <a class="nav-subitem" onclick="showSub('cache','cache-return-types',this)">Что возвращают методы (для переменной)</a>
@@ -3184,6 +3185,67 @@ CACHE_DRIVER=redis</code></pre>
 
     <div class="remember-box">
       <strong>Итог.</strong> У вас есть полная свобода выбора — от простого файлового кеша для разработки до высокопроизводительных Redis / Memcached в продакшене. Всё настраивается через конфигурационный файл и переменную окружения <code>CACHE_DRIVER</code>. Единый API <code>Cache::put()</code>/<code>Cache::get()</code> работает одинаково независимо от драйвера — можно менять хранилище без переписывания кода.
+    </div>
+  </div>
+
+  <div class="subsection" id="cache-stores">
+    <div class="subsection-title"><i data-lucide="layers-3"></i> Multiple Stores — несколько хранилищ в одном проекте</div>
+
+    <p class="text"><strong>Что это.</strong> Multiple stores — это возможность объявить <strong>несколько независимых конфигураций кеша</strong> в <code>config/cache.php</code> и использовать их по имени через <code>Cache::store('название')</code>. Позволяет гибко управлять хранением, распределяя разные типы данных по разным драйверам или серверам.</p>
+
+    <p class="text"><strong>Как это выглядит в конфиге:</strong></p>
+<pre><code><span class="c-comment">// config/cache.php</span>
+<span class="c-str">'stores'</span> =&gt; [
+    <span class="c-str">'redis'</span> =&gt; [
+        <span class="c-str">'driver'</span>     =&gt; <span class="c-str">'redis'</span>,
+        <span class="c-str">'connection'</span> =&gt; <span class="c-str">'default'</span>,
+    ],
+    <span class="c-str">'redis_fast'</span> =&gt; [
+        <span class="c-str">'driver'</span>     =&gt; <span class="c-str">'redis'</span>,
+        <span class="c-str">'connection'</span> =&gt; <span class="c-str">'fast'</span>,        <span class="c-comment">// отдельное соединение Redis (другой сервер)</span>
+    ],
+    <span class="c-str">'file_slow'</span> =&gt; [
+        <span class="c-str">'driver'</span> =&gt; <span class="c-str">'file'</span>,
+        <span class="c-str">'path'</span>   =&gt; <span class="c-fn">storage_path</span>(<span class="c-str">'framework/cache/slow'</span>),
+    ],
+    <span class="c-str">'database'</span> =&gt; [
+        <span class="c-str">'driver'</span> =&gt; <span class="c-str">'database'</span>,
+        <span class="c-str">'table'</span>  =&gt; <span class="c-str">'cache'</span>,
+    ],
+],</code></pre>
+
+    <p class="text"><strong>Как использовать:</strong></p>
+<pre><code><span class="c-comment">// Стандартное хранилище (указанное в CACHE_DRIVER)</span>
+<span class="c-type">Cache</span>::<span class="c-fn">put</span>(<span class="c-str">'key'</span>, <span class="c-str">'value'</span>, <span class="c-num">60</span>);
+
+<span class="c-comment">// Конкретное хранилище по имени</span>
+<span class="c-type">Cache</span>::<span class="c-fn">store</span>(<span class="c-str">'redis_fast'</span>)-&gt;<span class="c-fn">put</span>(<span class="c-str">'hot'</span>, <span class="c-str">'data'</span>, <span class="c-num">60</span>);
+<span class="c-type">Cache</span>::<span class="c-fn">store</span>(<span class="c-str">'file_slow'</span>)-&gt;<span class="c-fn">put</span>(<span class="c-str">'big_report'</span>, <span class="c-var">$report</span>, <span class="c-num">3600</span>);</code></pre>
+
+    <p class="text"><strong>Зачем это нужно:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Разделение горячего и холодного кеша.</strong> Горячий — часто запрашиваемые данные (Redis, высокопроизводительный). Холодный — редко используемые или большие данные (файлы, БД), чтобы не засорять оперативную память.</li>
+      <li><strong>Изоляция по функциональности.</strong> Например, кеш для сессий отдельно, для API-ответов отдельно, для отчётов отдельно. Упрощает мониторинг и очистку.</li>
+      <li><strong>Разные драйверы для разных задач.</strong> Можно комбинировать Redis для быстрых операций и файлы для огромных кешей, где скорость не критична.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="switch-camera" style="width:14px;height:14px"></i> Смена хранилища для фасада</div>
+    <p class="text">Если нужно временно переключить стандартное хранилище для всех вызовов <code>Cache::</code>, есть <code>shouldUse()</code>:</p>
+<pre><code><span class="c-type">Cache</span>::<span class="c-fn">shouldUse</span>(<span class="c-str">'redis_fast'</span>);
+<span class="c-comment">// теперь все вызовы без store() идут в redis_fast</span></code></pre>
+    <p class="text">Обычно так делать не рекомендуется — усложняет код и делает поведение неявным. Явный <code>store('name')</code> в каждом месте предсказуемее.</p>
+
+    <div class="pitfall">
+      <strong>Важно:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Каждое хранилище использует свои настройки (драйвер, соединение, таблицу, путь).</li>
+        <li>Хранилища <strong>не пересекаются</strong> — ключи в одном не видны в другом.</li>
+        <li>Для <code>Cache::tags()</code> нужно чтобы драйвер поддерживал теги (Redis/Memcached) — <code>store('redis')-&gt;tags(...)</code> работает, но <code>store('file')-&gt;tags(...)</code> — нет.</li>
+      </ul>
+    </div>
+
+    <div class="remember-box">
+      <strong>Итог.</strong> Multiple stores — механизм для создания нескольких независимых кешей с разными конфигурациями. Оптимизация производительности (горячий кеш в Redis, холодный в файлах), разделение по смыслу (сессии/API/отчёты), лёгкое переключение через <code>Cache::store('name')</code>. Полезно в крупных проектах, где разные части системы имеют разные требования к скорости и объёму кеширования.
     </div>
   </div>
 
