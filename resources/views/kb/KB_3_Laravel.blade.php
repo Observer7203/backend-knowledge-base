@@ -185,8 +185,11 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('cache','cache-drivers',this)">Драйверы (file/db/redis/memcached/...)</a>
     <a class="nav-subitem" onclick="showSub('cache','cache-features',this)">Возможности (tags/locks/stores)</a>
     <a class="nav-subitem" onclick="showSub('cache','cache-basics',this)">Базовые операции (put/get/remember/pull)</a>
+    <a class="nav-subitem" onclick="showSub('cache','cache-return-types',this)">Что возвращают методы (для переменной)</a>
     <a class="nav-subitem" onclick="showSub('cache','cache-tags',this)">Cache Tags — групповая инвалидация</a>
+    <a class="nav-subitem" onclick="showSub('cache','cache-locks',this)">Atomic Locks — распределённые блокировки</a>
     <a class="nav-subitem" onclick="showSub('cache','cache-pull',this)">pull() — get + forget за один вызов</a>
+    <a class="nav-subitem" onclick="showSub('cache','cache-db-table',this)">Таблица для database-драйвера</a>
   </div>
 
   <div class="nav-group-label">Асинхронность</div>
@@ -3235,6 +3238,18 @@ CACHE_DRIVER=redis</code></pre>
     <span class="c-key">return</span> <span class="c-type">User</span>::<span class="c-fn">active</span>()-&gt;<span class="c-fn">get</span>();   <span class="c-comment">// тяжёлый запрос</span>
 });</code></pre>
       <p>Есть вариант <code>rememberForever()</code> — без TTL, хранится до явного удаления.</p>
+
+      <p><strong>Откуда <code>remember</code> берёт данные.</strong> Источник данных определяется <em>внутри колбэка</em>, который вы передаёте вторым параметром. Колбэк выполняется <em>только</em> тогда, когда данных по ключу нет в кеше или они истекли, и его результат сохраняется в кеш. Внутри колбэка вы сами пишете логику — Eloquent-запрос, вызов внешнего API, сложные вычисления, чтение из файла. Никакой магии.</p>
+<pre><code><span class="c-var">$products</span> = <span class="c-type">Cache</span>::<span class="c-fn">remember</span>(<span class="c-str">'popular_products'</span>, <span class="c-num">300</span>, <span class="c-key">function</span> () {
+    <span class="c-key">return</span> <span class="c-type">Product</span>::<span class="c-fn">with</span>(<span class="c-str">'category'</span>)
+        -&gt;<span class="c-fn">where</span>(<span class="c-str">'views'</span>, <span class="c-str">'&gt;'</span>, <span class="c-num">1000</span>)
+        -&gt;<span class="c-fn">orderBy</span>(<span class="c-str">'sales'</span>, <span class="c-str">'desc'</span>)
+        -&gt;<span class="c-fn">limit</span>(<span class="c-num">10</span>)
+        -&gt;<span class="c-fn">get</span>();
+});
+<span class="c-comment">// При первом запросе — тяжёлый SQL, результат в кеш на 5 минут.
+// Следующие 5 минут все запросы получают данные из кеша без обращения к БД.</span></code></pre>
+      <p>Переменная <code>$users</code>/<code>$products</code> — обычная PHP-переменная, содержит либо результат из кеша, либо результат выполнения колбэка. Никакой дополнительной регистрации не требуется. Если колбэк возвращает <code>null</code> или пустой массив — они тоже кешируются (в зависимости от драйвера).</p>
     </div>
 
     <div class="card">
@@ -3260,6 +3275,41 @@ CACHE_DRIVER=redis</code></pre>
         <li><code>pull</code> — прочитать + удалить за один вызов</li>
       </ul>
       Кеш используется для ускорения работы (результаты запросов, сложные вычисления, данные из внешних API) и разгрузки БД.
+    </div>
+  </div>
+
+  <div class="subsection" id="cache-return-types">
+    <div class="subsection-title"><i data-lucide="corner-down-left"></i> Что возвращают методы кеша (для переменной)</div>
+
+    <p class="text">В API кеша Laravel есть методы, которые <strong>возвращают значение</strong> (его можно присвоить переменной), и методы, которые <strong>ничего не возвращают</strong> или возвращают <code>bool</code>. Правило простое: смотрите на возвращаемый тип метода — если <code>mixed</code> или <code>bool</code>, значение можно сохранить в переменную; если <code>void</code> — нельзя.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="download" style="width:14px;height:14px"></i> Возвращают значение (можно присвоить переменной)</div>
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>Что возвращает</th><th>Пример</th></tr></thead>
+      <tbody>
+        <tr><td><code>get($key, $default = null)</code></td><td>значение или <code>$default</code></td><td><code>$value = Cache::get('key', 'default');</code></td></tr>
+        <tr><td><code>remember($key, $ttl, $cb)</code></td><td>значение из кеша или результат колбэка</td><td><code>$users = Cache::remember('users', 60, fn() =&gt; User::all());</code></td></tr>
+        <tr><td><code>rememberForever($key, $cb)</code></td><td>то же, но без TTL</td><td><code>$config = Cache::rememberForever('cfg', fn() =&gt; ...);</code></td></tr>
+        <tr><td><code>pull($key)</code></td><td>значение и удаляет ключ</td><td><code>$token = Cache::pull('token');</code></td></tr>
+        <tr><td><code>many(array $keys)</code></td><td>массив значений для нескольких ключей</td><td><code>$values = Cache::many(['key1', 'key2']);</code></td></tr>
+        <tr><td><code>increment($key, $amount = 1)</code></td><td>новое значение счётчика</td><td><code>$newCount = Cache::increment('counter', 5);</code></td></tr>
+        <tr><td><code>decrement($key, $amount = 1)</code></td><td>новое значение счётчика</td><td><code>$newCount = Cache::decrement('counter');</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="upload" style="width:14px;height:14px"></i> Ничего не возвращают или возвращают bool</div>
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>Что возвращает</th><th>Пример</th></tr></thead>
+      <tbody>
+        <tr><td><code>put($key, $value, $ttl)</code></td><td>ничего (или <code>true</code>) — обычно результат игнорируют</td><td><code>Cache::put('key', 'value', 60);</code></td></tr>
+        <tr><td><code>add($key, $value, $ttl)</code></td><td><code>bool</code> — было ли добавление успешным</td><td><code>$added = Cache::add('key', 'value', 60);</code></td></tr>
+        <tr><td><code>forget($key)</code></td><td><code>bool</code> — удалён ли ключ</td><td><code>$deleted = Cache::forget('key');</code></td></tr>
+        <tr><td><code>flush()</code></td><td><code>bool</code> — очистка всего</td><td><code>$cleared = Cache::flush();</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="remember-box">
+      <strong>Итог.</strong> Если метод возвращает данные (<code>get</code>, <code>pull</code>, <code>remember</code>, <code>increment</code>) — присваиваете переменной. Если ничего не возвращает (<code>put</code>, <code>forget</code>, <code>flush</code>) — просто выполняете действие. Методы возвращающие <code>bool</code> (<code>add</code>, <code>forget</code>, <code>flush</code>) можно присвоить, но обычно результат используют только для проверки успешности операции.
     </div>
   </div>
 
@@ -3363,6 +3413,64 @@ CACHE_DRIVER=redis</code></pre>
     </div>
   </div>
 
+  <div class="subsection" id="cache-locks">
+    <div class="subsection-title"><i data-lucide="lock-keyhole"></i> Atomic Locks — распределённые блокировки</div>
+
+    <p class="text"><strong>Что это.</strong> Atomic lock — это <strong>распределённая блокировка</strong>, которая гарантирует, что определённый участок кода или задача выполняется только одним процессом или сервером одновременно. Критично важно в распределённых системах, где несколько экземпляров приложения могут попытаться выполнить одну и ту же работу параллельно — обработать один заказ, запустить крон-задачу, обновить баланс.</p>
+
+    <p class="text"><strong>Как работает <code>Cache::lock()</code>:</strong></p>
+<pre><code><span class="c-type">Cache</span>::<span class="c-fn">lock</span>(<span class="c-str">'process-order'</span>, <span class="c-num">10</span>)-&gt;<span class="c-fn">get</span>(<span class="c-key">function</span> () {
+    <span class="c-comment">// выполняем критическую операцию</span>
+});</code></pre>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>'process-order'</code> — уникальный идентификатор блокировки (например, ID заказа).</li>
+      <li><code>10</code> — максимальное время удержания в секундах (TTL). Если колбэк займёт больше 10 секунд, блокировка автоматически освободится — защита от зависших задач.</li>
+      <li><code>get(callback)</code> — пытается захватить блокировку. Если успешно — выполняет колбэк и автоматически освобождает. Если не удалось (уже занята) — сразу вернёт <code>false</code>/<code>null</code>, колбэк не выполнится.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="alert-circle" style="width:14px;height:14px"></i> Зачем это нужно</div>
+    <p class="text"><strong>Проблема.</strong> В веб-приложении два параллельных запроса от одного пользователя могут одновременно попытаться оплатить один и тот же заказ. Без блокировки они дважды спишут деньги, дважды обновят статус — несогласованность данных.</p>
+    <p class="text"><strong>Решение.</strong> Блокировка на уровне заказа — первый запрос захватывает блокировку, выполняет обработку, освобождает. Второй запрос видит, что блокировка занята, и либо завершается с ошибкой, либо ждёт.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hand" style="width:14px;height:14px"></i> Ручное управление блокировкой</div>
+    <p class="text">Иногда нужно больше контроля — используются методы <code>acquire()</code> и <code>release()</code>:</p>
+<pre><code><span class="c-var">$lock</span> = <span class="c-type">Cache</span>::<span class="c-fn">lock</span>(<span class="c-str">'process-order'</span>, <span class="c-num">10</span>);
+
+<span class="c-key">if</span> (<span class="c-var">$lock</span>-&gt;<span class="c-fn">acquire</span>()) {
+    <span class="c-key">try</span> {
+        <span class="c-comment">// выполняем работу</span>
+    } <span class="c-key">finally</span> {
+        <span class="c-var">$lock</span>-&gt;<span class="c-fn">release</span>();   <span class="c-comment">// обязательно освободить!</span>
+    }
+} <span class="c-key">else</span> {
+    <span class="c-comment">// блокировка уже занята</span>
+}</code></pre>
+    <p class="text">Метод <code>get()</code> делает это автоматически — удобнее и безопаснее (не забыть <code>release</code>).</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="clock" style="width:14px;height:14px"></i> Автоматическое освобождение</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Если колбэк внутри <code>get()</code> выполнился успешно — блокировка освобождается после выхода из колбэка.</li>
+      <li>Если колбэк выбросил исключение — блокировка всё равно освободится (гарантируется механизмом).</li>
+      <li>Если выполнение превысило TTL (10 секунд) — блокировка автоматически удаляется драйвером кеша, чтобы не блокировать другие процессы. При этом ваш код <em>продолжит</em> выполняться — это может привести к одновременной работе двух процессов, если первый ещё не завершился, а второй уже захватил освободившуюся блокировку. Поэтому <strong>TTL должен быть больше</strong> ожидаемого времени выполнения.</li>
+    </ul>
+
+    <div class="pitfall">
+      <strong>Какие драйверы поддерживают.</strong> Блокировки доступны для драйверов кеша с атомарными операциями: <code>redis</code>, <code>memcached</code>, <code>database</code> (начиная с определённых версий), <code>dynamodb</code>. Для <code>file</code> и <code>array</code> — не работают или с ограничениями. Laravel использует атомарные операции (например, Redis <code>SET NX EX</code>) для реализации блокировок.
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="target" style="width:14px;height:14px"></i> Типичные сценарии</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Обработка платежей</strong> — блокировка по ID заказа, чтобы не списать дважды.</li>
+      <li><strong>Крон-задача</strong> — блокировка по имени задачи, чтобы не запустилась повторно если предыдущий запуск ещё не завершился.</li>
+      <li><strong>Обновление ресурса</strong> — генерация отчёта, кеширование тяжёлого набора данных: несколько запросов не запустят одну и ту же операцию.</li>
+      <li><strong>Rate-limiting на уровне ресурса</strong> — ограничение одновременных запросов к внешнему API.</li>
+    </ul>
+
+    <div class="remember-box">
+      <strong>Итог.</strong> <code>Cache::lock()</code> — распределённая блокировка с автоматическим управлением. <code>get(callback)</code> — пытается захватить, выполняет колбэк, освобождает. TTL — защита от зависаний. Критична для согласованности данных в конкурентных средах. Поддерживается Redis, Memcached, Database. Используйте когда нужно гарантировать, что операция выполняется только одним экземпляром приложения одновременно.
+    </div>
+  </div>
+
   <div class="subsection" id="cache-pull">
     <div class="subsection-title"><i data-lucide="download-cloud"></i> <code>pull()</code> — get + forget за один вызов</div>
 
@@ -3414,6 +3522,23 @@ CACHE_DRIVER=redis</code></pre>
 
     <div class="remember-box">
       <strong>Итог.</strong> <code>pull()</code> = <code>get()</code> + <code>forget()</code> за один вызов. Не зависит от оставшегося TTL — удаляет сразу после чтения. Полезен для извлечения и очистки одноразовых данных (токены, коды, флаги), чтобы они не могли быть прочитаны повторно.
+    </div>
+  </div>
+
+  <div class="subsection" id="cache-db-table">
+    <div class="subsection-title"><i data-lucide="database"></i> Таблица для database-драйвера — <code>make:cache-table</code></div>
+
+    <p class="text">Если вы используете драйвер <code>database</code> — Laravel хранит кеш в таблице БД, и её нужно создать. Для этого есть Artisan-команда:</p>
+<pre><code>php artisan make:cache-table</code></pre>
+    <p class="text">Команда создаёт файл миграции в <code>database/migrations/</code>. Далее её нужно применить:</p>
+<pre><code>php artisan migrate</code></pre>
+
+    <div class="tip">
+      <strong>В новых проектах Laravel</strong> (начиная с версии 11) миграция для cache-таблицы обычно уже <em>присутствует по умолчанию</em>. Скорее всего вам не придётся создавать её вручную — достаточно выполнить <code>php artisan migrate</code>. Если по каким-то причинам её нет — команда <code>make:cache-table</code> создаст.
+    </div>
+
+    <div class="pitfall">
+      <strong>Старая команда.</strong> В более старых версиях документации и сторонних источниках можно встретить <code>php artisan cache:table</code>. В актуальных версиях Laravel (11.x и выше) используется именно <code>make:cache-table</code>. Обе команды делают одно и то же — создают миграцию для таблицы кеша.
     </div>
   </div>
 
