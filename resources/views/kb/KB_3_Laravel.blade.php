@@ -128,6 +128,17 @@ ul.bullets strong{color:var(--text);}
   <a class="nav-item" onclick="showSection('lifecycle',this)"><i data-lucide="rotate-cw"></i> Request Lifecycle</a>
   <a class="nav-item" onclick="showSection('bootstrap-deep',this)"><i data-lucide="package"></i> Bootstrap: providers &amp; app.php</a>
   <a class="nav-item" onclick="showSection('routing',this)"><i data-lucide="route"></i> Routing</a>
+  <a class="nav-item" onclick="showSection('controllers',this)"><i data-lucide="git-pull-request"></i> Controllers</a>
+  <div class="nav-subgroup">
+    <a class="nav-subitem" onclick="showSub('controllers','ctrl-overview',this)">Обзор + структура папки</a>
+    <a class="nav-subitem" onclick="showSub('controllers','ctrl-thin-fat',this)">Тонкий vs толстый контроллер</a>
+    <a class="nav-subitem" onclick="showSub('controllers','ctrl-resource',this)">Resource Controllers (7 методов)</a>
+    <a class="nav-subitem" onclick="showSub('controllers','ctrl-api-resource',this)">apiResource — для API</a>
+    <a class="nav-subitem" onclick="showSub('controllers','ctrl-nested',this)">Nested / Shallow resources</a>
+    <a class="nav-subitem" onclick="showSub('controllers','ctrl-middleware',this)">Middleware в контроллере (L10/L11)</a>
+    <a class="nav-subitem" onclick="showSub('controllers','ctrl-invokable',this)">Single Action / Invokable</a>
+    <a class="nav-subitem" onclick="showSub('controllers','ctrl-responses',this)">Возврат ответов</a>
+  </div>
   <a class="nav-item" onclick="showSection('middleware',this)"><i data-lucide="filter"></i> Middleware</a>
   <div class="nav-subgroup">
     <a class="nav-subitem" onclick="showSub('middleware','mw-purpose',this)">Назначение</a>
@@ -1060,6 +1071,338 @@ ul.bullets strong{color:var(--text);}
     <div class="pitfall"><strong>6. Группа maintenance в route файле.</strong> Если включить <code>php artisan down</code>, доступ к маршрутам блокируется. Исключения — через <code>--secret</code> и middleware <code>preventDuringMaintenance</code>.</div>
     <div class="pitfall"><strong>7. Cross-route data leakage.</strong> Использование <code>request()-&gt;input(...)</code> вместо параметров маршрута: значение тянется из тела, query или route — приоритет неочевиден. Явно типизируйте через FormRequest.</div>
     <div class="pitfall"><strong>8. <code>fallback</code> ловит всё.</strong> <code>Route::fallback(...)</code> срабатывает на любой не-matched URL. Если в нём опечатка в check'е — пользователь может попасть на код, не предназначенный для публичного доступа.</div>
+  </div>
+</div>
+
+<div id="sec-controllers" class="section">
+  <div class="section-title">Controllers</div>
+
+  <div class="subsection" id="ctrl-overview">
+    <div class="subsection-title"><i data-lucide="book-open"></i> Обзор + структура папки</div>
+    <p class="text">Контроллер — класс, который группирует связанные обработчики HTTP-запросов. По конвенции живёт в <code>app/Http/Controllers/</code>. Роутер вызывает нужный метод контроллера, передавая туда <code>Request</code> и параметры маршрута.</p>
+
+    <p class="text"><strong>Типичная структура:</strong></p>
+<pre><code>app/Http/Controllers/
+├── Controller.php                  <span class="c-comment"># базовый — от него наследуются все</span>
+├── HomeController.php              <span class="c-comment"># для веба</span>
+├── PostController.php              <span class="c-comment"># resource controller</span>
+├── Auth/
+│   ├── LoginController.php
+│   └── RegisterController.php
+├── Api/
+│   ├── V1/
+│   │   ├── PostController.php      <span class="c-comment"># API resource</span>
+│   │   └── UserController.php
+│   └── V2/...
+└── Admin/
+    └── DashboardController.php</code></pre>
+
+    <p class="text"><strong>Создание через artisan:</strong></p>
+<pre><code>php artisan make:controller <span class="c-type">PostController</span>                    <span class="c-comment"># пустой</span>
+php artisan make:controller <span class="c-type">PostController</span> --resource         <span class="c-comment"># 7 методов CRUD</span>
+php artisan make:controller <span class="c-type">PostController</span> --api              <span class="c-comment"># 5 методов (без create/edit)</span>
+php artisan make:controller <span class="c-type">PostController</span> --resource --model=<span class="c-type">Post</span>   <span class="c-comment"># + type-hints модели</span>
+php artisan make:controller <span class="c-type">ShowProfile</span> --invokable            <span class="c-comment"># один __invoke</span>
+php artisan make:controller <span class="c-type">Api/V1/PostController</span>              <span class="c-comment"># в подпапку</span></code></pre>
+
+    <div class="remember-box">
+      Разбивайте контроллеры по <strong>ресурсу</strong> (<code>PostController</code>, <code>UserController</code>), а не по «функциям». Один контроллер = одна сущность / одна тема. Веб и API — обычно отдельно (<code>Api/V1/</code>).
+    </div>
+  </div>
+
+  <div class="subsection" id="ctrl-thin-fat">
+    <div class="subsection-title"><i data-lucide="feather"></i> Тонкий vs толстый контроллер</div>
+    <p class="text">Ключевой архитектурный принцип: <strong>контроллер должен быть тонким</strong>. Его задача — <em>принять запрос, делегировать работу, вернуть ответ</em>. Всю бизнес-логику вынести в отдельные классы (Actions / Services).</p>
+
+    <p class="text"><strong>❌ Толстый контроллер</strong> — плохо: логика размазана, тяжело тестировать, невозможно переиспользовать:</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">OrderController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>)
+    {
+        <span class="c-var">$data</span> = <span class="c-var">$request</span>-&gt;<span class="c-fn">validate</span>([<span class="c-comment">/* ... */</span>]);
+
+        <span class="c-comment">// Валидация бизнес-правил</span>
+        <span class="c-key">if</span> (<span class="c-type">Cart</span>::<span class="c-fn">total</span>() &lt; <span class="c-num">100</span>) { <span class="c-fn">abort</span>(<span class="c-num">422</span>, <span class="c-str">'Мин. сумма 100'</span>); }
+
+        <span class="c-comment">// Создание заказа</span>
+        <span class="c-var">$order</span> = <span class="c-type">Order</span>::<span class="c-fn">create</span>(<span class="c-var">$data</span>);
+
+        <span class="c-comment">// Списание товаров со склада</span>
+        <span class="c-key">foreach</span> (<span class="c-var">$data</span>[<span class="c-str">'items'</span>] <span class="c-key">as</span> <span class="c-var">$item</span>) {
+            <span class="c-type">Inventory</span>::<span class="c-fn">reserve</span>(<span class="c-var">$item</span>[<span class="c-str">'sku'</span>], <span class="c-var">$item</span>[<span class="c-str">'qty'</span>]);
+        }
+
+        <span class="c-comment">// Оплата</span>
+        <span class="c-var">$payment</span> = <span class="c-key">new</span> <span class="c-type">StripeGateway</span>(<span class="c-fn">config</span>(<span class="c-str">'stripe.key'</span>));
+        <span class="c-var">$payment</span>-&gt;<span class="c-fn">charge</span>(<span class="c-var">$order</span>-&gt;<span class="c-var">total</span>);
+
+        <span class="c-comment">// Уведомление</span>
+        <span class="c-type">Mail</span>::<span class="c-fn">to</span>(<span class="c-var">$order</span>-&gt;<span class="c-var">email</span>)-&gt;<span class="c-fn">send</span>(<span class="c-key">new</span> <span class="c-type">OrderPlaced</span>(<span class="c-var">$order</span>));
+
+        <span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">route</span>(<span class="c-str">'orders.show'</span>, <span class="c-var">$order</span>);
+    }
+}</code></pre>
+
+    <p class="text"><strong>✅ Тонкий контроллер</strong> — хорошо: только оркестрация, вся логика в Action:</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">OrderController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">StoreOrderRequest</span> <span class="c-var">$request</span>, <span class="c-type">PlaceOrder</span> <span class="c-var">$action</span>)
+    {
+        <span class="c-var">$order</span> = <span class="c-var">$action</span>-&gt;<span class="c-fn">handle</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>());
+
+        <span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">route</span>(<span class="c-str">'orders.show'</span>, <span class="c-var">$order</span>);
+    }
+}</code></pre>
+
+    <p class="text"><strong>Что контроллер делает</strong>, а что нет:</p>
+    <table class="data-table">
+      <thead><tr><th>✅ Контроллер должен</th><th>❌ Контроллер НЕ должен</th></tr></thead>
+      <tbody>
+        <tr><td>Принимать запрос через FormRequest</td><td>Валидировать бизнес-правила («сумма &gt; 100»)</td></tr>
+        <tr><td>Вызвать Action / Service</td><td>Работать с БД напрямую (кроме простых <code>Model::find</code>)</td></tr>
+        <tr><td>Формировать ответ (view/json/redirect)</td><td>Отправлять email / SMS / push</td></tr>
+        <tr><td>Возвращать HTTP-статус</td><td>Вызывать внешние API</td></tr>
+        <tr><td></td><td>Транзакции БД</td></tr>
+        <tr><td></td><td>Хешировать пароли, генерировать токены</td></tr>
+      </tbody>
+    </table>
+    <p class="text">Подробно про Actions / Services — в KB_13 Service Container и в отдельном разделе «Actions & Services» (см. sidebar).</p>
+  </div>
+
+  <div class="subsection" id="ctrl-resource">
+    <div class="subsection-title"><i data-lucide="grip"></i> Resource Controllers — 7 методов CRUD</div>
+    <p class="text"><strong>Resource Controller</strong> — стандартный паттерн Laravel для CRUD-ресурса. Одна команда генерирует контроллер с 7 методами, одна строка в роутере — 7 маршрутов.</p>
+
+    <p class="text"><strong>Генерация:</strong></p>
+<pre><code>php artisan make:controller <span class="c-type">PostController</span> --resource --model=<span class="c-type">Post</span></code></pre>
+
+    <p class="text"><strong>Регистрация в роутах:</strong></p>
+<pre><code><span class="c-type">Route</span>::<span class="c-fn">resource</span>(<span class="c-str">'posts'</span>, <span class="c-type">PostController</span>::<span class="c-key">class</span>);</code></pre>
+
+    <p class="text">Одна строка создаст следующие 7 маршрутов:</p>
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>URL</th><th>Действие</th><th>Route name</th></tr></thead>
+      <tbody>
+        <tr><td>GET</td><td><code>/posts</code></td><td><code>index</code> — список</td><td><code>posts.index</code></td></tr>
+        <tr><td>GET</td><td><code>/posts/create</code></td><td><code>create</code> — форма создания</td><td><code>posts.create</code></td></tr>
+        <tr><td>POST</td><td><code>/posts</code></td><td><code>store</code> — сохранить новый</td><td><code>posts.store</code></td></tr>
+        <tr><td>GET</td><td><code>/posts/{post}</code></td><td><code>show</code> — показать один</td><td><code>posts.show</code></td></tr>
+        <tr><td>GET</td><td><code>/posts/{post}/edit</code></td><td><code>edit</code> — форма редактирования</td><td><code>posts.edit</code></td></tr>
+        <tr><td>PUT/PATCH</td><td><code>/posts/{post}</code></td><td><code>update</code> — обновить</td><td><code>posts.update</code></td></tr>
+        <tr><td>DELETE</td><td><code>/posts/{post}</code></td><td><code>destroy</code> — удалить</td><td><code>posts.destroy</code></td></tr>
+      </tbody>
+    </table>
+
+    <p class="text"><strong>Частичная регистрация</strong> — если не все 7 методов нужны:</p>
+<pre><code><span class="c-comment">// Только эти</span>
+<span class="c-type">Route</span>::<span class="c-fn">resource</span>(<span class="c-str">'posts'</span>, <span class="c-type">PostController</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">only</span>([<span class="c-str">'index'</span>, <span class="c-str">'show'</span>]);
+
+<span class="c-comment">// Все кроме этих</span>
+<span class="c-type">Route</span>::<span class="c-fn">resource</span>(<span class="c-str">'posts'</span>, <span class="c-type">PostController</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">except</span>([<span class="c-str">'create'</span>, <span class="c-str">'edit'</span>]);</code></pre>
+
+    <p class="text"><strong>Пример скелета контроллера</strong> с Route Model Binding + FormRequest:</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">PostController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">index</span>() {
+        <span class="c-key">return</span> <span class="c-fn">view</span>(<span class="c-str">'posts.index'</span>, [<span class="c-str">'posts'</span> =&gt; <span class="c-type">Post</span>::<span class="c-fn">latest</span>()-&gt;<span class="c-fn">paginate</span>(<span class="c-num">15</span>)]);
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">create</span>() {
+        <span class="c-key">return</span> <span class="c-fn">view</span>(<span class="c-str">'posts.create'</span>);
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">StorePostRequest</span> <span class="c-var">$request</span>) {
+        <span class="c-var">$post</span> = <span class="c-type">Post</span>::<span class="c-fn">create</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>());
+        <span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">route</span>(<span class="c-str">'posts.show'</span>, <span class="c-var">$post</span>);
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">show</span>(<span class="c-type">Post</span> <span class="c-var">$post</span>) {   <span class="c-comment">// Route Model Binding</span>
+        <span class="c-key">return</span> <span class="c-fn">view</span>(<span class="c-str">'posts.show'</span>, <span class="c-fn">compact</span>(<span class="c-str">'post'</span>));
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">edit</span>(<span class="c-type">Post</span> <span class="c-var">$post</span>) {
+        <span class="c-key">return</span> <span class="c-fn">view</span>(<span class="c-str">'posts.edit'</span>, <span class="c-fn">compact</span>(<span class="c-str">'post'</span>));
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">update</span>(<span class="c-type">UpdatePostRequest</span> <span class="c-var">$request</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>) {
+        <span class="c-var">$post</span>-&gt;<span class="c-fn">update</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>());
+        <span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">route</span>(<span class="c-str">'posts.show'</span>, <span class="c-var">$post</span>);
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">destroy</span>(<span class="c-type">Post</span> <span class="c-var">$post</span>) {
+        <span class="c-var">$post</span>-&gt;<span class="c-fn">delete</span>();
+        <span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">route</span>(<span class="c-str">'posts.index'</span>);
+    }
+}</code></pre>
+
+    <p class="text">Проверить все маршруты одной командой:</p>
+<pre><code>php artisan route:list --path=posts</code></pre>
+  </div>
+
+  <div class="subsection" id="ctrl-api-resource">
+    <div class="subsection-title"><i data-lucide="cloud"></i> <code>apiResource</code> — то же самое, но для API</div>
+    <p class="text">Для API-роутов методы <code>create</code> и <code>edit</code> не нужны — они возвращают HTML-формы. Для этого есть <code>apiResource</code>:</p>
+<pre><code><span class="c-type">Route</span>::<span class="c-fn">apiResource</span>(<span class="c-str">'posts'</span>, <span class="c-type">Api</span>\<span class="c-type">V1</span>\<span class="c-type">PostController</span>::<span class="c-key">class</span>);</code></pre>
+
+    <p class="text">Регистрирует только <strong>5 методов</strong>: <code>index</code>, <code>store</code>, <code>show</code>, <code>update</code>, <code>destroy</code>. Без <code>create</code> и <code>edit</code>.</p>
+
+    <p class="text"><strong>Массовая регистрация нескольких API-ресурсов:</strong></p>
+<pre><code><span class="c-type">Route</span>::<span class="c-fn">apiResources</span>([
+    <span class="c-str">'posts'</span>    =&gt; <span class="c-type">Api</span>\<span class="c-type">V1</span>\<span class="c-type">PostController</span>::<span class="c-key">class</span>,
+    <span class="c-str">'comments'</span> =&gt; <span class="c-type">Api</span>\<span class="c-type">V1</span>\<span class="c-type">CommentController</span>::<span class="c-key">class</span>,
+    <span class="c-str">'tags'</span>     =&gt; <span class="c-type">Api</span>\<span class="c-type">V1</span>\<span class="c-type">TagController</span>::<span class="c-key">class</span>,
+]);</code></pre>
+
+    <p class="text">Генерация контроллера сразу под API — с 5 методами:</p>
+<pre><code>php artisan make:controller <span class="c-type">Api/V1/PostController</span> --api --model=<span class="c-type">Post</span></code></pre>
+  </div>
+
+  <div class="subsection" id="ctrl-nested">
+    <div class="subsection-title"><i data-lucide="git-branch"></i> Nested / Shallow resources</div>
+    <p class="text"><strong>Nested resource</strong> — вложенные ресурсы через точку. Полезно когда URL отражает иерархию: комментарии принадлежат посту.</p>
+<pre><code><span class="c-type">Route</span>::<span class="c-fn">resource</span>(<span class="c-str">'posts.comments'</span>, <span class="c-type">CommentController</span>::<span class="c-key">class</span>);</code></pre>
+
+    <p class="text">Регистрирует маршруты вида:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>GET /posts/{post}/comments</code></li>
+      <li><code>POST /posts/{post}/comments</code></li>
+      <li><code>GET /posts/{post}/comments/{comment}</code> — <strong>оба параметра</strong> в URL</li>
+      <li><code>PUT /posts/{post}/comments/{comment}</code></li>
+      <li><code>DELETE /posts/{post}/comments/{comment}</code></li>
+    </ul>
+
+    <p class="text"><strong>Shallow nested</strong> — для операций над конкретным комментарием (<code>show</code>, <code>edit</code>, <code>update</code>, <code>destroy</code>) не нужен ID поста, потому что ID комментария уже уникален. Делаем URL короче:</p>
+<pre><code><span class="c-type">Route</span>::<span class="c-fn">resource</span>(<span class="c-str">'posts.comments'</span>, <span class="c-type">CommentController</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">shallow</span>();</code></pre>
+
+    <p class="text">Получаем:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>GET /posts/{post}/comments</code> — вложено (список комментов к посту)</li>
+      <li><code>POST /posts/{post}/comments</code> — вложено (создать)</li>
+      <li><code>GET /comments/{comment}</code> — <strong>не вложено</strong></li>
+      <li><code>PUT /comments/{comment}</code> — не вложено</li>
+      <li><code>DELETE /comments/{comment}</code> — не вложено</li>
+    </ul>
+
+    <div class="tip">
+      Для безопасности с nested resources — <code>-&gt;scopeBindings()</code> (см. раздел Routing), чтобы комментарий искался только среди комментариев конкретного поста, а не глобально.
+    </div>
+  </div>
+
+  <div class="subsection" id="ctrl-middleware">
+    <div class="subsection-title"><i data-lucide="filter"></i> Middleware в контроллере (Laravel 10 vs 11+)</div>
+
+    <p class="text"><strong>В Laravel 10 и ниже</strong> — middleware назначались в конструкторе контроллера:</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">PostController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>()
+    {
+        <span class="c-var">$this</span>-&gt;<span class="c-fn">middleware</span>(<span class="c-str">'auth'</span>);
+        <span class="c-var">$this</span>-&gt;<span class="c-fn">middleware</span>(<span class="c-str">'admin'</span>)-&gt;<span class="c-fn">only</span>([<span class="c-str">'destroy'</span>]);
+        <span class="c-var">$this</span>-&gt;<span class="c-fn">middleware</span>(<span class="c-str">'verified'</span>)-&gt;<span class="c-fn">except</span>([<span class="c-str">'index'</span>, <span class="c-str">'show'</span>]);
+    }
+}</code></pre>
+
+    <p class="text"><strong>В Laravel 11+</strong> — метод <code>middleware()</code> в контроллере <strong>убран</strong>. Middleware назначаются в роутах:</p>
+<pre><code><span class="c-type">Route</span>::<span class="c-fn">resource</span>(<span class="c-str">'posts'</span>, <span class="c-type">PostController</span>::<span class="c-key">class</span>)
+    -&gt;<span class="c-fn">middleware</span>([<span class="c-str">'auth'</span>])
+    -&gt;<span class="c-fn">middleware</span>(<span class="c-str">'admin'</span>)-&gt;<span class="c-fn">only</span>([<span class="c-str">'destroy'</span>]);
+
+<span class="c-comment">// Или через группы</span>
+<span class="c-type">Route</span>::<span class="c-fn">middleware</span>([<span class="c-str">'auth'</span>, <span class="c-str">'verified'</span>])-&gt;<span class="c-fn">group</span>(<span class="c-key">function</span> () {
+    <span class="c-type">Route</span>::<span class="c-fn">resource</span>(<span class="c-str">'posts'</span>, <span class="c-type">PostController</span>::<span class="c-key">class</span>);
+    <span class="c-type">Route</span>::<span class="c-fn">resource</span>(<span class="c-str">'comments'</span>, <span class="c-type">CommentController</span>::<span class="c-key">class</span>);
+});</code></pre>
+
+    <p class="text">Если хочется <strong>сохранить старый стиль</strong> в Laravel 11+ — контроллер должен реализовать интерфейс <code>HasMiddleware</code>:</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Routing</span>\<span class="c-type">Controllers</span>\<span class="c-type">HasMiddleware</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Routing</span>\<span class="c-type">Controllers</span>\<span class="c-type">Middleware</span>;
+
+<span class="c-key">class</span> <span class="c-type">PostController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span> <span class="c-key">implements</span> <span class="c-type">HasMiddleware</span>
+{
+    <span class="c-key">public static function</span> <span class="c-fn">middleware</span>(): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> [
+            <span class="c-str">'auth'</span>,
+            <span class="c-key">new</span> <span class="c-type">Middleware</span>(<span class="c-str">'admin'</span>, <span class="c-var">only</span>: [<span class="c-str">'destroy'</span>]),
+            <span class="c-key">new</span> <span class="c-type">Middleware</span>(<span class="c-str">'verified'</span>, <span class="c-var">except</span>: [<span class="c-str">'index'</span>, <span class="c-str">'show'</span>]),
+        ];
+    }
+}</code></pre>
+
+    <div class="remember-box">
+      В новых проектах на Laravel 11+ рекомендуется назначать middleware <strong>в роутах</strong> (группы или <code>-&gt;middleware()</code>). Это делает конфигурацию явной — открыл <code>routes/web.php</code> и сразу видишь всю картину доступа.
+    </div>
+  </div>
+
+  <div class="subsection" id="ctrl-invokable">
+    <div class="subsection-title"><i data-lucide="zap"></i> Single Action Controllers — <code>__invoke</code></div>
+    <p class="text">Когда контроллер выполняет <strong>одно действие</strong> — не нужно раздувать класс до 7 методов. Используется класс с методом <code>__invoke()</code>.</p>
+
+<pre><code>php artisan make:controller <span class="c-type">ShowProfile</span> --invokable</code></pre>
+
+<pre><code><span class="c-key">class</span> <span class="c-type">ShowProfile</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__invoke</span>(<span class="c-type">User</span> <span class="c-var">$user</span>)
+    {
+        <span class="c-key">return</span> <span class="c-fn">view</span>(<span class="c-str">'profile'</span>, <span class="c-fn">compact</span>(<span class="c-str">'user'</span>));
+    }
+}
+
+<span class="c-comment">// routes/web.php</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}/profile'</span>, <span class="c-type">ShowProfile</span>::<span class="c-key">class</span>);
+<span class="c-comment">// Никакого второго параметра — не нужно указывать имя метода</span></code></pre>
+
+    <div class="tip">
+      Подробнее — в разделе <strong>Routing → Invokable Classes</strong>. Такие классы кешируются <code>route:cache</code> и хорошо ложатся на паттерн Action (один класс = одно действие).
+    </div>
+  </div>
+
+  <div class="subsection" id="ctrl-responses">
+    <div class="subsection-title"><i data-lucide="send"></i> Возврат ответов из контроллера</div>
+    <p class="text">Laravel автоматически превращает возвращаемое значение в HTTP-ответ. Что можно вернуть из метода контроллера:</p>
+
+    <table class="data-table">
+      <thead><tr><th>Что вернуть</th><th>Что получится</th><th>Пример</th></tr></thead>
+      <tbody>
+        <tr><td>Строка</td><td><code>Content-Type: text/html</code></td><td><code>return 'Hello';</code></td></tr>
+        <tr><td>Массив / коллекция</td><td>Автоматически JSON</td><td><code>return ['status' =&gt; 'ok'];</code></td></tr>
+        <tr><td>Eloquent-модель</td><td>Автоматически JSON (через <code>toArray</code>)</td><td><code>return User::find(1);</code></td></tr>
+        <tr><td><code>view(...)</code></td><td>Отрендеренный HTML</td><td><code>return view('posts.show', compact('post'));</code></td></tr>
+        <tr><td><code>response()-&gt;json(...)</code></td><td>Явный JSON с control</td><td><code>return response()-&gt;json($data, 201);</code></td></tr>
+        <tr><td><code>redirect(...)</code></td><td>HTTP 302 + <code>Location</code></td><td><code>return redirect()-&gt;route('home');</code></td></tr>
+        <tr><td><code>back()</code></td><td>Редирект на предыдущую страницу</td><td><code>return back()-&gt;withErrors($errors);</code></td></tr>
+        <tr><td><code>response()-&gt;download(...)</code></td><td>Файл с <code>Content-Disposition: attachment</code></td><td><code>return response()-&gt;download('/path/file.pdf');</code></td></tr>
+        <tr><td><code>response()-&gt;streamDownload(fn())</code></td><td>Стрим — файл создаётся на лету</td><td>Для больших CSV / отчётов</td></tr>
+        <tr><td><code>response()-&gt;noContent()</code></td><td>HTTP 204 без тела</td><td>После <code>destroy</code> в API</td></tr>
+        <tr><td><code>JsonResource</code></td><td>Форматированный JSON через API Resource</td><td><code>return new PostResource($post);</code></td></tr>
+      </tbody>
+    </table>
+
+    <p class="text"><strong>Примеры типичных возвратов:</strong></p>
+<pre><code><span class="c-comment">// Web — форма после создания</span>
+<span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">route</span>(<span class="c-str">'posts.show'</span>, <span class="c-var">$post</span>)-&gt;<span class="c-fn">with</span>(<span class="c-str">'status'</span>, <span class="c-str">'Пост создан'</span>);
+
+<span class="c-comment">// API — JSON с статусом 201 Created</span>
+<span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">json</span>([<span class="c-str">'data'</span> =&gt; <span class="c-var">$post</span>], <span class="c-num">201</span>);
+
+<span class="c-comment">// API — через ресурс с автоматическим 201</span>
+<span class="c-key">return</span> (<span class="c-key">new</span> <span class="c-type">PostResource</span>(<span class="c-var">$post</span>))-&gt;<span class="c-fn">response</span>()-&gt;<span class="c-fn">setStatusCode</span>(<span class="c-num">201</span>);
+
+<span class="c-comment">// API — успешное удаление, ничего не возвращаем</span>
+<span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">noContent</span>();       <span class="c-comment">// HTTP 204</span>
+
+<span class="c-comment">// Скачать файл отчёта</span>
+<span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">download</span>(<span class="c-fn">storage_path</span>(<span class="c-str">'reports/report.pdf'</span>));
+
+<span class="c-comment">// Стрим большого CSV — генерируется на лету, не хранится в памяти</span>
+<span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">streamDownload</span>(<span class="c-key">function</span> () {
+    <span class="c-var">$handle</span> = <span class="c-fn">fopen</span>(<span class="c-str">'php://output'</span>, <span class="c-str">'w'</span>);
+    <span class="c-type">Order</span>::<span class="c-fn">chunk</span>(<span class="c-num">1000</span>, <span class="c-key">fn</span> (<span class="c-var">$orders</span>) =&gt;
+        <span class="c-var">$orders</span>-&gt;<span class="c-fn">each</span>(<span class="c-key">fn</span> (<span class="c-var">$o</span>) =&gt; <span class="c-fn">fputcsv</span>(<span class="c-var">$handle</span>, <span class="c-var">$o</span>-&gt;<span class="c-fn">toArray</span>()))
+    );
+}, <span class="c-str">'orders.csv'</span>);</code></pre>
+
+    <p class="text">Подробно про HTTP-объекты (<code>RedirectResponse</code>, <code>JsonResponse</code>, <code>Response</code>) — в разделе <strong>HTTP-объекты Laravel</strong>.</p>
   </div>
 </div>
 
