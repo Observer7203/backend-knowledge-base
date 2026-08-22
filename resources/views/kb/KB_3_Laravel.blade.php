@@ -2855,6 +2855,60 @@ ul.bullets strong{color:var(--text);}
     <div class="remember-box">
       <strong>Итог.</strong> Observer — класс, который слушает события модели и выполняет код в ответ. Позволяет держать модель тонкой, а побочную логику — в отдельном классе, что улучшает поддерживаемость и читаемость проекта. Регистрация: <code>User::observe(UserObserver::class)</code> в <code>AppServiceProvider::boot()</code>.
     </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="git-merge" style="width:14px;height:14px"></i> Зачем регистрировать Observers в провайдерах</div>
+    <p class="text">Observers нужно регистрировать в Service Provider (например, <code>App\Providers\AppServiceProvider</code>), потому что:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Централизованное управление</strong> — все подписки на события моделей собираются в одном месте, что упрощает поддержку и поиск.</li>
+      <li><strong>Гарантированное выполнение при старте</strong> — метод <code>boot()</code> провайдера вызывается после того, как все сервисы зарегистрированы, и модели уже доступны. Если зарегистрировать Observer прямо в модели или в контроллере, это может привести к дублированию или выполнению в неподходящий момент.</li>
+      <li><strong>Единая точка входа</strong> — при смене логики или добавлении новых наблюдателей вы правите только провайдер, не разыскивая вызовы по всему коду.</li>
+    </ul>
+    <p class="text">Пример регистрации в <code>AppServiceProvider</code>:</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">boot</span>()
+{
+    <span class="c-type">User</span>::<span class="c-fn">observe</span>(<span class="c-type">UserObserver</span>::<span class="c-key">class</span>);
+    <span class="c-type">Post</span>::<span class="c-fn">observe</span>(<span class="c-type">PostObserver</span>::<span class="c-key">class</span>);
+}</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="clipboard-list" style="width:14px;height:14px"></i> Частые сценарии использования Observers</div>
+    <p class="text">Observers идеально подходят для <strong>побочных действий (side-effects)</strong>, которые не являются основной бизнес-логикой, но должны происходить при определённых событиях модели.</p>
+    <table class="data-table">
+      <thead><tr><th>Событие</th><th>Типичные действия</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>created</code></td>
+          <td>Отправка приветственного письма или SMS · создание связанных записей (например, профиля) · уведомление администратору · запись в лог регистрации · генерация реферальной ссылки · отправка события в очередь для аналитики</td>
+        </tr>
+        <tr>
+          <td><code>updated</code></td>
+          <td>Уведомление об изменении профиля (email/push) · инвалидация кеша (сброс списка пользователей) · логирование изменений (аудит) · синхронизация с CRM / внешним API · пересчёт агрегированных данных (рейтинг)</td>
+        </tr>
+        <tr>
+          <td><code>deleted</code></td>
+          <td>Удаление связанных файлов (аватары, документы) · очистка кеша · логирование удаления · уведомление о удалении (админу) · удаление зависимых записей (если нет каскадного удаления в БД)</td>
+        </tr>
+        <tr>
+          <td><code>restored</code> (SoftDeletes)</td>
+          <td>Восстановление файлов, если они были удалены · уведомление о восстановлении · обновление индексов поиска</td>
+        </tr>
+        <tr>
+          <td><code>retrieved</code></td>
+          <td>Логирование доступа к данным (редко, обычно для аудита чтения — GDPR, ISO)</td>
+        </tr>
+        <tr>
+          <td><code>creating</code> / <code>updating</code></td>
+          <td>Автоматическая установка значений (например, <code>slug</code>) · валидация, не охваченная стандартной · преобразование данных перед записью</td>
+        </tr>
+        <tr>
+          <td><code>saving</code></td>
+          <td>Общая обработка перед любым сохранением. Осторожно: срабатывает и при создании, и при обновлении.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="remember-box">
+      <strong>Почему это важно.</strong> Observers позволяют отделить побочные действия от кода контроллера и модели. Вместо того чтобы писать <code>Mail::send(...)</code> в контроллере каждый раз при создании пользователя — выносите это в Observer. Контроллеры становятся тоньше, код — переиспользуемым, тестирование — проще. Основные применения: уведомления, логирование, кеширование, очистка данных, синхронизация с внешними системами, генерация данных, аудит.
+    </div>
   </div>
 
   <div class="subsection" id="el-relations">
