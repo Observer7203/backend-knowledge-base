@@ -209,6 +209,7 @@ ul.bullets strong{color:var(--text);}
   <div class="nav-subgroup">
     <a class="nav-subitem" onclick="showSub('queues','q-purpose',this)">Назначение</a>
     <a class="nav-subitem" onclick="showSub('queues','q-drivers',this)">Драйверы (sync/database/redis/sqs/beanstalkd)</a>
+    <a class="nav-subitem" onclick="showSub('queues','q-jobs',this)">Job-классы (tries/timeout/backoff)</a>
     <a class="nav-subitem" onclick="showSub('queues','q-features',this)">Возможности (jobs/retry/chains/batches)</a>
     <a class="nav-subitem" onclick="showSub('queues','q-practice',this)">Практика: job с retry + idempotency</a>
     <a class="nav-subitem" onclick="showSub('queues','q-pitfalls',this)">Особые случаи</a>
@@ -4063,6 +4064,122 @@ php artisan migrate</code></pre>
         <li>Можно объявить <strong>несколько соединений</strong> и обращаться по имени: <code>Job::dispatch()-&gt;onConnection('redis-fast')</code>.</li>
       </ul>
       Очереди — важная часть архитектуры Laravel, позволяющая асинхронно обрабатывать задачи и улучшать отзывчивость приложения.
+    </div>
+  </div>
+
+  <div class="subsection" id="q-jobs">
+    <div class="subsection-title"><i data-lucide="box"></i> Job-классы — отложенные задачи</div>
+
+    <p class="text"><strong>Что это.</strong> Job — класс, который инкапсулирует работу, которую нужно выполнить асинхронно (в очереди). Он содержит всю логику в методе <code>handle()</code> и настраивается через свойства.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="layers" style="width:14px;height:14px"></i> Структура Job-класса</div>
+<pre><code><span class="c-key">namespace</span> <span class="c-type">App</span>\<span class="c-type">Jobs</span>;
+
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Bus</span>\<span class="c-type">Queueable</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Contracts</span>\<span class="c-type">Queue</span>\<span class="c-type">ShouldQueue</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Foundation</span>\<span class="c-type">Bus</span>\<span class="c-type">Dispatchable</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Queue</span>\<span class="c-type">InteractsWithQueue</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Queue</span>\<span class="c-type">SerializesModels</span>;
+
+<span class="c-key">class</span> <span class="c-type">ProcessPodcast</span> <span class="c-key">implements</span> <span class="c-type">ShouldQueue</span>
+{
+    <span class="c-key">use</span> <span class="c-type">Dispatchable</span>, <span class="c-type">InteractsWithQueue</span>, <span class="c-type">Queueable</span>, <span class="c-type">SerializesModels</span>;
+
+    <span class="c-key">public</span> <span class="c-var">$podcast</span>;
+
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-var">$podcast</span>)
+    {
+        <span class="c-var">$this</span>-&gt;<span class="c-var">podcast</span> = <span class="c-var">$podcast</span>;
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>()
+    {
+        <span class="c-comment">// основная логика: обработка подкаста, конвертация, уведомление и т.д.</span>
+    }
+}</code></pre>
+
+    <p class="text"><strong>Что каждая часть делает:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>handle()</code> — вызывается когда задание извлекается из очереди и выполняется работником. Здесь вся бизнес-логика.</li>
+      <li><code>ShouldQueue</code> — интерфейс-маркер, указывающий, что задание должно быть <em>поставлено в очередь</em>, а не выполняться синхронно.</li>
+      <li><code>Dispatchable</code> — трейт, позволяет вызывать <code>ProcessPodcast::dispatch(...)</code>.</li>
+      <li><code>InteractsWithQueue</code> — методы работы с очередью изнутри job (удалить, освободить, delete, release).</li>
+      <li><code>Queueable</code> — задать очередь, соединение, задержку через <code>onQueue()</code>, <code>onConnection()</code>, <code>delay()</code>.</li>
+      <li><code>SerializesModels</code> — автоматически превращает Eloquent-модели в ID при сериализации, при десериализации — восстанавливает через <code>findOrFail</code>.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="sliders" style="width:14px;height:14px"></i> Свойства для управления выполнением</div>
+    <table class="data-table">
+      <thead><tr><th>Свойство</th><th>Назначение</th><th>Пример</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>$tries</code></td>
+          <td>Максимальное количество попыток выполнения при ошибках</td>
+          <td><code>public $tries = 3;</code></td>
+        </tr>
+        <tr>
+          <td><code>$timeout</code></td>
+          <td>Максимальное время выполнения в секундах. Если превышено — задание провалено</td>
+          <td><code>public $timeout = 120;</code></td>
+        </tr>
+        <tr>
+          <td><code>$maxExceptions</code></td>
+          <td>Максимальное число исключений, после которого задание провалено. Позволяет делать несколько повторных попыток до лимита</td>
+          <td><code>public $maxExceptions = 3;</code></td>
+        </tr>
+        <tr>
+          <td><code>$backoff</code></td>
+          <td>Задержка между повторными попытками (сек). Может быть числом или массивом (экспоненциальная задержка)</td>
+          <td><code>public $backoff = [10, 30, 60];</code></td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="text">Эти свойства задаются прямо в классе или через метод <code>retryUntil()</code> для динамической задержки.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hammer" style="width:14px;height:14px"></i> Пример с настройками</div>
+<pre><code><span class="c-key">class</span> <span class="c-type">SendOrderConfirmation</span> <span class="c-key">implements</span> <span class="c-type">ShouldQueue</span>
+{
+    <span class="c-key">use</span> <span class="c-type">Dispatchable</span>, <span class="c-type">InteractsWithQueue</span>, <span class="c-type">Queueable</span>, <span class="c-type">SerializesModels</span>;
+
+    <span class="c-key">public</span> <span class="c-var">$order</span>;
+    <span class="c-key">public</span> <span class="c-var">$tries</span>   = <span class="c-num">5</span>;
+    <span class="c-key">public</span> <span class="c-var">$timeout</span> = <span class="c-num">60</span>;
+    <span class="c-key">public</span> <span class="c-var">$backoff</span> = [<span class="c-num">15</span>, <span class="c-num">30</span>, <span class="c-num">60</span>];   <span class="c-comment">// после 1-й ошибки — 15с, 2-й — 30с, 3-й — 60с</span>
+
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-type">Order</span> <span class="c-var">$order</span>)
+    {
+        <span class="c-var">$this</span>-&gt;<span class="c-var">order</span> = <span class="c-var">$order</span>;
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>()
+    {
+        <span class="c-comment">// Отправляем подтверждение заказа</span>
+        <span class="c-type">Mail</span>::<span class="c-fn">to</span>(<span class="c-var">$this</span>-&gt;<span class="c-var">order</span>-&gt;<span class="c-var">user</span>-&gt;<span class="c-var">email</span>)
+            -&gt;<span class="c-fn">send</span>(<span class="c-key">new</span> <span class="c-type">OrderConfirmation</span>(<span class="c-var">$this</span>-&gt;<span class="c-var">order</span>));
+    }
+}</code></pre>
+
+    <p class="text"><strong>Запуск job</strong> — в контроллере или где угодно:</p>
+<pre><code><span class="c-type">SendOrderConfirmation</span>::<span class="c-fn">dispatch</span>(<span class="c-var">$order</span>);</code></pre>
+
+    <div class="pitfall">
+      <strong>Важные моменты:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Если задание выбрасывает исключение, количество попыток уменьшается. После исчерпания <code>$tries</code> — задание помещается в таблицу <code>failed_jobs</code>.</li>
+        <li><code>$timeout</code> должен быть меньше, чем таймаут воркера <code>queue:work</code> (по умолчанию 60 секунд). Иначе воркер может убить задание раньше срабатывания собственного timeout.</li>
+        <li>Для <em>динамического</em> таймаута — метод <code>retryUntil()</code>, возвращающий <code>Carbon</code>-объект «до этого момента ретраить».</li>
+        <li><code>$backoff</code> принимает массив — каждый элемент это задержка перед N+1 попыткой. Если указано одно число — задержка одинаковая для всех попыток.</li>
+      </ul>
+    </div>
+
+    <div class="remember-box">
+      <strong>Зачем эти настройки:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><strong>Надёжность</strong> — автоматические повторные попытки при временных сбоях (сеть, внешний API).</li>
+        <li><strong>Контроль времени</strong> — не даём заданию зависнуть навсегда.</li>
+        <li><strong>Гибкость</strong> — разные задачи могут иметь разные стратегии повторных попыток.</li>
+      </ul>
+      <strong>Итог.</strong> Job-классы — основа асинхронной обработки в Laravel. Они определяют работу (<code>handle()</code>), а свойства (<code>$tries</code>, <code>$timeout</code>, <code>$backoff</code>) управляют поведением при ошибках, делая систему устойчивой и предсказуемой.
     </div>
   </div>
 
