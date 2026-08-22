@@ -174,6 +174,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('eloquent','el-casts',this)">Casts — типы атрибутов</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-scopes',this)">Scopes — переиспользуемые фильтры</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-accessors',this)">Accessors / Mutators</a>
+    <a class="nav-subitem" onclick="showSub('eloquent','el-observers',this)">Observers — наблюдатели за событиями</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-relations',this)">Связи: hasOne / hasMany / belongsTo / belongsToMany</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-practice',this)">Практика: модель заказа</a>
     <a class="nav-subitem" onclick="showSub('eloquent','el-pitfalls',this)">Особые случаи</a>
@@ -2780,6 +2781,79 @@ ul.bullets strong{color:var(--text);}
 
     <div class="remember-box">
       <strong>Где определять и кто вызывает.</strong> Аксессоры и мутаторы определяются только в <strong>модели</strong> (класс <code>User</code>, <code>Post</code> и т.д.). Контроллер просто использует модель — ему не нужно знать о преобразованиях. Всё происходит прозрачно: вы читаете <code>$user-&gt;full_name</code> — а там уже готовая строка.
+    </div>
+  </div>
+
+  <div class="subsection" id="el-observers">
+    <div class="subsection-title"><i data-lucide="eye"></i> Observers — наблюдатели за событиями модели</div>
+
+    <p class="text"><strong>Что это.</strong> Observers (наблюдатели) — это классы, которые позволяют централизованно обрабатывать события жизненного цикла модели Eloquent (создание, обновление, удаление, восстановление). Вместо того чтобы писать логику в самой модели или размазывать её по контроллерам, выносите её в отдельный класс-наблюдатель.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="bell" style="width:14px;height:14px"></i> Какие события можно перехватывать</div>
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>Когда срабатывает</th></tr></thead>
+      <tbody>
+        <tr><td><code>retrieved</code></td><td>После того как модель извлечена из БД (<code>find</code>, <code>get</code>, <code>first</code>...)</td></tr>
+        <tr><td><code>creating</code></td><td>Перед созданием новой записи (до <code>INSERT</code>)</td></tr>
+        <tr><td><code>created</code></td><td>После создания записи (после <code>INSERT</code>)</td></tr>
+        <tr><td><code>updating</code></td><td>Перед обновлением (до <code>UPDATE</code>)</td></tr>
+        <tr><td><code>updated</code></td><td>После обновления</td></tr>
+        <tr><td><code>saving</code></td><td>Перед сохранением — и для создания, и для обновления</td></tr>
+        <tr><td><code>saved</code></td><td>После сохранения — и для создания, и для обновления</td></tr>
+        <tr><td><code>deleting</code></td><td>Перед удалением</td></tr>
+        <tr><td><code>deleted</code></td><td>После удаления</td></tr>
+        <tr><td><code>restoring</code></td><td>Перед восстановлением (если используется <code>SoftDeletes</code>)</td></tr>
+        <tr><td><code>restored</code></td><td>После восстановления</td></tr>
+      </tbody>
+    </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hammer" style="width:14px;height:14px"></i> Как создать и использовать Observer</div>
+
+    <p class="text"><strong>1. Создать класс через artisan:</strong></p>
+<pre><code>php artisan make:observer <span class="c-type">UserObserver</span> --model=<span class="c-type">User</span></code></pre>
+
+    <p class="text"><strong>2. Определить логику в методах:</strong></p>
+<pre><code><span class="c-comment">// app/Observers/UserObserver.php</span>
+<span class="c-key">class</span> <span class="c-type">UserObserver</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">created</span>(<span class="c-type">User</span> <span class="c-var">$user</span>)
+    {
+        <span class="c-comment">// Отправляем приветственное письмо</span>
+        <span class="c-type">Mail</span>::<span class="c-fn">to</span>(<span class="c-var">$user</span>-&gt;<span class="c-var">email</span>)-&gt;<span class="c-fn">send</span>(<span class="c-key">new</span> <span class="c-type">WelcomeMail</span>(<span class="c-var">$user</span>));
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">deleted</span>(<span class="c-type">User</span> <span class="c-var">$user</span>)
+    {
+        <span class="c-comment">// Удаляем аватарку пользователя из файловой системы</span>
+        <span class="c-type">Storage</span>::<span class="c-fn">delete</span>(<span class="c-var">$user</span>-&gt;<span class="c-var">avatar_path</span>);
+    }
+}</code></pre>
+
+    <p class="text"><strong>3. Зарегистрировать в сервис-провайдере</strong> (например, <code>App\Providers\AppServiceProvider</code>):</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">App</span>\<span class="c-type">Models</span>\<span class="c-type">User</span>;
+<span class="c-key">use</span> <span class="c-type">App</span>\<span class="c-type">Observers</span>\<span class="c-type">UserObserver</span>;
+
+<span class="c-key">public function</span> <span class="c-fn">boot</span>()
+{
+    <span class="c-type">User</span>::<span class="c-fn">observe</span>(<span class="c-type">UserObserver</span>::<span class="c-key">class</span>);
+}</code></pre>
+
+    <p class="text"><strong>Зачем это нужно:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Разделение ответственности:</strong> модель занимается только данными, а побочные действия (отправка писем, логирование, очистка кеша) вынесены в отдельный класс.</li>
+      <li><strong>Переиспользуемость:</strong> логика не дублируется в контроллерах.</li>
+      <li><strong>Тестируемость:</strong> Observer легко тестировать отдельно от контроллеров.</li>
+      <li><strong>Чистота модели:</strong> модель не перегружена событиями.</li>
+    </ul>
+
+    <p class="text"><strong>Альтернативы:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Model Events</strong> — можно объявить через свойство <code>$dispatchesEvents</code> в модели.</li>
+      <li><strong>Event Listeners</strong> — можно связать с моделью через события, но Observer — более высокоуровневый и удобный подход, когда все хуки для одной модели.</li>
+    </ul>
+
+    <div class="remember-box">
+      <strong>Итог.</strong> Observer — класс, который слушает события модели и выполняет код в ответ. Позволяет держать модель тонкой, а побочную логику — в отдельном классе, что улучшает поддерживаемость и читаемость проекта. Регистрация: <code>User::observe(UserObserver::class)</code> в <code>AppServiceProvider::boot()</code>.
     </div>
   </div>
 
