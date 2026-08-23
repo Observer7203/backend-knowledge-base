@@ -188,6 +188,17 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="nav-group-label">Данные</div>
+  <a class="nav-item" onclick="showSection('api-resources',this)"><i data-lucide="file-json"></i> API Resources</a>
+  <div class="nav-subgroup">
+    <a class="nav-subitem" onclick="showSub('api-resources','ar-overview',this)">Зачем нужны API Resources</a>
+    <a class="nav-subitem" onclick="showSub('api-resources','ar-jsonresource',this)">JsonResource — один ресурс</a>
+    <a class="nav-subitem" onclick="showSub('api-resources','ar-collection',this)">Collection — список ресурсов</a>
+    <a class="nav-subitem" onclick="showSub('api-resources','ar-conditional',this)">Условные поля (when / whenLoaded)</a>
+    <a class="nav-subitem" onclick="showSub('api-resources','ar-meta',this)">Meta / links / additional</a>
+    <a class="nav-subitem" onclick="showSub('api-resources','ar-pagination',this)">Пагинация в ресурсах</a>
+    <a class="nav-subitem" onclick="showSub('api-resources','ar-wrapping',this)">Wrapping (обёртка data)</a>
+    <a class="nav-subitem" onclick="showSub('api-resources','ar-status',this)">Кастомный статус и заголовки</a>
+  </div>
   <a class="nav-item" onclick="showSection('eloquent',this)"><i data-lucide="database"></i> Eloquent (базовое)</a>
   <div class="nav-subgroup">
     <a class="nav-subitem" onclick="showSub('eloquent','el-purpose',this)">Назначение</a>
@@ -3027,6 +3038,342 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
     <div class="pitfall"><strong>6. Кастомное правило без <code>$fail()</code>.</strong> В Laravel 10+ кастомное правило через invokable использует <code>$fail($message)</code>; забывание этого вызова делает правило всегда проходящим.</div>
     <div class="pitfall"><strong>7. Массивы и dot-notation.</strong> <code>'items.*.sku' =&gt; 'required'</code> валидирует каждый элемент массива. Без <code>*</code> — только наличие массива как поля.</div>
     <div class="pitfall"><strong>8. <code>FormRequest::after()</code>.</strong> Laravel 11+ ввёл <code>after()</code> для дополнительных проверок после правил. Полезно для меж-полевой логики (например, <code>start_date &lt; end_date</code>), которую неудобно выразить простыми правилами.</div>
+  </div>
+</div>
+
+<div id="sec-api-resources" class="section">
+  <div class="section-title">API Resources — форматирование JSON-ответов</div>
+
+  <div class="subsection" id="ar-overview">
+    <div class="subsection-title"><i data-lucide="book-open"></i> Зачем нужны API Resources</div>
+    <p class="text"><strong>API Resource</strong> — трансформационный слой между моделью Eloquent и JSON-ответом клиенту. Задача: единообразно форматировать данные, скрывать чувствительные поля, включать связанные ресурсы по необходимости, добавлять meta-информацию.</p>
+
+    <p class="text"><strong>Проблема без ресурсов.</strong> Возврат <code>User::find($id)</code> напрямую отдаёт все атрибуты как есть — включая <code>password</code>, <code>remember_token</code>, timestamps, служебные поля. Форматирование дат, преобразование enum-ов, вложенные связи — всё это придётся делать вручную в контроллере или в модели через <code>toArray()</code>. Быстро превращается в кашу.</p>
+
+<pre><code><span class="c-comment">// ❌ Без ресурса — контроллер отдаёт всё</span>
+<span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">json</span>(<span class="c-type">User</span>::<span class="c-fn">with</span>(<span class="c-str">'posts'</span>)-&gt;<span class="c-fn">find</span>(<span class="c-var">$id</span>));
+<span class="c-comment">// В JSON попадут: password, remember_token, email_verified_at,
+// created_at/updated_at, все поля постов включая user_id...</span>
+
+<span class="c-comment">// ✅ Через ресурс — контроль над форматом</span>
+<span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">UserResource</span>(<span class="c-type">User</span>::<span class="c-fn">with</span>(<span class="c-str">'posts'</span>)-&gt;<span class="c-fn">find</span>(<span class="c-var">$id</span>));</code></pre>
+
+    <p class="text"><strong>Что дают API Resources:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Явно контролируешь какие поля попадут в JSON.</li>
+      <li>Единообразный формат ответов для всего API.</li>
+      <li>Скрытие чувствительных полей (пароль, токены, внутренние ID).</li>
+      <li>Форматирование дат, enum, sums (валюты, размеры).</li>
+      <li>Условные поля — включаются только если явно загружены (защита от N+1).</li>
+      <li>Meta-информация — пагинация, версия API, permissions.</li>
+      <li>Легкое версионирование API (<code>V1\UserResource</code> vs <code>V2\UserResource</code>).</li>
+    </ul>
+
+    <p class="text"><strong>Создание:</strong></p>
+<pre><code>php artisan make:resource <span class="c-type">UserResource</span>                    <span class="c-comment"># один ресурс</span>
+php artisan make:resource <span class="c-type">UserCollection</span>                <span class="c-comment"># коллекция ресурсов</span>
+php artisan make:resource <span class="c-type">Api/V1/PostResource</span>             <span class="c-comment"># в подпапке</span></code></pre>
+    <p class="text">Файлы создаются в <code>app/Http/Resources/</code>.</p>
+  </div>
+
+  <div class="subsection" id="ar-jsonresource">
+    <div class="subsection-title"><i data-lucide="file"></i> <code>JsonResource</code> — один ресурс</div>
+    <p class="text">Наследуемся от <code>Illuminate\Http\Resources\Json\JsonResource</code>, метод <code>toArray()</code> возвращает массив, который станет JSON.</p>
+
+<pre><code><span class="c-key">namespace</span> <span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Resources</span>;
+
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Http</span>\<span class="c-type">Request</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Http</span>\<span class="c-type">Resources</span>\<span class="c-type">Json</span>\<span class="c-type">JsonResource</span>;
+
+<span class="c-key">class</span> <span class="c-type">UserResource</span> <span class="c-key">extends</span> <span class="c-type">JsonResource</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">toArray</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> [
+            <span class="c-str">'id'</span>         =&gt; <span class="c-var">$this</span>-&gt;<span class="c-var">id</span>,
+            <span class="c-str">'name'</span>       =&gt; <span class="c-var">$this</span>-&gt;<span class="c-var">name</span>,
+            <span class="c-str">'email'</span>      =&gt; <span class="c-var">$this</span>-&gt;<span class="c-var">email</span>,
+            <span class="c-str">'role'</span>       =&gt; <span class="c-var">$this</span>-&gt;<span class="c-var">role</span>-&gt;<span class="c-var">value</span>,          <span class="c-comment">// enum</span>
+            <span class="c-str">'created_at'</span> =&gt; <span class="c-var">$this</span>-&gt;<span class="c-var">created_at</span>-&gt;<span class="c-fn">toIso8601String</span>(),
+        ];
+    }
+}</code></pre>
+
+    <p class="text"><strong>Использование в контроллере:</strong></p>
+<pre><code><span class="c-key">use</span> <span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Resources</span>\<span class="c-type">UserResource</span>;
+
+<span class="c-key">public function</span> <span class="c-fn">show</span>(<span class="c-type">User</span> <span class="c-var">$user</span>)
+{
+    <span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">UserResource</span>(<span class="c-var">$user</span>);
+}</code></pre>
+
+    <p class="text"><strong>Результирующий JSON</strong> (автоматически оборачивается в <code>data</code>):</p>
+<pre><code>{
+    <span class="c-str">"data"</span>: {
+        <span class="c-str">"id"</span>: <span class="c-num">1</span>,
+        <span class="c-str">"name"</span>: <span class="c-str">"Alice"</span>,
+        <span class="c-str">"email"</span>: <span class="c-str">"alice@example.com"</span>,
+        <span class="c-str">"role"</span>: <span class="c-str">"admin"</span>,
+        <span class="c-str">"created_at"</span>: <span class="c-str">"2026-01-15T10:30:00+00:00"</span>
+    }
+}</code></pre>
+
+    <div class="tip">
+      Внутри <code>toArray</code> обращение к <code>$this</code> проксируется к самой модели — <code>$this-&gt;id</code>, <code>$this-&gt;email</code> и т.д. Это работает через магический <code>__get</code>: ресурс делегирует доступ к атрибутам исходной модели.
+    </div>
+  </div>
+
+  <div class="subsection" id="ar-collection">
+    <div class="subsection-title"><i data-lucide="list"></i> Collection — список ресурсов</div>
+    <p class="text">Для массива объектов есть 2 способа.</p>
+
+    <p class="text"><strong>Способ 1 — <code>::collection()</code></strong> (простой, для 90% случаев):</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">index</span>()
+{
+    <span class="c-key">return</span> <span class="c-type">UserResource</span>::<span class="c-fn">collection</span>(<span class="c-type">User</span>::<span class="c-fn">all</span>());
+}</code></pre>
+    <p class="text">Каждый <code>User</code> прогонится через <code>UserResource::toArray()</code>, получится массив в <code>data</code>:</p>
+<pre><code>{
+    <span class="c-str">"data"</span>: [
+        {<span class="c-str">"id"</span>: <span class="c-num">1</span>, <span class="c-str">"name"</span>: <span class="c-str">"Alice"</span>, ...},
+        {<span class="c-str">"id"</span>: <span class="c-num">2</span>, <span class="c-str">"name"</span>: <span class="c-str">"Bob"</span>, ...}
+    ]
+}</code></pre>
+
+    <p class="text"><strong>Способ 2 — отдельный ResourceCollection</strong> (когда нужна кастомизация коллекции):</p>
+<pre><code>php artisan make:resource <span class="c-type">UserCollection</span></code></pre>
+<pre><code><span class="c-key">namespace</span> <span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Resources</span>;
+
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Http</span>\<span class="c-type">Resources</span>\<span class="c-type">Json</span>\<span class="c-type">ResourceCollection</span>;
+
+<span class="c-key">class</span> <span class="c-type">UserCollection</span> <span class="c-key">extends</span> <span class="c-type">ResourceCollection</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">toArray</span>(<span class="c-var">$request</span>): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> [
+            <span class="c-str">'data'</span> =&gt; <span class="c-var">$this</span>-&gt;<span class="c-fn">collection</span>,
+            <span class="c-str">'meta'</span> =&gt; [
+                <span class="c-str">'total'</span>        =&gt; <span class="c-var">$this</span>-&gt;<span class="c-fn">collection</span>-&gt;<span class="c-fn">count</span>(),
+                <span class="c-str">'active_count'</span> =&gt; <span class="c-var">$this</span>-&gt;<span class="c-fn">collection</span>-&gt;<span class="c-fn">where</span>(<span class="c-str">'active'</span>, <span class="c-key">true</span>)-&gt;<span class="c-fn">count</span>(),
+            ],
+        ];
+    }
+}
+
+<span class="c-comment">// Использование</span>
+<span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">UserCollection</span>(<span class="c-type">User</span>::<span class="c-fn">all</span>());</code></pre>
+
+    <div class="tip">
+      Обычно <code>::collection()</code> достаточно. <code>ResourceCollection</code> нужен только когда хотите добавить кастомные meta-поля или изменить структуру ответа для списка.
+    </div>
+  </div>
+
+  <div class="subsection" id="ar-conditional">
+    <div class="subsection-title"><i data-lucide="git-branch"></i> Условные поля — <code>when</code> / <code>whenLoaded</code></div>
+    <p class="text">Не все поля нужны всегда. Ресурсы дают методы для условного включения полей.</p>
+
+    <p class="text"><strong><code>when()</code></strong> — включить поле если условие истинно:</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">toArray</span>(<span class="c-var">$request</span>): <span class="c-key">array</span>
+{
+    <span class="c-key">return</span> [
+        <span class="c-str">'id'</span>    =&gt; <span class="c-var">$this</span>-&gt;<span class="c-var">id</span>,
+        <span class="c-str">'name'</span>  =&gt; <span class="c-var">$this</span>-&gt;<span class="c-var">name</span>,
+
+        <span class="c-comment">// email виден только владельцу или админу</span>
+        <span class="c-str">'email'</span> =&gt; <span class="c-var">$this</span>-&gt;<span class="c-fn">when</span>(
+            <span class="c-var">$request</span>-&gt;<span class="c-fn">user</span>()?-&gt;<span class="c-fn">can</span>(<span class="c-str">'view-email'</span>, <span class="c-var">$this</span>-&gt;<span class="c-fn">resource</span>),
+            <span class="c-var">$this</span>-&gt;<span class="c-var">email</span>
+        ),
+
+        <span class="c-comment">// admin_notes только если запросчик — админ</span>
+        <span class="c-str">'admin_notes'</span> =&gt; <span class="c-var">$this</span>-&gt;<span class="c-fn">when</span>(
+            <span class="c-var">$request</span>-&gt;<span class="c-fn">user</span>()?-&gt;<span class="c-fn">isAdmin</span>(),
+            <span class="c-var">$this</span>-&gt;<span class="c-var">admin_notes</span>
+        ),
+    ];
+}</code></pre>
+    <p class="text">Если условие <code>false</code> — поле <em>не попадает в JSON вообще</em> (нет ключа).</p>
+
+    <p class="text"><strong>🔥 <code>whenLoaded()</code></strong> — включить связь только если она загружена (защита от N+1):</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">toArray</span>(<span class="c-var">$request</span>): <span class="c-key">array</span>
+{
+    <span class="c-key">return</span> [
+        <span class="c-str">'id'</span>    =&gt; <span class="c-var">$this</span>-&gt;<span class="c-var">id</span>,
+        <span class="c-str">'title'</span> =&gt; <span class="c-var">$this</span>-&gt;<span class="c-var">title</span>,
+
+        <span class="c-comment">// author включается ТОЛЬКО если ->with('author') был в query</span>
+        <span class="c-str">'author'</span>   =&gt; <span class="c-key">new</span> <span class="c-type">UserResource</span>(<span class="c-var">$this</span>-&gt;<span class="c-fn">whenLoaded</span>(<span class="c-str">'author'</span>)),
+
+        <span class="c-comment">// comments — тоже</span>
+        <span class="c-str">'comments'</span> =&gt; <span class="c-type">CommentResource</span>::<span class="c-fn">collection</span>(<span class="c-var">$this</span>-&gt;<span class="c-fn">whenLoaded</span>(<span class="c-str">'comments'</span>)),
+
+        <span class="c-comment">// pivot-атрибуты BelongsToMany</span>
+        <span class="c-str">'assigned_at'</span> =&gt; <span class="c-var">$this</span>-&gt;<span class="c-fn">whenPivotLoaded</span>(<span class="c-str">'role_user'</span>, <span class="c-key">fn</span> () =&gt; <span class="c-var">$this</span>-&gt;<span class="c-var">pivot</span>-&gt;<span class="c-var">created_at</span>),
+    ];
+}</code></pre>
+
+    <p class="text"><strong>Как это работает:</strong></p>
+<pre><code><span class="c-comment">// Запрос БЕЗ загруженной связи</span>
+<span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">PostResource</span>(<span class="c-type">Post</span>::<span class="c-fn">find</span>(<span class="c-num">1</span>));
+<span class="c-comment">// JSON: { "id": 1, "title": "..." }  — author НЕ включён</span>
+
+<span class="c-comment">// Запрос С загруженной связью</span>
+<span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">PostResource</span>(<span class="c-type">Post</span>::<span class="c-fn">with</span>(<span class="c-str">'author'</span>)-&gt;<span class="c-fn">find</span>(<span class="c-num">1</span>));
+<span class="c-comment">// JSON: { "id": 1, "title": "...", "author": {...} }  — author включён</span></code></pre>
+
+    <div class="remember-box">
+      <strong>Почему это критично.</strong> Если писать <code>'author' =&gt; new UserResource($this-&gt;author)</code> — на каждый Post будет отдельный SELECT к users (проблема N+1). <code>whenLoaded</code> исключает случай — если разработчик забыл <code>-&gt;with('author')</code>, поле просто не попадёт в JSON, а не сделает N запросов.
+    </div>
+
+    <p class="text"><strong>Другие условные методы:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>whenNotNull($this-&gt;phone)</code> — включить если не null.</li>
+      <li><code>whenLoaded('posts', fn() =&gt; $this-&gt;posts-&gt;count(), 0)</code> — with default при не-загруженном.</li>
+      <li><code>mergeWhen($condition, ['field1' =&gt; ..., 'field2' =&gt; ...])</code> — включить <em>несколько</em> полей одновременно.</li>
+      <li><code>whenCounted('posts', $this-&gt;posts_count)</code> — если использовали <code>withCount('posts')</code>.</li>
+    </ul>
+  </div>
+
+  <div class="subsection" id="ar-meta">
+    <div class="subsection-title"><i data-lucide="info"></i> Meta / links / additional</div>
+    <p class="text">Часто нужно вернуть не только основной ресурс, но и дополнительную мета-информацию: версия API, пагинация, права пользователя, ссылки.</p>
+
+    <p class="text"><strong>Способ 1 — метод <code>with()</code>:</strong></p>
+<pre><code><span class="c-key">class</span> <span class="c-type">UserResource</span> <span class="c-key">extends</span> <span class="c-type">JsonResource</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">toArray</span>(<span class="c-var">$request</span>): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> [<span class="c-str">'id'</span> =&gt; <span class="c-var">$this</span>-&gt;<span class="c-var">id</span>, <span class="c-str">'name'</span> =&gt; <span class="c-var">$this</span>-&gt;<span class="c-var">name</span>];
+    }
+
+    <span class="c-comment">// Добавляется на верхний уровень JSON (рядом с data)</span>
+    <span class="c-key">public function</span> <span class="c-fn">with</span>(<span class="c-var">$request</span>): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> [
+            <span class="c-str">'meta'</span> =&gt; [
+                <span class="c-str">'api_version'</span> =&gt; <span class="c-str">'1.0'</span>,
+                <span class="c-str">'server_time'</span> =&gt; <span class="c-fn">now</span>()-&gt;<span class="c-fn">toIso8601String</span>(),
+            ],
+            <span class="c-str">'links'</span> =&gt; [
+                <span class="c-str">'self'</span>  =&gt; <span class="c-fn">route</span>(<span class="c-str">'users.show'</span>, <span class="c-var">$this</span>-&gt;<span class="c-var">id</span>),
+                <span class="c-str">'posts'</span> =&gt; <span class="c-fn">route</span>(<span class="c-str">'users.posts.index'</span>, <span class="c-var">$this</span>-&gt;<span class="c-var">id</span>),
+            ],
+        ];
+    }
+}</code></pre>
+    <p class="text">Результат:</p>
+<pre><code>{
+    <span class="c-str">"data"</span>: { <span class="c-str">"id"</span>: <span class="c-num">1</span>, <span class="c-str">"name"</span>: <span class="c-str">"Alice"</span> },
+    <span class="c-str">"meta"</span>: { <span class="c-str">"api_version"</span>: <span class="c-str">"1.0"</span>, ... },
+    <span class="c-str">"links"</span>: { <span class="c-str">"self"</span>: <span class="c-str">"/api/users/1"</span>, ... }
+}</code></pre>
+
+    <p class="text"><strong>Способ 2 — <code>additional()</code></strong> при возврате:</p>
+<pre><code><span class="c-key">return</span> (<span class="c-key">new</span> <span class="c-type">UserResource</span>(<span class="c-var">$user</span>))-&gt;<span class="c-fn">additional</span>([
+    <span class="c-str">'meta'</span> =&gt; [<span class="c-str">'request_id'</span> =&gt; <span class="c-var">$request</span>-&gt;<span class="c-fn">header</span>(<span class="c-str">'X-Request-Id'</span>)],
+]);</code></pre>
+    <p class="text">Разница: <code>with()</code> — постоянные мета для этого ресурса. <code>additional()</code> — точечно для конкретного запроса.</p>
+  </div>
+
+  <div class="subsection" id="ar-pagination">
+    <div class="subsection-title"><i data-lucide="rows-3"></i> Пагинация в ресурсах</div>
+    <p class="text">Если модель пагинируется через <code>paginate()</code> — ресурс автоматически добавит поля <code>meta</code> и <code>links</code>:</p>
+
+<pre><code><span class="c-key">public function</span> <span class="c-fn">index</span>()
+{
+    <span class="c-key">return</span> <span class="c-type">UserResource</span>::<span class="c-fn">collection</span>(<span class="c-type">User</span>::<span class="c-fn">paginate</span>(<span class="c-num">15</span>));
+}</code></pre>
+
+    <p class="text">Ответ:</p>
+<pre><code>{
+    <span class="c-str">"data"</span>: [
+        { <span class="c-str">"id"</span>: <span class="c-num">1</span>, <span class="c-str">"name"</span>: <span class="c-str">"Alice"</span> },
+        ...15 юзеров
+    ],
+    <span class="c-str">"links"</span>: {
+        <span class="c-str">"first"</span>: <span class="c-str">"http://.../users?page=1"</span>,
+        <span class="c-str">"last"</span>:  <span class="c-str">"http://.../users?page=10"</span>,
+        <span class="c-str">"prev"</span>:  <span class="c-str">null</span>,
+        <span class="c-str">"next"</span>:  <span class="c-str">"http://.../users?page=2"</span>
+    },
+    <span class="c-str">"meta"</span>: {
+        <span class="c-str">"current_page"</span>: <span class="c-num">1</span>,
+        <span class="c-str">"from"</span>:  <span class="c-num">1</span>,
+        <span class="c-str">"last_page"</span>: <span class="c-num">10</span>,
+        <span class="c-str">"path"</span>:  <span class="c-str">"http://.../users"</span>,
+        <span class="c-str">"per_page"</span>: <span class="c-num">15</span>,
+        <span class="c-str">"to"</span>:    <span class="c-num">15</span>,
+        <span class="c-str">"total"</span>: <span class="c-num">150</span>
+    }
+}</code></pre>
+
+    <p class="text">Работает и с <code>simplePaginate()</code> (без общего <code>total</code>) и с <code>cursorPaginate()</code> (курсорная пагинация — быстрее для больших таблиц).</p>
+  </div>
+
+  <div class="subsection" id="ar-wrapping">
+    <div class="subsection-title"><i data-lucide="package"></i> Wrapping — обёртка <code>data</code></div>
+    <p class="text">По умолчанию все ресурсы оборачиваются в <code>{ "data": ... }</code>. Иногда это не нужно.</p>
+
+    <p class="text"><strong>Отключить обёртку для конкретного ресурса:</strong></p>
+<pre><code><span class="c-key">class</span> <span class="c-type">UserResource</span> <span class="c-key">extends</span> <span class="c-type">JsonResource</span>
+{
+    <span class="c-key">public static</span> <span class="c-var">$wrap</span> = <span class="c-key">null</span>;   <span class="c-comment">// убрать обёртку</span>
+}
+
+<span class="c-comment">// или переименовать</span>
+<span class="c-key">public static</span> <span class="c-var">$wrap</span> = <span class="c-str">'user'</span>;   <span class="c-comment">// вместо data — user</span></code></pre>
+
+    <p class="text"><strong>Глобально отключить</strong> для всех ресурсов — в <code>AppServiceProvider::boot()</code>:</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Http</span>\<span class="c-type">Resources</span>\<span class="c-type">Json</span>\<span class="c-type">JsonResource</span>;
+
+<span class="c-key">public function</span> <span class="c-fn">boot</span>(): <span class="c-key">void</span>
+{
+    <span class="c-type">JsonResource</span>::<span class="c-fn">withoutWrapping</span>();
+}</code></pre>
+
+    <div class="pitfall">
+      <strong>Не убирайте data-обёртку без причины.</strong> Она — стандарт REST API (JSON:API, JSend). Даёт место для <code>meta</code>, <code>links</code>, <code>errors</code> на верхнем уровне. Убирать оправдано если API имитирует контракт третьей стороны или используется старым клиентом.
+    </div>
+  </div>
+
+  <div class="subsection" id="ar-status">
+    <div class="subsection-title"><i data-lucide="check-circle"></i> Кастомный статус и заголовки</div>
+    <p class="text">Ресурс автоматически имеет HTTP-статус 200. Для 201 Created / 202 Accepted / других — используйте <code>-&gt;response()</code>:</p>
+
+<pre><code><span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">StoreUserRequest</span> <span class="c-var">$request</span>)
+{
+    <span class="c-var">$user</span> = <span class="c-type">User</span>::<span class="c-fn">create</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>());
+
+    <span class="c-key">return</span> (<span class="c-key">new</span> <span class="c-type">UserResource</span>(<span class="c-var">$user</span>))
+        -&gt;<span class="c-fn">response</span>()
+        -&gt;<span class="c-fn">setStatusCode</span>(<span class="c-num">201</span>)
+        -&gt;<span class="c-fn">header</span>(<span class="c-str">'Location'</span>, <span class="c-fn">route</span>(<span class="c-str">'users.show'</span>, <span class="c-var">$user</span>));
+}</code></pre>
+
+    <p class="text">Или через хук <code>withResponse</code> в самом ресурсе (для стандартного изменения):</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">UserResource</span> <span class="c-key">extends</span> <span class="c-type">JsonResource</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">toArray</span>(<span class="c-var">$request</span>): <span class="c-key">array</span> { <span class="c-comment">/* ... */</span> }
+
+    <span class="c-key">public function</span> <span class="c-fn">withResponse</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>, <span class="c-type">JsonResponse</span> <span class="c-var">$response</span>): <span class="c-key">void</span>
+    {
+        <span class="c-var">$response</span>-&gt;<span class="c-fn">header</span>(<span class="c-str">'X-API-Version'</span>, <span class="c-str">'1.0'</span>);
+    }
+}</code></pre>
+
+    <div class="remember-box">
+      <strong>Итог по API Resources:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><code>JsonResource</code> — трансформация одной модели в JSON (метод <code>toArray</code>).</li>
+        <li><code>::collection()</code> — для массива объектов, автопагинация через <code>-&gt;paginate()</code>.</li>
+        <li><code>ResourceCollection</code> — когда нужна кастомная структура коллекции с meta.</li>
+        <li><code>when()</code> / <code>whenLoaded()</code> — условные поля, критично для защиты от N+1.</li>
+        <li><code>with()</code> и <code>additional()</code> — метаданные на верхнем уровне JSON.</li>
+        <li>Пагинация работает автоматически (<code>links</code> + <code>meta</code>).</li>
+        <li>Wrap в <code>data</code> — стандарт, отключайте только с причиной.</li>
+        <li><code>-&gt;response()-&gt;setStatusCode(201)</code> — для custom HTTP-статуса.</li>
+      </ul>
+    </div>
   </div>
 </div>
 
