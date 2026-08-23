@@ -240,6 +240,15 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('queues','q-pitfalls',this)">Особые случаи</a>
   </div>
   <a class="nav-item" onclick="showSection('events',this)"><i data-lucide="activity"></i> Events &amp; Listeners</a>
+  <div class="nav-subgroup">
+    <a class="nav-subitem" onclick="showSub('events','ev-purpose',this)">Назначение</a>
+    <a class="nav-subitem" onclick="showSub('events','ev-components',this)">Компоненты (Event/Listener/Subscriber)</a>
+    <a class="nav-subitem" onclick="showSub('events','ev-listen',this)">Регистрация: $listen формат</a>
+    <a class="nav-subitem" onclick="showSub('events','ev-queue-config',this)">Queue-config для Listeners</a>
+    <a class="nav-subitem" onclick="showSub('events','ev-event-vs-job',this)">Event vs Job — когда что</a>
+    <a class="nav-subitem" onclick="showSub('events','ev-practice',this)">Практика: событие + асинхронный listener</a>
+    <a class="nav-subitem" onclick="showSub('events','ev-pitfalls',this)">Особые случаи</a>
+  </div>
   <a class="nav-item" onclick="showSection('scheduler',this)"><i data-lucide="calendar-clock"></i> Scheduler</a>
 
   <div class="nav-group-label">Безопасность</div>
@@ -5406,12 +5415,12 @@ php artisan migrate</code></pre>
 
 <div id="sec-events" class="section">
   <div class="section-title">Events &amp; Listeners</div>
-  <div class="subsection">
+  <div class="subsection" id="ev-purpose">
     <div class="subsection-title"><i data-lucide="book-open"></i> Назначение</div>
     <p class="text">События — механизм слабого связывания: код «эмитит» событие, не зная, кто на него подпишется. Несколько listeners могут реагировать независимо. Это основной способ организации side-effects (отправка письма после регистрации, audit-лог, обновление аналитики) без раздувания основного кода.</p>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="ev-components">
     <div class="subsection-title"><i data-lucide="list"></i> Компоненты</div>
     <div class="card"><h3>Event class</h3><p class="text">DTO с публичными свойствами. Имплементирует ничего особого (или <code>ShouldBroadcast</code>, если транслируется). Создание: <code>php artisan make:event OrderPaid</code>.</p></div>
     <div class="card"><h3>Listener class</h3><p class="text">Класс с <code>handle(Event $event)</code>. Может имплементировать <code>ShouldQueue</code> — тогда исполнение асинхронно через очередь. Регистрация — в <code>EventServiceProvider::$listen</code> или через <code>Event::listen(...)</code>.</p></div>
@@ -5420,7 +5429,271 @@ php artisan migrate</code></pre>
     <div class="card"><h3>Eloquent events</h3><p class="text"><code>created</code>, <code>updated</code>, <code>deleted</code>, <code>retrieved</code> — события моделей. Подписка через observers или <code>static::created(fn ($model) =&gt; ...)</code> в boot модели.</p></div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="ev-listen">
+    <div class="subsection-title"><i data-lucide="link"></i> Регистрация — <code>$listen</code> формат</div>
+
+    <p class="text">Чтобы Laravel знал, какой listener подписан на какое событие, есть 3 способа:</p>
+
+    <div class="card">
+      <h3>1. Массив <code>$listen</code> в EventServiceProvider (классика L10 и ниже)</h3>
+      <p>В <code>app/Providers/EventServiceProvider.php</code> — свойство <code>$listen</code>: ключ = класс события, значение = массив классов listener'ов.</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">EventServiceProvider</span> <span class="c-key">extends</span> <span class="c-type">ServiceProvider</span>
+{
+    <span class="c-key">protected</span> <span class="c-var">$listen</span> = [
+        <span class="c-comment">// Один event → несколько listeners</span>
+        <span class="c-type">OrderPaid</span>::<span class="c-key">class</span> =&gt; [
+            <span class="c-type">SendOrderConfirmation</span>::<span class="c-key">class</span>,
+            <span class="c-type">UpdateSalesStats</span>::<span class="c-key">class</span>,
+            <span class="c-type">NotifyWarehouse</span>::<span class="c-key">class</span>,
+        ],
+
+        <span class="c-comment">// Одно событие → один listener</span>
+        <span class="c-type">UserRegistered</span>::<span class="c-key">class</span> =&gt; [
+            <span class="c-type">SendWelcomeEmail</span>::<span class="c-key">class</span>,
+        ],
+
+        <span class="c-comment">// Ключ можно как строку — для стандартных Laravel-событий</span>
+        <span class="c-str">'Illuminate\Auth\Events\Login'</span> =&gt; [
+            <span class="c-type">LogSuccessfulLogin</span>::<span class="c-key">class</span>,
+        ],
+    ];
+}</code></pre>
+      <p>Каждый listener получит один и тот же экземпляр события. Порядок выполнения — как в массиве (сверху вниз), но не гарантируется, если listeners асинхронные (ShouldQueue).</p>
+    </div>
+
+    <div class="card">
+      <h3>2. <code>Event::listen()</code> в boot() провайдера</h3>
+      <p>Программная регистрация — полезно если listener определяется в runtime:</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Support</span>\<span class="c-type">Facades</span>\<span class="c-type">Event</span>;
+
+<span class="c-key">public function</span> <span class="c-fn">boot</span>(): <span class="c-key">void</span>
+{
+    <span class="c-comment">// Класс + метод</span>
+    <span class="c-type">Event</span>::<span class="c-fn">listen</span>(
+        <span class="c-type">OrderPaid</span>::<span class="c-key">class</span>,
+        [<span class="c-type">SendOrderConfirmation</span>::<span class="c-key">class</span>, <span class="c-str">'handle'</span>]
+    );
+
+    <span class="c-comment">// Замыкание (inline listener)</span>
+    <span class="c-type">Event</span>::<span class="c-fn">listen</span>(<span class="c-type">OrderPaid</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">OrderPaid</span> <span class="c-var">$event</span>) {
+        <span class="c-type">Log</span>::<span class="c-fn">info</span>(<span class="c-str">'Order paid: '</span> . <span class="c-var">$event</span>-&gt;<span class="c-var">order</span>-&gt;<span class="c-var">id</span>);
+    });
+
+    <span class="c-comment">// Wildcard — слушать все события с префиксом</span>
+    <span class="c-type">Event</span>::<span class="c-fn">listen</span>(<span class="c-str">'order.*'</span>, <span class="c-key">function</span> (<span class="c-key">string</span> <span class="c-var">$eventName</span>, <span class="c-key">array</span> <span class="c-var">$data</span>) {
+        <span class="c-comment">// $eventName = 'order.paid', 'order.cancelled' и т.п.</span>
+    });
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>3. Auto-discovery (Laravel 8+)</h3>
+      <p>Laravel может сам находить listeners сканируя <code>app/Listeners</code> — по типу аргумента <code>handle()</code>. Включается в EventServiceProvider:</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">shouldDiscoverEvents</span>(): <span class="c-key">bool</span>
+{
+    <span class="c-key">return</span> <span class="c-key">true</span>;
+}</code></pre>
+      <p>Теперь <code>SendOrderConfirmation::handle(OrderPaid $event)</code> будет автоматически подписан на <code>OrderPaid</code> — регистрация в <code>$listen</code> не нужна.</p>
+      <div class="pitfall">
+        <strong>Осторожно:</strong> auto-discovery работает через сканирование папки. Найти всех слушателей события grep'ом уже сложнее — надо смотреть type-hint каждого файла. Явный <code>$listen</code> проще для больших проектов.
+      </div>
+    </div>
+
+    <p class="text"><strong>Кеширование:</strong> в production для скорости — <code>php artisan event:cache</code>. Compiles массив в один файл. Сброс — <code>event:clear</code>. Auto-discovery без кеша — дорого.</p>
+  </div>
+
+  <div class="subsection" id="ev-queue-config">
+    <div class="subsection-title"><i data-lucide="sliders"></i> Queue-config для Listeners</div>
+
+    <p class="text">Если listener реализует <code>ShouldQueue</code> — исполнение переносится в очередь и <em>всё поведение job'а</em> становится доступно. Свойства и методы — те же что у Job.</p>
+
+    <p class="text"><strong>Свойства настройки:</strong></p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Contracts</span>\<span class="c-type">Queue</span>\<span class="c-type">ShouldQueue</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Queue</span>\<span class="c-type">InteractsWithQueue</span>;
+
+<span class="c-key">class</span> <span class="c-type">SendOrderConfirmation</span> <span class="c-key">implements</span> <span class="c-type">ShouldQueue</span>
+{
+    <span class="c-key">use</span> <span class="c-type">InteractsWithQueue</span>;
+
+    <span class="c-comment">// Куда положить job</span>
+    <span class="c-key">public</span> <span class="c-key">string</span> <span class="c-var">$connection</span> = <span class="c-str">'redis'</span>;         <span class="c-comment">// какое соединение</span>
+    <span class="c-key">public</span> <span class="c-key">string</span> <span class="c-var">$queue</span>      = <span class="c-str">'emails'</span>;        <span class="c-comment">// какая очередь</span>
+    <span class="c-key">public int</span>    <span class="c-var">$delay</span>      = <span class="c-num">60</span>;              <span class="c-comment">// задержка в секундах</span>
+
+    <span class="c-comment">// Retry-логика</span>
+    <span class="c-key">public int</span>    <span class="c-var">$tries</span>          = <span class="c-num">3</span>;
+    <span class="c-key">public int</span>    <span class="c-var">$maxExceptions</span>  = <span class="c-num">2</span>;
+    <span class="c-key">public int</span>    <span class="c-var">$timeout</span>        = <span class="c-num">120</span>;
+    <span class="c-key">public array</span>  <span class="c-var">$backoff</span>        = [<span class="c-num">10</span>, <span class="c-num">30</span>, <span class="c-num">60</span>];   <span class="c-comment">// экспоненциальная задержка</span>
+
+    <span class="c-comment">// Автоудаление при отсутствии модели</span>
+    <span class="c-key">public bool</span>   <span class="c-var">$deleteWhenMissingModels</span> = <span class="c-key">true</span>;
+
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">OrderPaid</span> <span class="c-var">$event</span>): <span class="c-key">void</span>
+    {
+        <span class="c-type">Mail</span>::<span class="c-fn">to</span>(<span class="c-var">$event</span>-&gt;<span class="c-var">order</span>-&gt;<span class="c-var">user</span>)-&gt;<span class="c-fn">send</span>(<span class="c-key">new</span> <span class="c-type">OrderConfirmationMail</span>(<span class="c-var">$event</span>-&gt;<span class="c-var">order</span>));
+    }
+
+    <span class="c-comment">// Хук после исчерпания $tries</span>
+    <span class="c-key">public function</span> <span class="c-fn">failed</span>(<span class="c-type">OrderPaid</span> <span class="c-var">$event</span>, <span class="c-type">Throwable</span> <span class="c-var">$e</span>): <span class="c-key">void</span>
+    {
+        <span class="c-type">Log</span>::<span class="c-fn">error</span>(<span class="c-str">'Order confirmation failed'</span>, [
+            <span class="c-str">'order_id'</span> =&gt; <span class="c-var">$event</span>-&gt;<span class="c-var">order</span>-&gt;<span class="c-var">id</span>,
+            <span class="c-str">'error'</span>    =&gt; <span class="c-var">$e</span>-&gt;<span class="c-fn">getMessage</span>(),
+        ]);
+
+        <span class="c-comment">// Уведомить админа что письмо не отправилось после всех попыток</span>
+        <span class="c-type">AdminAlert</span>::<span class="c-fn">dispatch</span>(<span class="c-str">'Confirmation email failed'</span>);
+    }
+}</code></pre>
+
+    <p class="text"><strong>Разбор свойств:</strong></p>
+    <table class="data-table">
+      <thead><tr><th>Свойство</th><th>Что делает</th></tr></thead>
+      <tbody>
+        <tr><td><code>$connection</code></td><td>Соединение очереди (из <code>config/queue.php</code>): redis / database / sqs...</td></tr>
+        <tr><td><code>$queue</code></td><td>Имя очереди внутри соединения (для приоритизации: <code>queue:work --queue=high,default</code>)</td></tr>
+        <tr><td><code>$delay</code></td><td>Задержка перед первой попыткой выполнения (секунды)</td></tr>
+        <tr><td><code>$tries</code></td><td>Максимальное количество попыток (после — job попадает в <code>failed_jobs</code>)</td></tr>
+        <tr><td><code>$maxExceptions</code></td><td>Максимум исключений (не то же самое что tries — timeout не считается исключением)</td></tr>
+        <tr><td><code>$timeout</code></td><td>Таймаут выполнения одной попытки (секунды)</td></tr>
+        <tr><td><code>$backoff</code></td><td>Задержка между попытками — <code>[10, 30, 60]</code> экспоненциально или число для константной</td></tr>
+        <tr><td><code>$deleteWhenMissingModels</code></td><td>Если модель в <code>SerializesModels</code> не найдена (удалена) — удалить job вместо ошибки</td></tr>
+      </tbody>
+    </table>
+
+    <p class="text"><strong>Динамическая конфигурация — методы вместо свойств:</strong></p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">viaConnection</span>(): <span class="c-key">string</span>
+{
+    <span class="c-key">return</span> <span class="c-fn">app</span>()-&gt;<span class="c-fn">environment</span>(<span class="c-str">'production'</span>) ? <span class="c-str">'redis'</span> : <span class="c-str">'sync'</span>;
+}
+
+<span class="c-key">public function</span> <span class="c-fn">viaQueue</span>(): <span class="c-key">string</span>
+{
+    <span class="c-key">return</span> <span class="c-var">$this</span>-&gt;<span class="c-fn">event</span>-&gt;<span class="c-fn">isUrgent</span>() ? <span class="c-str">'high'</span> : <span class="c-str">'default'</span>;
+}
+
+<span class="c-key">public function</span> <span class="c-fn">backoff</span>(): <span class="c-key">array</span>
+{
+    <span class="c-key">return</span> [<span class="c-fn">rand</span>(<span class="c-num">10</span>, <span class="c-num">30</span>), <span class="c-fn">rand</span>(<span class="c-num">60</span>, <span class="c-num">120</span>)];
+}</code></pre>
+
+    <p class="text"><strong>Метод <code>failed()</code></strong> — хук после исчерпания попыток. Вызывается ровно один раз. Полезно для:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Логирования в БД (запись в audit-таблицу вместо только <code>failed_jobs</code>)</li>
+      <li>Уведомления админа / Slack / Sentry</li>
+      <li>Компенсирующего действия (откатить статус, вернуть на модерацию)</li>
+      <li>Метрики (increment failure counter)</li>
+    </ul>
+
+    <div class="remember-box">
+      <strong>Всё то же самое работает и в Jobs.</strong> Разница только в контексте: у Job аргумент <code>__construct</code>, у Listener'а — <code>handle(EventClass $event)</code>. Свойства (<code>$tries</code>, <code>$backoff</code>, <code>$queue</code>, <code>$connection</code>) — идентичны.
+    </div>
+  </div>
+
+  <div class="subsection" id="ev-event-vs-job">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> Event vs Job — когда что использовать</div>
+
+    <p class="text">Внешне похожи: и Event, и Job можно поставить в очередь, оба выполняют бизнес-действие асинхронно. Разница — в <strong>семантике связи</strong> отправителя с получателем.</p>
+
+    <table class="data-table">
+      <thead><tr><th></th><th>Event</th><th>Job</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Отношение</strong></td>
+          <td>1 → N (отправитель, N слушателей)</td>
+          <td>1 → 1 (отправитель, один обработчик)</td>
+        </tr>
+        <tr>
+          <td><strong>Отправитель знает получателя</strong></td>
+          <td>❌ Нет. Просто эмитит «случилось X»</td>
+          <td>✅ Да. Явно: «сделай Y»</td>
+        </tr>
+        <tr>
+          <td><strong>Смысл</strong></td>
+          <td>«Что случилось» (факт в прошедшем времени: <code>OrderPaid</code>, <code>UserRegistered</code>)</td>
+          <td>«Что сделать» (императив: <code>SendConfirmation</code>, <code>GenerateReport</code>)</td>
+        </tr>
+        <tr>
+          <td><strong>Кол-во обработчиков</strong></td>
+          <td>Любое (0..N listeners)</td>
+          <td>Ровно один (<code>handle()</code>)</td>
+        </tr>
+        <tr>
+          <td><strong>Добавить нового получателя</strong></td>
+          <td>Просто зарегистрировать новый listener в <code>$listen</code></td>
+          <td>Нужно вызвать <code>OtherJob::dispatch()</code> в коде</td>
+        </tr>
+        <tr>
+          <td><strong>Хорошо когда</strong></td>
+          <td>Много независимых side-effects (письмо, аналитика, лог, уведомление)</td>
+          <td>Одно конкретное действие (отправить письмо, конвертировать видео)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="text"><strong>Пример на одной задаче — «пользователь оплатил заказ»:</strong></p>
+
+    <p class="text"><strong>Вариант A — через Event</strong> (правильно, когда действий несколько):</p>
+<pre><code><span class="c-comment">// В контроллере / Action</span>
+<span class="c-type">OrderPaid</span>::<span class="c-fn">dispatch</span>(<span class="c-var">$order</span>);
+<span class="c-comment">// Отправитель не знает, что произойдёт дальше.</span>
+
+<span class="c-comment">// В EventServiceProvider</span>
+<span class="c-key">protected</span> <span class="c-var">$listen</span> = [
+    <span class="c-type">OrderPaid</span>::<span class="c-key">class</span> =&gt; [
+        <span class="c-type">SendOrderConfirmation</span>::<span class="c-key">class</span>,   <span class="c-comment">// письмо клиенту</span>
+        <span class="c-type">UpdateSalesStats</span>::<span class="c-key">class</span>,        <span class="c-comment">// аналитика</span>
+        <span class="c-type">NotifyWarehouse</span>::<span class="c-key">class</span>,         <span class="c-comment">// уведомить склад</span>
+        <span class="c-type">SyncToCrm</span>::<span class="c-key">class</span>,               <span class="c-comment">// CRM</span>
+    ],
+];
+<span class="c-comment">// Через полгода добавили ещё SendSlackNotification —
+// зарегистрировали в $listen, код Order-логики не тронули.</span></code></pre>
+
+    <p class="text"><strong>Вариант B — напрямую через Jobs</strong> (правильно, когда действие одно и конкретное):</p>
+<pre><code><span class="c-comment">// В контроллере / Action</span>
+<span class="c-type">SendOrderConfirmation</span>::<span class="c-fn">dispatch</span>(<span class="c-var">$order</span>);
+<span class="c-comment">// Явно: «отправь письмо-подтверждение».</span></code></pre>
+
+    <p class="text"><strong>Плохой Job (замаскированный Event):</strong></p>
+<pre><code><span class="c-comment">// ❌ Такой job слишком много берёт на себя</span>
+<span class="c-key">class</span> <span class="c-type">ProcessOrderPayment</span> <span class="c-key">implements</span> <span class="c-type">ShouldQueue</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>()
+    {
+        <span class="c-var">$this</span>-&gt;<span class="c-fn">sendConfirmation</span>();
+        <span class="c-var">$this</span>-&gt;<span class="c-fn">updateStats</span>();
+        <span class="c-var">$this</span>-&gt;<span class="c-fn">notifyWarehouse</span>();
+        <span class="c-var">$this</span>-&gt;<span class="c-fn">syncCrm</span>();
+    }
+}
+<span class="c-comment">// Если один шаг упал — упадёт весь job. Retry прогонит все шаги снова.
+// Добавить новое действие = править этот класс. Тестировать сложнее.</span></code></pre>
+
+    <p class="text"><strong>Хороший подход — Event + отдельные Listeners:</strong></p>
+<pre><code><span class="c-comment">// ✅ Каждое действие — независимый listener</span>
+<span class="c-type">OrderPaid</span>::<span class="c-fn">dispatch</span>(<span class="c-var">$order</span>);
+<span class="c-comment">// Каждый listener retry-ится независимо.
+// Один упал — остальные отработали.
+// Добавить новое — просто новый listener.</span></code></pre>
+
+    <div class="remember-box">
+      <strong>Правило выбора:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><strong>Одно конкретное действие</strong> — <code>Job</code>. Пример: сгенерировать PDF по ID заказа.</li>
+        <li><strong>Факт «что-то случилось» → много реакций</strong> — <code>Event</code>. Пример: OrderPaid → 5 разных listener'ов.</li>
+        <li><strong>Один listener сегодня, но может быть больше завтра</strong> — <code>Event</code>. Гибкость без переписывания.</li>
+        <li><strong>Тонкий контроллер</strong> хорош оба варианта — главное вынести из <code>__invoke</code> контроллера.</li>
+      </ul>
+    </div>
+
+    <div class="tip">
+      <strong>Часто на собесе:</strong> «Чем отличается Event от Job?». Короткий ответ: <em>Event — «случилось X», может быть 0..N слушателей, слабая связь. Job — «сделай Y», один обработчик, явный вызов. Event хорош когда одна причина → много следствий.</em>
+    </div>
+  </div>
+
+  <div class="subsection" id="ev-practice">
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика: событие и асинхронный listener</div>
 <pre><code><span class="c-comment">// app/Events/OrderPaid.php</span>
 <span class="c-key">final class</span> <span class="c-type">OrderPaid</span>
@@ -5446,7 +5719,7 @@ php artisan migrate</code></pre>
 </code></pre>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="ev-pitfalls">
     <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
     <div class="pitfall"><strong>1. Eloquent-модель в свойстве event.</strong> При <code>ShouldQueue</code> listener сериализуется через <code>SerializesModels</code> — сохраняется только id. Между dispatch и handle строка может измениться или удалиться.</div>
     <div class="pitfall"><strong>2. <code>Event::fake()</code> в тестах не вызывает listeners.</strong> Если тесту нужно проверить side-effect listener'а — не используйте fake, либо отдельно тестируйте listener.</div>
