@@ -211,6 +211,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('queues','q-drivers',this)">Драйверы (sync/database/redis/sqs/beanstalkd)</a>
     <a class="nav-subitem" onclick="showSub('queues','q-jobs',this)">Job-классы (tries/timeout/backoff)</a>
     <a class="nav-subitem" onclick="showSub('queues','q-chains-batches',this)">Chains и Batches (группы задач)</a>
+    <a class="nav-subitem" onclick="showSub('queues','q-rate-limit',this)">Rate Limiting для Job</a>
     <a class="nav-subitem" onclick="showSub('queues','q-features',this)">Возможности (jobs/retry/chains/batches)</a>
     <a class="nav-subitem" onclick="showSub('queues','q-practice',this)">Практика: job с retry + idempotency</a>
     <a class="nav-subitem" onclick="showSub('queues','q-pitfalls',this)">Особые случаи</a>
@@ -4334,6 +4335,95 @@ php artisan migrate</code></pre>
         <li><strong>Chain</strong> — для последовательных задач, где важен порядок и зависимость (скачать → обработать → уведомить).</li>
         <li><strong>Batch</strong> — для параллельных независимых задач, с возможностью реагировать на успех/ошибку всех или одной из них (массовая рассылка писем, параллельная обработка файлов).</li>
       </ul>
+    </div>
+  </div>
+
+  <div class="subsection" id="q-rate-limit">
+    <div class="subsection-title"><i data-lucide="gauge"></i> Rate Limiting для Job — защита от перегрузки внешних API</div>
+
+    <p class="text">В Laravel можно ограничивать частоту выполнения заданий очереди (jobs), чтобы не перегружать внешние сервисы (API, БД, сторонние сервисы) слишком большим количеством запросов.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="help-circle" style="width:14px;height:14px"></i> Зачем это нужно</div>
+    <p class="text">Если приложение отправляет тысячи писем через внешний SMTP, вызывает API (Telegram, Google Maps, платёжки) или выполняет действия с ограничениями по частоте — легко превысить лимиты, получить <code>429 Too Many Requests</code> или быть заблокированным. Очереди позволяют <em>замедлить</em> выполнение таких задач, соблюдая квоты.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="split" style="width:14px;height:14px"></i> Как работает — 2 подхода</div>
+
+    <div class="card">
+      <h3>1. Middleware <code>RateLimited</code> (рекомендуемый способ)</h3>
+      <p>Применяем специальный middleware к job-классу — он проверяет лимит и при необходимости откладывает выполнение.</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Queue</span>\<span class="c-type">Middleware</span>\<span class="c-type">RateLimited</span>;
+
+<span class="c-key">class</span> <span class="c-type">ProcessExternalApiJob</span> <span class="c-key">implements</span> <span class="c-type">ShouldQueue</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">middleware</span>(): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> [
+            <span class="c-key">new</span> <span class="c-type">RateLimited</span>(<span class="c-str">'api-calls'</span>),   <span class="c-comment">// идентификатор лимита</span>
+        ];
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>()
+    {
+        <span class="c-comment">// Вызов внешнего API</span>
+    }
+}</code></pre>
+
+      <p>Лимит <code>'api-calls'</code> определяется в <code>App\Providers\AppServiceProvider</code> (в <code>boot()</code>) через фасад <code>RateLimiter</code>:</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Cache</span>\<span class="c-type">RateLimiting</span>\<span class="c-type">Limit</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Support</span>\<span class="c-type">Facades</span>\<span class="c-type">RateLimiter</span>;
+
+<span class="c-type">RateLimiter</span>::<span class="c-fn">for</span>(<span class="c-str">'api-calls'</span>, <span class="c-key">function</span> (<span class="c-var">$job</span>) {
+    <span class="c-key">return</span> <span class="c-type">Limit</span>::<span class="c-fn">perMinute</span>(<span class="c-num">100</span>);   <span class="c-comment">// 100 вызовов в минуту</span>
+});</code></pre>
+      <p>Когда лимит превышен, Laravel автоматически <code>release()</code>-ит задание с задержкой (по умолчанию — до следующего окна). Задание повторно попытается выполниться позже, когда лимит будет доступен.</p>
+    </div>
+
+    <div class="card">
+      <h3>2. Через <code>RateLimiter</code> вручную внутри <code>handle()</code></h3>
+      <p>Более гранулярный контроль — сами проверяем лимит и вызываем <code>release()</code>.</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">handle</span>()
+{
+    <span class="c-var">$key</span>     = <span class="c-str">'api-calls:'</span> . <span class="c-var">$this</span>-&gt;<span class="c-var">id</span>;
+    <span class="c-var">$limiter</span> = <span class="c-fn">app</span>(<span class="c-type">RateLimiter</span>::<span class="c-key">class</span>);
+
+    <span class="c-key">if</span> (<span class="c-var">$limiter</span>-&gt;<span class="c-fn">tooManyAttempts</span>(<span class="c-var">$key</span>, <span class="c-num">100</span>)) {
+        <span class="c-var">$this</span>-&gt;<span class="c-fn">release</span>(<span class="c-var">$limiter</span>-&gt;<span class="c-fn">availableIn</span>(<span class="c-var">$key</span>));
+        <span class="c-key">return</span>;
+    }
+
+    <span class="c-comment">// выполняем запрос</span>
+    <span class="c-var">$limiter</span>-&gt;<span class="c-fn">hit</span>(<span class="c-var">$key</span>, <span class="c-num">60</span>);   <span class="c-comment">// учитываем попытку (60 сек окно)</span>
+
+    <span class="c-comment">// ... сам вызов API</span>
+}</code></pre>
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="settings-2" style="width:14px;height:14px"></i> Настройка поведения</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>Limit::perMinute()</code>, <code>perHour()</code>, <code>perSecond()</code> — задают временные окна.</li>
+      <li><code>-&gt;by(...)</code> — ключ для дифференциации лимита (по ID пользователя, IP, внешнему ключу).</li>
+      <li><code>-&gt;releaseAfter(N)</code> — время задержки при освобождении задания.</li>
+      <li><code>-&gt;response()</code> — кастомный ответ при превышении (для HTTP throttle, не для Job).</li>
+    </ul>
+
+    <p class="text"><strong>Пример с разными лимитами для разных пользователей:</strong></p>
+<pre><code><span class="c-type">RateLimiter</span>::<span class="c-fn">for</span>(<span class="c-str">'api-calls'</span>, <span class="c-key">function</span> (<span class="c-var">$job</span>) {
+    <span class="c-key">return</span> <span class="c-var">$job</span>-&gt;<span class="c-var">user</span>
+        ? <span class="c-type">Limit</span>::<span class="c-fn">perMinute</span>(<span class="c-num">100</span>)-&gt;<span class="c-fn">by</span>(<span class="c-var">$job</span>-&gt;<span class="c-var">user</span>-&gt;<span class="c-var">id</span>)
+        : <span class="c-type">Limit</span>::<span class="c-fn">perMinute</span>(<span class="c-num">10</span>)-&gt;<span class="c-fn">by</span>(<span class="c-var">$job</span>-&gt;<span class="c-var">ip</span>);
+});</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="target" style="width:14px;height:14px"></i> Где применяется</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Отправка email через внешние SMTP</strong> (SendGrid, Mailgun) — у них часто жёсткие лимиты.</li>
+      <li><strong>API соцсетей</strong> (Twitter/X, Facebook, Instagram) — строгие ограничения по OAuth-токену.</li>
+      <li><strong>Платёжные системы</strong> (Stripe, PayPal) — избегаем ошибок из-за rate limit.</li>
+      <li><strong>Парсинг сайтов</strong> — чтобы не заблокировали за слишком частые запросы.</li>
+      <li><strong>Пуш-уведомления</strong> (FCM, APNs) — Google и Apple тоже ограничивают.</li>
+    </ul>
+
+    <div class="remember-box">
+      <strong>Итог.</strong> Rate limiting для Job — механизм контроля частоты выполнения заданий, чтобы не превысить лимиты внешних сервисов. Реализуется через middleware <code>RateLimited</code> (рекомендуемый способ) или вручную с фасадом <code>RateLimiter</code>. При превышении job освобождается с задержкой и повторяется позже — очередь сама регулирует нагрузку. Обязательный инструмент для надёжных интеграций с внешними API.
     </div>
   </div>
 
