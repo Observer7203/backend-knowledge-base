@@ -210,6 +210,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('queues','q-purpose',this)">Назначение</a>
     <a class="nav-subitem" onclick="showSub('queues','q-drivers',this)">Драйверы (sync/database/redis/sqs/beanstalkd)</a>
     <a class="nav-subitem" onclick="showSub('queues','q-jobs',this)">Job-классы (tries/timeout/backoff)</a>
+    <a class="nav-subitem" onclick="showSub('queues','q-chains-batches',this)">Chains и Batches (группы задач)</a>
     <a class="nav-subitem" onclick="showSub('queues','q-features',this)">Возможности (jobs/retry/chains/batches)</a>
     <a class="nav-subitem" onclick="showSub('queues','q-practice',this)">Практика: job с retry + idempotency</a>
     <a class="nav-subitem" onclick="showSub('queues','q-pitfalls',this)">Особые случаи</a>
@@ -4227,6 +4228,112 @@ php artisan migrate</code></pre>
 
     <div class="remember-box">
       <strong>Итог по параллельности.</strong> Job-классы с <code>ShouldQueue</code> — способ выполнять тяжёлые операции фоново, не блокируя пользовательские запросы. Обрабатываются параллельно при наличии нескольких воркеров и значительно повышают отзывчивость приложения. Формула: <em>больше воркеров → выше пропускная способность обработки очереди</em>.
+    </div>
+  </div>
+
+  <div class="subsection" id="q-chains-batches">
+    <div class="subsection-title"><i data-lucide="git-merge"></i> Chains и Batches — управление группами задач</div>
+
+    <p class="text">Chains и Batches — это способы организовать выполнение <strong>нескольких задач (jobs)</strong> скоординированно. Отличаются порядком, поведением при ошибках и возможностью отслеживать прогресс.</p>
+
+    <div class="card">
+      <h3>Chain (Цепочка) — последовательное выполнение</h3>
+      <p>Задачи выполняются <strong>одна за другой</strong>, строго по порядку. Если какая-то задача в цепочке завершается с ошибкой (исключение), выполнение <em>всей цепочки прерывается</em> — остальные задачи не запускаются.</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Support</span>\<span class="c-type">Facades</span>\<span class="c-type">Bus</span>;
+
+<span class="c-type">Bus</span>::<span class="c-fn">chain</span>([
+    <span class="c-key">new</span> <span class="c-type">DownloadFileJob</span>(<span class="c-var">$fileId</span>),
+    <span class="c-key">new</span> <span class="c-type">ProcessFileJob</span>(<span class="c-var">$fileId</span>),
+    <span class="c-key">new</span> <span class="c-type">NotifyUserJob</span>(<span class="c-var">$userId</span>),
+])-&gt;<span class="c-fn">dispatch</span>();</code></pre>
+      <p><strong>Применение:</strong> когда следующая задача зависит от результата предыдущей (скачать → обработать → уведомить). В таком случае нельзя запускать их одновременно.</p>
+    </div>
+
+    <div class="card">
+      <h3>Batch (Пакет) — параллельное выполнение</h3>
+      <p>Задачи выполняются <strong>параллельно</strong> (одновременно), независимо друг от друга. Можно добавить финальные колбэки:</p>
+      <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+        <li><code>then</code> — вызывается, когда все задачи <em>успешно</em> завершены.</li>
+        <li><code>catch</code> — вызывается, если хотя бы одна задача упала (исключение).</li>
+        <li><code>finally</code> — вызывается в любом случае, после выполнения всех задач.</li>
+      </ul>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Support</span>\<span class="c-type">Facades</span>\<span class="c-type">Bus</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Bus</span>\<span class="c-type">Batch</span>;
+<span class="c-key">use</span> <span class="c-type">Throwable</span>;
+
+<span class="c-var">$batch</span> = <span class="c-type">Bus</span>::<span class="c-fn">batch</span>([
+    <span class="c-key">new</span> <span class="c-type">SendEmailToUser</span>(<span class="c-var">$user1</span>),
+    <span class="c-key">new</span> <span class="c-type">SendEmailToUser</span>(<span class="c-var">$user2</span>),
+    <span class="c-key">new</span> <span class="c-type">SendEmailToUser</span>(<span class="c-var">$user3</span>),
+])-&gt;<span class="c-fn">then</span>(<span class="c-key">function</span> (<span class="c-type">Batch</span> <span class="c-var">$batch</span>) {
+    <span class="c-comment">// все успешно</span>
+})-&gt;<span class="c-fn">catch</span>(<span class="c-key">function</span> (<span class="c-type">Batch</span> <span class="c-var">$batch</span>, <span class="c-type">Throwable</span> <span class="c-var">$e</span>) {
+    <span class="c-comment">// что-то упало</span>
+})-&gt;<span class="c-fn">finally</span>(<span class="c-key">function</span> (<span class="c-type">Batch</span> <span class="c-var">$batch</span>) {
+    <span class="c-comment">// всегда</span>
+})-&gt;<span class="c-fn">dispatch</span>();</code></pre>
+      <p><strong>Применение:</strong> когда задачи независимы и их можно выполнять одновременно для ускорения (отправка нескольких писем, обработка независимых файлов, параллельные API-запросы).</p>
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="settings" style="width:14px;height:14px"></i> Важные особенности</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Для <strong>Batches</strong> нужна таблица <code>job_batches</code> для хранения состояния пакетов. Создаётся командой:
+<pre style="margin-top:6px"><code>php artisan queue:batches-table
+php artisan migrate</code></pre>
+      </li>
+      <li>В <strong>цепочках</strong> нельзя получить доступ к состоянию промежуточных задач (только через передачу данных, например, через общий объект или кеш).</li>
+      <li>В <strong>батчах</strong> можно отслеживать прогресс через <code>$batch-&gt;progress()</code> (0–100), или отменить через <code>$batch-&gt;cancel()</code>.</li>
+      <li>Цепочки <strong>не требуют дополнительной таблицы</strong> и поддерживаются даже в драйвере <code>sync</code>.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="git-compare" style="width:14px;height:14px"></i> Сравнение Chain vs Batch</div>
+    <table class="data-table">
+      <thead><tr><th>Характеристика</th><th>Chain</th><th>Batch</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Порядок выполнения</strong></td>
+          <td>Строго последовательный</td>
+          <td>Параллельный</td>
+        </tr>
+        <tr>
+          <td><strong>При ошибке</strong></td>
+          <td>Прерывается вся цепочка</td>
+          <td>Продолжается выполнение остальных задач</td>
+        </tr>
+        <tr>
+          <td><strong>Финальные колбэки</strong></td>
+          <td>Нет (можно добавить свою задачу в конце)</td>
+          <td><code>then</code>, <code>catch</code>, <code>finally</code></td>
+        </tr>
+        <tr>
+          <td><strong>Отслеживание прогресса</strong></td>
+          <td>Нет</td>
+          <td>Есть — <code>$batch-&gt;progress()</code></td>
+        </tr>
+        <tr>
+          <td><strong>Отмена</strong></td>
+          <td>Нет</td>
+          <td><code>$batch-&gt;cancel()</code></td>
+        </tr>
+        <tr>
+          <td><strong>Дополнительная таблица</strong></td>
+          <td>Не нужна</td>
+          <td>Нужна (<code>job_batches</code>)</td>
+        </tr>
+        <tr>
+          <td><strong>Работает с драйвером <code>sync</code></strong></td>
+          <td>Да</td>
+          <td>Только с БД-совместимыми (нужен доступ к job_batches)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="remember-box">
+      <strong>Итог.</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><strong>Chain</strong> — для последовательных задач, где важен порядок и зависимость (скачать → обработать → уведомить).</li>
+        <li><strong>Batch</strong> — для параллельных независимых задач, с возможностью реагировать на успех/ошибку всех или одной из них (массовая рассылка писем, параллельная обработка файлов).</li>
+      </ul>
     </div>
   </div>
 
