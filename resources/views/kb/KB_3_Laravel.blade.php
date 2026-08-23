@@ -4376,6 +4376,71 @@ php artisan migrate</code></pre>
     <span class="c-key">return</span> <span class="c-type">Limit</span>::<span class="c-fn">perMinute</span>(<span class="c-num">100</span>);   <span class="c-comment">// 100 вызовов в минуту</span>
 });</code></pre>
       <p>Когда лимит превышен, Laravel автоматически <code>release()</code>-ит задание с задержкой (по умолчанию — до следующего окна). Задание повторно попытается выполниться позже, когда лимит будет доступен.</p>
+
+      <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="info" style="width:14px;height:14px"></i> Почему <code>middleware()</code> возвращает <code>new RateLimited('api-calls')</code>, а не сам лимит</div>
+
+      <p>Ключевой момент, который вызывает путаницу: <code>middleware()</code> — это <strong>не обычный метод для обработки запроса</strong>, а метод для <em>регистрации промежуточного слоя</em>, который будет применён к job перед выполнением.</p>
+
+      <p><strong>Как это работает на самом деле.</strong> В классе Job вы определяете метод <code>middleware()</code>, который возвращает массив <em>объектов middleware</em>. Этот метод вызывается при сериализации/десериализации Job для определения, какие middleware применить.</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">middleware</span>(): <span class="c-key">array</span>
+{
+    <span class="c-key">return</span> [
+        <span class="c-key">new</span> <span class="c-type">RateLimited</span>(<span class="c-str">'api-calls'</span>),
+    ];
+}</code></pre>
+      <p>Здесь <code>'api-calls'</code> — это <strong>идентификатор (имя) лимита</strong>, который связывает job с соответствующей конфигурацией в <code>RateLimiter</code>.</p>
+
+      <p><strong>Где задаётся сам лимит.</strong> В <code>App\Providers\AppServiceProvider</code> (или другом сервис-провайдере) определяете правила для этого идентификатора через <code>RateLimiter::for()</code>:</p>
+<pre><code><span class="c-type">RateLimiter</span>::<span class="c-fn">for</span>(<span class="c-str">'api-calls'</span>, <span class="c-key">function</span> (<span class="c-var">$job</span>) {
+    <span class="c-key">return</span> <span class="c-type">Limit</span>::<span class="c-fn">perMinute</span>(<span class="c-num">100</span>);
+});</code></pre>
+      <p>Лимит настраивается <em>отдельно</em> от job и может быть легко изменён без правки самого Job-класса.</p>
+
+      <p><strong>Что делает Laravel при выполнении Job:</strong></p>
+      <ol style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+        <li>Берёт задание из очереди.</li>
+        <li>Проверяет, есть ли зарегистрированные middleware через метод <code>middleware()</code>.</li>
+        <li>Если есть, оборачивает выполнение задания в стек этих middleware.</li>
+        <li>Middleware <code>RateLimited</code> проверяет через <code>RateLimiter</code>, превышен ли лимит для <code>'api-calls'</code>. Если да — вызывает <code>$this-&gt;release($delay)</code>: задание освобождается обратно в очередь с задержкой (по умолчанию — до восстановления лимита через <code>availableIn()</code>), воркер переходит к следующему заданию.</li>
+      </ol>
+
+      <p><strong>Почему так сделано:</strong></p>
+      <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+        <li><strong>Разделение ответственности:</strong> Job содержит бизнес-логику, а ограничения частоты вынесены в отдельную настройку.</li>
+        <li><strong>Гибкость:</strong> лимиты (100 → 200 запросов в минуту) меняются без пересборки Job-классов — правится только провайдер.</li>
+        <li><strong>Переиспользование:</strong> один <code>RateLimited</code> middleware применяется к разным Job-классам с разными идентификаторами, и для каждого задан свой лимит.</li>
+      </ul>
+
+      <div class="pitfall">
+        <strong>Важный нюанс.</strong> Метод <code>middleware()</code> <em>не вызывается</em> в момент выполнения бизнес-логики. Он вызывается при сериализации/десериализации Job для определения списка применяемых middleware. Поэтому он должен быть лёгким и не содержать логики, зависящей от текущего состояния приложения (запросов к БД, чтения кеша и т.д.).
+      </div>
+
+      <p><strong>Полный цикл в одном примере:</strong></p>
+<pre><code><span class="c-comment">// app/Jobs/ProcessExternalApiJob.php</span>
+<span class="c-key">class</span> <span class="c-type">ProcessExternalApiJob</span> <span class="c-key">implements</span> <span class="c-type">ShouldQueue</span>
+{
+    <span class="c-key">use</span> <span class="c-type">Dispatchable</span>, <span class="c-type">InteractsWithQueue</span>, <span class="c-type">Queueable</span>, <span class="c-type">SerializesModels</span>;
+
+    <span class="c-key">public function</span> <span class="c-fn">middleware</span>(): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> [<span class="c-key">new</span> <span class="c-type">RateLimited</span>(<span class="c-str">'api-calls'</span>)];
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>()
+    {
+        <span class="c-comment">// внешний API запрос</span>
+    }
+}
+
+<span class="c-comment">// App\Providers\AppServiceProvider::boot()</span>
+<span class="c-type">RateLimiter</span>::<span class="c-fn">for</span>(<span class="c-str">'api-calls'</span>, <span class="c-key">function</span> (<span class="c-var">$job</span>) {
+    <span class="c-key">return</span> <span class="c-type">Limit</span>::<span class="c-fn">perMinute</span>(<span class="c-num">100</span>)-&gt;<span class="c-fn">by</span>(<span class="c-var">$job</span>-&gt;<span class="c-var">user</span>?-&gt;<span class="c-var">id</span> ?? <span class="c-str">'global'</span>);
+});</code></pre>
+      <p>Порядок работы: <code>dispatch()</code> → job в очереди → воркер берёт → middleware <code>RateLimited</code> проверяет лимит для <code>'api-calls'</code> (с учётом <code>by(...)</code>) → если превышен: <code>release()</code> с задержкой (повтор позже); если не превышен: выполняется <code>handle()</code>.</p>
+
+      <div class="remember-box">
+        <strong>Резюме.</strong> <code>middleware()</code> возвращает <em>объекты middleware</em> для последующей обработки задания. Сам лимит настраивается вне Job — через <code>RateLimiter::for()</code>. <code>RateLimited</code> — это инструмент, который проверяет лимит и при необходимости откладывает выполнение (не возвращает HTTP-ответ, как в web-middleware). Такой подход централизованно управляет нагрузкой на внешние ресурсы, сохраняя код чистым и гибким.
+      </div>
     </div>
 
     <div class="card">
