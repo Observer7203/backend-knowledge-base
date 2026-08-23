@@ -212,6 +212,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('queues','q-jobs',this)">Job-классы (tries/timeout/backoff)</a>
     <a class="nav-subitem" onclick="showSub('queues','q-chains-batches',this)">Chains и Batches (группы задач)</a>
     <a class="nav-subitem" onclick="showSub('queues','q-rate-limit',this)">Rate Limiting для Job</a>
+    <a class="nav-subitem" onclick="showSub('queues','q-unique',this)">Unique Jobs — защита от дублирования</a>
     <a class="nav-subitem" onclick="showSub('queues','q-features',this)">Возможности (jobs/retry/chains/batches)</a>
     <a class="nav-subitem" onclick="showSub('queues','q-practice',this)">Практика: job с retry + idempotency</a>
     <a class="nav-subitem" onclick="showSub('queues','q-pitfalls',this)">Особые случаи</a>
@@ -4489,6 +4490,114 @@ php artisan migrate</code></pre>
 
     <div class="remember-box">
       <strong>Итог.</strong> Rate limiting для Job — механизм контроля частоты выполнения заданий, чтобы не превысить лимиты внешних сервисов. Реализуется через middleware <code>RateLimited</code> (рекомендуемый способ) или вручную с фасадом <code>RateLimiter</code>. При превышении job освобождается с задержкой и повторяется позже — очередь сама регулирует нагрузку. Обязательный инструмент для надёжных интеграций с внешними API.
+    </div>
+  </div>
+
+  <div class="subsection" id="q-unique">
+    <div class="subsection-title"><i data-lucide="fingerprint"></i> Unique Jobs — защита от дублирования</div>
+
+    <p class="text">Иногда одно и то же задание может быть поставлено в очередь несколько раз — из-за повторных кликов пользователя, повторных вызовов API или ошибок в коде. Это приводит к двойной обработке одного заказа, повторной отправке письма или другим проблемам.</p>
+
+    <p class="text"><strong>Unique Jobs</strong> гарантируют, что в очереди одновременно находится <strong>не более одного</strong> задания с заданным уникальным идентификатором. Если попытаться поставить такое же задание повторно — оно будет проигнорировано.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="wrench" style="width:14px;height:14px"></i> Как реализовать</div>
+    <p class="text">Добавьте интерфейс <code>ShouldBeUnique</code> к Job-классу и определите метод <code>uniqueId()</code>, возвращающий строковый идентификатор уникальности:</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Contracts</span>\<span class="c-type">Queue</span>\<span class="c-type">ShouldBeUnique</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Contracts</span>\<span class="c-type">Queue</span>\<span class="c-type">ShouldQueue</span>;
+
+<span class="c-key">class</span> <span class="c-type">ProcessOrder</span> <span class="c-key">implements</span> <span class="c-type">ShouldQueue</span>, <span class="c-type">ShouldBeUnique</span>
+{
+    <span class="c-key">public</span> <span class="c-var">$orderId</span>;
+
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-var">$orderId</span>)
+    {
+        <span class="c-var">$this</span>-&gt;<span class="c-var">orderId</span> = <span class="c-var">$orderId</span>;
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>()
+    {
+        <span class="c-comment">// обработка заказа</span>
+    }
+
+    <span class="c-comment">// Уникальный идентификатор — ID заказа</span>
+    <span class="c-key">public function</span> <span class="c-fn">uniqueId</span>()
+    {
+        <span class="c-key">return</span> <span class="c-var">$this</span>-&gt;<span class="c-var">orderId</span>;
+    }
+}</code></pre>
+    <p class="text">Теперь, если вызвать <code>ProcessOrder::dispatch($orderId)</code> дважды, пока первое задание ещё не обработано — второе будет проигнорировано (не попадёт в очередь).</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="settings-2" style="width:14px;height:14px"></i> Дополнительные настройки</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>$uniqueFor</code> — время (в секундах), в течение которого блокировка считается активной. По умолчанию — время удержания задания (обычно 24 часа).
+<pre style="margin-top:6px"><code><span class="c-key">public</span> <span class="c-var">$uniqueFor</span> = <span class="c-num">3600</span>;   <span class="c-comment">// блокировка на 1 час</span></code></pre>
+      </li>
+      <li><code>uniqueVia()</code> — метод, определяющий драйвер для хранения блокировок (по умолчанию — кеш):
+<pre style="margin-top:6px"><code><span class="c-key">public function</span> <span class="c-fn">uniqueVia</span>()
+{
+    <span class="c-key">return</span> <span class="c-type">Cache</span>::<span class="c-fn">driver</span>(<span class="c-str">'redis'</span>);
+}</code></pre>
+      </li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="cpu" style="width:14px;height:14px"></i> Как это работает под капотом</div>
+    <p class="text">При попытке поставить задание в очередь Laravel:</p>
+    <ol style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Вычисляет уникальный идентификатор через <code>uniqueId()</code>.</li>
+      <li>Пытается создать блокировку в хранилище (по умолчанию — кеш) с этим идентификатором.</li>
+      <li>Если блокировка успешно создана — задание ставится в очередь.</li>
+      <li>Если блокировка уже существует — задание не ставится, при <code>dispatch()</code> возвращается <code>null</code>/<code>false</code>.</li>
+      <li>По завершению задания (или его неудаче) блокировка автоматически снимается.</li>
+    </ol>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="target" style="width:14px;height:14px"></i> Когда это полезно</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Обработка заказов</strong> — не обработать один заказ дважды.</li>
+      <li><strong>Отправка email</strong> — не отправить письмо повторно.</li>
+      <li><strong>Синхронизация с внешним API</strong> — не слать дублирующиеся запросы.</li>
+      <li><strong>Импорт данных</strong> — не запускать импорт повторно, пока идёт предыдущий.</li>
+    </ul>
+
+    <div class="pitfall">
+      <strong>Важные нюансы:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Если задание выполняется и падает с ошибкой, оно может быть повторно поставлено в очередь (в зависимости от <code>$tries</code> и <code>$backoff</code>). Уникальность действует на протяжении всего времени, пока задание в очереди или выполняется.</li>
+        <li>Для работы Unique Jobs нужен драйвер кеша, поддерживающий блокировки: <code>redis</code>, <code>memcached</code>, <code>database</code>. Драйверы <code>file</code> и <code>array</code> <em>не подходят</em>.</li>
+        <li>Если задание по какой-то причине не было удалено из очереди (воркер упал), блокировка может остаться — в этом случае поможет <code>$uniqueFor</code>.</li>
+      </ul>
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hammer" style="width:14px;height:14px"></i> Полный пример</div>
+<pre><code><span class="c-key">class</span> <span class="c-type">UpdateUserCache</span> <span class="c-key">implements</span> <span class="c-type">ShouldQueue</span>, <span class="c-type">ShouldBeUnique</span>
+{
+    <span class="c-key">public</span> <span class="c-var">$userId</span>;
+    <span class="c-key">public</span> <span class="c-var">$uniqueFor</span> = <span class="c-num">600</span>;   <span class="c-comment">// блокировка на 10 минут</span>
+
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-var">$userId</span>)
+    {
+        <span class="c-var">$this</span>-&gt;<span class="c-var">userId</span> = <span class="c-var">$userId</span>;
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">uniqueId</span>()
+    {
+        <span class="c-key">return</span> <span class="c-str">'user-cache:'</span> . <span class="c-var">$this</span>-&gt;<span class="c-var">userId</span>;
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>()
+    {
+        <span class="c-type">Cache</span>::<span class="c-fn">put</span>(<span class="c-str">'user_'</span> . <span class="c-var">$this</span>-&gt;<span class="c-var">userId</span>, <span class="c-type">User</span>::<span class="c-fn">find</span>(<span class="c-var">$this</span>-&gt;<span class="c-var">userId</span>));
+    }
+}</code></pre>
+    <p class="text">Если за 10 минут поступит два вызова <code>UpdateUserCache::dispatch($userId)</code> для одного пользователя, второй будет проигнорирован — первое задание ещё в очереди или выполняется.</p>
+
+    <div class="remember-box">
+      <strong>Итог:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><code>ShouldBeUnique</code> — интерфейс для предотвращения дублирования заданий.</li>
+        <li><code>uniqueId()</code> — метод, возвращающий строку, по которой определяется уникальность.</li>
+        <li>Блокировка работает через кеш и автоматически снимается после выполнения или сбоя.</li>
+        <li>Защищает от двойной постановки, дублирующей обработки и избыточной нагрузки.</li>
+      </ul>
     </div>
   </div>
 
