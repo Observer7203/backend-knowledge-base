@@ -139,6 +139,17 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('controllers','ctrl-invokable',this)">Single Action / Invokable</a>
     <a class="nav-subitem" onclick="showSub('controllers','ctrl-responses',this)">Возврат ответов</a>
   </div>
+  <a class="nav-item" onclick="showSection('actions-services',this)"><i data-lucide="package-plus"></i> Actions &amp; Services</a>
+  <div class="nav-subgroup">
+    <a class="nav-subitem" onclick="showSub('actions-services','as-overview',this)">Обзор: тонкий контроллер</a>
+    <a class="nav-subitem" onclick="showSub('actions-services','as-service',this)">Service Layer (что это, где)</a>
+    <a class="nav-subitem" onclick="showSub('actions-services','as-action',this)">Action-паттерн (single-purpose)</a>
+    <a class="nav-subitem" onclick="showSub('actions-services','as-compare',this)">Service vs Action vs UseCase</a>
+    <a class="nav-subitem" onclick="showSub('actions-services','as-repository',this)">Repository pattern</a>
+    <a class="nav-subitem" onclick="showSub('actions-services','as-folders',this)">Куда положить: app/Services vs app/Actions</a>
+    <a class="nav-subitem" onclick="showSub('actions-services','as-testing',this)">Тестирование отдельно от контроллера</a>
+    <a class="nav-subitem" onclick="showSub('actions-services','as-practice',this)">Практика: PlaceOrder Action</a>
+  </div>
   <a class="nav-item" onclick="showSection('middleware',this)"><i data-lucide="filter"></i> Middleware</a>
   <div class="nav-subgroup">
     <a class="nav-subitem" onclick="showSub('middleware','mw-purpose',this)">Назначение</a>
@@ -1414,6 +1425,396 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
 }, <span class="c-str">'orders.csv'</span>);</code></pre>
 
     <p class="text">Подробно про HTTP-объекты (<code>RedirectResponse</code>, <code>JsonResponse</code>, <code>Response</code>) — в разделе <strong>HTTP-объекты Laravel</strong>.</p>
+  </div>
+</div>
+
+<div id="sec-actions-services" class="section">
+  <div class="section-title">Actions &amp; Services — архитектура бизнес-логики</div>
+
+  <div class="subsection" id="as-overview">
+    <div class="subsection-title"><i data-lucide="book-open"></i> Обзор: почему тонкий контроллер</div>
+    <p class="text">Контроллер отвечает только за приём HTTP-запроса и формирование HTTP-ответа. Всё что «внутри» — бизнес-логика, транзакции, работа с внешними сервисами, отправка писем — должно жить в <strong>отдельных классах</strong>. Их называют по-разному: Services, Actions, UseCases, Interactors. Все они делают одно и то же — <em>инкапсулируют операцию</em>, чтобы её можно было переиспользовать, тестировать и менять независимо от HTTP-слоя.</p>
+
+    <p class="text"><strong>Проблемы толстого контроллера:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Дублирование.</strong> Если ту же логику нужно вызвать из консольной команды / очереди / другого контроллера — придётся копировать.</li>
+      <li><strong>Сложное тестирование.</strong> Юнит-тест логики требует поднимать HTTP-контекст (<code>$request</code>, роутер, middleware).</li>
+      <li><strong>Смешение слоёв.</strong> Контроллер знает про SQL, транзакции, отправку email, платёжный шлюз — нарушение SRP.</li>
+      <li><strong>Невозможно переиспользовать между веб/API.</strong> Веб-контроллер редиректит, API-контроллер отдаёт JSON, а логика одна и та же — не выносится.</li>
+    </ul>
+
+    <p class="text"><strong>Что даёт вынесение в Actions/Services:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Один класс — одна операция, легко читать и найти в коде.</li>
+      <li>Тестируется без HTTP-контекста, зависимости мокаются через DI.</li>
+      <li>Переиспользуется из контроллера, job, artisan-команды, теста, listener.</li>
+      <li>Контроллер становится <em>оркестратором</em>: принял запрос → делегировал → вернул ответ.</li>
+    </ul>
+
+    <div class="remember-box">
+      <strong>Мантра.</strong> «Контроллер — <em>тонкий</em>, бизнес-логика — <em>снаружи</em>». Всё что не про HTTP — вон из контроллера. Контроллер не должен знать про транзакции, платёжные шлюзы, email, кеш, внешние API.
+    </div>
+  </div>
+
+  <div class="subsection" id="as-service">
+    <div class="subsection-title"><i data-lucide="briefcase"></i> Service Layer — сервисный слой</div>
+    <p class="text"><strong>Service</strong> — класс, объединяющий <strong>несколько связанных операций</strong> одной темы. Один сервис = одна доменная область (пользователи, заказы, платежи, отчёты).</p>
+
+    <p class="text"><strong>Типичный сервис:</strong></p>
+<pre><code><span class="c-comment">// app/Services/UserService.php</span>
+<span class="c-key">class</span> <span class="c-type">UserService</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+        <span class="c-key">private</span> <span class="c-type">UserRepository</span> <span class="c-var">$users</span>,
+        <span class="c-key">private</span> <span class="c-type">Mailer</span> <span class="c-var">$mailer</span>,
+    ) {}
+
+    <span class="c-key">public function</span> <span class="c-fn">register</span>(<span class="c-key">array</span> <span class="c-var">$data</span>): <span class="c-type">User</span>
+    {
+        <span class="c-var">$user</span> = <span class="c-var">$this</span>-&gt;<span class="c-var">users</span>-&gt;<span class="c-fn">create</span>(<span class="c-var">$data</span>);
+        <span class="c-var">$this</span>-&gt;<span class="c-var">mailer</span>-&gt;<span class="c-fn">sendWelcome</span>(<span class="c-var">$user</span>);
+        <span class="c-key">return</span> <span class="c-var">$user</span>;
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">changePassword</span>(<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-key">string</span> <span class="c-var">$newPassword</span>): <span class="c-key">void</span>
+    {
+        <span class="c-var">$user</span>-&gt;<span class="c-fn">update</span>([<span class="c-str">'password'</span> =&gt; <span class="c-fn">bcrypt</span>(<span class="c-var">$newPassword</span>)]);
+        <span class="c-var">$this</span>-&gt;<span class="c-var">mailer</span>-&gt;<span class="c-fn">sendPasswordChanged</span>(<span class="c-var">$user</span>);
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">deactivate</span>(<span class="c-type">User</span> <span class="c-var">$user</span>): <span class="c-key">void</span>
+    {
+        <span class="c-var">$user</span>-&gt;<span class="c-fn">update</span>([<span class="c-str">'active'</span> =&gt; <span class="c-key">false</span>]);
+        <span class="c-type">Auth</span>::<span class="c-fn">logoutOtherDevices</span>(...);
+    }
+}
+
+<span class="c-comment">// Контроллер — тонкий</span>
+<span class="c-key">public function</span> <span class="c-fn">register</span>(<span class="c-type">RegisterRequest</span> <span class="c-var">$request</span>, <span class="c-type">UserService</span> <span class="c-var">$users</span>)
+{
+    <span class="c-var">$user</span> = <span class="c-var">$users</span>-&gt;<span class="c-fn">register</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>());
+    <span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">json</span>(<span class="c-var">$user</span>, <span class="c-num">201</span>);
+}</code></pre>
+
+    <p class="text"><strong>Признаки хорошего сервиса:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Все зависимости объявлены в конструкторе (DI, а не <code>app()</code>/<code>new</code>).</li>
+      <li>Методы возвращают доменные объекты (модели, DTO), а не <code>Response</code>.</li>
+      <li>Не знает про HTTP: не принимает <code>Request</code>, не возвращает <code>Response</code>, не делает <code>redirect</code>.</li>
+      <li>Не работает с сессиями, кукисами, заголовками.</li>
+      <li>Может быть вызван из любого места: контроллера, job'а, artisan-команды, теста.</li>
+    </ul>
+
+    <div class="pitfall">
+      <strong>Антипаттерн:</strong> «God Service» на 40 методов и 3000 строк. Признак — в конструкторе 8+ зависимостей. Разбивайте на несколько сервисов по под-темам (например, <code>UserRegistrationService</code>, <code>UserProfileService</code>, <code>UserSecurityService</code>) или переходите на Actions (одна операция = один класс).
+    </div>
+  </div>
+
+  <div class="subsection" id="as-action">
+    <div class="subsection-title"><i data-lucide="zap"></i> Action-паттерн — single-purpose класс</div>
+    <p class="text"><strong>Action</strong> — класс, инкапсулирующий <strong>одну операцию</strong> (одно бизнес-действие). Единственный публичный метод, обычно <code>handle()</code> или <code>execute()</code>. Часто применяется вместо Service, когда операция сложная и не нуждается в объединении с другими.</p>
+
+    <p class="text"><strong>Типичный Action:</strong></p>
+<pre><code><span class="c-comment">// app/Actions/PlaceOrder.php</span>
+<span class="c-key">class</span> <span class="c-type">PlaceOrder</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+        <span class="c-key">private</span> <span class="c-type">PaymentGateway</span> <span class="c-var">$payment</span>,
+        <span class="c-key">private</span> <span class="c-type">Inventory</span> <span class="c-var">$inventory</span>,
+        <span class="c-key">private</span> <span class="c-type">EventDispatcher</span> <span class="c-var">$events</span>,
+    ) {}
+
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-key">array</span> <span class="c-var">$items</span>): <span class="c-type">Order</span>
+    {
+        <span class="c-key">return</span> <span class="c-type">DB</span>::<span class="c-fn">transaction</span>(<span class="c-key">function</span> () <span class="c-key">use</span> (<span class="c-var">$user</span>, <span class="c-var">$items</span>) {
+            <span class="c-var">$order</span> = <span class="c-type">Order</span>::<span class="c-fn">create</span>([<span class="c-str">'user_id'</span> =&gt; <span class="c-var">$user</span>-&gt;<span class="c-var">id</span>]);
+            <span class="c-var">$this</span>-&gt;<span class="c-var">inventory</span>-&gt;<span class="c-fn">reserve</span>(<span class="c-var">$items</span>);
+            <span class="c-var">$this</span>-&gt;<span class="c-var">payment</span>-&gt;<span class="c-fn">charge</span>(<span class="c-var">$user</span>, <span class="c-var">$order</span>-&gt;<span class="c-var">total</span>);
+            <span class="c-var">$this</span>-&gt;<span class="c-var">events</span>-&gt;<span class="c-fn">dispatch</span>(<span class="c-key">new</span> <span class="c-type">OrderPlaced</span>(<span class="c-var">$order</span>));
+            <span class="c-key">return</span> <span class="c-var">$order</span>;
+        });
+    }
+}
+
+<span class="c-comment">// Контроллер</span>
+<span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">StoreOrderRequest</span> <span class="c-var">$request</span>, <span class="c-type">PlaceOrder</span> <span class="c-var">$action</span>)
+{
+    <span class="c-var">$order</span> = <span class="c-var">$action</span>-&gt;<span class="c-fn">handle</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">user</span>(), <span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>()[<span class="c-str">'items'</span>]);
+    <span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">route</span>(<span class="c-str">'orders.show'</span>, <span class="c-var">$order</span>);
+}</code></pre>
+
+    <p class="text"><strong>Признаки Action:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Один</strong> публичный метод (<code>handle</code> / <code>execute</code> / <code>__invoke</code>).</li>
+      <li>Имя класса — <strong>глагол в императиве</strong>: <code>PlaceOrder</code>, <code>CancelSubscription</code>, <code>SendPasswordReset</code>, <code>PublishPost</code>.</li>
+      <li>Зависимости через конструктор (DI).</li>
+      <li>Возвращает результат операции (модель, DTO, void).</li>
+      <li>Атомарен: всё что нужно для завершения одной бизнес-операции — внутри одного класса.</li>
+    </ul>
+
+    <div class="tip">
+      Как <strong>invokable action</strong> — можно использовать <code>__invoke()</code> вместо <code>handle()</code>, тогда вызов сокращается до <code>$action($user, $items)</code>. Также подходит для <code>Route::get(..., PlaceOrder::class)</code> — Laravel сам вызовет <code>__invoke</code>.
+    </div>
+  </div>
+
+  <div class="subsection" id="as-compare">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> Service vs Action vs UseCase — терминология</div>
+    <p class="text">Разные команды используют разные названия для одной и той же идеи. Ниже — как различаются на практике:</p>
+
+    <table class="data-table">
+      <thead><tr><th></th><th>Service</th><th>Action / UseCase / Interactor</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Гранулярность</strong></td>
+          <td>Один класс — несколько связанных методов</td>
+          <td>Один класс — одна операция</td>
+        </tr>
+        <tr>
+          <td><strong>Метод</strong></td>
+          <td><code>register()</code>, <code>changePassword()</code>, <code>deactivate()</code>...</td>
+          <td>Один <code>handle()</code> / <code>execute()</code> / <code>__invoke()</code></td>
+        </tr>
+        <tr>
+          <td><strong>Именование класса</strong></td>
+          <td>Существительное (тема): <code>UserService</code>, <code>OrderService</code></td>
+          <td>Глагол (действие): <code>RegisterUser</code>, <code>PlaceOrder</code>, <code>CancelSubscription</code></td>
+        </tr>
+        <tr>
+          <td><strong>Размер класса</strong></td>
+          <td>Обычно 100-400 строк, 5-15 методов</td>
+          <td>30-150 строк, 1 метод</td>
+        </tr>
+        <tr>
+          <td><strong>Когда подходит</strong></td>
+          <td>Простой домен, несколько операций одной темы</td>
+          <td>Сложная операция с транзакцией, многими шагами, событиями</td>
+        </tr>
+        <tr>
+          <td><strong>Проблема при росте</strong></td>
+          <td>«God Service» на 40 методов</td>
+          <td>Взрыв количества файлов (100+ actions)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="text"><strong>Названия в разных школах:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Service</strong> — Laravel-community, DDD старой школы, .NET</li>
+      <li><strong>Action</strong> — Laravel-community (популяризировано Spatie), Rails, Django</li>
+      <li><strong>UseCase</strong> — Clean Architecture (Robert Martin), DDD</li>
+      <li><strong>Interactor</strong> — Ruby (Trailblazer, Interactor gem)</li>
+    </ul>
+    <p class="text">Разница чисто в названии и гранулярности. По сути — все они <em>инкапсулируют бизнес-операцию</em>. Выбирайте <strong>Actions</strong> когда операции сложные и хочется единый метод-контракт, <strong>Services</strong> когда операции лёгкие и логично группируются по теме.</p>
+  </div>
+
+  <div class="subsection" id="as-repository">
+    <div class="subsection-title"><i data-lucide="database"></i> Repository pattern — абстракция над БД</div>
+    <p class="text"><strong>Repository</strong> — класс, инкапсулирующий работу с хранилищем данных (обычно БД). Идея: сервис не знает про Eloquent — он вызывает <code>UserRepository::findByEmail($email)</code>, а тот уже делает <code>User::where('email', $email)-&gt;first()</code>.</p>
+
+<pre><code><span class="c-comment">// app/Repositories/UserRepository.php</span>
+<span class="c-key">class</span> <span class="c-type">UserRepository</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">find</span>(<span class="c-key">int</span> <span class="c-var">$id</span>): ?<span class="c-type">User</span>
+    {
+        <span class="c-key">return</span> <span class="c-type">User</span>::<span class="c-fn">find</span>(<span class="c-var">$id</span>);
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">findByEmail</span>(<span class="c-key">string</span> <span class="c-var">$email</span>): ?<span class="c-type">User</span>
+    {
+        <span class="c-key">return</span> <span class="c-type">User</span>::<span class="c-fn">where</span>(<span class="c-str">'email'</span>, <span class="c-var">$email</span>)-&gt;<span class="c-fn">first</span>();
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">create</span>(<span class="c-key">array</span> <span class="c-var">$data</span>): <span class="c-type">User</span>
+    {
+        <span class="c-key">return</span> <span class="c-type">User</span>::<span class="c-fn">create</span>(<span class="c-var">$data</span>);
+    }
+}</code></pre>
+
+    <div class="pitfall">
+      <strong>⚠ В Laravel Repository часто избыточен.</strong> Eloquent сам по себе — Active Record, и уже даёт удобное API. Оборачивать <code>User::find()</code> в <code>UserRepository::find()</code> — часто <em>писать один класс поверх другого</em> без выгоды.
+      <p style="margin-top:8px"><strong>Когда Repository оправдан:</strong></p>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Планируется реальная замена БД (не гипотетическая): Postgres → MongoDB, БД → внешний API.</li>
+        <li>Сложные query нужно переиспользовать (можно и через Query Scope в модели).</li>
+        <li>Строгий DDD с полной изоляцией доменной модели от Eloquent.</li>
+        <li>Тесты — но mockаются модели легко и без Repository через <code>Model::factory()-&gt;make()</code>.</li>
+      </ul>
+      В 90% Laravel-проектов Repository не нужен — Eloquent используется напрямую в Actions/Services.
+    </div>
+
+    <div class="remember-box">
+      <strong>Правило:</strong> добавляй Repository только когда есть <em>конкретная</em> причина. «Может пригодится» — не причина. Начинайте с прямого использования Eloquent в Actions/Services; если станет реально сложно — вынесите в Repository потом.
+    </div>
+  </div>
+
+  <div class="subsection" id="as-folders">
+    <div class="subsection-title"><i data-lucide="folder-tree"></i> Куда положить: структура папок</div>
+    <p class="text">Laravel не навязывает структуру для Services/Actions — можете класть куда удобно. Типичные варианты:</p>
+
+<pre><code>app/
+├── Actions/                            <span class="c-comment"># популярный вариант</span>
+│   ├── Users/
+│   │   ├── RegisterUser.php
+│   │   ├── DeactivateUser.php
+│   │   └── ChangePassword.php
+│   ├── Orders/
+│   │   ├── PlaceOrder.php
+│   │   ├── CancelOrder.php
+│   │   └── RefundOrder.php
+│   └── Notifications/
+│       └── SendPasswordReset.php
+│
+├── Services/                            <span class="c-comment"># альтернатива / дополнение</span>
+│   ├── PaymentGateway.php
+│   ├── SmsSender.php
+│   └── ReportGenerator.php
+│
+├── Repositories/                        <span class="c-comment"># опционально, если реально нужен</span>
+│   └── UserRepository.php
+│
+└── Http/
+    └── Controllers/
+        └── OrderController.php          <span class="c-comment"># тонкий, вызывает Actions</span></code></pre>
+
+    <p class="text"><strong>Практические правила именования:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Actions</strong> — глагол в императиве: <code>PlaceOrder</code>, <code>SendInvoice</code>, <code>PublishPost</code>.</li>
+      <li><strong>Services</strong> — существительное: <code>PaymentGateway</code>, <code>SmsSender</code>, <code>ReportGenerator</code>.</li>
+      <li><strong>Группировать по доменной области</strong>: <code>Actions/Users/</code>, <code>Actions/Orders/</code> — легче найти всё связанное.</li>
+      <li>Если у вас модульная структура (например, <code>modules/Billing/</code>) — Actions/Services живут внутри модуля, а не в глобальной <code>app/</code>.</li>
+    </ul>
+
+    <p class="text"><strong>Разница подходов:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>app/Actions/</code> — один класс = одна операция (single-purpose).</li>
+      <li><code>app/Services/</code> — один класс = набор связанных методов (multi-purpose) или интеграция с внешним сервисом.</li>
+      <li>Часто <strong>используют оба</strong>: Actions для бизнес-операций (PlaceOrder), Services для инфраструктуры (PaymentGateway).</li>
+    </ul>
+  </div>
+
+  <div class="subsection" id="as-testing">
+    <div class="subsection-title"><i data-lucide="test-tube"></i> Тестирование отдельно от контроллера</div>
+    <p class="text">Главная выгода Actions/Services — они <strong>тестируются как обычные классы</strong>, без HTTP-контекста.</p>
+
+    <p class="text"><strong>Юнит-тест Action:</strong></p>
+<pre><code><span class="c-key">class</span> <span class="c-type">PlaceOrderTest</span> <span class="c-key">extends</span> <span class="c-type">TestCase</span>
+{
+    <span class="c-key">use</span> <span class="c-type">RefreshDatabase</span>;
+
+    <span class="c-key">public function</span> <span class="c-fn">test_places_order_and_charges_payment</span>()
+    {
+        <span class="c-var">$user</span>  = <span class="c-type">User</span>::<span class="c-fn">factory</span>()-&gt;<span class="c-fn">create</span>();
+        <span class="c-var">$items</span> = [[<span class="c-str">'sku'</span> =&gt; <span class="c-str">'ABC'</span>, <span class="c-str">'qty'</span> =&gt; <span class="c-num">2</span>]];
+
+        <span class="c-comment">// Мокаем внешнюю зависимость — платёжный шлюз</span>
+        <span class="c-var">$payment</span> = <span class="c-type">Mockery</span>::<span class="c-fn">mock</span>(<span class="c-type">PaymentGateway</span>::<span class="c-key">class</span>);
+        <span class="c-var">$payment</span>-&gt;<span class="c-fn">shouldReceive</span>(<span class="c-str">'charge'</span>)-&gt;<span class="c-fn">once</span>()-&gt;<span class="c-fn">andReturn</span>(<span class="c-key">true</span>);
+        <span class="c-var">$this</span>-&gt;<span class="c-fn">app</span>-&gt;<span class="c-fn">instance</span>(<span class="c-type">PaymentGateway</span>::<span class="c-key">class</span>, <span class="c-var">$payment</span>);
+
+        <span class="c-comment">// Разрешаем Action через контейнер — зависимости подставятся</span>
+        <span class="c-var">$order</span> = <span class="c-fn">app</span>(<span class="c-type">PlaceOrder</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">handle</span>(<span class="c-var">$user</span>, <span class="c-var">$items</span>);
+
+        <span class="c-var">$this</span>-&gt;<span class="c-fn">assertInstanceOf</span>(<span class="c-type">Order</span>::<span class="c-key">class</span>, <span class="c-var">$order</span>);
+        <span class="c-var">$this</span>-&gt;<span class="c-fn">assertEquals</span>(<span class="c-var">$user</span>-&gt;<span class="c-var">id</span>, <span class="c-var">$order</span>-&gt;<span class="c-var">user_id</span>);
+    }
+}</code></pre>
+
+    <p class="text"><strong>Зачем это важно:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Не нужен <code>$this-&gt;post('/orders', ...)</code> — быстрее (миллисекунды vs сотни мс).</li>
+      <li>Не нужны CSRF, session, middleware — тестируется чистая логика.</li>
+      <li>Можно мокать любую зависимость через контейнер: <code>$this-&gt;app-&gt;instance(...)</code>.</li>
+      <li>Один и тот же Action покрыт unit-тестами один раз — и работает одинаково из контроллера, job, artisan-команды.</li>
+    </ul>
+
+    <div class="tip">
+      Feature-тесты (через <code>$this-&gt;post()</code>) остаются — проверяют интеграцию контроллер + Action + middleware + validation. Но <em>основную</em> бизнес-логику тестируйте юнит-тестами Actions/Services — их проще писать и они на порядок быстрее.
+    </div>
+  </div>
+
+  <div class="subsection" id="as-practice">
+    <div class="subsection-title"><i data-lucide="hammer"></i> Практика: PlaceOrder Action с транзакцией + Event</div>
+    <p class="text">Полный пример реальной бизнес-операции: разместить заказ. Валидация в FormRequest, тонкий контроллер, вся логика в Action, транзакция БД, событие для side-effects.</p>
+
+<pre><code><span class="c-comment">// 1. FormRequest — только валидация</span>
+<span class="c-key">class</span> <span class="c-type">StoreOrderRequest</span> <span class="c-key">extends</span> <span class="c-type">FormRequest</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">rules</span>(): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> [
+            <span class="c-str">'items'</span>       =&gt; <span class="c-str">'required|array|min:1'</span>,
+            <span class="c-str">'items.*.sku'</span> =&gt; <span class="c-str">'required|string|exists:products,sku'</span>,
+            <span class="c-str">'items.*.qty'</span> =&gt; <span class="c-str">'required|integer|min:1'</span>,
+        ];
+    }
+}
+
+<span class="c-comment">// 2. Action — вся бизнес-логика</span>
+<span class="c-key">class</span> <span class="c-type">PlaceOrder</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+        <span class="c-key">private</span> <span class="c-type">PaymentGateway</span> <span class="c-var">$payment</span>,
+        <span class="c-key">private</span> <span class="c-type">Inventory</span> <span class="c-var">$inventory</span>,
+    ) {}
+
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-key">array</span> <span class="c-var">$items</span>): <span class="c-type">Order</span>
+    {
+        <span class="c-key">return</span> <span class="c-type">DB</span>::<span class="c-fn">transaction</span>(<span class="c-key">function</span> () <span class="c-key">use</span> (<span class="c-var">$user</span>, <span class="c-var">$items</span>) {
+            <span class="c-var">$order</span> = <span class="c-type">Order</span>::<span class="c-fn">create</span>([
+                <span class="c-str">'user_id'</span> =&gt; <span class="c-var">$user</span>-&gt;<span class="c-var">id</span>,
+                <span class="c-str">'status'</span>  =&gt; <span class="c-str">'pending'</span>,
+            ]);
+
+            <span class="c-var">$order</span>-&gt;<span class="c-var">items</span>()-&gt;<span class="c-fn">createMany</span>(<span class="c-var">$items</span>);
+            <span class="c-var">$this</span>-&gt;<span class="c-var">inventory</span>-&gt;<span class="c-fn">reserve</span>(<span class="c-var">$items</span>);
+            <span class="c-var">$this</span>-&gt;<span class="c-var">payment</span>-&gt;<span class="c-fn">charge</span>(<span class="c-var">$user</span>, <span class="c-var">$order</span>-&gt;<span class="c-fn">total</span>());
+            <span class="c-var">$order</span>-&gt;<span class="c-fn">update</span>([<span class="c-str">'status'</span> =&gt; <span class="c-str">'paid'</span>]);
+
+            <span class="c-comment">// Событие вне транзакции гарантированно после commit</span>
+            <span class="c-type">OrderPaid</span>::<span class="c-fn">dispatch</span>(<span class="c-var">$order</span>)-&gt;<span class="c-fn">afterCommit</span>();
+
+            <span class="c-key">return</span> <span class="c-var">$order</span>;
+        });
+    }
+}
+
+<span class="c-comment">// 3. Контроллер — тонкий, только оркестрация</span>
+<span class="c-key">class</span> <span class="c-type">OrderController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">StoreOrderRequest</span> <span class="c-var">$request</span>, <span class="c-type">PlaceOrder</span> <span class="c-var">$action</span>)
+    {
+        <span class="c-var">$order</span> = <span class="c-var">$action</span>-&gt;<span class="c-fn">handle</span>(
+            <span class="c-var">$request</span>-&gt;<span class="c-fn">user</span>(),
+            <span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>()[<span class="c-str">'items'</span>]
+        );
+
+        <span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">route</span>(<span class="c-str">'orders.show'</span>, <span class="c-var">$order</span>);
+    }
+}
+
+<span class="c-comment">// 4. Listener подписан на OrderPaid — асинхронный, отправляется в очередь</span>
+<span class="c-key">class</span> <span class="c-type">SendOrderConfirmation</span> <span class="c-key">implements</span> <span class="c-type">ShouldQueue</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">OrderPaid</span> <span class="c-var">$event</span>)
+    {
+        <span class="c-type">Mail</span>::<span class="c-fn">to</span>(<span class="c-var">$event</span>-&gt;<span class="c-var">order</span>-&gt;<span class="c-var">user</span>-&gt;<span class="c-var">email</span>)
+            -&gt;<span class="c-fn">send</span>(<span class="c-key">new</span> <span class="c-type">OrderConfirmationMail</span>(<span class="c-var">$event</span>-&gt;<span class="c-var">order</span>));
+    }
+}</code></pre>
+
+    <p class="text"><strong>Что происходит:</strong> FormRequest валидирует и авторизует; Controller остаётся тонким; Action — единица бизнес-логики; транзакция оборачивает все БД-операции; <code>afterCommit</code> гарантирует что событие уйдёт после commit'а; событие <code>OrderPaid</code> подключает listener'ов без правок Action; каждый слой можно тестировать отдельно; логику можно переиспользовать из job / artisan / другого контроллера.</p>
+
+    <div class="remember-box">
+      <strong>Итог:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><strong>Service Layer</strong> — сервисы с несколькими методами по теме (<code>UserService</code>).</li>
+        <li><strong>Action</strong> — один класс, одна операция, метод <code>handle()</code> / <code>execute()</code> / <code>__invoke()</code> (<code>PlaceOrder</code>).</li>
+        <li><strong>UseCase / Interactor</strong> — то же что Action, только терминология из Clean Architecture / Ruby.</li>
+        <li><strong>Repository</strong> — оправдан только когда есть конкретная причина, в 90% Laravel-проектов Eloquent используется напрямую.</li>
+        <li><strong>Куда класть</strong> — <code>app/Actions/{Domain}/</code>, <code>app/Services/</code>, группировать по доменной области.</li>
+        <li><strong>Тесты</strong> — юнит-тестируйте Actions/Services напрямую, feature-тесты покрывают интеграцию через контроллер.</li>
+      </ul>
+    </div>
   </div>
 </div>
 
