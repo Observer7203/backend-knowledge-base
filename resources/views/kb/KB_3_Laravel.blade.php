@@ -5525,6 +5525,68 @@ php artisan migrate</code></pre>
       По умолчанию <code>ShouldBroadcast</code> ставит трансляцию в очередь (это правильно — не блокирует основной поток). <code>ShouldBroadcastNow</code> — синхронная трансляция, только когда критично.
     </div>
 
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="workflow" style="width:14px;height:14px"></i> Как это работает end-to-end: сервер → WebSocket → фронт</div>
+
+    <p class="text"><strong>Важно понимать:</strong> <code>broadcastOn()</code> — <em>не</em> метод, который ты вызываешь напрямую. Это <strong>метод-описание</strong>. Он нужен, чтобы сообщить Laravel <em>по какому каналу</em> транслировать событие. Ты вызываешь <code>OrderPaid::dispatch($order)</code>, а фреймворк сам «спрашивает» у события — какой канал вернёт <code>broadcastOn()</code>.</p>
+
+    <p class="text"><strong>Полный процесс по шагам:</strong></p>
+
+    <div class="card">
+      <h3>1. Создаёшь событие с <code>ShouldBroadcast</code></h3>
+      <p>Класс реализует интерфейс — маркер для Laravel, что это событие нужно не только обработать внутри, но и отправить на фронтенд.</p>
+    </div>
+
+    <div class="card">
+      <h3>2. Определяешь канал в <code>broadcastOn()</code></h3>
+      <p>Канал — как «комната» или «тема», на которую можно подписаться. Метод возвращает <code>Channel</code> / <code>PrivateChannel</code> / <code>PresenceChannel</code>.</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">broadcastOn</span>(): <span class="c-key">array</span>
+{
+    <span class="c-key">return</span> [
+        <span class="c-key">new</span> <span class="c-type">PrivateChannel</span>(<span class="c-str">'orders.'</span> . <span class="c-var">$this</span>-&gt;<span class="c-var">order</span>-&gt;<span class="c-var">id</span>),
+    ];
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>3. Инициируешь событие в коде</h3>
+      <p>В контроллере / Action / где угодно:</p>
+<pre><code><span class="c-type">OrderPaid</span>::<span class="c-fn">dispatch</span>(<span class="c-var">$order</span>);
+<span class="c-comment">// или event(new OrderPaid($order));</span></code></pre>
+      <p>В этот момент Laravel понимает: событие нужно транслировать через WebSocket.</p>
+    </div>
+
+    <div class="card">
+      <h3>4. Laravel кладёт трансляцию в очередь</h3>
+      <p>Трансляция происходит <em>асинхронно</em>, чтобы не тормозить основной ответ сервера. Событие попадает в отдельный job на трансляцию.</p>
+    </div>
+
+    <div class="card">
+      <h3>5. Воркер транслирует событие</h3>
+      <p>Воркер очереди (<code>queue:work</code>) забирает job и отправляет данные события (все public свойства) в твой WebSocket-сервис — <strong>Pusher</strong>, <strong>Ably</strong> или <strong>Laravel Reverb</strong>.</p>
+    </div>
+
+    <div class="card">
+      <h3>6. Фронтенд получает событие через Laravel Echo</h3>
+      <p><strong>Laravel Echo</strong> — клиентская JS-библиотека для WebSockets. Настроена на фронтенде, постоянно слушает указанные каналы. Получив событие — выполняет твой JS-колбэк:</p>
+<pre><code><span class="c-comment">// resources/js/app.js</span>
+<span class="c-type">Echo</span>.<span class="c-fn">private</span>(<span class="c-str">`orders.${orderId}`</span>)
+    .<span class="c-fn">listen</span>(<span class="c-str">'OrderPaid'</span>, (<span class="c-var">e</span>) =&gt; {
+        <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-var">e</span>.<span class="c-var">order</span>);   <span class="c-comment">// данные события</span>
+        <span class="c-comment">// Обновляем UI: показать уведомление, изменить статус, ...</span>
+    });</code></pre>
+    </div>
+
+    <div class="remember-box">
+      <strong>Последовательность действий:</strong>
+      <ol style="margin:6px 0 0 20px;line-height:1.7">
+        <li><strong>Сервер:</strong> ты создаёшь и диспатчишь событие (<code>OrderPaid::dispatch($order)</code>).</li>
+        <li><strong>Laravel:</strong> использует <code>broadcastOn()</code> твоего события, чтобы узнать куда отправлять.</li>
+        <li><strong>Очередь / Воркер:</strong> отправляет данные события в WebSocket-сервис.</li>
+        <li><strong>Фронтенд:</strong> Laravel Echo, подписанный на этот канал, получает событие и выполняет колбэк.</li>
+      </ol>
+      Таким образом, <code>broadcastOn()</code> — <em>не прямой вызов</em>, а инструкция для фреймворка, часть автоматического механизма доставки событий на клиент.
+    </div>
+
     <div class="remember-box">
       <strong>Итог по Event Class:</strong>
       <ul style="margin:6px 0 0 20px;line-height:1.7">
