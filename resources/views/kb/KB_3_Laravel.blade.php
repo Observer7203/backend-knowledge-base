@@ -6572,6 +6572,18 @@ php artisan migrate</code></pre>
       <li>Блокировка автоматически снимается после завершения задачи или в случае ошибки.</li>
     </ol>
 
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="atom" style="width:14px;height:14px"></i> Что такое «атомарная операция захвата»</div>
+    <p class="text"><strong>Атомарная операция</strong> — операция, которая выполняется как <em>единое целое</em>: либо полностью успешно, либо не выполняется вообще, без промежуточных состояний. В контексте распределённых блокировок это означает, что <strong>проверка наличия блокировки и её создание</strong> (если её нет) происходит за один неделимый шаг — исключая ситуацию, когда два сервера одновременно попытаются создать блокировку и оба её получат.</p>
+
+    <p class="text"><strong>Как реализовано в каждом драйвере:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Redis:</strong> команда <code>SET key value NX EX seconds</code> — устанавливает ключ <em>только если его нет</em>, с истечением через заданное время.</li>
+      <li><strong>Memcached:</strong> метод <code>add()</code> — добавляет элемент <em>только если его нет</em>.</li>
+      <li><strong>Database:</strong> используется <code>INSERT</code> с уникальным индексом или блокировка строки через <code>SELECT ... FOR UPDATE</code> в транзакции.</li>
+    </ul>
+
+    <p class="text">Эти механизмы гарантируют, что <em>только один процесс</em> сможет захватить блокировку, остальные получат отказ. <strong>Без атомарности</strong> два сервера могли бы одновременно проверить, что блокировки нет, и оба создать её — что привело бы к дублированию задачи (гонка данных).</p>
+
     <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hard-drive" style="width:14px;height:14px"></i> Требования к драйверу кеша</div>
     <p class="text">Нужен драйвер кеша, поддерживающий атомарные операции захвата/освобождения блокировок:</p>
     <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
@@ -6628,46 +6640,82 @@ php artisan migrate</code></pre>
 
     <p class="text">Полный набор методов для задания частоты и фильтров:</p>
 
+    <p class="text"><strong>Периоды (интервалы запуска)</strong> — методы задания частоты. Все они возвращают тот же экземпляр <code>Schedule</code> для цепочки вызовов.</p>
+
     <table class="data-table">
       <thead><tr><th>Метод</th><th>Описание</th></tr></thead>
       <tbody>
-        <tr><td><code>-&gt;cron('* * * * *')</code></td><td>Произвольное расписание в формате cron</td></tr>
+        <tr><td><code>-&gt;cron('* * * * *')</code></td><td>Произвольное cron-выражение, напр. <code>->cron('*/5 * * * *')</code></td></tr>
         <tr><td><code>-&gt;everyMinute()</code></td><td>Каждую минуту</td></tr>
         <tr><td><code>-&gt;everyTwoMinutes()</code></td><td>Каждые 2 минуты</td></tr>
         <tr><td><code>-&gt;everyFiveMinutes()</code></td><td>Каждые 5 минут</td></tr>
         <tr><td><code>-&gt;everyTenMinutes()</code></td><td>Каждые 10 минут</td></tr>
+        <tr><td><code>-&gt;everyFifteenMinutes()</code></td><td>Каждые 15 минут</td></tr>
         <tr><td><code>-&gt;everyThirtyMinutes()</code></td><td>Каждые 30 минут</td></tr>
-        <tr><td><code>-&gt;hourly()</code></td><td>Каждый час (в 0 минут)</td></tr>
-        <tr><td><code>-&gt;hourlyAt(15)</code></td><td>Каждый час в 15 минут</td></tr>
+        <tr><td><code>-&gt;hourly()</code></td><td>Каждый час (в 00 минут)</td></tr>
+        <tr><td><code>-&gt;hourlyAt(17)</code></td><td>Каждый час в 17 минут</td></tr>
         <tr><td><code>-&gt;everyTwoHours()</code></td><td>Каждые 2 часа</td></tr>
-        <tr><td><code>-&gt;daily()</code></td><td>Ежедневно в полночь</td></tr>
-        <tr><td><code>-&gt;dailyAt('13:00')</code></td><td>Ежедневно в 13:00</td></tr>
+        <tr><td><code>-&gt;everyThreeHours()</code></td><td>Каждые 3 часа</td></tr>
+        <tr><td><code>-&gt;everyFourHours()</code></td><td>Каждые 4 часа</td></tr>
+        <tr><td><code>-&gt;everySixHours()</code></td><td>Каждые 6 часов</td></tr>
+        <tr><td><code>-&gt;daily()</code></td><td>Ежедневно в полночь (00:00)</td></tr>
+        <tr><td><code>-&gt;dailyAt('13:30')</code></td><td>Ежедневно в 13:30</td></tr>
         <tr><td><code>-&gt;twiceDaily(1, 13)</code></td><td>Дважды в день: в 1:00 и 13:00</td></tr>
+        <tr><td><code>-&gt;twiceDailyAt(3, 15, 30)</code></td><td>Дважды в день в 3:30 и 15:30 (часы, минуты)</td></tr>
         <tr><td><code>-&gt;weekly()</code></td><td>Еженедельно в полночь воскресенья</td></tr>
-        <tr><td><code>-&gt;weeklyOn(1, '8:00')</code></td><td>Еженедельно в понедельник в 8:00</td></tr>
-        <tr><td><code>-&gt;monthly()</code></td><td>Ежемесячно в полночь 1-го числа</td></tr>
+        <tr><td><code>-&gt;weeklyOn(1, '8:00')</code></td><td>Еженедельно в понедельник (1 = Monday) в 8:00</td></tr>
+        <tr><td><code>-&gt;monthly()</code></td><td>Ежемесячно 1-го числа в полночь</td></tr>
         <tr><td><code>-&gt;monthlyOn(4, '15:00')</code></td><td>4-го числа каждого месяца в 15:00</td></tr>
-        <tr><td><code>-&gt;quarterly()</code></td><td>Каждый квартал (1 января, 1 апреля, 1 июля, 1 октября)</td></tr>
+        <tr><td><code>-&gt;twiceMonthly(1, 16, '13:00')</code></td><td>1-го и 16-го числа каждого месяца в 13:00</td></tr>
+        <tr><td><code>-&gt;quarterly()</code></td><td>Каждый квартал: 1 января, 1 апреля, 1 июля, 1 октября в полночь</td></tr>
         <tr><td><code>-&gt;yearly()</code></td><td>Ежегодно 1 января в полночь</td></tr>
+        <tr><td><code>-&gt;days([1, 3, 5])</code></td><td>Запускать в определённые дни недели (0=воскресенье)</td></tr>
       </tbody>
     </table>
 
-    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="filter" style="width:14px;height:14px"></i> Фильтры и модификаторы</div>
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="filter" style="width:14px;height:14px"></i> Фильтры (условия выполнения)</div>
+    <p class="text">Фильтры задают дополнительные условия. Если условие не выполнено — задача <strong>пропускается</strong>.</p>
     <table class="data-table">
       <thead><tr><th>Метод</th><th>Описание</th></tr></thead>
       <tbody>
-        <tr><td><code>-&gt;weekdays()</code></td><td>Только по рабочим дням (пн-пт)</td></tr>
-        <tr><td><code>-&gt;weekends()</code></td><td>Только по выходным (сб-вс)</td></tr>
+        <tr><td><code>-&gt;weekdays()</code></td><td>Только по рабочим дням (пн–пт)</td></tr>
+        <tr><td><code>-&gt;weekends()</code></td><td>Только по выходным (сб–вс)</td></tr>
         <tr><td><code>-&gt;sundays()</code></td><td>Только по воскресеньям</td></tr>
-        <tr><td><code>-&gt;mondays()</code></td><td>Только по понедельникам (и аналогично для других дней)</td></tr>
-        <tr><td><code>-&gt;between('8:00', '17:00')</code></td><td>Запускать только в указанном временном интервале</td></tr>
-        <tr><td><code>-&gt;when(fn () =&gt; ...)</code></td><td>Условие для выполнения (замыкание возвращает <code>bool</code>)</td></tr>
-        <tr><td><code>-&gt;skip(fn () =&gt; ...)</code></td><td>Пропустить, если условие true (обратное <code>when</code>)</td></tr>
-        <tr><td><code>-&gt;environments('production')</code></td><td>Запускать только в определённых окружениях</td></tr>
-        <tr><td><code>-&gt;evenInMaintenanceMode()</code></td><td>Выполнять даже в режиме обслуживания</td></tr>
-        <tr><td><code>-&gt;timezone('Asia/Almaty')</code></td><td>Установить таймзону для расписания</td></tr>
+        <tr><td><code>-&gt;mondays()</code></td><td>Только по понедельникам</td></tr>
+        <tr><td><code>-&gt;tuesdays()</code></td><td>Только по вторникам</td></tr>
+        <tr><td><code>-&gt;wednesdays()</code></td><td>Только по средам</td></tr>
+        <tr><td><code>-&gt;thursdays()</code></td><td>Только по четвергам</td></tr>
+        <tr><td><code>-&gt;fridays()</code></td><td>Только по пятницам</td></tr>
+        <tr><td><code>-&gt;saturdays()</code></td><td>Только по субботам</td></tr>
+        <tr><td><code>-&gt;between('9:00', '17:00')</code></td><td>Запускать только в указанном интервале (включительно)</td></tr>
+        <tr><td><code>-&gt;unlessBetween('22:00', '6:00')</code></td><td><em>Не</em> запускать между указанными временами</td></tr>
+        <tr><td><code>-&gt;when(fn () =&gt; ...)</code></td><td>Запускать, если замыкание вернуло <code>true</code></td></tr>
+        <tr><td><code>-&gt;skip(fn () =&gt; ...)</code></td><td>Пропустить, если замыкание вернуло <code>true</code> (обратное <code>when</code>)</td></tr>
+        <tr><td><code>-&gt;environments(['production'])</code></td><td>Запускать только в указанных окружениях</td></tr>
+        <tr><td><code>-&gt;evenInMaintenanceMode()</code></td><td>Выполнять даже в режиме обслуживания (по умолчанию задачи не запускаются)</td></tr>
+        <tr><td><code>-&gt;timezone('Asia/Almaty')</code></td><td>Таймзона для расписания</td></tr>
       </tbody>
     </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="link-2" style="width:14px;height:14px"></i> Комбинирование в цепочке</div>
+    <p class="text">Методы можно комбинировать — <strong>все условия</strong> применяются одновременно (AND-логика). Например:</p>
+<pre><code><span class="c-type">Schedule</span>::<span class="c-fn">command</span>(<span class="c-str">'reports:generate'</span>)
+    -&gt;<span class="c-fn">dailyAt</span>(<span class="c-str">'02:00'</span>)
+    -&gt;<span class="c-fn">weekdays</span>()
+    -&gt;<span class="c-fn">between</span>(<span class="c-str">'01:00'</span>, <span class="c-str">'04:00'</span>)
+    -&gt;<span class="c-fn">when</span>(<span class="c-key">fn</span>() =&gt; <span class="c-var">$this</span>-&gt;<span class="c-fn">shouldRun</span>())
+    -&gt;<span class="c-fn">onOneServer</span>();
+</code></pre>
+    <p class="text">Задача выполнится <em>каждый будний день в 2:00 ночи</em>, но только если сервер захватит блокировку и замыкание <code>shouldRun()</code> вернёт <code>true</code>. Все фильтры проверяются в момент, когда наступает время запуска.</p>
+
+    <div class="tip">
+      <strong>Важно:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Фильтры <code>weekdays()</code>, <code>between()</code>, <code>when()</code> проверяются <em>непосредственно перед запуском</em> задачи.</li>
+        <li>Для точного контроля используйте <code>->cron()</code> и комбинируйте с <code>->when()</code> для сложной логики.</li>
+        <li>При <code>->onOneServer()</code> фильтры всё равно применяются <em>на каждом сервере</em>, но задача выполнится только на том, кто успешно захватит блокировку.</li>
+      </ul>
+    </div>
   </div>
 
   <div class="subsection" id="sch-cron">
