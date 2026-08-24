@@ -244,6 +244,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('events','ev-purpose',this)">Назначение</a>
     <a class="nav-subitem" onclick="showSub('events','ev-components',this)">Компоненты (Event/Listener/Subscriber)</a>
     <a class="nav-subitem" onclick="showSub('events','ev-event-class',this)">Event Class — DTO + Broadcasting</a>
+    <a class="nav-subitem" onclick="showSub('events','ev-listener-class',this)">Listener Class — обработчик события</a>
     <a class="nav-subitem" onclick="showSub('events','ev-listen',this)">Регистрация: $listen формат</a>
     <a class="nav-subitem" onclick="showSub('events','ev-queue-config',this)">Queue-config для Listeners</a>
     <a class="nav-subitem" onclick="showSub('events','ev-event-vs-job',this)">Event vs Job — когда что</a>
@@ -5597,6 +5598,133 @@ php artisan migrate</code></pre>
         <li>Listeners реагируют — синхронно или асинхронно.</li>
         <li>Через <code>ShouldBroadcast</code> транслируется в real-time (Pusher/Reverb + Echo).</li>
         <li>Класс события <em>не содержит логики</em> — только данные.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="subsection" id="ev-listener-class">
+    <div class="subsection-title"><i data-lucide="ear"></i> Listener Class — обработчик события</div>
+
+    <p class="text"><strong>Что это.</strong> Listener — класс, который содержит <em>логику</em>, реагирующую на определённое событие. Получает экземпляр события в методе <code>handle()</code> и выполняет нужные действия (отправить письмо, обновить кеш, залогировать).</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="layers" style="width:14px;height:14px"></i> Структура слушателя</div>
+<pre><code><span class="c-key">namespace</span> <span class="c-type">App</span>\<span class="c-type">Listeners</span>;
+
+<span class="c-key">use</span> <span class="c-type">App</span>\<span class="c-type">Events</span>\<span class="c-type">OrderPaid</span>;
+
+<span class="c-key">class</span> <span class="c-type">SendOrderConfirmation</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">OrderPaid</span> <span class="c-var">$event</span>)
+    {
+        <span class="c-comment">// отправка письма</span>
+        <span class="c-type">Mail</span>::<span class="c-fn">to</span>(<span class="c-var">$event</span>-&gt;<span class="c-var">order</span>-&gt;<span class="c-var">user</span>-&gt;<span class="c-var">email</span>)
+            -&gt;<span class="c-fn">send</span>(<span class="c-key">new</span> <span class="c-type">OrderConfirmation</span>(<span class="c-var">$event</span>-&gt;<span class="c-var">order</span>));
+    }
+}</code></pre>
+
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Метод <code>handle</code> вызывается автоматически, когда событие диспатчится.</li>
+      <li>В параметре указывается <strong>конкретный класс события</strong>, на которое подписан слушатель.</li>
+      <li>Внутри доступны все публичные свойства события (<code>$event-&gt;order</code>).</li>
+      <li>Создание через artisan: <code>php artisan make:listener SendOrderConfirmation --event=OrderPaid</code></li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="link"></i> Регистрация слушателя</div>
+    <p class="text">Связь между событием и слушателем регистрируется в <code>App\Providers\EventServiceProvider</code>, в свойстве <code>$listen</code>:</p>
+<pre><code><span class="c-key">protected</span> <span class="c-var">$listen</span> = [
+    <span class="c-type">OrderPaid</span>::<span class="c-key">class</span> =&gt; [
+        <span class="c-type">SendOrderConfirmation</span>::<span class="c-key">class</span>,
+        <span class="c-type">UpdateInventory</span>::<span class="c-key">class</span>,
+        <span class="c-type">LogPayment</span>::<span class="c-key">class</span>,
+    ],
+];</code></pre>
+    <p class="text">Одно событие может иметь <strong>несколько слушателей</strong> — они выполняются в порядке перечисления. Альтернативно через фасад <code>Event</code> в <code>boot()</code> провайдера:</p>
+<pre><code><span class="c-type">Event</span>::<span class="c-fn">listen</span>(<span class="c-type">OrderPaid</span>::<span class="c-key">class</span>, <span class="c-type">SendOrderConfirmation</span>::<span class="c-key">class</span>);</code></pre>
+    <p class="text">Подробнее про все 3 способа регистрации — в подсекции <strong>Регистрация: $listen формат</strong>.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="fast-forward" style="width:14px;height:14px"></i> Асинхронное выполнение (очередь)</div>
+    <p class="text">Если слушатель должен выполняться <em>асинхронно</em>, не блокируя основной поток — он реализует интерфейс <code>ShouldQueue</code>:</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Contracts</span>\<span class="c-type">Queue</span>\<span class="c-type">ShouldQueue</span>;
+
+<span class="c-key">class</span> <span class="c-type">SendOrderConfirmation</span> <span class="c-key">implements</span> <span class="c-type">ShouldQueue</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">OrderPaid</span> <span class="c-var">$event</span>)
+    {
+        <span class="c-comment">// ...</span>
+    }
+}</code></pre>
+    <p class="text">После реализации интерфейса слушатель автоматически помещается в очередь при диспатче события. Воркер очереди выполняет его независимо от основного запроса.</p>
+
+    <p class="text">Можно настраивать очередь, задержку, попытки через свойства класса:</p>
+<pre><code><span class="c-key">public</span> <span class="c-key">string</span> <span class="c-var">$queue</span> = <span class="c-str">'emails'</span>;
+<span class="c-key">public int</span>    <span class="c-var">$delay</span> = <span class="c-num">60</span>;
+<span class="c-key">public int</span>    <span class="c-var">$tries</span> = <span class="c-num">3</span>;</code></pre>
+    <p class="text">Полный список свойств (<code>$connection</code>, <code>$queue</code>, <code>$delay</code>, <code>$tries</code>, <code>$maxExceptions</code>, <code>$timeout</code>, <code>$backoff</code>, <code>$deleteWhenMissingModels</code>) и метод <code>failed()</code> — в подсекции <strong>Queue-config для Listeners</strong>.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="repeat" style="width:14px;height:14px"></i> Жизненный цикл</div>
+    <ol style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Событие диспатчится через <code>event()</code> или <code>::dispatch()</code>.</li>
+      <li><code>EventServiceProvider</code> определяет список слушателей для этого события.</li>
+      <li>Для каждого слушателя:
+        <ul style="margin-top:4px">
+          <li>Если имплементирует <code>ShouldQueue</code> — ставится в очередь.</li>
+          <li>Если нет — вызывается синхронно, прямо в текущем процессе.</li>
+        </ul>
+      </li>
+      <li>Асинхронные слушатели выполняются воркером позже.</li>
+    </ol>
+
+    <div class="pitfall">
+      <strong>Важные нюансы:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>При очереди <strong>данные события должны быть сериализуемы</strong>. Модели Eloquent сериализуются через ID благодаря трейту <code>SerializesModels</code>.</li>
+        <li>Если слушатель <strong>выбрасывает исключение</strong> — оно обрабатывается по настройкам очереди (retry, <code>failed()</code>, таблица <code>failed_jobs</code>).</li>
+        <li>Можно <strong>отменить дальнейшую обработку</strong> слушателей возвратом <code>false</code> из <code>handle()</code>. В современных версиях <em>не рекомендуется</em> — лучше бросать исключение или использовать conditional-логику.</li>
+      </ul>
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hammer" style="width:14px;height:14px"></i> Полный пример</div>
+    <p class="text"><strong>Событие:</strong></p>
+<pre><code><span class="c-key">class</span> <span class="c-type">OrderPaid</span>
+{
+    <span class="c-key">use</span> <span class="c-type">Dispatchable</span>, <span class="c-type">SerializesModels</span>;
+
+    <span class="c-key">public</span> <span class="c-type">Order</span> <span class="c-var">$order</span>;
+
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-type">Order</span> <span class="c-var">$order</span>)
+    {
+        <span class="c-var">$this</span>-&gt;<span class="c-var">order</span> = <span class="c-var">$order</span>;
+    }
+}</code></pre>
+
+    <p class="text"><strong>Слушатель:</strong></p>
+<pre><code><span class="c-key">class</span> <span class="c-type">SendOrderConfirmation</span> <span class="c-key">implements</span> <span class="c-type">ShouldQueue</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">OrderPaid</span> <span class="c-var">$event</span>)
+    {
+        <span class="c-comment">/* отправка письма */</span>
+    }
+}</code></pre>
+
+    <p class="text"><strong>Регистрация:</strong></p>
+<pre><code><span class="c-comment">// EventServiceProvider</span>
+<span class="c-key">protected</span> <span class="c-var">$listen</span> = [
+    <span class="c-type">OrderPaid</span>::<span class="c-key">class</span> =&gt; [<span class="c-type">SendOrderConfirmation</span>::<span class="c-key">class</span>],
+];</code></pre>
+
+    <p class="text"><strong>Диспатч:</strong></p>
+<pre><code><span class="c-type">OrderPaid</span>::<span class="c-fn">dispatch</span>(<span class="c-var">$order</span>);</code></pre>
+    <p class="text">Теперь при оплате заказа слушатель ставится в очередь и отправляет письмо в фоне, не задерживая ответ пользователю.</p>
+
+    <div class="remember-box">
+      <strong>Итог по Listener:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Класс с методом <code>handle(EventClass $event)</code> — вызывается автоматически.</li>
+        <li>Регистрируется в <code>EventServiceProvider::$listen</code> или через <code>Event::listen()</code>.</li>
+        <li>Один event → 0..N listeners, порядок выполнения = порядок в массиве.</li>
+        <li><code>ShouldQueue</code> → асинхронно через очередь. Свойства <code>$queue</code>/<code>$delay</code>/<code>$tries</code> настраивают поведение.</li>
+        <li>Синхронный без <code>ShouldQueue</code> — выполняется в том же процессе что и <code>dispatch()</code>.</li>
+        <li>Данные event должны быть сериализуемы для очереди — модели через <code>SerializesModels</code>.</li>
       </ul>
     </div>
   </div>
