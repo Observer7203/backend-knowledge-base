@@ -258,6 +258,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('scheduler','sch-versions',this)">Где определяется (L10 vs L11+)</a>
     <a class="nav-subitem" onclick="showSub('scheduler','sch-features',this)">Возможности (overlap/oneServer/output)</a>
     <a class="nav-subitem" onclick="showSub('scheduler','sch-overlapping',this)">withoutOverlapping — параллельность</a>
+    <a class="nav-subitem" onclick="showSub('scheduler','sch-oneserver',this)">onOneServer — на одном сервере в кластере</a>
     <a class="nav-subitem" onclick="showSub('scheduler','sch-methods',this)">Все методы расписания (таблица)</a>
     <a class="nav-subitem" onclick="showSub('scheduler','sch-cron',this)">Запуск через cron</a>
     <a class="nav-subitem" onclick="showSub('scheduler','sch-practice',this)">Практика: расписание для отчётов</a>
@@ -6543,6 +6544,82 @@ php artisan migrate</code></pre>
 
     <div class="remember-box">
       <strong>Итог.</strong> <code>withoutOverlapping()</code> — удобный и надёжный способ предотвратить параллельное выполнение периодических задач. Главное — правильно подобрать TTL: чтобы блокировка не зависала навсегда, но и не сбрасывалась слишком рано. Правило: <strong>TTL &gt; максимальное ожидаемое время выполнения задачи</strong> с запасом.
+    </div>
+  </div>
+
+  <div class="subsection" id="sch-oneserver">
+    <div class="subsection-title"><i data-lucide="server"></i> <code>onOneServer()</code> — выполнение только на одном сервере в кластере</div>
+
+    <p class="text">При <strong>горизонтальном масштабировании</strong> (несколько экземпляров приложения, работающих параллельно) каждая запланированная задача будет запускаться на <em>каждом сервере</em> — если не принять меры. Это приводит к дублированию: повторная отправка писем, двойная обработка данных, N бэкапов вместо одного.</p>
+
+    <p class="text">Метод <code>onOneServer()</code> гарантирует, что задача выполняется <strong>ровно на одном узле</strong> кластера, независимо от количества запущенных экземпляров.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="code" style="width:14px;height:14px"></i> Синтаксис</div>
+<pre><code><span class="c-type">Schedule</span>::<span class="c-fn">command</span>(<span class="c-str">'reports:generate'</span>)-&gt;<span class="c-fn">daily</span>()-&gt;<span class="c-fn">onOneServer</span>();
+
+<span class="c-comment">// Комбинация с withoutOverlapping — максимальная защита</span>
+<span class="c-type">Schedule</span>::<span class="c-fn">command</span>(<span class="c-str">'backup:run'</span>)
+    -&gt;<span class="c-fn">daily</span>()
+    -&gt;<span class="c-fn">onOneServer</span>()
+    -&gt;<span class="c-fn">withoutOverlapping</span>();</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="cpu" style="width:14px;height:14px"></i> Принцип работы</div>
+    <p class="text">Использует <strong>атомарные блокировки</strong> в общем хранилище кеша. При старте задачи:</p>
+    <ol style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Планировщик пытается создать <strong>lock</strong> с уникальным именем для этой задачи.</li>
+      <li>Если блокировку удалось захватить — задача выполняется на текущем сервере.</li>
+      <li>Если блокировка уже занята другим сервером — задача пропускается на этом узле.</li>
+      <li>Блокировка автоматически снимается после завершения задачи или в случае ошибки.</li>
+    </ol>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hard-drive" style="width:14px;height:14px"></i> Требования к драйверу кеша</div>
+    <p class="text">Нужен драйвер кеша, поддерживающий атомарные операции захвата/освобождения блокировок:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>redis</code> — предпочтительный вариант (встроенные атомарные команды <code>SET NX EX</code>).</li>
+      <li><code>memcached</code> — тоже поддерживает атомарные операции.</li>
+      <li><code>database</code> — использует таблицу кеша с атомарными блокировками (начиная с определённых версий Laravel).</li>
+    </ul>
+
+    <div class="pitfall">
+      <strong>Не поддерживаются:</strong> <code>file</code>, <code>array</code>, <code>null</code> — они не обеспечивают распределённую блокировку. С такими драйверами <code>onOneServer()</code> либо выбросит исключение, либо просто не сработает (задача будет выполняться на всех серверах).
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="settings" style="width:14px;height:14px"></i> Отдельный драйвер для блокировок</div>
+    <p class="text">По умолчанию используется драйвер из <code>CACHE_DRIVER</code>. Можно явно указать другой драйвер для блокировок:</p>
+<pre><code><span class="c-type">Schedule</span>::<span class="c-fn">command</span>(<span class="c-str">'backup:run'</span>)
+    -&gt;<span class="c-fn">daily</span>()
+    -&gt;<span class="c-fn">onOneServer</span>()
+    -&gt;<span class="c-fn">useCacheDriver</span>(<span class="c-str">'redis'</span>);</code></pre>
+    <p class="text">Полезно, если основной кеш используется для других целей (например, <code>file</code> для данных, <code>redis</code> для блокировок).</p>
+
+    <div class="pitfall">
+      <strong>Важные моменты и ограничения:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><strong>TTL блокировки</strong> — по умолчанию 24 часа. Если задача выполняется дольше, блокировка истечёт, и другой сервер может её захватить — параллельное выполнение. В стандартном API <code>onOneServer()</code> <em>не принимает параметры</em> — TTL фиксирован (24 часа).</li>
+        <li><strong>Падение сервера</strong> — если процесс упал без освобождения блокировки, она автоматически истечёт через TTL, задача снова станет доступной другим узлам.</li>
+        <li><strong>Имя блокировки</strong> — строится по идентификатору задачи. Можно задать своё через <code>-&gt;name('unique-name')</code>.</li>
+        <li><strong>Совместимость с <code>withoutOverlapping()</code></strong> — использовать вместе. <code>withoutOverlapping</code> предотвращает параллельный запуск на <em>одном</em> сервере, <code>onOneServer</code> — на <em>разных</em>. Вместе = максимальная защита.</li>
+        <li><strong>Скорость</strong> — проверка блокировки добавляет незначительную задержку.</li>
+      </ul>
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="target" style="width:14px;height:14px"></i> Когда использовать</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Резервное копирование</strong> — не нужно делать одно и то же на каждом сервере.</li>
+      <li><strong>Генерация глобальных отчётов</strong> — достаточно одного экземпляра.</li>
+      <li><strong>Очистка временных файлов</strong> — не удалять одновременно с разных серверов.</li>
+      <li><strong>Отправка массовых уведомлений</strong> — избежать дублирования.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="git-branch" style="width:14px;height:14px"></i> Альтернативы</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Уникальные jobs</strong> (<code>ShouldBeUnique</code>) через централизованную очередь (Redis/SQS) — но только для асинхронных задач, не для планировщика.</li>
+      <li><strong>Ручная <code>Cache::lock()</code></strong> внутри самой задачи — больше гибкости, сложнее.</li>
+      <li><strong>Kubernetes CronJob</strong> — переносит управление на уровень инфраструктуры.</li>
+    </ul>
+
+    <div class="remember-box">
+      <strong>Итог.</strong> <code>onOneServer()</code> — простой и эффективный способ избежать дублирования периодических задач в кластерной среде. Опирается на общий кеш с атомарными блокировками (Redis/Memcached/DB). Для большинства сценариев где критично, чтобы задача выполнялась только один раз глобально. Комбинация <code>-&gt;onOneServer()-&gt;withoutOverlapping()</code> даёт максимальную защиту: один сервер + один экземпляр.
     </div>
   </div>
 
