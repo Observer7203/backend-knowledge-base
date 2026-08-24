@@ -257,6 +257,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('scheduler','sch-purpose',this)">Назначение</a>
     <a class="nav-subitem" onclick="showSub('scheduler','sch-versions',this)">Где определяется (L10 vs L11+)</a>
     <a class="nav-subitem" onclick="showSub('scheduler','sch-features',this)">Возможности (overlap/oneServer/output)</a>
+    <a class="nav-subitem" onclick="showSub('scheduler','sch-overlapping',this)">withoutOverlapping — параллельность</a>
     <a class="nav-subitem" onclick="showSub('scheduler','sch-methods',this)">Все методы расписания (таблица)</a>
     <a class="nav-subitem" onclick="showSub('scheduler','sch-cron',this)">Запуск через cron</a>
     <a class="nav-subitem" onclick="showSub('scheduler','sch-practice',this)">Практика: расписание для отчётов</a>
@@ -6479,6 +6480,70 @@ php artisan migrate</code></pre>
     <div class="card"><h3>withoutOverlapping</h3><p class="text"><code>-&gt;withoutOverlapping(10)</code> — не запускать, если предыдущий ещё не завершился. TTL 10 минут — защита от случая, когда процесс упал и lock не освобождён.</p></div>
     <div class="card"><h3>onOneServer</h3><p class="text">При горизонтальном масштабировании (несколько серверов) job выполняется ровно на одном. Требует драйвер кеша, поддерживающий atomic lock (Redis, Memcached, DB).</p></div>
     <div class="card"><h3>Output handling</h3><p class="text"><code>-&gt;sendOutputTo($file)</code>, <code>-&gt;emailOutputOnFailure($email)</code>. Удобно для разовых отчётов; для регулярного логирования &mdash; внешние агрегаторы.</p></div>
+  </div>
+
+  <div class="subsection" id="sch-overlapping">
+    <div class="subsection-title"><i data-lucide="lock"></i> <code>withoutOverlapping()</code> — предотвращение параллельного выполнения</div>
+
+    <p class="text">Метод <code>withoutOverlapping()</code> гарантирует, что одновременно выполняется <strong>только один экземпляр задачи</strong>. Если новый запуск задачи происходит, пока предыдущий ещё выполняется — новый запуск будет пропущен.</p>
+
+    <p class="text">Полезно для задач, которые могут работать <em>дольше интервала запуска</em> — резервное копирование, обработка больших файлов, синхронизация с внешним API — чтобы избежать конфликтов, дублирования данных или перегрузки ресурсов.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="code" style="width:14px;height:14px"></i> Синтаксис</div>
+<pre><code><span class="c-type">Schedule</span>::<span class="c-fn">command</span>(<span class="c-str">'backup:run'</span>)-&gt;<span class="c-fn">daily</span>()-&gt;<span class="c-fn">withoutOverlapping</span>(<span class="c-num">10</span>);
+
+<span class="c-comment">// или для замыкания</span>
+<span class="c-type">Schedule</span>::<span class="c-fn">call</span>(<span class="c-key">function</span> () {
+    <span class="c-comment">// длительная операция</span>
+})-&gt;<span class="c-fn">everyFiveMinutes</span>()-&gt;<span class="c-fn">withoutOverlapping</span>(<span class="c-num">5</span>);</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="clock" style="width:14px;height:14px"></i> Аргумент <code>$expiresAt</code></div>
+    <p class="text">Метод принимает один <strong>необязательный параметр</strong> — <code>$expiresAt</code> в <strong>минутах</strong>. Это TTL блокировки: через сколько минут она автоматически истекает. По умолчанию — <strong>1440 минут (24 часа)</strong>.</p>
+
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Если передать <code>0</code> или отрицательное число — блокировка <em>никогда не истекает</em> автоматически. Крайне не рекомендуется: при падении процесса блокировка останется навсегда и задача никогда не запустится снова.</li>
+      <li>Без параметра (<code>-&gt;withoutOverlapping()</code>) — TTL 24 часа.</li>
+      <li><strong>Рекомендуемое значение</strong> — время, заведомо <em>превышающее максимальное ожидаемое время выполнения</em> задачи, но не слишком большое, чтобы разблокировка произошла в случае сбоя.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="cpu" style="width:14px;height:14px"></i> Как работает под капотом</div>
+    <p class="text">Laravel использует <strong>драйвер кеша</strong> (по умолчанию — тот же, что настроен в <code>config/cache.php</code>) для хранения <strong>блокировки (lock)</strong>. При старте задачи создаётся ключ кеша, обычно содержащий имя задачи. Если ключ уже существует (задача выполняется) — текущий запуск отменяется.</p>
+
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>После <em>успешного</em> завершения задачи блокировка снимается автоматически (<code>release()</code> в <code>finally</code>).</li>
+      <li>Если задача упала с ошибкой или процесс принудительно остановлен — блокировка может остаться. Для этого и нужен <code>$expiresAt</code>: по истечении срока блокировка автоматически удаляется.</li>
+    </ul>
+
+    <div class="pitfall">
+      <strong>Важные особенности:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><strong>Имя задачи для блокировки</strong> — по умолчанию формируется из командной строки или замыкания. Через <code>-&gt;name('unique-name')</code> можно явно задать имя, что удобно если несколько задач могут иметь одинаковый идентификатор.</li>
+        <li><strong>С <code>-&gt;runInBackground()</code></strong> — блокировка всё равно действует, так как основана на кеше.</li>
+        <li><strong>Если задача выполняется дольше <code>$expiresAt</code></strong> — блокировка освободится автоматически, и запустится <em>вторая копия</em> задачи, даже если первая ещё работает. Поэтому <code>$expiresAt</code> должно быть строго <strong>больше</strong> ожидаемого времени выполнения.</li>
+      </ul>
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hammer" style="width:14px;height:14px"></i> Пример с cron и TTL</div>
+<pre><code><span class="c-type">Schedule</span>::<span class="c-fn">command</span>(<span class="c-str">'emails:send-bulk'</span>)
+    -&gt;<span class="c-fn">everyThirtyMinutes</span>()
+    -&gt;<span class="c-fn">withoutOverlapping</span>(<span class="c-num">15</span>);   <span class="c-comment">// блокировка истекает через 15 минут</span></code></pre>
+    <p class="text">Если задача выполняется в среднем 10 минут — 15 минут безопасный запас. Если задача зависнет на 20 минут, блокировка освободится через 15, и запустится новый экземпляр (может привести к дублированию). Оценивайте время выполнения адекватно.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="target" style="width:14px;height:14px"></i> Когда использовать</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Операции с внешними API, которые могут долго отвечать.</li>
+      <li>Пакетная обработка данных, которая может занять больше времени чем интервал расписания.</li>
+      <li>Генерация больших отчётов или экспорт данных.</li>
+      <li>Резервное копирование.</li>
+    </ul>
+
+    <div class="tip">
+      <strong>Альтернативы.</strong> Если требуется более сложная координация (блокировка на уровне модели или по кастомному ключу) — используй <code>Cache::lock()</code> внутри самой задачи (см. Cache → Atomic Locks). <code>withoutOverlapping</code> — встроенное простое решение для типовых сценариев в планировщике.
+    </div>
+
+    <div class="remember-box">
+      <strong>Итог.</strong> <code>withoutOverlapping()</code> — удобный и надёжный способ предотвратить параллельное выполнение периодических задач. Главное — правильно подобрать TTL: чтобы блокировка не зависала навсегда, но и не сбрасывалась слишком рано. Правило: <strong>TTL &gt; максимальное ожидаемое время выполнения задачи</strong> с запасом.
+    </div>
   </div>
 
   <div class="subsection" id="sch-methods">
