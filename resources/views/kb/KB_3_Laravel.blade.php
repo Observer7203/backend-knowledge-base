@@ -253,6 +253,15 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('events','ev-pitfalls',this)">Особые случаи</a>
   </div>
   <a class="nav-item" onclick="showSection('scheduler',this)"><i data-lucide="calendar-clock"></i> Scheduler</a>
+  <div class="nav-subgroup">
+    <a class="nav-subitem" onclick="showSub('scheduler','sch-purpose',this)">Назначение</a>
+    <a class="nav-subitem" onclick="showSub('scheduler','sch-versions',this)">Где определяется (L10 vs L11+)</a>
+    <a class="nav-subitem" onclick="showSub('scheduler','sch-features',this)">Возможности (overlap/oneServer/output)</a>
+    <a class="nav-subitem" onclick="showSub('scheduler','sch-methods',this)">Все методы расписания (таблица)</a>
+    <a class="nav-subitem" onclick="showSub('scheduler','sch-cron',this)">Запуск через cron</a>
+    <a class="nav-subitem" onclick="showSub('scheduler','sch-practice',this)">Практика: расписание для отчётов</a>
+    <a class="nav-subitem" onclick="showSub('scheduler','sch-pitfalls',this)">Особые случаи</a>
+  </div>
 
   <div class="nav-group-label">Безопасность</div>
   <a class="nav-item" onclick="showSection('auth',this)"><i data-lucide="key"></i> Auth, Gates &amp; Policies</a>
@@ -6392,12 +6401,78 @@ php artisan migrate</code></pre>
 
 <div id="sec-scheduler" class="section">
   <div class="section-title">Scheduler</div>
-  <div class="subsection">
+  <div class="subsection" id="sch-purpose">
     <div class="subsection-title"><i data-lucide="book-open"></i> Назначение</div>
-    <p class="text">Laravel scheduler — встроенный планировщик задач, заменяющий ручное редактирование crontab. Один cron-запись (<code>* * * * * php artisan schedule:run</code>) запускает Laravel, который сам решает, что запустить в эту минуту. Это убирает разрыв между приложением и cron-конфигурацией: расписание лежит в коде, версионируется, тестируется.</p>
+    <p class="text">Laravel scheduler — встроенный планировщик задач, заменяющий ручное редактирование crontab. Одна cron-запись (<code>* * * * * php artisan schedule:run</code>) запускает Laravel, который сам решает, что запустить в эту минуту. Это убирает разрыв между приложением и cron-конфигурацией: расписание лежит в коде, версионируется, тестируется.</p>
+
+    <p class="text">Позволяет декларативно определять периодически выполняемые задачи (отправка отчётов, очистка временных файлов, синхронизация с внешними API) без необходимости писать отдельные cron-записи для каждой задачи.</p>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="sch-versions">
+    <div class="subsection-title"><i data-lucide="git-branch"></i> Где определяется расписание — L10 vs L11+</div>
+
+    <div class="card">
+      <h3>До Laravel 11 (включая 10, 9 и раньше)</h3>
+      <p>Расписание определяется в классе <code>App\Console\Kernel</code> в методе <code>schedule()</code>. Класс находится в <code>app/Console/Kernel.php</code>.</p>
+<pre><code><span class="c-key">namespace</span> <span class="c-type">App</span>\<span class="c-type">Console</span>;
+
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Console</span>\<span class="c-type">Scheduling</span>\<span class="c-type">Schedule</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Foundation</span>\<span class="c-type">Console</span>\<span class="c-type">Kernel</span> <span class="c-key">as</span> <span class="c-type">ConsoleKernel</span>;
+
+<span class="c-key">class</span> <span class="c-type">Kernel</span> <span class="c-key">extends</span> <span class="c-type">ConsoleKernel</span>
+{
+    <span class="c-key">protected function</span> <span class="c-fn">schedule</span>(<span class="c-type">Schedule</span> <span class="c-var">$schedule</span>)
+    {
+        <span class="c-comment">// Ежедневный отчёт в 8:00 утра</span>
+        <span class="c-var">$schedule</span>-&gt;<span class="c-fn">command</span>(<span class="c-str">'reports:send'</span>)-&gt;<span class="c-fn">dailyAt</span>(<span class="c-str">'08:00'</span>);
+
+        <span class="c-comment">// Каждые 5 минут очистка кеша</span>
+        <span class="c-var">$schedule</span>-&gt;<span class="c-fn">command</span>(<span class="c-str">'cache:clear'</span>)-&gt;<span class="c-fn">everyFiveMinutes</span>();
+
+        <span class="c-comment">// Замыкание каждый час</span>
+        <span class="c-var">$schedule</span>-&gt;<span class="c-fn">call</span>(<span class="c-key">function</span> () {
+            <span class="c-comment">// некоторая логика</span>
+        })-&gt;<span class="c-fn">hourly</span>();
+
+        <span class="c-comment">// exec — запуск shell-команды</span>
+        <span class="c-var">$schedule</span>-&gt;<span class="c-fn">exec</span>(<span class="c-str">'php artisan queue:work --stop-when-empty'</span>)-&gt;<span class="c-fn">daily</span>();
+    }
+}</code></pre>
+      <p>В этом же классе можно определить Artisan-команды, вызываемые из расписания или вручную.</p>
+    </div>
+
+    <div class="card">
+      <h3>Laravel 11 и новее</h3>
+      <p>Начиная с Laravel 11, файл <code>App\Console\Kernel</code> больше не создаётся по умолчанию. Всё расписание планируется в файле <code>routes/console.php</code>. Этот файл, ранее используемый только для регистрации консольных маршрутов (Artisan-команд), теперь также содержит методы для определения расписания через фасад <code>Schedule</code>.</p>
+<pre><code><span class="c-comment">// routes/console.php</span>
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Support</span>\<span class="c-type">Facades</span>\<span class="c-type">Schedule</span>;
+
+<span class="c-type">Schedule</span>::<span class="c-fn">command</span>(<span class="c-str">'reports:send'</span>)-&gt;<span class="c-fn">dailyAt</span>(<span class="c-str">'08:00'</span>);
+<span class="c-type">Schedule</span>::<span class="c-fn">command</span>(<span class="c-str">'cache:clear'</span>)-&gt;<span class="c-fn">everyFiveMinutes</span>();
+<span class="c-type">Schedule</span>::<span class="c-fn">call</span>(<span class="c-key">function</span> () {
+    <span class="c-comment">// некоторая логика</span>
+})-&gt;<span class="c-fn">hourly</span>();</code></pre>
+      <p>Структура стала более плоской и унифицированной: все маршруты (HTTP и консольные) и расписания — в директории <code>routes</code>.</p>
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="arrow-right"></i> Миграция с Laravel 10 на 11</div>
+    <p class="text">Если обновляете проект с L10 → L11:</p>
+    <ol style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Удалить класс <code>App\Console\Kernel</code> (или оставить, но он не будет использоваться).</li>
+      <li>Перенести всё расписание из <code>schedule()</code> в <code>routes/console.php</code>.</li>
+      <li>Убедиться, что <code>routes/console.php</code> есть и в нём используется фасад <code>Schedule</code>.</li>
+    </ol>
+
+    <p class="text"><strong>Пример переноса:</strong></p>
+<pre><code><span class="c-comment">// Было в Kernel::schedule()</span>
+<span class="c-var">$schedule</span>-&gt;<span class="c-fn">command</span>(<span class="c-str">'backup:run'</span>)-&gt;<span class="c-fn">daily</span>();
+
+<span class="c-comment">// Стало в routes/console.php</span>
+<span class="c-type">Schedule</span>::<span class="c-fn">command</span>(<span class="c-str">'backup:run'</span>)-&gt;<span class="c-fn">daily</span>();</code></pre>
+    <p class="text">Замыкания в расписании переносятся без изменений.</p>
+  </div>
+
+  <div class="subsection" id="sch-features">
     <div class="subsection-title"><i data-lucide="list"></i> Возможности</div>
     <div class="card"><h3>Декларация в <code>routes/console.php</code></h3><p class="text">С Laravel 11+ расписание лежит в <code>routes/console.php</code> через <code>Schedule::command(...)-&gt;daily()</code>. До 11 — в <code>App\Console\Kernel::schedule()</code>.</p></div>
     <div class="card"><h3>Периоды и фильтры</h3><p class="text"><code>-&gt;everyMinute()</code>, <code>-&gt;hourly()</code>, <code>-&gt;dailyAt('14:30')</code>, <code>-&gt;weekly()</code>, <code>-&gt;cron('*/5 * * * *')</code>. Фильтры: <code>-&gt;weekdays()</code>, <code>-&gt;between('9:00', '17:00')</code>, <code>-&gt;when(fn () =&gt; ...)</code>.</p></div>
@@ -6406,7 +6481,83 @@ php artisan migrate</code></pre>
     <div class="card"><h3>Output handling</h3><p class="text"><code>-&gt;sendOutputTo($file)</code>, <code>-&gt;emailOutputOnFailure($email)</code>. Удобно для разовых отчётов; для регулярного логирования &mdash; внешние агрегаторы.</p></div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="sch-methods">
+    <div class="subsection-title"><i data-lucide="clock"></i> Все методы расписания — таблица</div>
+
+    <p class="text">Полный набор методов для задания частоты и фильтров:</p>
+
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>Описание</th></tr></thead>
+      <tbody>
+        <tr><td><code>-&gt;cron('* * * * *')</code></td><td>Произвольное расписание в формате cron</td></tr>
+        <tr><td><code>-&gt;everyMinute()</code></td><td>Каждую минуту</td></tr>
+        <tr><td><code>-&gt;everyTwoMinutes()</code></td><td>Каждые 2 минуты</td></tr>
+        <tr><td><code>-&gt;everyFiveMinutes()</code></td><td>Каждые 5 минут</td></tr>
+        <tr><td><code>-&gt;everyTenMinutes()</code></td><td>Каждые 10 минут</td></tr>
+        <tr><td><code>-&gt;everyThirtyMinutes()</code></td><td>Каждые 30 минут</td></tr>
+        <tr><td><code>-&gt;hourly()</code></td><td>Каждый час (в 0 минут)</td></tr>
+        <tr><td><code>-&gt;hourlyAt(15)</code></td><td>Каждый час в 15 минут</td></tr>
+        <tr><td><code>-&gt;everyTwoHours()</code></td><td>Каждые 2 часа</td></tr>
+        <tr><td><code>-&gt;daily()</code></td><td>Ежедневно в полночь</td></tr>
+        <tr><td><code>-&gt;dailyAt('13:00')</code></td><td>Ежедневно в 13:00</td></tr>
+        <tr><td><code>-&gt;twiceDaily(1, 13)</code></td><td>Дважды в день: в 1:00 и 13:00</td></tr>
+        <tr><td><code>-&gt;weekly()</code></td><td>Еженедельно в полночь воскресенья</td></tr>
+        <tr><td><code>-&gt;weeklyOn(1, '8:00')</code></td><td>Еженедельно в понедельник в 8:00</td></tr>
+        <tr><td><code>-&gt;monthly()</code></td><td>Ежемесячно в полночь 1-го числа</td></tr>
+        <tr><td><code>-&gt;monthlyOn(4, '15:00')</code></td><td>4-го числа каждого месяца в 15:00</td></tr>
+        <tr><td><code>-&gt;quarterly()</code></td><td>Каждый квартал (1 января, 1 апреля, 1 июля, 1 октября)</td></tr>
+        <tr><td><code>-&gt;yearly()</code></td><td>Ежегодно 1 января в полночь</td></tr>
+      </tbody>
+    </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="filter" style="width:14px;height:14px"></i> Фильтры и модификаторы</div>
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>Описание</th></tr></thead>
+      <tbody>
+        <tr><td><code>-&gt;weekdays()</code></td><td>Только по рабочим дням (пн-пт)</td></tr>
+        <tr><td><code>-&gt;weekends()</code></td><td>Только по выходным (сб-вс)</td></tr>
+        <tr><td><code>-&gt;sundays()</code></td><td>Только по воскресеньям</td></tr>
+        <tr><td><code>-&gt;mondays()</code></td><td>Только по понедельникам (и аналогично для других дней)</td></tr>
+        <tr><td><code>-&gt;between('8:00', '17:00')</code></td><td>Запускать только в указанном временном интервале</td></tr>
+        <tr><td><code>-&gt;when(fn () =&gt; ...)</code></td><td>Условие для выполнения (замыкание возвращает <code>bool</code>)</td></tr>
+        <tr><td><code>-&gt;skip(fn () =&gt; ...)</code></td><td>Пропустить, если условие true (обратное <code>when</code>)</td></tr>
+        <tr><td><code>-&gt;environments('production')</code></td><td>Запускать только в определённых окружениях</td></tr>
+        <tr><td><code>-&gt;evenInMaintenanceMode()</code></td><td>Выполнять даже в режиме обслуживания</td></tr>
+        <tr><td><code>-&gt;timezone('Asia/Almaty')</code></td><td>Установить таймзону для расписания</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection" id="sch-cron">
+    <div class="subsection-title"><i data-lucide="terminal"></i> Запуск планировщика через cron</div>
+
+    <p class="text">Чтобы планировщик работал, нужно добавить <strong>одну запись</strong> в системный cron, которая будет вызывать Artisan-команду <code>schedule:run</code> <em>каждую минуту</em>. Эта команда проверяет, какие задачи должны быть запущены в текущую минуту, и выполняет их.</p>
+
+    <p class="text"><strong>Запись в cron</strong> (обычно через <code>crontab -e</code>):</p>
+<pre><code>* * * * * cd /path-to-your-project && php artisan schedule:run &gt;&gt; /dev/null 2&gt;&amp;1</code></pre>
+
+    <p class="text"><strong>Что делает каждая часть:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>* * * * *</code> — cron-выражение «каждую минуту» (min hour day month day_of_week).</li>
+      <li><code>cd /path-to-your-project</code> — переход в директорию проекта.</li>
+      <li><code>php artisan schedule:run</code> — запуск планировщика Laravel.</li>
+      <li><code>&gt;&gt; /dev/null 2&gt;&amp;1</code> — подавить вывод и ошибки (иначе cron пришлёт email на локального юзера).</li>
+    </ul>
+
+    <div class="tip">
+      В некоторых средах (Laravel Forge, Vapor, Envoyer, платформы с поддержкой очередей) cron-запись <strong>настраивается автоматически</strong>. Проверять в UI платформы.
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="test-tube" style="width:14px;height:14px"></i> Тестирование расписания</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>php artisan schedule:list</code> — показать все зарегистрированные задачи и когда они запустятся.</li>
+      <li><code>php artisan schedule:test</code> (Laravel 9+) — интерактивно выбрать задачу и запустить её сейчас.</li>
+      <li><code>php artisan schedule:run</code> — запустить то, что должно запуститься <em>прямо сейчас</em> согласно расписанию.</li>
+      <li><code>php artisan schedule:work</code> — запустить schedule:run каждую минуту в фоне (для локальной разработки, замена cron).</li>
+    </ul>
+  </div>
+
+  <div class="subsection" id="sch-practice">
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика: расписание для отчётов</div>
 <pre><code><span class="c-comment">// routes/console.php</span>
 <span class="c-key">use</span> <span class="c-type">Illuminate\Support\Facades\Schedule</span>;
@@ -6425,7 +6576,7 @@ php artisan migrate</code></pre>
 </code></pre>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="sch-pitfalls">
     <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
     <div class="pitfall"><strong>1. Cron-запись не настроена.</strong> Без <code>* * * * * php artisan schedule:run</code> в crontab расписание не работает. Заверьте на проде первой проверкой.</div>
     <div class="pitfall"><strong>2. <code>withoutOverlapping</code> без TTL.</strong> Дефолтный TTL — 24 часа. Если процесс упал, lock держится сутки. Указывайте явный таймаут.</div>
