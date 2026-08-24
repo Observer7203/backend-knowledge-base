@@ -243,6 +243,7 @@ ul.bullets strong{color:var(--text);}
   <div class="nav-subgroup">
     <a class="nav-subitem" onclick="showSub('events','ev-purpose',this)">Назначение</a>
     <a class="nav-subitem" onclick="showSub('events','ev-components',this)">Компоненты (Event/Listener/Subscriber)</a>
+    <a class="nav-subitem" onclick="showSub('events','ev-event-class',this)">Event Class — DTO + Broadcasting</a>
     <a class="nav-subitem" onclick="showSub('events','ev-listen',this)">Регистрация: $listen формат</a>
     <a class="nav-subitem" onclick="showSub('events','ev-queue-config',this)">Queue-config для Listeners</a>
     <a class="nav-subitem" onclick="showSub('events','ev-event-vs-job',this)">Event vs Job — когда что</a>
@@ -5429,6 +5430,115 @@ php artisan migrate</code></pre>
     <div class="card"><h3>Eloquent events</h3><p class="text"><code>created</code>, <code>updated</code>, <code>deleted</code>, <code>retrieved</code> — события моделей. Подписка через observers или <code>static::created(fn ($model) =&gt; ...)</code> в boot модели.</p></div>
   </div>
 
+  <div class="subsection" id="ev-event-class">
+    <div class="subsection-title"><i data-lucide="file-code"></i> Event Class — DTO для сигнализации о событиях</div>
+
+    <p class="text"><strong>Что это.</strong> Event — это <strong>класс-контейнер (DTO)</strong>, который инкапсулирует информацию о произошедшем действии («заказ оплачен», «пользователь зарегистрирован»). Он не содержит бизнес-логики — только передаёт данные слушателям (Listeners).</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="layers" style="width:14px;height:14px"></i> Структура Event-класса</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Публичные свойства</strong> — данные, доступные слушателям (модель заказа, ID пользователя, доп. параметры).</li>
+      <li><strong>Конструктор</strong> — принимает данные и инициализирует свойства.</li>
+      <li><strong>Интерфейсы</strong> — обычно ничего не имплементирует; если событие транслируется через WebSockets — реализует <code>ShouldBroadcast</code>.</li>
+    </ul>
+
+    <p class="text"><strong>Создание через artisan:</strong></p>
+<pre><code>php artisan make:event <span class="c-type">OrderPaid</span></code></pre>
+
+    <p class="text">Создаётся класс в <code>app/Events/OrderPaid.php</code>:</p>
+<pre><code><span class="c-key">namespace</span> <span class="c-type">App</span>\<span class="c-type">Events</span>;
+
+<span class="c-key">use</span> <span class="c-type">App</span>\<span class="c-type">Models</span>\<span class="c-type">Order</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Foundation</span>\<span class="c-type">Events</span>\<span class="c-type">Dispatchable</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Queue</span>\<span class="c-type">SerializesModels</span>;
+
+<span class="c-key">class</span> <span class="c-type">OrderPaid</span>
+{
+    <span class="c-key">use</span> <span class="c-type">Dispatchable</span>, <span class="c-type">SerializesModels</span>;
+
+    <span class="c-key">public</span> <span class="c-type">Order</span> <span class="c-var">$order</span>;
+
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-type">Order</span> <span class="c-var">$order</span>)
+    {
+        <span class="c-var">$this</span>-&gt;<span class="c-var">order</span> = <span class="c-var">$order</span>;
+    }
+}</code></pre>
+
+    <p class="text"><strong>Разбор трейтов:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>Dispatchable</code> — даёт метод <code>dispatch()</code> для вызова события (<code>OrderPaid::dispatch($order)</code> вместо <code>event(new OrderPaid($order))</code>).</li>
+      <li><code>SerializesModels</code> — позволяет корректно сериализовать модели Eloquent при передаче в очередь (если listener асинхронный). Сохраняется только <code>id</code>, при выполнении происходит <code>findOrFail</code>.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="send" style="width:14px;height:14px"></i> Диспатч события</div>
+<pre><code><span class="c-comment">// 2 равнозначных способа</span>
+<span class="c-fn">event</span>(<span class="c-key">new</span> <span class="c-type">OrderPaid</span>(<span class="c-var">$order</span>));
+
+<span class="c-type">OrderPaid</span>::<span class="c-fn">dispatch</span>(<span class="c-var">$order</span>);</code></pre>
+    <p class="text">После диспатча все зарегистрированные listeners получают экземпляр события и выполняют свои действия (синхронно или через очередь если реализуют <code>ShouldQueue</code>).</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="target" style="width:14px;height:14px"></i> Для чего нужны события</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Разделение ответственности</strong> — код, который инициирует событие, не знает о том, что с ним будет сделано.</li>
+      <li><strong>Гибкость</strong> — можно добавлять новые listeners без изменения исходного кода (например, добавить отправку SMS при оплате, не трогая контроллер).</li>
+      <li><strong>Асинхронность</strong> — listeners могут реализовать <code>ShouldQueue</code> и выполняться в очереди, не замедляя основной запрос.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="radio" style="width:14px;height:14px"></i> Broadcasting — трансляция в реальном времени</div>
+    <p class="text">Если событие реализует <code>ShouldBroadcast</code> — оно автоматически транслируется через WebSockets (Pusher, Laravel Reverb, Ably). Тогда фронтенд (через Laravel Echo) может получать уведомления о событиях <strong>без перезагрузки страницы</strong>.</p>
+
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Contracts</span>\<span class="c-type">Broadcasting</span>\<span class="c-type">ShouldBroadcast</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Broadcasting</span>\<span class="c-type">Channel</span>;
+
+<span class="c-key">class</span> <span class="c-type">OrderPaid</span> <span class="c-key">implements</span> <span class="c-type">ShouldBroadcast</span>
+{
+    <span class="c-key">use</span> <span class="c-type">Dispatchable</span>, <span class="c-type">SerializesModels</span>;
+
+    <span class="c-key">public</span> <span class="c-type">Order</span> <span class="c-var">$order</span>;
+
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-type">Order</span> <span class="c-var">$order</span>)
+    {
+        <span class="c-var">$this</span>-&gt;<span class="c-var">order</span> = <span class="c-var">$order</span>;
+    }
+
+    <span class="c-comment">// На какой канал транслировать</span>
+    <span class="c-key">public function</span> <span class="c-fn">broadcastOn</span>(): <span class="c-type">Channel</span>
+    {
+        <span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">Channel</span>(<span class="c-str">'orders'</span>);
+    }
+
+    <span class="c-comment">// (опционально) — данные для WebSocket-подписчиков</span>
+    <span class="c-key">public function</span> <span class="c-fn">broadcastWith</span>(): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> [<span class="c-str">'id'</span> =&gt; <span class="c-var">$this</span>-&gt;<span class="c-var">order</span>-&gt;<span class="c-var">id</span>, <span class="c-str">'total'</span> =&gt; <span class="c-var">$this</span>-&gt;<span class="c-var">order</span>-&gt;<span class="c-var">total</span>];
+    }
+}</code></pre>
+
+    <p class="text"><strong>Типы каналов:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>Channel('orders')</code> — публичный, слушать может кто угодно.</li>
+      <li><code>PrivateChannel('user.'.$userId)</code> — приватный, требует авторизации.</li>
+      <li><code>PresenceChannel('room.42')</code> — приватный + отслеживает кто онлайн.</li>
+    </ul>
+
+    <div class="tip">
+      По умолчанию <code>ShouldBroadcast</code> ставит трансляцию в очередь (это правильно — не блокирует основной поток). <code>ShouldBroadcastNow</code> — синхронная трансляция, только когда критично.
+    </div>
+
+    <div class="remember-box">
+      <strong>Итог по Event Class:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Event — DTO, описывающий <em>факт</em> в прошедшем времени.</li>
+        <li>Создаётся через <code>php artisan make:event</code>.</li>
+        <li>Диспатчится через <code>event()</code> или <code>::dispatch()</code>.</li>
+        <li>Трейты <code>Dispatchable</code> + <code>SerializesModels</code> — стандарт.</li>
+        <li>Listeners реагируют — синхронно или асинхронно.</li>
+        <li>Через <code>ShouldBroadcast</code> транслируется в real-time (Pusher/Reverb + Echo).</li>
+        <li>Класс события <em>не содержит логики</em> — только данные.</li>
+      </ul>
+    </div>
+  </div>
+
   <div class="subsection" id="ev-listen">
     <div class="subsection-title"><i data-lucide="link"></i> Регистрация — <code>$listen</code> формат</div>
 
@@ -5690,6 +5800,78 @@ php artisan migrate</code></pre>
 
     <div class="tip">
       <strong>Часто на собесе:</strong> «Чем отличается Event от Job?». Короткий ответ: <em>Event — «случилось X», может быть 0..N слушателей, слабая связь. Job — «сделай Y», один обработчик, явный вызов. Event хорош когда одна причина → много следствий.</em>
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="help-circle" style="width:14px;height:14px"></i> Частые вопросы про Jobs / Events</div>
+
+    <div class="card">
+      <h3>Правильно ли, что Job — для расписания, а Events/Listeners — реакция на событие?</h3>
+      <p><strong>В целом да, но с нюансами:</strong></p>
+      <ul style="margin:6px 0 0 20px;line-height:1.7;color:var(--text2)">
+        <li>Jobs — <strong>не только для расписания.</strong> Для расписания есть <code>Scheduler</code>. Jobs — общий механизм для выноса тяжёлых операций из основного потока в очередь.</li>
+        <li>Events/Listeners — механизм <strong>реакции на факт</strong>: объявляешь событие (<code>OrderPlaced</code>), один или несколько listeners реагируют.</li>
+        <li>Могут пересекаться: listener может задиспатчить Job, Job может выбросить event.</li>
+      </ul>
+      <p><strong>Мнемоника:</strong> Jobs = «работа», Events/Listeners = «реакция на событие».</p>
+    </div>
+
+    <div class="card">
+      <h3>Почему у Jobs нет «времени выполнения»?</h3>
+      <p>Ни у Jobs, ни у Events нет <em>встроенного</em> времени. Оба выполняются в момент когда их вызывают. Но есть разница:</p>
+      <ul style="margin:6px 0 0 20px;line-height:1.7;color:var(--text2)">
+        <li><strong>Event</strong> — выбрасывается и <em>сразу</em> вызывает listeners (синхронно; асинхронно если <code>ShouldQueue</code>). Время выполнения = время вызова.</li>
+        <li><strong>Job</strong> — ставится в очередь и выполняется <em>позже</em>, когда воркер её заберёт. Точное время неизвестно — зависит от загрузки очереди, количества воркеров, задержек.</li>
+      </ul>
+      <p><strong>Как задать конкретное время</strong> Job'у:</p>
+<pre><code><span class="c-comment">// Задержка на 5 минут</span>
+<span class="c-type">ProcessOrder</span>::<span class="c-fn">dispatch</span>(<span class="c-var">$order</span>)-&gt;<span class="c-fn">delay</span>(<span class="c-fn">now</span>()-&gt;<span class="c-fn">addMinutes</span>(<span class="c-num">5</span>));
+
+<span class="c-comment">// Точное время</span>
+<span class="c-type">ProcessOrder</span>::<span class="c-fn">dispatch</span>(<span class="c-var">$order</span>)-&gt;<span class="c-fn">delay</span>(<span class="c-fn">now</span>()-&gt;<span class="c-fn">setTime</span>(<span class="c-num">15</span>, <span class="c-num">0</span>));
+
+<span class="c-comment">// Или через $delay свойство в самом job</span>
+<span class="c-key">public</span> <span class="c-key">int</span> <span class="c-var">$delay</span> = <span class="c-num">60</span>;   <span class="c-comment">// секунд</span></code></pre>
+      <p>Для <em>регулярного</em> запуска Job (крон-задача) — используется <strong>Scheduler</strong>, который вызывает <code>dispatch()</code> по расписанию.</p>
+    </div>
+
+    <div class="card">
+      <h3>Job вызывается в контроллере после действия?</h3>
+      <p><strong>Да.</strong> Типичный поток: контроллер выполнил основное действие (сохранил заказ) → диспатчит Job → возвращает ответ пользователю. Job выполняется в фоне.</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">OrderRequest</span> <span class="c-var">$request</span>)
+{
+    <span class="c-var">$order</span> = <span class="c-type">Order</span>::<span class="c-fn">create</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>());
+
+    <span class="c-comment">// Отправляем задачу в очередь после сохранения</span>
+    <span class="c-type">ProcessOrder</span>::<span class="c-fn">dispatch</span>(<span class="c-var">$order</span>);
+
+    <span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">json</span>([
+        <span class="c-str">'message'</span> =&gt; <span class="c-str">'Order placed, processing in background'</span>,
+    ], <span class="c-num">201</span>);
+}</code></pre>
+      <p><strong>Что происходит:</strong></p>
+      <ol style="margin:6px 0 0 20px;line-height:1.7;color:var(--text2)">
+        <li>Заказ сохраняется в БД (синхронно).</li>
+        <li>Job <code>ProcessOrder</code> ставится в очередь (миллисекунды).</li>
+        <li>Ответ пользователю уходит сразу, без ожидания обработки.</li>
+        <li>Воркер в фоне забирает job и выполняет — независимо от HTTP-запроса.</li>
+      </ol>
+      <p><strong>Где ещё можно вызывать:</strong></p>
+      <ul style="margin:6px 0 0 20px;line-height:1.7;color:var(--text2)">
+        <li>Из контроллера (самый частый случай)</li>
+        <li>Из Action / Service (тонкий контроллер, вся логика включая dispatch — в Action)</li>
+        <li>Из другого Job (chain / batch)</li>
+        <li>Из Event Listener'а</li>
+        <li>Из artisan-команды</li>
+        <li>Из Scheduler'а</li>
+      </ul>
+      <div class="tip">
+        <strong>Нюансы диспатча:</strong>
+        <ul style="margin:6px 0 0 20px;line-height:1.5">
+          <li>Если Job не имплементирует <code>ShouldQueue</code> — выполняется <em>синхронно</em> прямо в момент <code>dispatch()</code>.</li>
+          <li><code>dispatchSync()</code> — принудительно синхронно, даже с <code>ShouldQueue</code> (для тестов).</li>
+          <li><code>dispatch()-&gt;afterCommit()</code> — job уйдёт в очередь только после commit транзакции (защита от гонки, когда воркер ищет ещё несохранённый заказ).</li>
+        </ul>
+      </div>
     </div>
   </div>
 
