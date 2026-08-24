@@ -5800,6 +5800,145 @@ php artisan migrate</code></pre>
     </div>
 
     <p class="text"><strong>Кеширование:</strong> в production для скорости — <code>php artisan event:cache</code>. Compiles массив в один файл. Сброс — <code>event:clear</code>. Auto-discovery без кеша — дорого.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="search" style="width:14px;height:14px"></i> Auto-discovery — глубже</div>
+    <p class="text">Механизм работает на основе <strong>сигнатуры метода <code>handle()</code></strong> в классе слушателя: Laravel анализирует тип параметра и сопоставляет его с соответствующим событием.</p>
+
+    <p class="text"><strong>Включение — 2 способа:</strong></p>
+<pre><code><span class="c-comment">// 1. Свойство $shouldDiscoverEvents (классика, Laravel 8+)</span>
+<span class="c-key">protected</span> <span class="c-var">$shouldDiscoverEvents</span> = <span class="c-key">true</span>;
+
+<span class="c-comment">// 2. Метод в boot() (иногда используется в Laravel 11)</span>
+<span class="c-key">public function</span> <span class="c-fn">boot</span>(): <span class="c-key">void</span>
+{
+    <span class="c-type">Event</span>::<span class="c-fn">shouldDiscoverEvents</span>();
+}</code></pre>
+
+    <p class="text">После включения Laravel сканирует <code>app/Listeners</code> (по умолчанию) и автоматически подписывает каждый слушатель на событие, указанное в типе параметра <code>handle()</code>.</p>
+
+    <p class="text"><strong>Пример:</strong></p>
+<pre><code><span class="c-comment">// app/Events/OrderShipped.php</span>
+<span class="c-key">class</span> <span class="c-type">OrderShipped</span>
+{
+    <span class="c-key">public</span> <span class="c-var">$order</span>;
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-var">$order</span>) { <span class="c-var">$this</span>-&gt;<span class="c-var">order</span> = <span class="c-var">$order</span>; }
+}
+
+<span class="c-comment">// app/Listeners/SendShipmentNotification.php</span>
+<span class="c-comment">// автоматически подпишется на OrderShipped — тип параметра</span>
+<span class="c-key">class</span> <span class="c-type">SendShipmentNotification</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">OrderShipped</span> <span class="c-var">$event</span>)
+    {
+        <span class="c-comment">// ...</span>
+    }
+}</code></pre>
+    <p class="text">Не нужно ничего добавлять в <code>$listen</code>.</p>
+
+    <p class="text"><strong>Плюсы:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Меньше шаблонного кода — не дублируешь имена событий и слушателей.</li>
+      <li>Удобно для быстрой разработки: создал слушатель — и он уже работает.</li>
+      <li>Меньше шанс забыть зарегистрировать слушатель при рефакторинге.</li>
+    </ul>
+
+    <p class="text"><strong>Минусы:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Усложняет поиск</strong> — grep'ом найти всех слушателей события труднее, связь неявная.</li>
+      <li><strong>Меньше контроля над порядком</strong> — порядок не гарантируется без свойства <code>$priority</code>.</li>
+      <li>Для больших проектов сканирование папки замедляет загрузку (только при обновлении кеша).</li>
+    </ul>
+
+    <div class="tip">
+      <strong>Практические рекомендации:</strong> для небольших/средних проектов — auto-discovery. Для больших проектов, где важна явность — оставить ручную регистрацию в <code>$listen</code>. Комбинировать можно, но вносит путаницу. Для критических мест (аудит, логирование) — явно.
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="code-2" style="width:14px;height:14px"></i> Программная регистрация через <code>Event::listen()</code> — глубже</div>
+
+    <p class="text">Программная регистрация выполняется в коде, обычно в методе <code>boot()</code> любого сервис-провайдера (чаще всего <code>EventServiceProvider</code>). Называется «программной», потому что явно вызываешь <code>Event::listen()</code> в рантайме (на этапе загрузки приложения) для каждой связи событие → слушатель.</p>
+
+    <p class="text"><strong>Когда использовать программную регистрацию:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Связь должна определяться <strong>динамически</strong>, в зависимости от условий (feature flag, env-переменная).</li>
+      <li>Слушатель — <strong>замыкание</strong> (анонимная функция), а не отдельный класс.</li>
+      <li>Нужен <strong>wildcard-обработчик</strong> для группы событий (общий префикс).</li>
+      <li>Регистрация в провайдере, отличном от <code>EventServiceProvider</code> (например, доменный провайдер модуля).</li>
+    </ul>
+
+    <p class="text"><strong>Все варианты вызова:</strong></p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Support</span>\<span class="c-type">Facades</span>\<span class="c-type">Event</span>;
+
+<span class="c-key">public function</span> <span class="c-fn">boot</span>()
+{
+    <span class="c-comment">// 1. Класс-слушатель с указанием метода (обычно 'handle')</span>
+    <span class="c-type">Event</span>::<span class="c-fn">listen</span>(
+        <span class="c-type">OrderPaid</span>::<span class="c-key">class</span>,
+        [<span class="c-type">SendOrderConfirmation</span>::<span class="c-key">class</span>, <span class="c-str">'handle'</span>]
+    );
+
+    <span class="c-comment">// 2. Замыкание (inline-слушатель)</span>
+    <span class="c-type">Event</span>::<span class="c-fn">listen</span>(<span class="c-type">OrderPaid</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">OrderPaid</span> <span class="c-var">$event</span>) {
+        <span class="c-type">Log</span>::<span class="c-fn">info</span>(<span class="c-str">'Order paid: '</span> . <span class="c-var">$event</span>-&gt;<span class="c-var">order</span>-&gt;<span class="c-var">id</span>);
+    });
+
+    <span class="c-comment">// 3. Wildcard-обработчик для всех событий с префиксом 'order.'</span>
+    <span class="c-type">Event</span>::<span class="c-fn">listen</span>(<span class="c-str">'order.*'</span>, <span class="c-key">function</span> (<span class="c-key">string</span> <span class="c-var">$eventName</span>, <span class="c-key">array</span> <span class="c-var">$data</span>) {
+        <span class="c-comment">// $eventName = 'order.paid', 'order.cancelled' и т.д.
+        // $data — массив данных (для событий без объекта)</span>
+    });
+
+    <span class="c-comment">// 4. Условная регистрация</span>
+    <span class="c-key">if</span> (<span class="c-fn">config</span>(<span class="c-str">'features.audit_log'</span>)) {
+        <span class="c-type">Event</span>::<span class="c-fn">listen</span>(<span class="c-type">OrderPaid</span>::<span class="c-key">class</span>, <span class="c-type">LogPaymentToAudit</span>::<span class="c-key">class</span>);
+    }
+}</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="git-compare" style="width:14px;height:14px"></i> <code>$listen</code> массив vs <code>Event::listen()</code></div>
+    <table class="data-table">
+      <thead><tr><th>Характеристика</th><th><code>$listen</code> массив</th><th><code>Event::listen()</code></th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Место</strong></td>
+          <td>Свойство класса EventServiceProvider</td>
+          <td>Вызов в <code>boot()</code> провайдера</td>
+        </tr>
+        <tr>
+          <td><strong>Гибкость</strong></td>
+          <td>Статичен, не зависит от условий</td>
+          <td>Условная логика (<code>if/else</code>, конфиги)</td>
+        </tr>
+        <tr>
+          <td><strong>Тип слушателя</strong></td>
+          <td>Только классы</td>
+          <td>Классы, замыкания, wildcard-обработчики</td>
+        </tr>
+        <tr>
+          <td><strong>Скорость при загрузке</strong></td>
+          <td>Быстрее (кешируется через <code>event:cache</code>)</td>
+          <td>Медленнее, но разница незначительна</td>
+        </tr>
+        <tr>
+          <td><strong>Поддерживаемость</strong></td>
+          <td>Все связи в одном месте — легко найти</td>
+          <td>Может быть разбросано по разным провайдерам</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="text"><strong>Что значит «в runtime».</strong> Регистрация происходит во <em>время выполнения</em> загрузочного кода приложения, а не на уровне статической конфигурации. Но это всё равно происходит <em>один раз</em> при старте приложения, а не на каждый запрос. Метод <code>boot()</code> выполняется на старте приложения, и <code>Event::listen()</code> — это просто добавление слушателя в глобальный реестр. Термин «runtime» здесь означает: связь создаётся <em>кодом</em>, который может использовать логику, доступную только во время выполнения (значение env-переменной, конфига, результат вызова метода).</p>
+
+    <p class="text"><strong>В Laravel 11+.</strong> Структура упростилась, но <code>EventServiceProvider</code> и метод <code>boot()</code> по-прежнему доступны и работают одинаково. Многие переехали в декларативные замыкания в <code>bootstrap/app.php</code>, но <code>Event::listen()</code> — по-прежнему рабочий подход. Работает одинаково во всех версиях Laravel, начиная с 5.0.</p>
+
+    <div class="remember-box">
+      <strong>Итог по программной регистрации:</strong> <code>Event::listen()</code> — гибкий способ, полезный когда:
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Не хочешь создавать отдельный класс-слушатель (замыкания).</li>
+        <li>Нужно привязать слушателя только при определённых условиях (feature flag).</li>
+        <li>Нужен wildcard для группы событий.</li>
+        <li>Предпочитаешь явный код, а не статический массив.</li>
+      </ul>
+      Не заменяет <code>$listen</code>, а дополняет его.
+    </div>
   </div>
 
   <div class="subsection" id="ev-queue-config">
