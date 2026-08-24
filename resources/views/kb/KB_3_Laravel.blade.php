@@ -260,6 +260,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('scheduler','sch-overlapping',this)">withoutOverlapping — параллельность</a>
     <a class="nav-subitem" onclick="showSub('scheduler','sch-oneserver',this)">onOneServer — на одном сервере в кластере</a>
     <a class="nav-subitem" onclick="showSub('scheduler','sch-methods',this)">Все методы расписания (таблица)</a>
+    <a class="nav-subitem" onclick="showSub('scheduler','sch-output',this)">Output Handling — вывод задач</a>
     <a class="nav-subitem" onclick="showSub('scheduler','sch-cron',this)">Запуск через cron</a>
     <a class="nav-subitem" onclick="showSub('scheduler','sch-practice',this)">Практика: расписание для отчётов</a>
     <a class="nav-subitem" onclick="showSub('scheduler','sch-pitfalls',this)">Особые случаи</a>
@@ -6714,6 +6715,103 @@ php artisan migrate</code></pre>
         <li>Фильтры <code>weekdays()</code>, <code>between()</code>, <code>when()</code> проверяются <em>непосредственно перед запуском</em> задачи.</li>
         <li>Для точного контроля используйте <code>->cron()</code> и комбинируйте с <code>->when()</code> для сложной логики.</li>
         <li>При <code>->onOneServer()</code> фильтры всё равно применяются <em>на каждом сервере</em>, но задача выполнится только на том, кто успешно захватит блокировку.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="subsection" id="sch-output">
+    <div class="subsection-title"><i data-lucide="file-output"></i> Output Handling — обработка вывода задач</div>
+
+    <p class="text">При выполнении запланированных задач (команд, замыканий, исполняемых файлов) часто нужно <strong>сохранить вывод</strong> (stdout/stderr) в файл, отправить результат по email или иначе обработать. Laravel даёт цепочку методов для управления выводом задачи <em>после её выполнения</em>.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="file-text" style="width:14px;height:14px"></i> <code>-&gt;sendOutputTo($filePath)</code> — перезапись файла</div>
+    <p class="text">Перенаправляет весь вывод (stdout + stderr) в указанный файл. <strong>Файл перезаписывается</strong> при каждом запуске задачи.</p>
+<pre><code><span class="c-type">Schedule</span>::<span class="c-fn">command</span>(<span class="c-str">'reports:generate'</span>)
+    -&gt;<span class="c-fn">daily</span>()
+    -&gt;<span class="c-fn">sendOutputTo</span>(<span class="c-fn">storage_path</span>(<span class="c-str">'logs/report.log'</span>));
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="file-plus" style="width:14px;height:14px"></i> <code>-&gt;appendOutputTo($filePath)</code> — дописывание</div>
+    <p class="text">То же, что <code>sendOutputTo</code>, но вывод <strong>дописывается в конец</strong> файла. Полезно для накопления логов за длительное время.</p>
+<pre><code><span class="c-type">Schedule</span>::<span class="c-fn">command</span>(<span class="c-str">'backup:run'</span>)
+    -&gt;<span class="c-fn">daily</span>()
+    -&gt;<span class="c-fn">appendOutputTo</span>(<span class="c-fn">storage_path</span>(<span class="c-str">'logs/backup.log'</span>));
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="mail" style="width:14px;height:14px"></i> <code>-&gt;emailOutputTo($email, $subject = null)</code> — всегда на email</div>
+    <p class="text">Отправляет вывод задачи на email <strong>после каждого выполнения</strong>. Если вывод <em>пустой</em> — письмо не отправляется.</p>
+<pre><code><span class="c-type">Schedule</span>::<span class="c-fn">command</span>(<span class="c-str">'reports:generate'</span>)
+    -&gt;<span class="c-fn">weekly</span>()
+    -&gt;<span class="c-fn">emailOutputTo</span>(<span class="c-str">'admin@example.com'</span>, <span class="c-str">'Weekly Report Output'</span>);
+</code></pre>
+    <p class="text">Можно комбинировать с <code>sendOutputTo()</code> — тогда вывод одновременно и сохранён в файл, и отправлен по почте. Также поддерживает <strong>массив адресов</strong>:</p>
+<pre><code>-&gt;<span class="c-fn">emailOutputTo</span>([<span class="c-str">'admin@example.com'</span>, <span class="c-str">'manager@example.com'</span>]);
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="mail-warning" style="width:14px;height:14px"></i> <code>-&gt;emailOutputOnFailure($email, $subject = null)</code> — только при ошибке</div>
+    <p class="text">Отправляет вывод <strong>только если задача завершилась с ошибкой</strong> (ненулевой код возврата). При успехе письмо не приходит — удобно для мониторинга без спама.</p>
+<pre><code><span class="c-type">Schedule</span>::<span class="c-fn">command</span>(<span class="c-str">'critical:task'</span>)
+    -&gt;<span class="c-fn">everyFiveMinutes</span>()
+    -&gt;<span class="c-fn">emailOutputOnFailure</span>(<span class="c-str">'devops@example.com'</span>, <span class="c-str">'Critical Task Failed'</span>);
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="git-branch" style="width:14px;height:14px"></i> <code>-&gt;onSuccess()</code> / <code>-&gt;onFailure()</code> — колбэки</div>
+    <p class="text">Замыкания для произвольного кода при успехе или неудаче задачи. Даёт максимальную гибкость: Slack-нотификация, отдельный лог, обновление метрик и т.д.</p>
+<pre><code><span class="c-type">Schedule</span>::<span class="c-fn">command</span>(<span class="c-str">'backup:run'</span>)
+    -&gt;<span class="c-fn">daily</span>()
+    -&gt;<span class="c-fn">onSuccess</span>(<span class="c-key">function</span> () {
+        <span class="c-comment">// Отправить уведомление в Slack</span>
+    })
+    -&gt;<span class="c-fn">onFailure</span>(<span class="c-key">function</span> () {
+        <span class="c-comment">// Записать в отдельный лог ошибку</span>
+    });
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="table-2" style="width:14px;height:14px"></i> Сводка методов</div>
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>Что делает</th><th>Когда срабатывает</th></tr></thead>
+      <tbody>
+        <tr><td><code>-&gt;sendOutputTo(path)</code></td><td>Записать вывод в файл (перезапись)</td><td>После каждого запуска</td></tr>
+        <tr><td><code>-&gt;appendOutputTo(path)</code></td><td>Дописать вывод в конец файла</td><td>После каждого запуска</td></tr>
+        <tr><td><code>-&gt;emailOutputTo(email)</code></td><td>Отправить вывод на email (можно массив)</td><td>После каждого запуска, если вывод не пустой</td></tr>
+        <tr><td><code>-&gt;emailOutputOnFailure(email)</code></td><td>Отправить вывод на email</td><td>Только при exit code ≠ 0</td></tr>
+        <tr><td><code>-&gt;onSuccess(Closure)</code></td><td>Произвольный код</td><td>При exit code = 0</td></tr>
+        <tr><td><code>-&gt;onFailure(Closure)</code></td><td>Произвольный код</td><td>При exit code ≠ 0</td></tr>
+      </tbody>
+    </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="lightbulb" style="width:14px;height:14px"></i> Рекомендации по использованию</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Регулярные отчёты</strong> — <code>sendOutputTo()</code> + ротация через <code>logrotate</code> либо перенаправление в агрегатор (ELK, Graylog, Datadog).</li>
+      <li><strong>Критичные задачи</strong> — <code>emailOutputOnFailure()</code> или <code>onFailure()</code> для оперативного оповещения без «шума» при успехе.</li>
+      <li><strong>Большие объёмы вывода</strong> — не отправляйте email'ом, сохраняйте в файл и обрабатывайте внешними инструментами.</li>
+      <li><strong>Парсинг/анализ</strong> — сохраняйте в файл и обрабатывайте другой запланированной задачей.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hammer" style="width:14px;height:14px"></i> Пример полной настройки</div>
+<pre><code><span class="c-type">Schedule</span>::<span class="c-fn">command</span>(<span class="c-str">'sales:aggregate'</span>)
+    -&gt;<span class="c-fn">dailyAt</span>(<span class="c-str">'01:00'</span>)
+    -&gt;<span class="c-fn">sendOutputTo</span>(<span class="c-fn">storage_path</span>(<span class="c-str">'logs/sales.log'</span>))
+    -&gt;<span class="c-fn">emailOutputOnFailure</span>(<span class="c-str">'team@example.com'</span>, <span class="c-str">'Sales Aggregation Failed'</span>)
+    -&gt;<span class="c-fn">onSuccess</span>(<span class="c-key">fn</span>() =&gt; <span class="c-type">Log</span>::<span class="c-fn">info</span>(<span class="c-str">'Sales aggregation succeeded'</span>));
+</code></pre>
+    <p class="text">В сумме: вывод сохранён локально, при ошибке команда получает email с логом, при успехе — запись в лог Laravel. Классическая схема для «серьёзной» задачи без внешних инструментов.</p>
+
+    <div class="pitfall"><strong>1. Захватывается только stdout/stderr задачи.</strong> Методы работают с выводом, который команда пишет в консоль (<code>echo</code>, <code>print</code>, <code>$this-&gt;info()</code> в Artisan). Вывод внутренних исключений тоже перехватывается.</div>
+    <div class="pitfall"><strong>2. <code>Log::info()</code> не попадает в <code>sendOutputTo</code>.</strong> Стандартный <code>Log</code>-фасад пишет напрямую в <code>storage/logs/laravel.log</code> через файловые каналы — этот вывод <em>не</em> захватывается планировщиком. Для захвата логов задачи — используйте отдельный канал (напр. <code>stderr</code>) или пишите в консоль явно.</div>
+    <div class="pitfall"><strong>3. Пустой вывод = нет письма.</strong> <code>emailOutputTo()</code> ничего не отправит, если команда не произвела вывод. Это часто <em>желаемое поведение</em>, но иногда путает — «почему письмо не пришло, задача же выполнилась?».</div>
+    <div class="pitfall"><strong>4. <code>sendOutputTo</code> перезаписывает.</strong> Если нужно накопление истории — <code>appendOutputTo</code>, иначе увидите только последний запуск.</div>
+    <div class="pitfall"><strong>5. Права на файл.</strong> Файл создаётся под юзером cron (обычно <code>www-data</code> или тот, кто запускает <code>schedule:run</code>). Директория должна быть доступна на запись.</div>
+    <div class="pitfall"><strong>6. Email через <code>MAIL_MAILER=log</code> на dev.</strong> Локально письмо «уйдёт» в лог, а не на реальный адрес — легко подумать, что фича не работает.</div>
+
+    <div class="remember-box">
+      <strong>Короткая шпаргалка:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Нужно сохранить один лог → <code>sendOutputTo()</code></li>
+        <li>Нужна история запусков → <code>appendOutputTo()</code></li>
+        <li>Отчёт каждый раз в почту → <code>emailOutputTo()</code></li>
+        <li>Оповещение <em>только при падении</em> → <code>emailOutputOnFailure()</code></li>
+        <li>Кастомная логика (Slack/метрики) → <code>onSuccess()</code> / <code>onFailure()</code></li>
       </ul>
     </div>
   </div>
