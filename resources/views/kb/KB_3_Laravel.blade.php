@@ -245,6 +245,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('events','ev-components',this)">Компоненты (Event/Listener/Subscriber)</a>
     <a class="nav-subitem" onclick="showSub('events','ev-event-class',this)">Event Class — DTO + Broadcasting</a>
     <a class="nav-subitem" onclick="showSub('events','ev-listener-class',this)">Listener Class — обработчик события</a>
+    <a class="nav-subitem" onclick="showSub('events','ev-subscriber',this)">Subscriber — группировка listeners</a>
     <a class="nav-subitem" onclick="showSub('events','ev-listen',this)">Регистрация: $listen формат</a>
     <a class="nav-subitem" onclick="showSub('events','ev-queue-config',this)">Queue-config для Listeners</a>
     <a class="nav-subitem" onclick="showSub('events','ev-event-vs-job',this)">Event vs Job — когда что</a>
@@ -5726,6 +5727,152 @@ php artisan migrate</code></pre>
         <li>Синхронный без <code>ShouldQueue</code> — выполняется в том же процессе что и <code>dispatch()</code>.</li>
         <li>Данные event должны быть сериализуемы для очереди — модели через <code>SerializesModels</code>.</li>
       </ul>
+    </div>
+  </div>
+
+  <div class="subsection" id="ev-subscriber">
+    <div class="subsection-title"><i data-lucide="users"></i> Subscriber — группировка логически связанных listeners</div>
+
+    <p class="text"><strong>Что это.</strong> Subscriber (подписчик) — класс, который позволяет объединить <strong>несколько слушателей</strong> (методов-обработчиков) для различных событий в одном месте. В отличие от обычного класса-слушателя (одно событие = один класс), подписчик содержит <em>несколько методов</em>, каждый из которых реагирует на своё событие.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="layers" style="width:14px;height:14px"></i> Структура подписчика</div>
+    <p class="text">Класс должен содержать метод <code>subscribe()</code>, получающий экземпляр <code>Dispatcher</code>. Внутри регистрируешь слушателей через <code>$events-&gt;listen()</code> для каждого события.</p>
+
+<pre><code><span class="c-key">namespace</span> <span class="c-type">App</span>\<span class="c-type">Listeners</span>;
+
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Events</span>\<span class="c-type">Dispatcher</span>;
+
+<span class="c-key">class</span> <span class="c-type">UserEventSubscriber</span>
+{
+    <span class="c-comment">// Обработчик события регистрации</span>
+    <span class="c-key">public function</span> <span class="c-fn">handleUserRegistered</span>(<span class="c-var">$event</span>)
+    {
+        <span class="c-comment">// логика</span>
+    }
+
+    <span class="c-comment">// Обработчик события обновления профиля</span>
+    <span class="c-key">public function</span> <span class="c-fn">handleUserUpdated</span>(<span class="c-var">$event</span>)
+    {
+        <span class="c-comment">// логика</span>
+    }
+
+    <span class="c-comment">// Метод регистрации listeners</span>
+    <span class="c-key">public function</span> <span class="c-fn">subscribe</span>(<span class="c-type">Dispatcher</span> <span class="c-var">$events</span>): <span class="c-key">void</span>
+    {
+        <span class="c-var">$events</span>-&gt;<span class="c-fn">listen</span>(
+            <span class="c-str">'App\Events\UserRegistered'</span>,
+            [<span class="c-type">UserEventSubscriber</span>::<span class="c-key">class</span>, <span class="c-str">'handleUserRegistered'</span>]
+        );
+
+        <span class="c-var">$events</span>-&gt;<span class="c-fn">listen</span>(
+            <span class="c-str">'App\Events\UserUpdated'</span>,
+            [<span class="c-type">UserEventSubscriber</span>::<span class="c-key">class</span>, <span class="c-str">'handleUserUpdated'</span>]
+        );
+    }
+}</code></pre>
+    <p class="text">Вместо строковых имён можно использовать <code>Event::class</code> — синтаксис <code>[класс, метод]</code> остаётся.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="link" style="width:14px;height:14px"></i> Регистрация подписчика</div>
+    <p class="text">2 способа — как и с обычными listeners:</p>
+
+<pre><code><span class="c-comment">// 1. Через свойство $subscribe в EventServiceProvider</span>
+<span class="c-key">protected</span> <span class="c-var">$subscribe</span> = [
+    <span class="c-type">UserEventSubscriber</span>::<span class="c-key">class</span>,
+];
+
+<span class="c-comment">// 2. Программно в boot()</span>
+<span class="c-type">Event</span>::<span class="c-fn">subscribe</span>(<span class="c-type">UserEventSubscriber</span>::<span class="c-key">class</span>);</code></pre>
+    <p class="text">После регистрации диспетчер вызывает <code>subscribe()</code> у подписчика — тот сам регистрирует все связи.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="target" style="width:14px;height:14px"></i> Зачем использовать подписчики</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Группировка по смыслу</strong> — все обработчики одной сущности (например, пользователя) в одном классе.</li>
+      <li><strong>Снижение дублирования</strong> — если несколько listeners используют общие зависимости, их можно внедрить через конструктор подписчика.</li>
+      <li><strong>Упрощение регистрации</strong> — не перечислять каждую пару <em>событие → слушатель</em> в <code>$listen</code>; всё объявлено внутри подписчика.</li>
+      <li><strong>Удобство для большой логики</strong> — при большом числе listeners подписчик уменьшает количество файлов.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="git-compare" style="width:14px;height:14px"></i> Отличия от обычных Listeners</div>
+    <table class="data-table">
+      <thead><tr><th>Характеристика</th><th>Обычный Listener</th><th>Subscriber</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Количество событий</strong></td>
+          <td>Одно</td>
+          <td>Множество</td>
+        </tr>
+        <tr>
+          <td><strong>Метод обработки</strong></td>
+          <td><code>handle(Event $event)</code></td>
+          <td>Любой пользовательский метод</td>
+        </tr>
+        <tr>
+          <td><strong>Регистрация</strong></td>
+          <td>В <code>$listen</code> или <code>Event::listen()</code></td>
+          <td>В <code>$subscribe</code> или <code>Event::subscribe()</code></td>
+        </tr>
+        <tr>
+          <td><strong>Структура</strong></td>
+          <td>Простая, один класс = одно событие</td>
+          <td>Группирует связанные обработчики</td>
+        </tr>
+        <tr>
+          <td><strong>Поддержка очереди</strong></td>
+          <td>Да (<code>ShouldQueue</code>)</td>
+          <td>Да, но с оговоркой (см. ниже)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="pitfall">
+      <strong>Subscriber + очередь.</strong> Если нужно чтобы методы подписчика выполнялись асинхронно — можно имплементировать <code>ShouldQueue</code> на уровне подписчика, <em>но это повлияет на все методы</em>. Более гибко — использовать <code>InteractsWithQueue</code> и устанавливать очередь для отдельных методов через свойства. На практике подписчики чаще используют <strong>синхронно</strong>, а для асинхронных задач — отдельные listeners с <code>ShouldQueue</code>.
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hammer" style="width:14px;height:14px"></i> Полный пример цикла</div>
+
+    <p class="text"><strong>События:</strong></p>
+<pre><code><span class="c-key">namespace</span> <span class="c-type">App</span>\<span class="c-type">Events</span>;
+
+<span class="c-key">class</span> <span class="c-type">UserRegistered</span> { <span class="c-key">public</span> <span class="c-var">$user</span>; <span class="c-comment">/* ... */</span> }
+<span class="c-key">class</span> <span class="c-type">UserUpdated</span>    { <span class="c-key">public</span> <span class="c-var">$user</span>; <span class="c-comment">/* ... */</span> }</code></pre>
+
+    <p class="text"><strong>Подписчик:</strong></p>
+<pre><code><span class="c-key">namespace</span> <span class="c-type">App</span>\<span class="c-type">Listeners</span>;
+
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Events</span>\<span class="c-type">Dispatcher</span>;
+<span class="c-key">use</span> <span class="c-type">App</span>\<span class="c-type">Events</span>\{<span class="c-type">UserRegistered</span>, <span class="c-type">UserUpdated</span>};
+
+<span class="c-key">class</span> <span class="c-type">UserEventSubscriber</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">sendWelcomeEmail</span>(<span class="c-var">$event</span>) { <span class="c-comment">/* ... */</span> }
+    <span class="c-key">public function</span> <span class="c-fn">clearCache</span>(<span class="c-var">$event</span>)      { <span class="c-comment">/* ... */</span> }
+
+    <span class="c-key">public function</span> <span class="c-fn">subscribe</span>(<span class="c-type">Dispatcher</span> <span class="c-var">$events</span>): <span class="c-key">void</span>
+    {
+        <span class="c-var">$events</span>-&gt;<span class="c-fn">listen</span>(<span class="c-type">UserRegistered</span>::<span class="c-key">class</span>, [<span class="c-key">self</span>::<span class="c-key">class</span>, <span class="c-str">'sendWelcomeEmail'</span>]);
+        <span class="c-var">$events</span>-&gt;<span class="c-fn">listen</span>(<span class="c-type">UserUpdated</span>::<span class="c-key">class</span>,    [<span class="c-key">self</span>::<span class="c-key">class</span>, <span class="c-str">'clearCache'</span>]);
+    }
+}</code></pre>
+
+    <p class="text"><strong>Регистрация в EventServiceProvider:</strong></p>
+<pre><code><span class="c-key">protected</span> <span class="c-var">$subscribe</span> = [
+    <span class="c-type">UserEventSubscriber</span>::<span class="c-key">class</span>,
+];</code></pre>
+
+    <p class="text"><strong>Диспатч:</strong></p>
+<pre><code><span class="c-fn">event</span>(<span class="c-key">new</span> <span class="c-type">UserRegistered</span>(<span class="c-var">$user</span>));</code></pre>
+    <p class="text">При диспатче сработает метод <code>sendWelcomeEmail</code> подписчика.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="lightbulb" style="width:14px;height:14px"></i> Рекомендации по использованию</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Используй подписчиков, когда есть <strong>несколько событий</strong>, связанных с одной моделью или модулем.</li>
+      <li>Для простых проектов достаточно обычных listeners — проще для поиска.</li>
+      <li>Для <strong>критически важных</strong> событий, требующих асинхронности — отдельные listeners с <code>ShouldQueue</code>, явно регистрируемые в <code>$listen</code>.</li>
+      <li>Подписчики удобны для <strong>аудита, логирования, очистки кеша</strong> — действий, выполняемых синхронно при разных событиях.</li>
+    </ul>
+
+    <div class="remember-box">
+      <strong>Итог.</strong> Subscriber — инструмент <em>организации кода</em>, а не замена обычным listeners. Улучшает читаемость и поддерживаемость когда количество связанных обработчиков растёт. Один класс → несколько событий → несколько методов + один <code>subscribe()</code>.
     </div>
   </div>
 
