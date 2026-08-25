@@ -7156,6 +7156,62 @@ php artisan migrate</code></pre>
 </code></pre>
     <p class="text">Теперь любой guard может использовать этот провайдер для аутентификации из LDAP.</p>
 
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="folder-tree" style="width:14px;height:14px"></i> Куда помещать класс кастомного UserProvider</div>
+    <p class="text">Класс можно разместить в любом месте, которое соответствует автозагрузке <strong>PSR-4</strong> (обычно внутри <code>app/</code>). Для чистоты структуры проекта рекомендуется <strong>выделить отдельную директорию</strong> под классы, связанные с аутентификацией.</p>
+
+    <table class="data-table">
+      <thead><tr><th>Путь</th><th>Пояснение</th></tr></thead>
+      <tbody>
+        <tr><td><code>app/Auth/LdapUserProvider.php</code></td><td><strong>Рекомендуется.</strong> Логичное место для всех кастомных провайдеров — сразу видно, что относится к аутентификации.</td></tr>
+        <tr><td><code>app/Services/Auth/LdapUserProvider.php</code></td><td>Если в проекте уже есть папка <code>Services/</code> для внешних интеграций.</td></tr>
+        <tr><td><code>app/Extensions/LdapUserProvider.php</code></td><td>Если принято выделять «расширения фреймворка» в отдельный слой.</td></tr>
+        <tr><td><code>app/LdapUserProvider.php</code></td><td>Простой вариант, но <em>не рекомендуется</em> — засоряет корень <code>app/</code>.</td></tr>
+      </tbody>
+    </table>
+
+    <p class="text"><strong>Пример структуры проекта:</strong></p>
+<pre><code>app/
+├── Auth/
+│   ├── LdapUserProvider.php
+│   └── ...
+├── Http/
+├── Models/
+└── ...
+</code></pre>
+
+    <p class="text"><strong>Полный пример регистрации</strong> с правильным namespace:</p>
+<pre><code><span class="c-comment">// app/Auth/LdapUserProvider.php</span>
+<span class="c-key">namespace</span> <span class="c-type">App\Auth</span>;
+
+<span class="c-key">use</span> <span class="c-type">Illuminate\Contracts\Auth\UserProvider</span>;
+
+<span class="c-key">class</span> <span class="c-type">LdapUserProvider</span> <span class="c-key">implements</span> <span class="c-type">UserProvider</span> { <span class="c-comment">/* ... */</span> }
+
+<span class="c-comment">// app/Providers/AppServiceProvider.php</span>
+<span class="c-key">use</span> <span class="c-type">App\Auth\LdapUserProvider</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate\Support\Facades\Auth</span>;
+
+<span class="c-key">public function</span> <span class="c-fn">boot</span>(): <span class="c-key">void</span>
+{
+    <span class="c-type">Auth</span>::<span class="c-fn">provider</span>(<span class="c-str">'ldap'</span>, <span class="c-key">function</span> (<span class="c-var">$app</span>, <span class="c-key">array</span> <span class="c-var">$config</span>) {
+        <span class="c-key">return new</span> <span class="c-type">LdapUserProvider</span>();
+    });
+}
+</code></pre>
+
+    <div class="tip">
+      <strong>Важно:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Класс <em>обязательно</em> реализует интерфейс <code>Illuminate\Contracts\Auth\UserProvider</code>.</li>
+        <li>Namespace должен <strong>совпадать с путём</strong>: файл <code>app/Auth/LdapUserProvider.php</code> → <code>namespace App\Auth;</code>.</li>
+        <li>После регистрации в <code>boot()</code> имя <code>ldap</code> можно использовать в <code>config/auth.php</code> в массиве <code>providers</code>.</li>
+      </ul>
+    </div>
+
+    <div class="remember-box" style="margin-top:8px">
+      <strong>Стандартная практика:</strong> размещение в <code>app/Auth/</code> — сразу понятно, что там классы аутентификации, легко найти все кастомные UserProvider/Guard в одном месте.
+    </div>
+
     <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="lightbulb" style="width:14px;height:14px"></i> Зачем нужна гибкость providers</div>
     <div class="card">
       <h3>Разделение данных</h3>
