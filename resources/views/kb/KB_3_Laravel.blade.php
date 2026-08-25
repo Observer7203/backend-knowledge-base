@@ -268,6 +268,14 @@ ul.bullets strong{color:var(--text);}
 
   <div class="nav-group-label">Безопасность</div>
   <a class="nav-item" onclick="showSection('auth',this)"><i data-lucide="key"></i> Auth, Gates &amp; Policies</a>
+  <div class="nav-subgroup">
+    <a class="nav-subitem" onclick="showSub('auth','auth-purpose',this)">Назначение</a>
+    <a class="nav-subitem" onclick="showSub('auth','auth-components',this)">Компоненты (Guards/Providers/Gates/Policies)</a>
+    <a class="nav-subitem" onclick="showSub('auth','auth-guards',this)">Guards — глубокий разбор</a>
+    <a class="nav-subitem" onclick="showSub('auth','auth-spa',this)">SPA и Sanctum</a>
+    <a class="nav-subitem" onclick="showSub('auth','auth-practice',this)">Практика: policy для модели</a>
+    <a class="nav-subitem" onclick="showSub('auth','auth-pitfalls',this)">Особые случаи</a>
+  </div>
 
   <div class="nav-group-label">Производительность</div>
   <a class="nav-item" onclick="showSection('octane',this)"><i data-lucide="rocket"></i> Octane / long-running</a>
@@ -6879,12 +6887,12 @@ php artisan migrate</code></pre>
 
 <div id="sec-auth" class="section">
   <div class="section-title">Auth, Gates и Policies</div>
-  <div class="subsection">
+  <div class="subsection" id="auth-purpose">
     <div class="subsection-title"><i data-lucide="book-open"></i> Назначение</div>
     <p class="text">Аутентификация (auth) и авторизация (authorization) — два разных слоя. Auth отвечает «кто этот пользователь». Authorization — «может ли он сделать это действие». Laravel разделяет их явно: guards/providers для аутентификации, gates и policies — для авторизации. Понимание разницы и взаимодействия — основа безопасной архитектуры.</p>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="auth-components">
     <div class="subsection-title"><i data-lucide="list"></i> Компоненты</div>
     <div class="card"><h3>Guards</h3><p class="text">Способ аутентификации: <code>session</code>, <code>token</code>, <code>sanctum</code>, <code>passport</code>, кастомный. Один guard на один способ. <code>auth('api')-&gt;user()</code> — пользователь из guard <code>api</code>.</p></div>
     <div class="card"><h3>Providers</h3><p class="text">Источник пользователей: <code>eloquent</code> (модель User), <code>database</code> (таблица напрямую). Гибкость — кастомный провайдер для LDAP, SSO.</p></div>
@@ -6893,7 +6901,194 @@ php artisan migrate</code></pre>
     <div class="card"><h3>Gate::before / after</h3><p class="text">Глобальные хуки: <code>Gate::before(fn ($user) =&gt; $user-&gt;is_root ? true : null)</code> — root проходит везде. Возврат null — продолжать проверку обычным путём.</p></div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="auth-guards">
+    <div class="subsection-title"><i data-lucide="shield"></i> Guards — глубокий разбор</div>
+
+    <p class="text"><strong>Guard</strong> — механизм, определяющий, <em>как</em> аутентифицировать пользователя для конкретного запроса: через сессии, токены, API-ключи, JWT и т.д. Каждый guard реализует <strong>один способ</strong> проверки подлинности. В Laravel можно использовать <em>несколько guards одновременно</em> для разных частей приложения (например, <code>web</code> для веб-интерфейса и <code>api</code> для API).</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="file-cog" style="width:14px;height:14px"></i> Где определяются</div>
+    <p class="text">Все guards настраиваются в <code>config/auth.php</code> в массиве <code>guards</code>. По умолчанию:</p>
+<pre><code><span class="c-str">'guards'</span> =&gt; [
+    <span class="c-str">'web'</span> =&gt; [
+        <span class="c-str">'driver'</span>   =&gt; <span class="c-str">'session'</span>,
+        <span class="c-str">'provider'</span> =&gt; <span class="c-str">'users'</span>,
+    ],
+    <span class="c-str">'api'</span> =&gt; [
+        <span class="c-str">'driver'</span>   =&gt; <span class="c-str">'token'</span>,
+        <span class="c-str">'provider'</span> =&gt; <span class="c-str">'users'</span>,
+        <span class="c-str">'hash'</span>     =&gt; <span class="c-key">false</span>,
+    ],
+],
+</code></pre>
+    <p class="text">Каждый guard содержит два ключа:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>driver</code> — <em>механизм</em> аутентификации (session, token, sanctum, passport, custom)</li>
+      <li><code>provider</code> — <em>источник</em> пользователей (обычно <code>users</code> = модель <code>App\Models\User</code>; можно определить свой для LDAP/SSO)</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="cpu" style="width:14px;height:14px"></i> Типы драйверов</div>
+    <table class="data-table">
+      <thead><tr><th>Драйвер</th><th>Описание</th><th>Типичное использование</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>session</code></td>
+          <td>Хранит состояние в сессии (куки). Требует middleware <code>StartSession</code>.</td>
+          <td>Веб-интерфейс, стандартный вход через форму.</td>
+        </tr>
+        <tr>
+          <td><code>token</code></td>
+          <td>Проверяет API-токен в заголовке <code>Authorization</code> или параметре запроса. Токен хранится в поле <code>users.api_token</code>. <strong>Устарел.</strong></td>
+          <td>Простые API без сложной логики. <em>Не рекомендуется для новых проектов.</em></td>
+        </tr>
+        <tr>
+          <td><code>sanctum</code></td>
+          <td>Гибкий: поддерживает и сессии (через куки), и токены (через заголовок).</td>
+          <td>Современные SPA (Vue/React) и мобильные клиенты.</td>
+        </tr>
+        <tr>
+          <td><code>passport</code></td>
+          <td>Полноценный OAuth2-сервер: access-токены, refresh-токены, scopes.</td>
+          <td>API для сторонних приложений, микросервисы, сложные системы с разделением прав.</td>
+        </tr>
+        <tr>
+          <td><code>jwt</code> (кастомный)</td>
+          <td>JWT-токены. Не в ядре — требует <code>tymon/jwt-auth</code>.</td>
+          <td>Безсессионная аутентификация с компактными токенами.</td>
+        </tr>
+        <tr>
+          <td><code>custom</code></td>
+          <td>Собственный драйвер под специфические нужды (сертификаты, внешний сервис).</td>
+          <td>Нестандартные протоколы, интеграции.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="user-check" style="width:14px;height:14px"></i> Получение текущего пользователя</div>
+<pre><code><span class="c-comment">// Пользователь из guard 'web' (по умолчанию)</span>
+<span class="c-var">$user</span> = <span class="c-fn">auth</span>()-&gt;<span class="c-fn">user</span>();
+
+<span class="c-comment">// Пользователь из guard 'api'</span>
+<span class="c-var">$user</span> = <span class="c-fn">auth</span>(<span class="c-str">'api'</span>)-&gt;<span class="c-fn">user</span>();
+
+<span class="c-comment">// Через фасад — явно указываем guard</span>
+<span class="c-var">$user</span> = <span class="c-type">Auth</span>::<span class="c-fn">guard</span>(<span class="c-str">'api'</span>)-&gt;<span class="c-fn">user</span>();
+
+<span class="c-comment">// Проверка аутентификации в определённом guard</span>
+<span class="c-key">if</span> (<span class="c-fn">auth</span>(<span class="c-str">'api'</span>)-&gt;<span class="c-fn">check</span>()) {
+    <span class="c-comment">// ...</span>
+}
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="log-in" style="width:14px;height:14px"></i> Принудительная аутентификация</div>
+<pre><code><span class="c-key">if</span> (<span class="c-type">Auth</span>::<span class="c-fn">guard</span>(<span class="c-str">'web'</span>)-&gt;<span class="c-fn">attempt</span>(<span class="c-var">$credentials</span>)) {
+    <span class="c-comment">// вход для web — создаётся сессия</span>
+}
+
+<span class="c-key">if</span> (<span class="c-type">Auth</span>::<span class="c-fn">guard</span>(<span class="c-str">'api'</span>)-&gt;<span class="c-fn">attempt</span>(<span class="c-var">$credentials</span>)) {
+    <span class="c-comment">// вход для api-token — обычно не используется,</span>
+    <span class="c-comment">// т.к. токены не создаются через attempt (нужен createToken)</span>
+}
+</code></pre>
+    <p class="text">Для <code>sanctum</code> и <code>passport</code> — обычно <code>attempt</code> с последующей выдачей токена (<code>$user-&gt;createToken(...)</code>).</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="route" style="width:14px;height:14px"></i> Привязка guard к маршрутам</div>
+<pre><code><span class="c-comment">// Использовать guard 'api'</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/user'</span>, <span class="c-key">function</span> () {
+    <span class="c-key">return</span> <span class="c-fn">auth</span>(<span class="c-str">'api'</span>)-&gt;<span class="c-fn">user</span>();
+})-&gt;<span class="c-fn">middleware</span>(<span class="c-str">'auth:api'</span>);
+
+<span class="c-comment">// Несколько guards — проверяются по очереди</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/profile'</span>, <span class="c-key">function</span> () {
+    <span class="c-comment">// ...</span>
+})-&gt;<span class="c-fn">middleware</span>(<span class="c-str">'auth:web,api'</span>);
+</code></pre>
+    <p class="text">Если guard не указан — используется <code>defaults.guard</code> из <code>config/auth.php</code> (обычно <code>web</code>).</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="wrench" style="width:14px;height:14px"></i> Кастомные guards</div>
+    <p class="text">Если стандартные драйверы не подходят — реализуйте <code>Illuminate\Contracts\Auth\Guard</code> и зарегистрируйте через сервис-провайдер:</p>
+<pre><code><span class="c-comment">// AppServiceProvider::boot()</span>
+<span class="c-type">Auth</span>::<span class="c-fn">extend</span>(<span class="c-str">'custom'</span>, <span class="c-key">function</span> (<span class="c-var">$app</span>, <span class="c-var">$name</span>, <span class="c-var">$config</span>) {
+    <span class="c-key">return new</span> <span class="c-type">CustomGuard</span>(
+        <span class="c-var">$app</span>-&gt;<span class="c-fn">make</span>(<span class="c-type">YourUserProvider</span>::<span class="c-key">class</span>),
+        <span class="c-var">$app</span>-&gt;<span class="c-fn">make</span>(<span class="c-type">Request</span>::<span class="c-key">class</span>)
+    );
+});
+</code></pre>
+    <p class="text">После этого в <code>config/auth.php</code> добавляйте guard с драйвером <code>custom</code>.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="info" style="width:14px;height:14px"></i> Особенности драйверов</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong><code>session</code></strong> — сессии + куки, требует <code>StartSession</code> в middleware-группе <code>web</code>.</li>
+      <li><strong><code>token</code></strong> — устаревший. Вместо него — <code>sanctum</code> или <code>passport</code>.</li>
+      <li><strong><code>sanctum</code></strong> — для SPA использует куки (сессии), для мобильных — токены в заголовке. Может работать полностью без сессий.</li>
+      <li><strong><code>passport</code></strong> — OAuth2-сервер, требует установки пакета и настройки RSA-ключей.</li>
+    </ul>
+
+    <div class="tip">
+      <strong>Практические рекомендации:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><strong>Веб-сайт</strong> → <code>web</code> с драйвером <code>session</code>.</li>
+        <li><strong>API</strong> → <code>sanctum</code> (простой) или <code>passport</code> (OAuth2).</li>
+        <li><strong>Микросервисы / внешние интеграции</strong> → <code>passport</code> или кастомный JWT.</li>
+        <li><strong>Несколько способов входа в одном проекте</strong> (админы через сессии, пользователи через токены) → отдельные guards, привязанные к нужным маршрутам.</li>
+      </ul>
+    </div>
+
+    <div class="remember-box">
+      <strong>Итог:</strong> Guard = «как проверяем пользователя». Provider = «где хранятся пользователи». Один guard — один способ проверки, но в одном приложении их может быть много. <code>auth('guard')-&gt;user()</code> для получения, <code>middleware('auth:guard')</code> для защиты маршрутов.
+    </div>
+  </div>
+
+  <div class="subsection" id="auth-spa">
+    <div class="subsection-title"><i data-lucide="app-window"></i> SPA и Sanctum</div>
+
+    <p class="text"><strong>SPA (Single Page Application)</strong> — одностраничное веб-приложение. В отличие от классических многостраничных сайтов (MPA), где каждый клик по ссылке загружает новую HTML-страницу с сервера, SPA работает иначе.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="layers" style="width:14px;height:14px"></i> Как устроена SPA</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Один раз загружает всю «оболочку».</strong> При первом посещении браузер получает одну HTML-страницу + все CSS/JS-бандлы.</li>
+      <li><strong>Дальше работает в браузере.</strong> Вся навигация и отрисовка интерфейса — в браузере. При переходе по ссылке JavaScript перехватывает событие, запрашивает у сервера только <em>данные</em> (обычно JSON) и динамически обновляет уже загруженную страницу.</li>
+      <li><strong>Никаких перезагрузок.</strong> Нет мерцаний и белых экранов, характерных для перезагрузки. Интерфейс обновляется плавно и мгновенно — по ощущениям близко к нативным приложениям.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="split" style="width:14px;height:14px"></i> SPA + Laravel: типичная схема</div>
+    <div class="card">
+      <h3>Бэкенд (API)</h3>
+      <p class="text">Laravel работает как <strong>API-сервер</strong>: отдаёт только данные (JSON), не занимается отрисовкой HTML. Роуты в <code>routes/api.php</code>, контроллеры возвращают <code>JsonResource</code>/массивы.</p>
+    </div>
+    <div class="card">
+      <h3>Фронтенд (SPA)</h3>
+      <p class="text">Клиентская часть на JS-фреймворке: <strong>React / Vue.js / Angular / Svelte</strong>. Развёртывается отдельно (Vite/Webpack) либо инжектится в единственный blade-шаблон Laravel.</p>
+    </div>
+    <div class="card">
+      <h3>Аутентификация: Laravel Sanctum</h3>
+      <p class="text">Для защиты API — <strong>Laravel Sanctum</strong>. Даёт лёгкий механизм аутентификации: <em>для SPA на том же домене</em> — через куки-сессии (безопасно, без хранения токена в JS), <em>для мобильных клиентов</em> — через токены в заголовке <code>Authorization</code>.</p>
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hammer" style="width:14px;height:14px"></i> Sanctum для SPA — коротко</div>
+<pre><code><span class="c-comment">// 1. Установка</span>
+composer require laravel/sanctum
+php artisan vendor:publish --provider=<span class="c-str">"Laravel\Sanctum\SanctumServiceProvider"</span>
+php artisan migrate
+
+<span class="c-comment">// 2. config/sanctum.php — указать домены SPA</span>
+<span class="c-str">'stateful'</span> =&gt; [<span class="c-str">'localhost:3000'</span>, <span class="c-str">'app.example.com'</span>],
+
+<span class="c-comment">// 3. Защищаем routes/api.php</span>
+<span class="c-type">Route</span>::<span class="c-fn">middleware</span>(<span class="c-str">'auth:sanctum'</span>)-&gt;<span class="c-fn">get</span>(<span class="c-str">'/user'</span>, <span class="c-key">fn</span>(<span class="c-type">Request</span> <span class="c-var">$r</span>) =&gt; <span class="c-var">$r</span>-&gt;<span class="c-fn">user</span>());
+
+<span class="c-comment">// 4. Со стороны SPA (пример на Axios):</span>
+<span class="c-comment">// - сначала GET /sanctum/csrf-cookie (получить XSRF-TOKEN)</span>
+<span class="c-comment">// - потом POST /login с credentials (создаётся сессия)</span>
+<span class="c-comment">// - все последующие запросы автоматически несут куки</span>
+</code></pre>
+
+    <div class="tip">
+      <strong>Итог:</strong> SPA + Laravel — это способ строить веб-приложения, которые по скорости и плавности интерфейса максимально приближены к нативным программам. Стандартная связка — <em>Laravel как JSON API + Vue/React как SPA + Sanctum для auth</em>.
+    </div>
+  </div>
+
+  <div class="subsection" id="auth-practice">
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика: policy для модели</div>
 <pre><code><span class="c-key">final class</span> <span class="c-type">PostPolicy</span>
 {
@@ -6926,7 +7121,7 @@ php artisan migrate</code></pre>
 </code></pre>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="auth-pitfalls">
     <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
     <div class="pitfall"><strong>1. <code>auth()-&gt;user()</code> возвращает null.</strong> Если запрос не прошёл через <code>auth</code> middleware, <code>user()</code> вернёт null. Code <code>auth()-&gt;user()-&gt;id</code> упадёт. Используйте <code>auth()-&gt;id()</code> или явные проверки.</div>
     <div class="pitfall"><strong>2. Policy <code>before</code> и <code>after</code>.</strong> Можно объявить методы <code>before</code>/<code>after</code> прямо в policy. <code>before</code> возвращает true/false/null — null означает «продолжить обычную проверку».</div>
