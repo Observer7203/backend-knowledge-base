@@ -275,6 +275,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('auth','auth-providers',this)">Providers — источники пользователей</a>
     <a class="nav-subitem" onclick="showSub('auth','auth-spa',this)">SPA и Sanctum</a>
     <a class="nav-subitem" onclick="showSub('auth','auth-gates',this)">Gates — простые проверки</a>
+    <a class="nav-subitem" onclick="showSub('auth','auth-policies',this)">Policies — авторизация моделей</a>
     <a class="nav-subitem" onclick="showSub('auth','auth-practice',this)">Практика: policy для модели</a>
     <a class="nav-subitem" onclick="showSub('auth','auth-pitfalls',this)">Особые случаи</a>
   </div>
@@ -7482,6 +7483,217 @@ php artisan migrate
 
     <div class="remember-box">
       <strong>Итог:</strong> Gate — простой и быстрый способ определить правила авторизации, <em>не привязанные к модели</em>. Идеально подходит для общих проверок (админ, модератор, разрешения, feature-флаги). Для сложной логики по сущностям — используйте <a href="#" onclick="showSub('auth','auth-practice',this.parentElement.parentElement); return false;">Policies</a>. Определяйте Gates в <code>AuthServiceProvider</code> для централизованного управления.
+    </div>
+  </div>
+
+  <div class="subsection" id="auth-policies">
+    <div class="subsection-title"><i data-lucide="shield-check"></i> Policies — авторизация действий с моделями</div>
+
+    <p class="text"><strong>Policies (политики)</strong> — классы, группирующие логику авторизации для <em>конкретной модели</em> (<code>Post</code>, <code>User</code>, <code>Order</code>). Каждая политика содержит методы, соответствующие различным действиям (<code>view</code>, <code>create</code>, <code>update</code>, <code>delete</code>...), которые принимают текущего пользователя и, опционально, целевую модель.</p>
+
+    <p class="text">Policies — <strong>рекомендуемый способ</strong> авторизации действий, связанных с моделями: структурируют проверки по сущностям и легко расширяются. Тесно интегрируются с фасадом <code>Gate</code>, но дают более высокоуровневый и удобный API.</p>
+
+    <div class="tip">
+      <strong>Когда что:</strong> <a href="#" onclick="showSub('auth','auth-gates',this.parentElement.parentElement); return false;">Gates</a> — для проверок <em>не про сущность</em> (админ? модератор?). Policies — для проверок <em>про конкретную модель</em> (может ли <em>этот</em> user редактировать <em>этот</em> post?).
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="terminal" style="width:14px;height:14px"></i> Создание политики</div>
+    <p class="text">Политика создаётся Artisan-командой. Флаг <code>--model</code> сразу генерирует типовые методы для CRUD-операций:</p>
+<pre><code>php artisan make:policy PostPolicy --model=Post
+</code></pre>
+
+    <p class="text">Пример полной <code>PostPolicy</code>:</p>
+<pre><code><span class="c-key">namespace</span> <span class="c-type">App\Policies</span>;
+
+<span class="c-key">use</span> <span class="c-type">App\Models\User</span>;
+<span class="c-key">use</span> <span class="c-type">App\Models\Post</span>;
+
+<span class="c-key">class</span> <span class="c-type">PostPolicy</span>
+{
+    <span class="c-comment">// Может ли просматривать список постов (обычно всегда true)</span>
+    <span class="c-key">public function</span> <span class="c-fn">viewAny</span>(<span class="c-type">User</span> <span class="c-var">$user</span>): <span class="c-key">bool</span>
+    {
+        <span class="c-key">return</span> <span class="c-key">true</span>;
+    }
+
+    <span class="c-comment">// Может ли просматривать конкретный пост</span>
+    <span class="c-key">public function</span> <span class="c-fn">view</span>(<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>): <span class="c-key">bool</span>
+    {
+        <span class="c-key">return</span> <span class="c-var">$user</span>-&gt;<span class="c-var">id</span> === <span class="c-var">$post</span>-&gt;<span class="c-var">user_id</span> || <span class="c-var">$user</span>-&gt;<span class="c-var">is_admin</span>;
+    }
+
+    <span class="c-comment">// Может ли создавать посты (модели ещё нет — только $user)</span>
+    <span class="c-key">public function</span> <span class="c-fn">create</span>(<span class="c-type">User</span> <span class="c-var">$user</span>): <span class="c-key">bool</span>
+    {
+        <span class="c-key">return</span> <span class="c-var">$user</span>-&gt;<span class="c-fn">hasVerifiedEmail</span>();
+    }
+
+    <span class="c-comment">// Может ли обновлять</span>
+    <span class="c-key">public function</span> <span class="c-fn">update</span>(<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>): <span class="c-key">bool</span>
+    {
+        <span class="c-key">return</span> <span class="c-var">$user</span>-&gt;<span class="c-var">id</span> === <span class="c-var">$post</span>-&gt;<span class="c-var">user_id</span>;
+    }
+
+    <span class="c-comment">// Может ли удалять</span>
+    <span class="c-key">public function</span> <span class="c-fn">delete</span>(<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>): <span class="c-key">bool</span>
+    {
+        <span class="c-key">return</span> <span class="c-var">$user</span>-&gt;<span class="c-var">id</span> === <span class="c-var">$post</span>-&gt;<span class="c-var">user_id</span> || <span class="c-var">$user</span>-&gt;<span class="c-var">is_admin</span>;
+    }
+
+    <span class="c-comment">// Восстановление (для SoftDeletes)</span>
+    <span class="c-key">public function</span> <span class="c-fn">restore</span>(<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>): <span class="c-key">bool</span>
+    {
+        <span class="c-key">return</span> <span class="c-var">$user</span>-&gt;<span class="c-var">is_admin</span>;
+    }
+
+    <span class="c-comment">// Принудительное удаление из БД</span>
+    <span class="c-key">public function</span> <span class="c-fn">forceDelete</span>(<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>): <span class="c-key">bool</span>
+    {
+        <span class="c-key">return</span> <span class="c-var">$user</span>-&gt;<span class="c-var">is_super_admin</span>;
+    }
+}
+</code></pre>
+    <p class="text">Каждый метод возвращает <code>true</code> (разрешено) или <code>false</code> (запрещено). Если метод не определён — по умолчанию <code>false</code> (кроме случаев, когда <code>Gate::before()</code> вернул <code>true</code>).</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="link-2" style="width:14px;height:14px"></i> Регистрация политик</div>
+    <p class="text">Политики регистрируются в <code>App\Providers\AuthServiceProvider</code> в свойстве <code>$policies</code>. Ключ — имя модели, значение — класс политики.</p>
+<pre><code><span class="c-key">namespace</span> <span class="c-type">App\Providers</span>;
+
+<span class="c-key">use</span> <span class="c-type">App\Models\Post</span>;
+<span class="c-key">use</span> <span class="c-type">App\Models\User</span>;
+<span class="c-key">use</span> <span class="c-type">App\Policies\PostPolicy</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate\Foundation\Support\Providers\AuthServiceProvider</span> <span class="c-key">as</span> <span class="c-type">ServiceProvider</span>;
+
+<span class="c-key">class</span> <span class="c-type">AuthServiceProvider</span> <span class="c-key">extends</span> <span class="c-type">ServiceProvider</span>
+{
+    <span class="c-key">protected</span> <span class="c-var">$policies</span> = [
+        <span class="c-type">Post</span>::<span class="c-key">class</span> =&gt; <span class="c-type">PostPolicy</span>::<span class="c-key">class</span>,
+        <span class="c-type">User</span>::<span class="c-key">class</span> =&gt; <span class="c-type">UserPolicy</span>::<span class="c-key">class</span>,
+    ];
+
+    <span class="c-key">public function</span> <span class="c-fn">boot</span>(): <span class="c-key">void</span>
+    {
+        <span class="c-var">$this</span>-&gt;<span class="c-fn">registerPolicies</span>();
+        <span class="c-comment">// дополнительная регистрация Gate::define(...) при необходимости</span>
+    }
+}
+</code></pre>
+    <p class="text">Метод <code>$this-&gt;registerPolicies()</code> автоматически загружает указанные политики.</p>
+
+    <div class="pitfall"><strong>Laravel 11+:</strong> <code>registerPolicies()</code> вызывается по умолчанию — достаточно добавить массив <code>$policies</code>. Более того, сам <code>AuthServiceProvider</code> больше не создаётся автоматически: можно регистрировать через <code>Gate::policy(Post::class, PostPolicy::class)</code> в <code>AppServiceProvider::boot()</code> либо создать <code>AuthServiceProvider</code> вручную.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="play" style="width:14px;height:14px"></i> Использование политик</div>
+
+    <p class="text"><strong>1. Через фасад <code>Gate</code>:</strong></p>
+<pre><code><span class="c-key">if</span> (<span class="c-type">Gate</span>::<span class="c-fn">allows</span>(<span class="c-str">'update'</span>, <span class="c-var">$post</span>)) {
+    <span class="c-comment">// разрешено — Laravel ищет PostPolicy@update</span>
+}
+<span class="c-key">if</span> (<span class="c-type">Gate</span>::<span class="c-fn">denies</span>(<span class="c-str">'update'</span>, <span class="c-var">$post</span>)) {
+    <span class="c-fn">abort</span>(<span class="c-num">403</span>);
+}
+</code></pre>
+    <p class="text">Laravel по классу переданного <code>$post</code> находит зарегистрированную политику и вызывает нужный метод.</p>
+
+    <p class="text"><strong>2. Через <code>can()</code> / <code>cannot()</code> у пользователя</strong> (самый удобный способ):</p>
+<pre><code><span class="c-key">if</span> (<span class="c-var">$request</span>-&gt;<span class="c-fn">user</span>()-&gt;<span class="c-fn">can</span>(<span class="c-str">'update'</span>, <span class="c-var">$post</span>)) {
+    <span class="c-comment">// разрешено</span>
+}
+</code></pre>
+
+    <p class="text"><strong>3. В контроллере через <code>authorize()</code>:</strong></p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">update</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>, <span class="c-key">int</span> <span class="c-var">$id</span>)
+{
+    <span class="c-var">$post</span> = <span class="c-type">Post</span>::<span class="c-fn">findOrFail</span>(<span class="c-var">$id</span>);
+    <span class="c-var">$this</span>-&gt;<span class="c-fn">authorize</span>(<span class="c-str">'update'</span>, <span class="c-var">$post</span>);
+    <span class="c-comment">// выполнение обновления</span>
+}
+</code></pre>
+    <p class="text">Если проверка не пройдена — <code>authorize()</code> бросает <code>AuthorizationException</code> и возвращает ответ <strong>403</strong>.</p>
+
+    <p class="text"><strong>4. В шаблонах Blade:</strong></p>
+<pre><code>@can(<span class="c-str">'update'</span>, <span class="c-var">$post</span>)
+    &lt;a href=<span class="c-str">"&#123;{ route('posts.edit', $post) }&#125;"</span>&gt;Редактировать&lt;/a&gt;
+@endcan
+
+@cannot(<span class="c-str">'delete'</span>, <span class="c-var">$post</span>)
+    &lt;p&gt;Вы не можете удалить этот пост.&lt;/p&gt;
+@endcannot
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="search" style="width:14px;height:14px"></i> Auto-discovery политик</div>
+    <p class="text">Если соблюдаются соглашения об именовании (модель <code>App\Models\Post</code> ↔ политика <code>App\Policies\PostPolicy</code>) — Laravel <strong>автоматически</strong> находит политику <em>без явной регистрации</em> в <code>$policies</code>. Достаточно правильных namespace.</p>
+    <p class="text"><strong>Кастомный резолвер</strong> auto-discovery — через <code>Gate::guessPolicyNamesUsing(fn ($class) =&gt; ...)</code> в <code>boot()</code>. Полезно, если политики лежат вне <code>App\Policies\</code>. Для явности лучше регистрировать вручную в <code>$policies</code>.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="user-cog" style="width:14px;height:14px"></i> <code>before</code> и <code>after</code> в политике</div>
+    <p class="text">Метод <code>before</code> в самой политике выполняется <em>перед всеми остальными методами</em>. Если вернёт <code>true</code>/<code>false</code> — проверка завершится досрочно. Типичный кейс — разрешить админу всё:</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">before</span>(<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-key">string</span> <span class="c-var">$ability</span>)
+{
+    <span class="c-key">if</span> (<span class="c-var">$user</span>-&gt;<span class="c-var">is_super_admin</span>) {
+        <span class="c-key">return</span> <span class="c-key">true</span>;
+    }
+    <span class="c-comment">// return null; — продолжить обычную проверку</span>
+}
+</code></pre>
+    <p class="text">Отличие от <code>Gate::before()</code> — этот <code>before</code> действует <em>только внутри этой политики</em>, а не глобально.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> Методы без модели (создание)</div>
+    <p class="text">Действие <code>create</code> принимает <em>только пользователя</em> — модели ещё не существует:</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">create</span>(<span class="c-type">User</span> <span class="c-var">$user</span>): <span class="c-key">bool</span>
+{
+    <span class="c-key">return</span> <span class="c-var">$user</span>-&gt;<span class="c-fn">hasVerifiedEmail</span>();
+}
+
+<span class="c-comment">// Вызов в контроллере:</span>
+<span class="c-var">$this</span>-&gt;<span class="c-fn">authorize</span>(<span class="c-str">'create'</span>, <span class="c-type">Post</span>::<span class="c-key">class</span>); <span class="c-comment">// передаём класс, не инстанс</span>
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="package" style="width:14px;height:14px"></i> Инъекция зависимостей в политику</div>
+    <p class="text">В конструктор политики можно внедрять любые сервисы через DI (Laravel резолвит политику через контейнер):</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">PostPolicy</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+        <span class="c-key">private readonly</span> <span class="c-type">SubscriptionChecker</span> <span class="c-var">$subs</span>,
+    ) {}
+
+    <span class="c-key">public function</span> <span class="c-fn">create</span>(<span class="c-type">User</span> <span class="c-var">$user</span>): <span class="c-key">bool</span>
+    {
+        <span class="c-key">return</span> <span class="c-var">$this</span>-&gt;<span class="c-var">subs</span>-&gt;<span class="c-fn">isActive</span>(<span class="c-var">$user</span>);
+    }
+}
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hammer" style="width:14px;height:14px"></i> Пример: контроллер с route model binding</div>
+<pre><code><span class="c-key">use</span> <span class="c-type">App\Models\Post</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate\Http\Request</span>;
+
+<span class="c-key">class</span> <span class="c-type">PostController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">update</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>)
+    {
+        <span class="c-var">$this</span>-&gt;<span class="c-fn">authorize</span>(<span class="c-str">'update'</span>, <span class="c-var">$post</span>);
+        <span class="c-comment">// обновляем пост</span>
+        <span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">route</span>(<span class="c-str">'posts.index'</span>);
+    }
+}
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="alert-octagon" style="width:14px;height:14px"></i> Особые случаи</div>
+    <div class="pitfall"><strong>1. Метод не определён = <code>false</code>.</strong> Если политика не имеет метода — доступ запрещён по умолчанию. Исключение — если <code>Gate::before</code> или <code>PostPolicy::before</code> вернули <code>true</code>.</div>
+    <div class="pitfall"><strong>2. Guest (null user).</strong> Если сигнатура <code>view(User $user, Post $post)</code> — Laravel сразу вернёт <code>false</code> для гостя. Чтобы гость мог пройти — сигнатура <code>view(?User $user, Post $post)</code>.</div>
+    <div class="pitfall"><strong>3. Правильный аргумент для <code>create</code>.</strong> В <code>authorize('create', Post::class)</code> передавайте <em>класс</em>, не инстанс — метод принимает только <code>$user</code>.</div>
+    <div class="pitfall"><strong>4. Auto-discovery не сработал.</strong> Если политика лежит вне <code>App\Policies\</code> или модель вне <code>App\Models\</code> — регистрируйте вручную в <code>$policies</code>.</div>
+    <div class="pitfall"><strong>5. N+1 в policy.</strong> Внутри метода <code>update</code> обращение к <code>$post-&gt;owner-&gt;team</code> → на списке из 20 постов будет 40 запросов. Eager-load relations <em>до</em> проверки.</div>
+
+    <div class="remember-box">
+      <strong>Итог — Policies это:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Группировка проверок по сущностям (по одному классу на модель)</li>
+        <li>Создание через <code>php artisan make:policy PostPolicy --model=Post</code></li>
+        <li>Регистрация в <code>AuthServiceProvider::$policies</code> (либо auto-discovery по namespace)</li>
+        <li>Использование через <code>$user-&gt;can()</code>, <code>authorize()</code>, <code>@can</code></li>
+        <li><code>before</code> в самой политике — для локальных исключений (админ обходит всё)</li>
+      </ul>
+      Policies — <em>для действий с моделями</em>. <a href="#" onclick="showSub('auth','auth-gates',this.parentElement.parentElement); return false;">Gates</a> — <em>для общих проверок</em>. Вместе — чистый, переиспользуемый, тестируемый код авторизации.
     </div>
   </div>
 
