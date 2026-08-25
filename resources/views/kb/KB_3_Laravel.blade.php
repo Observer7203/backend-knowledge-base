@@ -274,6 +274,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('auth','auth-guards',this)">Guards — глубокий разбор</a>
     <a class="nav-subitem" onclick="showSub('auth','auth-providers',this)">Providers — источники пользователей</a>
     <a class="nav-subitem" onclick="showSub('auth','auth-spa',this)">SPA и Sanctum</a>
+    <a class="nav-subitem" onclick="showSub('auth','auth-gates',this)">Gates — простые проверки</a>
     <a class="nav-subitem" onclick="showSub('auth','auth-practice',this)">Практика: policy для модели</a>
     <a class="nav-subitem" onclick="showSub('auth','auth-pitfalls',this)">Особые случаи</a>
   </div>
@@ -7314,6 +7315,173 @@ php artisan migrate
 
     <div class="tip">
       <strong>Итог:</strong> SPA + Laravel — это способ строить веб-приложения, которые по скорости и плавности интерфейса максимально приближены к нативным программам. Стандартная связка — <em>Laravel как JSON API + Vue/React как SPA + Sanctum для auth</em>.
+    </div>
+  </div>
+
+  <div class="subsection" id="auth-gates">
+    <div class="subsection-title"><i data-lucide="check-circle"></i> Gates — простые проверки авторизации</div>
+
+    <p class="text"><strong>Gates</strong> — механизм авторизации, позволяющий определить <em>простые глобальные правила доступа</em> в виде замыканий. Предназначены для <strong>сквозных проверок</strong>, не привязанных к конкретной модели: пользователь — админ? имеет доступ к отчётам? находится в определённой группе? Это аналог <a href="#" onclick="showSub('auth','auth-practice',this.parentElement.parentElement); return false;">Policies</a>, но для более простых и обобщённых сценариев.</p>
+
+    <div class="tip">
+      <strong>Правило выбора:</strong> Gate — когда проверка <em>не про конкретную сущность</em> («может ли вообще войти в админку»). Policy — когда проверка про <em>конкретную модель</em> («может ли редактировать <em>этот</em> пост»).
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="file-cog" style="width:14px;height:14px"></i> Определение Gates</div>
+    <p class="text">Gates определяются в <code>app/Providers/AuthServiceProvider::boot()</code> через фасад <code>Gate</code>:</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate\Support\Facades\Gate</span>;
+
+<span class="c-key">public function</span> <span class="c-fn">boot</span>(): <span class="c-key">void</span>
+{
+    <span class="c-comment">// Простая проверка</span>
+    <span class="c-type">Gate</span>::<span class="c-fn">define</span>(<span class="c-str">'admin-area'</span>, <span class="c-key">function</span> (<span class="c-var">$user</span>) {
+        <span class="c-key">return</span> <span class="c-var">$user</span>-&gt;<span class="c-var">is_admin</span> === <span class="c-key">true</span>;
+    });
+
+    <span class="c-comment">// Проверка с дополнительными параметрами</span>
+    <span class="c-type">Gate</span>::<span class="c-fn">define</span>(<span class="c-str">'update-post'</span>, <span class="c-key">function</span> (<span class="c-var">$user</span>, <span class="c-var">$post</span>) {
+        <span class="c-key">return</span> <span class="c-var">$user</span>-&gt;<span class="c-var">id</span> === <span class="c-var">$post</span>-&gt;<span class="c-var">user_id</span>;
+    });
+
+    <span class="c-comment">// Проверка на основе нескольких условий</span>
+    <span class="c-type">Gate</span>::<span class="c-fn">define</span>(<span class="c-str">'access-reports'</span>, <span class="c-key">function</span> (<span class="c-var">$user</span>) {
+        <span class="c-key">return</span> <span class="c-var">$user</span>-&gt;<span class="c-fn">hasRole</span>(<span class="c-str">'manager'</span>) || <span class="c-var">$user</span>-&gt;<span class="c-fn">hasPermission</span>(<span class="c-str">'view_reports'</span>);
+    });
+}
+</code></pre>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Первый аргумент — <em>строка-идентификатор</em> (имя разрешения, обычно kebab-case).</li>
+      <li>Второй аргумент — замыкание, принимающее текущего <code>$user</code> и, опционально, дополнительные параметры (модель, ID, любые данные).</li>
+    </ul>
+
+    <div class="pitfall"><strong>Laravel 11+:</strong> <code>AuthServiceProvider</code> больше не создаётся автоматически. Gates и policies можно регистрировать прямо в <code>AppServiceProvider::boot()</code>, либо создать <code>AuthServiceProvider</code> вручную для чистоты структуры.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="play" style="width:14px;height:14px"></i> Использование Gates</div>
+
+    <p class="text"><strong>1. Через фасад <code>Gate</code>:</strong></p>
+<pre><code><span class="c-key">if</span> (<span class="c-type">Gate</span>::<span class="c-fn">allows</span>(<span class="c-str">'admin-area'</span>)) {
+    <span class="c-comment">// пользователь имеет доступ к админ-зоне</span>
+}
+
+<span class="c-key">if</span> (<span class="c-type">Gate</span>::<span class="c-fn">denies</span>(<span class="c-str">'update-post'</span>, <span class="c-var">$post</span>)) {
+    <span class="c-fn">abort</span>(<span class="c-num">403</span>, <span class="c-str">'You cannot edit this post.'</span>);
+}
+</code></pre>
+
+    <p class="text"><strong>2. Через методы <code>can()</code> / <code>cannot()</code> на пользователе:</strong></p>
+<pre><code><span class="c-key">if</span> (<span class="c-var">$request</span>-&gt;<span class="c-fn">user</span>()-&gt;<span class="c-fn">can</span>(<span class="c-str">'admin-area'</span>)) {
+    <span class="c-comment">// ...</span>
+}
+
+<span class="c-key">if</span> (<span class="c-var">$request</span>-&gt;<span class="c-fn">user</span>()-&gt;<span class="c-fn">cannot</span>(<span class="c-str">'update-post'</span>, <span class="c-var">$post</span>)) {
+    <span class="c-comment">// ...</span>
+}
+</code></pre>
+
+    <p class="text"><strong>3. В шаблонах Blade:</strong></p>
+<pre><code>@can(<span class="c-str">'admin-area'</span>)
+    &lt;a href=<span class="c-str">"/admin"</span>&gt;Панель администратора&lt;/a&gt;
+@endcan
+
+@cannot(<span class="c-str">'update-post'</span>, <span class="c-var">$post</span>)
+    &lt;p&gt;Вы не можете редактировать этот пост.&lt;/p&gt;
+@endcannot
+</code></pre>
+
+    <p class="text"><strong>4. В контроллерах через <code>authorize()</code>:</strong></p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">update</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>, <span class="c-key">int</span> <span class="c-var">$id</span>)
+{
+    <span class="c-var">$post</span> = <span class="c-type">Post</span>::<span class="c-fn">findOrFail</span>(<span class="c-var">$id</span>);
+    <span class="c-var">$this</span>-&gt;<span class="c-fn">authorize</span>(<span class="c-str">'update-post'</span>, <span class="c-var">$post</span>); <span class="c-comment">// бросит 403 если false</span>
+    <span class="c-comment">// ...</span>
+}
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="git-compare" style="width:14px;height:14px"></i> Gates vs Policies</div>
+    <table class="data-table">
+      <thead><tr><th>Характеристика</th><th>Gates</th><th>Policies</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Назначение</td>
+          <td>Глобальные, не привязанные к модели</td>
+          <td>Связаны с моделью (Post, User, Order)</td>
+        </tr>
+        <tr>
+          <td>Где определяются</td>
+          <td><code>AuthServiceProvider::boot()</code></td>
+          <td>Отдельные классы в <code>app/Policies/</code></td>
+        </tr>
+        <tr>
+          <td>Проверка</td>
+          <td><code>Gate::allows('ability', $model)</code></td>
+          <td><code>$user-&gt;can('ability', $model)</code> / <code>authorize()</code></td>
+        </tr>
+        <tr>
+          <td>Организация</td>
+          <td>Один файл для всех правил</td>
+          <td>Каждая модель — свой файл политики</td>
+        </tr>
+        <tr>
+          <td>Для сложных проверок</td>
+          <td>Гибко, но менее структурировано</td>
+          <td>Структурировано, поддерживает auto-discovery</td>
+        </tr>
+        <tr>
+          <td>Работа с моделями</td>
+          <td>Можно, но модель передаётся <em>явно</em></td>
+          <td>Специализировано для моделей</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="list-checks" style="width:14px;height:14px"></i> Практические сценарии</div>
+    <div class="card">
+      <h3>Проверка роли / прав</h3>
+      <p class="text">Пользователь — админ? Модератор? Имеет ли доступ к админке? — типичный кейс для Gate, не привязан к конкретной сущности.</p>
+    </div>
+    <div class="card">
+      <h3>Функциональные ограничения</h3>
+      <p class="text">Доступ к отчётам, экспорту данных, определённым разделам меню — «может ли эта функция быть доступна пользователю».</p>
+    </div>
+    <div class="card">
+      <h3>Глобальные условия</h3>
+      <p class="text">Доступ к функциональности только в рабочее время / только на определённом окружении — проверка времени/условий внутри замыкания.</p>
+    </div>
+    <div class="card">
+      <h3>A/B тестирование и feature-флаги</h3>
+      <p class="text">Проверка, включена ли фича для данного пользователя (по ID, группе, эксперименту).</p>
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="user-cog" style="width:14px;height:14px"></i> <code>Gate::before</code> — глобальный супер-админ</div>
+    <p class="text">Позволяет выполнить проверку <em>до</em> всех остальных Gates — типичный кейс «супер-админ проходит везде»:</p>
+<pre><code><span class="c-type">Gate</span>::<span class="c-fn">before</span>(<span class="c-key">function</span> (<span class="c-var">$user</span>, <span class="c-var">$ability</span>) {
+    <span class="c-key">if</span> (<span class="c-var">$user</span>-&gt;<span class="c-var">is_super_admin</span>) {
+        <span class="c-key">return</span> <span class="c-key">true</span>; <span class="c-comment">// пропускает все проверки</span>
+    }
+    <span class="c-comment">// return null; — продолжить обычную проверку</span>
+});
+</code></pre>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Вернуть <code>true</code> → проверка сразу разрешена, остальные Gates <em>не выполняются</em>.</li>
+      <li>Вернуть <code>false</code> → проверка отклонена (полный запрет).</li>
+      <li>Вернуть <code>null</code> → продолжить обычную проверку (стандартное поведение).</li>
+    </ul>
+    <p class="text">Есть также <code>Gate::after()</code> — вызывается <em>после</em> обычной проверки, может изменить результат (реже используется).</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="info" style="width:14px;height:14px"></i> Особенности</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Gate возвращает <code>true</code> / <code>false</code>. <code>false</code> → доступ запрещён.</li>
+      <li>Если замыкание бросает исключение — оно <em>не перехватывается</em> и приводит к ошибке (не рекомендуется).</li>
+      <li>Можно определять Gates с дополнительными параметрами (ID сущности, статус, любые данные).</li>
+      <li><code>Gate::before</code> / <code>Gate::after</code> — для глобальных проверок (супер-админ везде проходит).</li>
+    </ul>
+
+    <div class="pitfall"><strong>Не путайте параметр с моделью.</strong> Gate принимает любые данные как второй аргумент — это не обязательно Eloquent-модель. Полиси — специализированы для моделей, Gate — универсален.</div>
+    <div class="pitfall"><strong>Централизуйте.</strong> Разбросанные <code>Gate::define</code> в разных провайдерах превращаются в кошмар — держите все определения в <em>одном</em> месте (<code>AuthServiceProvider</code>).</div>
+    <div class="pitfall"><strong>Не логи́ните <code>false</code> из замыкания.</strong> Внутри Gate не пишите в лог отказ — <code>authorize()</code> сам бросает <code>AuthorizationException</code> (403), лог создаётся глобальным обработчиком.</div>
+
+    <div class="remember-box">
+      <strong>Итог:</strong> Gate — простой и быстрый способ определить правила авторизации, <em>не привязанные к модели</em>. Идеально подходит для общих проверок (админ, модератор, разрешения, feature-флаги). Для сложной логики по сущностям — используйте <a href="#" onclick="showSub('auth','auth-practice',this.parentElement.parentElement); return false;">Policies</a>. Определяйте Gates в <code>AuthServiceProvider</code> для централизованного управления.
     </div>
   </div>
 
