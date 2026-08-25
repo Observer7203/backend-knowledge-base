@@ -276,6 +276,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('auth','auth-spa',this)">SPA и Sanctum</a>
     <a class="nav-subitem" onclick="showSub('auth','auth-gates',this)">Gates — простые проверки</a>
     <a class="nav-subitem" onclick="showSub('auth','auth-policies',this)">Policies — авторизация моделей</a>
+    <a class="nav-subitem" onclick="showSub('auth','auth-hooks',this)">Gate::before / after — хуки</a>
     <a class="nav-subitem" onclick="showSub('auth','auth-practice',this)">Практика: policy для модели</a>
     <a class="nav-subitem" onclick="showSub('auth','auth-pitfalls',this)">Особые случаи</a>
   </div>
@@ -7694,6 +7695,166 @@ php artisan migrate
         <li><code>before</code> в самой политике — для локальных исключений (админ обходит всё)</li>
       </ul>
       Policies — <em>для действий с моделями</em>. <a href="#" onclick="showSub('auth','auth-gates',this.parentElement.parentElement); return false;">Gates</a> — <em>для общих проверок</em>. Вместе — чистый, переиспользуемый, тестируемый код авторизации.
+    </div>
+  </div>
+
+  <div class="subsection" id="auth-hooks">
+    <div class="subsection-title"><i data-lucide="git-fork"></i> Gate::before / Gate::after — глобальные хуки авторизации</div>
+
+    <p class="text"><strong>Gate::before</strong> и <strong>Gate::after</strong> — механизм, позволяющий перехватывать <em>все проверки авторизации</em> (и <a href="#" onclick="showSub('auth','auth-gates',this.parentElement.parentElement); return false;">Gates</a>, и <a href="#" onclick="showSub('auth','auth-policies',this.parentElement.parentElement); return false;">Policies</a>) <em>до</em> или <em>после</em> их выполнения. Полезны для глобальной логики: супер-администратор проходит всё, логирование попыток доступа, кеширование результатов проверок.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="log-in" style="width:14px;height:14px"></i> <code>Gate::before</code> — перехват ДО проверки</div>
+    <p class="text">Регистрирует замыкание, которое выполняется <strong>перед любой проверкой</strong> авторизации (Gates + Policies).</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate\Support\Facades\Gate</span>;
+
+<span class="c-type">Gate</span>::<span class="c-fn">before</span>(<span class="c-key">function</span> (<span class="c-var">$user</span>, <span class="c-key">string</span> <span class="c-var">$ability</span>, <span class="c-key">array</span> <span class="c-var">$arguments</span>) {
+    <span class="c-comment">// $user      — текущий user или null (гость)</span>
+    <span class="c-comment">// $ability   — 'update', 'admin-area', ...</span>
+    <span class="c-comment">// $arguments — массив аргументов проверки (модель, ID)</span>
+});
+</code></pre>
+
+    <p class="text"><strong>Правила возврата:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>return true</code> → доступ <strong>разрешён</strong>, дальнейшая проверка не выполняется</li>
+      <li><code>return false</code> → доступ <strong>запрещён</strong>, дальнейшая проверка не выполняется</li>
+      <li><code>return null</code> → «ничего не решаю, пусть проверяют дальше» — обычная проверка продолжается</li>
+    </ul>
+
+    <div class="pitfall"><strong>Никогда не возвращайте <code>null</code>, если хотите запретить доступ.</strong> В PHP <code>null !== false</code>, а Laravel проверяет наличие <em>именно</em> <code>null</code>. Для запрета — только явный <code>return false</code>.</div>
+
+    <p class="text"><strong>Типичный пример — супер-администратор:</strong></p>
+<pre><code><span class="c-type">Gate</span>::<span class="c-fn">before</span>(<span class="c-key">function</span> (<span class="c-var">$user</span>, <span class="c-key">string</span> <span class="c-var">$ability</span>, <span class="c-key">array</span> <span class="c-var">$arguments</span>) {
+    <span class="c-key">if</span> (<span class="c-var">$user</span> && <span class="c-var">$user</span>-&gt;<span class="c-var">is_root</span>) {
+        <span class="c-key">return</span> <span class="c-key">true</span>; <span class="c-comment">// root имеет доступ ко всему</span>
+    }
+    <span class="c-key">return</span> <span class="c-key">null</span>; <span class="c-comment">// остальные — обычная проверка</span>
+});
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="log-out" style="width:14px;height:14px"></i> <code>Gate::after</code> — перехват ПОСЛЕ проверки</div>
+    <p class="text">Регистрирует замыкание, выполняющееся <strong>после</strong> завершения проверки (как успешной, так и неудачной). Может <em>переопределить</em> результат, но это редко используется.</p>
+<pre><code><span class="c-type">Gate</span>::<span class="c-fn">after</span>(<span class="c-key">function</span> (<span class="c-var">$user</span>, <span class="c-key">string</span> <span class="c-var">$ability</span>, <span class="c-key">array</span> <span class="c-var">$arguments</span>, <span class="c-key">bool</span> <span class="c-var">$result</span>) {
+    <span class="c-comment">// $result — итог обычной проверки</span>
+    <span class="c-comment">// return true/false — переопределить</span>
+    <span class="c-comment">// return null       — оставить как есть</span>
+});
+</code></pre>
+
+    <p class="text"><strong>Пример — логирование всех проверок:</strong></p>
+<pre><code><span class="c-type">Gate</span>::<span class="c-fn">after</span>(<span class="c-key">function</span> (<span class="c-var">$user</span>, <span class="c-key">string</span> <span class="c-var">$ability</span>, <span class="c-key">array</span> <span class="c-var">$arguments</span>, <span class="c-key">bool</span> <span class="c-var">$result</span>) {
+    <span class="c-type">Log</span>::<span class="c-fn">info</span>(<span class="c-str">"Auth check: user {&#123;$user-&gt;id}} ability {&#123;$ability}} result "</span> . (<span class="c-var">$result</span> ? <span class="c-str">'ALLOW'</span> : <span class="c-str">'DENY'</span>));
+    <span class="c-key">return</span> <span class="c-key">null</span>; <span class="c-comment">// не меняем результат</span>
+});
+</code></pre>
+
+    <p class="text"><strong>Пример — переопределение результата</strong> (редкая практика):</p>
+<pre><code><span class="c-type">Gate</span>::<span class="c-fn">after</span>(<span class="c-key">function</span> (<span class="c-var">$user</span>, <span class="c-key">string</span> <span class="c-var">$ability</span>, <span class="c-key">array</span> <span class="c-var">$arguments</span>, <span class="c-key">bool</span> <span class="c-var">$result</span>) {
+    <span class="c-key">if</span> (<span class="c-var">$ability</span> === <span class="c-str">'view-sensitive'</span> && <span class="c-var">$user</span>-&gt;<span class="c-var">is_verified</span>) {
+        <span class="c-key">return</span> <span class="c-key">true</span>; <span class="c-comment">// даже если проверка вернула false — даём доступ</span>
+    }
+    <span class="c-key">return</span> <span class="c-key">null</span>;
+});
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="list-ordered" style="width:14px;height:14px"></i> Порядок выполнения</div>
+    <p class="text">Для одной проверки <code>Gate::allows('update', $post)</code> порядок следующий:</p>
+    <ol style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Выполняется <strong>глобальный <code>Gate::before()</code></strong>. Если вернул <code>true</code>/<code>false</code> — проверка сразу завершается. Если <code>null</code> — идём дальше.</li>
+      <li>Если разрешение определено через <code>Gate::define()</code> — вызывается его замыкание.</li>
+      <li>Иначе, если существует <strong>Policy</strong> для класса модели — вызывается соответствующий метод политики.</li>
+      <li>Внутри Policy может быть свой <code>before()</code> (только для этой политики) — выполняется <em>до</em> конкретного метода, но <em>после</em> глобального <code>Gate::before()</code>.</li>
+      <li>После получения результата выполняется <strong>глобальный <code>Gate::after()</code></strong>, который может его переопределить.</li>
+    </ol>
+    <p class="text">Таким образом, <code>Gate::before</code> имеет <em>наивысший приоритет</em> — может полностью отменить дальнейшую проверку.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="git-compare" style="width:14px;height:14px"></i> <code>Gate::before</code> vs <code>Policy::before</code></div>
+    <table class="data-table">
+      <thead><tr><th>Характеристика</th><th><code>Gate::before</code></th><th><code>Policy::before</code></th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Область действия</td>
+          <td><strong>Глобальная</strong> — ко всем проверкам приложения</td>
+          <td><strong>Локальная</strong> — только для этой политики</td>
+        </tr>
+        <tr>
+          <td>Где регистрируется</td>
+          <td><code>AuthServiceProvider::boot()</code></td>
+          <td>Метод <code>before()</code> внутри класса политики</td>
+        </tr>
+        <tr>
+          <td>Приоритет</td>
+          <td>Первый — до всего остального</td>
+          <td>После глобального <code>Gate::before</code></td>
+        </tr>
+        <tr>
+          <td>Типичное применение</td>
+          <td>Root, feature-флаги, maintenance</td>
+          <td>«Админ может всё с этой моделью»</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="lightbulb" style="width:14px;height:14px"></i> Практические рекомендации</div>
+
+    <div class="card">
+      <h3>Когда использовать <code>Gate::before</code></h3>
+      <ul style="line-height:1.7;margin:6px 0 0 20px">
+        <li><strong>Супер-администраторов (root)</strong> — единственная запись, разрешающая всё</li>
+        <li><strong>Гостевой доступ</strong> — авто-запрет для неаутентифицированных (но лучше через middleware <code>auth</code>)</li>
+        <li><strong>Feature-флаги и maintenance</strong> — глобальное включение/выключение доступа</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>Когда использовать <code>Gate::after</code></h3>
+      <ul style="line-height:1.7;margin:6px 0 0 20px">
+        <li><strong>Логирование</strong> всех проверок авторизации (аудит)</li>
+        <li><strong>Мониторинг</strong> — подсчёт отказов, метрики, аномалии</li>
+        <li><strong>Кеширование результатов</strong> проверок (реже, требует продуманной инвалидации)</li>
+      </ul>
+    </div>
+
+    <div class="pitfall"><strong>Не злоупотребляйте.</strong> Сложная бизнес-логика в <code>Gate::before</code> снижает читаемость и предсказуемость — оставьте туда только глобальные исключения (root, флаги). Конкретные правила — в Gates и Policies.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hammer" style="width:14px;height:14px"></i> Пример полной настройки</div>
+<pre><code><span class="c-comment">// AuthServiceProvider::boot()</span>
+<span class="c-key">public function</span> <span class="c-fn">boot</span>(): <span class="c-key">void</span>
+{
+    <span class="c-var">$this</span>-&gt;<span class="c-fn">registerPolicies</span>();
+
+    <span class="c-comment">// Глобальный before: root проходит всё</span>
+    <span class="c-type">Gate</span>::<span class="c-fn">before</span>(<span class="c-key">function</span> (<span class="c-var">$user</span>, <span class="c-key">string</span> <span class="c-var">$ability</span>, <span class="c-key">array</span> <span class="c-var">$arguments</span>) {
+        <span class="c-key">if</span> (<span class="c-var">$user</span> && <span class="c-var">$user</span>-&gt;<span class="c-var">is_root</span>) {
+            <span class="c-key">return</span> <span class="c-key">true</span>;
+        }
+        <span class="c-key">return</span> <span class="c-key">null</span>;
+    });
+
+    <span class="c-comment">// Глобальный after: логирование в отдельный канал</span>
+    <span class="c-type">Gate</span>::<span class="c-fn">after</span>(<span class="c-key">function</span> (<span class="c-var">$user</span>, <span class="c-key">string</span> <span class="c-var">$ability</span>, <span class="c-key">array</span> <span class="c-var">$arguments</span>, <span class="c-key">bool</span> <span class="c-var">$result</span>) {
+        <span class="c-type">Log</span>::<span class="c-fn">channel</span>(<span class="c-str">'auth'</span>)-&gt;<span class="c-fn">info</span>(<span class="c-str">'Auth check'</span>, [
+            <span class="c-str">'user'</span>    =&gt; <span class="c-var">$user</span>?-&gt;<span class="c-var">id</span>,
+            <span class="c-str">'ability'</span> =&gt; <span class="c-var">$ability</span>,
+            <span class="c-str">'result'</span>  =&gt; <span class="c-var">$result</span> ? <span class="c-str">'ALLOW'</span> : <span class="c-str">'DENY'</span>,
+        ]);
+        <span class="c-key">return</span> <span class="c-key">null</span>;
+    });
+
+    <span class="c-comment">// Обычные Gates</span>
+    <span class="c-type">Gate</span>::<span class="c-fn">define</span>(<span class="c-str">'admin-area'</span>, <span class="c-key">fn</span>(<span class="c-var">$user</span>) =&gt; <span class="c-var">$user</span>-&gt;<span class="c-var">is_admin</span>);
+}
+</code></pre>
+
+    <div class="remember-box">
+      <strong>Итог:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><code>Gate::before</code> — глобальный перехват <em>до</em> проверки. <code>true</code>=разрешено, <code>false</code>=запрещено, <code>null</code>=продолжить.</li>
+        <li><code>Gate::after</code> — глобальный перехват <em>после</em>. Может переопределить результат, но обычно используется для побочных эффектов (логирование, метрики).</li>
+        <li><code>before</code> — для root и глобальных правил. <em>Не</em> для сложной бизнес-логики.</li>
+        <li><code>after</code> — для аудита и мониторинга.</li>
+        <li>Приоритет: <code>Gate::before</code> → <code>Gate::define</code> / <code>Policy::before</code> → метод Policy → <code>Gate::after</code>.</li>
+      </ul>
     </div>
   </div>
 
