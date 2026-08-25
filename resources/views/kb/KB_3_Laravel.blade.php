@@ -272,6 +272,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('auth','auth-purpose',this)">Назначение</a>
     <a class="nav-subitem" onclick="showSub('auth','auth-components',this)">Компоненты (Guards/Providers/Gates/Policies)</a>
     <a class="nav-subitem" onclick="showSub('auth','auth-guards',this)">Guards — глубокий разбор</a>
+    <a class="nav-subitem" onclick="showSub('auth','auth-providers',this)">Providers — источники пользователей</a>
     <a class="nav-subitem" onclick="showSub('auth','auth-spa',this)">SPA и Sanctum</a>
     <a class="nav-subitem" onclick="showSub('auth','auth-practice',this)">Практика: policy для модели</a>
     <a class="nav-subitem" onclick="showSub('auth','auth-pitfalls',this)">Особые случаи</a>
@@ -7036,6 +7037,178 @@ php artisan migrate</code></pre>
 
     <div class="remember-box">
       <strong>Итог:</strong> Guard = «как проверяем пользователя». Provider = «где хранятся пользователи». Один guard — один способ проверки, но в одном приложении их может быть много. <code>auth('guard')-&gt;user()</code> для получения, <code>middleware('auth:guard')</code> для защиты маршрутов.
+    </div>
+  </div>
+
+  <div class="subsection" id="auth-providers">
+    <div class="subsection-title"><i data-lucide="database"></i> Providers — источники пользователей</div>
+
+    <p class="text"><strong>Provider (провайдер)</strong> — компонент, отвечающий за <em>извлечение пользователей из хранилища</em> (БД, LDAP, внешний API и т.д.) на основе переданных данных (email/пароль/токен). Он определяет, <strong>откуда берутся пользователи</strong>, в то время как <a href="#" onclick="showSub('auth','auth-guards',this.parentElement.parentElement); return false;">Guard</a> определяет, <em>как их проверять</em>. Эти два понятия работают вместе: <strong>Guard использует Provider</strong> для получения пользователя.</p>
+
+    <div class="tip">
+      <strong>Guard vs Provider — одной фразой:</strong> Guard — «как проверяем» (session/token/…), Provider — «откуда достаём» (Eloquent/DB/LDAP). Один Guard всегда ссылается на один Provider.
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="file-cog" style="width:14px;height:14px"></i> Где определяются</div>
+    <p class="text">Все провайдеры настраиваются в <code>config/auth.php</code> в массиве <code>providers</code>. По умолчанию:</p>
+<pre><code><span class="c-str">'providers'</span> =&gt; [
+    <span class="c-str">'users'</span> =&gt; [
+        <span class="c-str">'driver'</span> =&gt; <span class="c-str">'eloquent'</span>,
+        <span class="c-str">'model'</span>  =&gt; <span class="c-type">App\Models\User</span>::<span class="c-key">class</span>,
+    ],
+],
+</code></pre>
+    <p class="text">Каждый провайдер содержит:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>driver</code> — <em>тип</em> провайдера (способ получения пользователей)</li>
+      <li><code>model</code> — Eloquent-модель (для <code>eloquent</code>-драйвера)</li>
+      <li><code>table</code> — имя таблицы (для <code>database</code>-драйвера)</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="cpu" style="width:14px;height:14px"></i> Типы драйверов</div>
+    <table class="data-table">
+      <thead><tr><th>Драйвер</th><th>Описание</th><th>Когда использовать</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>eloquent</code></td>
+          <td>Использует Eloquent-модель для поиска пользователя. По умолчанию — <code>App\Models\User</code>.</td>
+          <td>Стандартный выбор. Пользователи в БД, нужны отношения Eloquent, mutators, casts.</td>
+        </tr>
+        <tr>
+          <td><code>database</code></td>
+          <td>Использует Query Builder для прямого обращения к таблице БД (без модели).</td>
+          <td>Простые системы без Eloquent, либо когда модель не нужна.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hammer" style="width:14px;height:14px"></i> Пример настройки</div>
+    <p class="text"><strong>Eloquent-провайдер</strong> с двумя моделями (пользователи + администраторы):</p>
+<pre><code><span class="c-str">'providers'</span> =&gt; [
+    <span class="c-str">'users'</span> =&gt; [
+        <span class="c-str">'driver'</span> =&gt; <span class="c-str">'eloquent'</span>,
+        <span class="c-str">'model'</span>  =&gt; <span class="c-type">App\Models\User</span>::<span class="c-key">class</span>,
+    ],
+    <span class="c-str">'admins'</span> =&gt; [
+        <span class="c-str">'driver'</span> =&gt; <span class="c-str">'eloquent'</span>,
+        <span class="c-str">'model'</span>  =&gt; <span class="c-type">App\Models\Admin</span>::<span class="c-key">class</span>,
+    ],
+],
+</code></pre>
+
+    <p class="text"><strong>Database-провайдер</strong> (без модели):</p>
+<pre><code><span class="c-str">'providers'</span> =&gt; [
+    <span class="c-str">'users'</span> =&gt; [
+        <span class="c-str">'driver'</span> =&gt; <span class="c-str">'database'</span>,
+        <span class="c-str">'table'</span>  =&gt; <span class="c-str">'users'</span>,
+    ],
+],
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="link-2" style="width:14px;height:14px"></i> Как Provider связан с Guard</div>
+    <p class="text">Каждый Guard ссылается на <em>конкретный Provider</em> через ключ <code>provider</code>:</p>
+<pre><code><span class="c-str">'guards'</span> =&gt; [
+    <span class="c-str">'web'</span> =&gt; [
+        <span class="c-str">'driver'</span>   =&gt; <span class="c-str">'session'</span>,
+        <span class="c-str">'provider'</span> =&gt; <span class="c-str">'users'</span>,
+    ],
+    <span class="c-str">'api'</span> =&gt; [
+        <span class="c-str">'driver'</span>   =&gt; <span class="c-str">'token'</span>,
+        <span class="c-str">'provider'</span> =&gt; <span class="c-str">'users'</span>,
+    ],
+    <span class="c-str">'admin'</span> =&gt; [
+        <span class="c-str">'driver'</span>   =&gt; <span class="c-str">'session'</span>,
+        <span class="c-str">'provider'</span> =&gt; <span class="c-str">'admins'</span>,
+    ],
+],
+</code></pre>
+    <p class="text">Теперь guard <code>admin</code> использует провайдер <code>admins</code>, который ссылается на модель <code>Admin</code>. <code>web</code> и <code>api</code> используют один и тот же провайдер <code>users</code>, но разные способы проверки.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="wrench" style="width:14px;height:14px"></i> Кастомные провайдеры (LDAP, SSO, внешние API)</div>
+    <p class="text">Если стандартные провайдеры не подходят (пользователи в LDAP, Active Directory, внешнем API) — реализуйте интерфейс <code>Illuminate\Contracts\Auth\UserProvider</code>:</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate\Contracts\Auth\UserProvider</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate\Contracts\Auth\Authenticatable</span>;
+
+<span class="c-key">class</span> <span class="c-type">LdapUserProvider</span> <span class="c-key">implements</span> <span class="c-type">UserProvider</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">retrieveById</span>(<span class="c-var">$identifier</span>) { <span class="c-comment">/* найти по ID */</span> }
+    <span class="c-key">public function</span> <span class="c-fn">retrieveByToken</span>(<span class="c-var">$identifier</span>, <span class="c-var">$token</span>) { <span class="c-comment">/* remember-me */</span> }
+    <span class="c-key">public function</span> <span class="c-fn">updateRememberToken</span>(<span class="c-type">Authenticatable</span> <span class="c-var">$user</span>, <span class="c-var">$token</span>) { <span class="c-comment">/* сохранить токен */</span> }
+    <span class="c-key">public function</span> <span class="c-fn">retrieveByCredentials</span>(<span class="c-key">array</span> <span class="c-var">$credentials</span>) { <span class="c-comment">/* найти по email/username */</span> }
+    <span class="c-key">public function</span> <span class="c-fn">validateCredentials</span>(<span class="c-type">Authenticatable</span> <span class="c-var">$user</span>, <span class="c-key">array</span> <span class="c-var">$credentials</span>) { <span class="c-comment">/* проверить пароль */</span> }
+}
+</code></pre>
+
+    <p class="text">Регистрация в сервис-провайдере через <code>Auth::provider()</code>:</p>
+<pre><code><span class="c-comment">// AppServiceProvider::boot()</span>
+<span class="c-type">Auth</span>::<span class="c-fn">provider</span>(<span class="c-str">'ldap'</span>, <span class="c-key">function</span> (<span class="c-var">$app</span>, <span class="c-key">array</span> <span class="c-var">$config</span>) {
+    <span class="c-key">return new</span> <span class="c-type">LdapUserProvider</span>();
+});
+</code></pre>
+
+    <p class="text">После этого в <code>config/auth.php</code>:</p>
+<pre><code><span class="c-str">'providers'</span> =&gt; [
+    <span class="c-str">'ldap_users'</span> =&gt; [
+        <span class="c-str">'driver'</span> =&gt; <span class="c-str">'ldap'</span>,
+        <span class="c-comment">// дополнительные настройки (host, base_dn, ...)</span>
+    ],
+],
+</code></pre>
+    <p class="text">Теперь любой guard может использовать этот провайдер для аутентификации из LDAP.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="lightbulb" style="width:14px;height:14px"></i> Зачем нужна гибкость providers</div>
+    <div class="card">
+      <h3>Разделение данных</h3>
+      <p class="text">Одна таблица — для обычных пользователей, другая — для администраторов. У каждой своя модель, свои поля, свои relations.</p>
+    </div>
+    <div class="card">
+      <h3>Интеграция с внешними системами</h3>
+      <p class="text">Корпоративные пользователи — через Active Directory. Внешние клиенты — через обычную БД. Один Laravel обслуживает обе группы.</p>
+    </div>
+    <div class="card">
+      <h3>Миграция</h3>
+      <p class="text">При переходе с одной системы на другую можно <em>заменить провайдер</em> без изменения логики аутентификации выше по стеку.</p>
+    </div>
+    <div class="card">
+      <h3>Тестирование</h3>
+      <p class="text">Фейковый провайдер, возвращающий предопределённых пользователей — простой способ протестировать flow без реальной БД.</p>
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="split" style="width:14px;height:14px"></i> Пример: два разных провайдера в одном приложении</div>
+<pre><code><span class="c-comment">// config/auth.php</span>
+<span class="c-str">'providers'</span> =&gt; [
+    <span class="c-str">'users'</span> =&gt; [
+        <span class="c-str">'driver'</span> =&gt; <span class="c-str">'eloquent'</span>,
+        <span class="c-str">'model'</span>  =&gt; <span class="c-type">App\Models\User</span>::<span class="c-key">class</span>,
+    ],
+    <span class="c-str">'api_clients'</span> =&gt; [
+        <span class="c-str">'driver'</span> =&gt; <span class="c-str">'database'</span>,
+        <span class="c-str">'table'</span>  =&gt; <span class="c-str">'api_clients'</span>,
+    ],
+],
+
+<span class="c-str">'guards'</span> =&gt; [
+    <span class="c-str">'web'</span> =&gt; [
+        <span class="c-str">'driver'</span>   =&gt; <span class="c-str">'session'</span>,
+        <span class="c-str">'provider'</span> =&gt; <span class="c-str">'users'</span>,
+    ],
+    <span class="c-str">'api'</span> =&gt; [
+        <span class="c-str">'driver'</span>   =&gt; <span class="c-str">'passport'</span>,
+        <span class="c-str">'provider'</span> =&gt; <span class="c-str">'api_clients'</span>,
+    ],
+],
+</code></pre>
+    <p class="text">Веб-часть использует модель <code>User</code>, а API — таблицу <code>api_clients</code>. Никаких пересечений: разные модели, разные способы проверки, но одна общая инфраструктура Laravel.</p>
+
+    <div class="remember-box">
+      <strong>Итог:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><strong>Provider</strong> = источник данных пользователей (Eloquent, БД-таблица, LDAP, внешнее API).</li>
+        <li><strong>Драйверы:</strong> <code>eloquent</code> (стандарт) и <code>database</code> (простой без модели).</li>
+        <li><strong>Кастомные</strong> — <code>Auth::provider(...)</code> в <code>boot()</code> для интеграции с внешними системами.</li>
+        <li><strong>Связь:</strong> Guard (как) использует Provider (откуда) для поиска и проверки учётных данных.</li>
+        <li><strong>Гибкость:</strong> разные части приложения — разные провайдеры (админы из одной таблицы, пользователи из другой).</li>
+      </ul>
     </div>
   </div>
 
