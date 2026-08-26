@@ -185,6 +185,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('validation','val-formrequest',this)">Компоненты FormRequest</a>
     <a class="nav-subitem" onclick="showSub('validation','val-compare',this)">FormRequest vs inline vs Validator::make</a>
     <a class="nav-subitem" onclick="showSub('validation','val-practice',this)">Практика: пример кода</a>
+    <a class="nav-subitem" onclick="showSub('validation','val-store-update',this)">Store vs Update Request</a>
     <a class="nav-subitem" onclick="showSub('validation','val-pitfalls',this)">Особые случаи</a>
   </div>
 
@@ -1487,6 +1488,25 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
 }, <span class="c-str">'orders.csv'</span>);</code></pre>
 
     <p class="text">Подробно про HTTP-объекты (<code>RedirectResponse</code>, <code>JsonResponse</code>, <code>Response</code>) — в разделе <strong>HTTP-объекты Laravel</strong>.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="package-2" style="width:14px;height:14px"></i> Хелпер <code>compact()</code> для передачи данных в view</div>
+    <p class="text"><code>compact()</code> — встроенная функция PHP: создаёт массив, используя <em>имена переменных как ключи</em>. Синтаксический сахар для сокращения записи при передаче переменных во view.</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">show</span>(<span class="c-type">Post</span> <span class="c-var">$post</span>)
+{
+    <span class="c-comment">// Вариант 1 — явный массив</span>
+    <span class="c-key">return</span> <span class="c-fn">view</span>(<span class="c-str">'posts.show'</span>, [<span class="c-str">'post'</span> =&gt; <span class="c-var">$post</span>]);
+
+    <span class="c-comment">// Вариант 2 — то же самое через compact()</span>
+    <span class="c-key">return</span> <span class="c-fn">view</span>(<span class="c-str">'posts.show'</span>, <span class="c-fn">compact</span>(<span class="c-str">'post'</span>));
+}
+</code></pre>
+    <p class="text"><strong>Как работает:</strong> если есть переменная <code>$post</code>, вызов <code>compact('post')</code> вернёт <code>['post' =&gt; $post]</code>. Несколько переменных: <code>compact('post', 'user')</code> → <code>['post' =&gt; $post, 'user' =&gt; $user]</code>.</p>
+
+    <div class="tip">
+      <strong>Плюсы:</strong> короче, чем массив с ключами вручную, особенно когда переменных 3–5. <strong>Критика:</strong> имена ключей неочевидны без чтения ближайшего кода — новичок не всегда понимает, откуда взялись переменные во view. В сообществе Laravel применяется широко — вопрос стиля команды.
+    </div>
+
+    <div class="pitfall"><strong>Опечатка в имени = тихая ошибка.</strong> <code>compact('psot')</code> (вместо <code>'post'</code>) в PHP 7.4− молча возвращал <code>[]</code>. В PHP 8.0+ бросает <code>Warning</code>, но не <code>Error</code> — во view переменная просто окажется <code>undefined</code>. IDE обычно подсвечивают. Явный массив <code>['post' =&gt; $post]</code> статически проверяем лучше.</div>
   </div>
 </div>
 
@@ -3264,6 +3284,94 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
     <span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">json</span>(<span class="c-var">$user</span>);
 }
 </code></pre>
+  </div>
+
+  <div class="subsection" id="val-store-update">
+    <div class="subsection-title"><i data-lucide="git-branch"></i> Store vs Update Request — почему разделяют</div>
+
+    <p class="text">Типичный паттерн для CRUD-моделей — <strong>два отдельных FormRequest</strong>: один на создание, второй на обновление. Правила почти всегда отличаются (уникальность, обязательность, проверка связанных записей), и разделение позволяет держать оба класса плоскими без <code>if</code> внутри <code>rules()</code>.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> 1. <code>StorePostRequest</code> — создание</div>
+    <p class="text">Правила применяются <em>только к новым записям</em>. <code>unique</code> без всяких исключений — новой записи ни с чем сравниваться не нужно.</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">StorePostRequest</span> <span class="c-key">extends</span> <span class="c-type">FormRequest</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">rules</span>(): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> [
+            <span class="c-str">'title'</span>   =&gt; <span class="c-str">'required|string|max:255'</span>,
+            <span class="c-str">'slug'</span>    =&gt; <span class="c-str">'required|unique:posts,slug'</span>, <span class="c-comment">// уникален в таблице</span>
+            <span class="c-str">'content'</span> =&gt; <span class="c-str">'required'</span>,
+        ];
+    }
+}
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="edit" style="width:14px;height:14px"></i> 2. <code>UpdatePostRequest</code> — обновление</div>
+    <p class="text">Ключевое отличие — при проверке <code>unique</code> нужно <strong>игнорировать текущую запись</strong>, иначе пользователь получит ошибку «slug уже занят», редактируя тот же самый пост со старым slug'ом.</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">UpdatePostRequest</span> <span class="c-key">extends</span> <span class="c-type">FormRequest</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">rules</span>(): <span class="c-key">array</span>
+    {
+        <span class="c-comment">// Пост берётся через Route Model Binding</span>
+        <span class="c-var">$postId</span> = <span class="c-var">$this</span>-&gt;<span class="c-fn">route</span>(<span class="c-str">'post'</span>)-&gt;<span class="c-var">id</span>;
+
+        <span class="c-key">return</span> [
+            <span class="c-str">'title'</span>   =&gt; <span class="c-str">'required|string|max:255'</span>,
+            <span class="c-comment">// Уникальность, но исключаем текущий пост по ID</span>
+            <span class="c-str">'slug'</span>    =&gt; <span class="c-str">'required|unique:posts,slug,'</span> . <span class="c-var">$postId</span>,
+            <span class="c-str">'content'</span> =&gt; <span class="c-str">'required'</span>,
+        ];
+    }
+}
+</code></pre>
+
+    <p class="text"><strong>Синтаксис <code>unique:posts,slug,{id}</code>:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>unique:posts</code> — проверить в таблице <code>posts</code></li>
+      <li><code>,slug</code> — по колонке <code>slug</code></li>
+      <li><code>,{id}</code> — <em>исключить</em> запись с этим ID из проверки (третий параметр = ignore id)</li>
+    </ul>
+
+    <div class="tip">
+      <strong>Более чистый вариант через <code>Rule::unique()</code>:</strong>
+<pre style="margin-top:8px"><code><span class="c-key">use</span> <span class="c-type">Illuminate\Validation\Rule</span>;
+
+<span class="c-str">'slug'</span> =&gt; [
+    <span class="c-str">'required'</span>,
+    <span class="c-type">Rule</span>::<span class="c-fn">unique</span>(<span class="c-str">'posts'</span>, <span class="c-str">'slug'</span>)-&gt;<span class="c-fn">ignore</span>(<span class="c-var">$this</span>-&gt;<span class="c-fn">route</span>(<span class="c-str">'post'</span>)),
+],
+</code></pre>
+      Такая запись читаемее, лучше типизирована и меньше шансов ошибиться со строковой конкатенацией. Второй аргумент <code>ignore()</code> — колонка первичного ключа (по умолчанию <code>id</code>).
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="lightbulb" style="width:14px;height:14px"></i> Почему разделяют, а не один класс с <code>if</code></div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Правила <strong>store</strong> и <strong>update</strong> почти всегда различаются: уникальность, обязательные поля (при PATCH часть полей опциональна), проверка связанных записей.</li>
+      <li>Один <code>PostRequest</code> с <code>if ($this-&gt;isMethod('POST'))</code> внутри <code>rules()</code> — быстро превращается в лапшу.</li>
+      <li>Два класса — <em>явнее</em>: сразу видно в сигнатуре контроллера, какие правила применяются в данном методе.</li>
+      <li>Тесты пишутся отдельно для каждого сценария без ветвлений.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hammer" style="width:14px;height:14px"></i> Использование в контроллере</div>
+<pre><code><span class="c-key">class</span> <span class="c-type">PostController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">StorePostRequest</span> <span class="c-var">$request</span>)
+    {
+        <span class="c-var">$post</span> = <span class="c-type">Post</span>::<span class="c-fn">create</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>());
+        <span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">route</span>(<span class="c-str">'posts.show'</span>, <span class="c-var">$post</span>);
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">update</span>(<span class="c-type">UpdatePostRequest</span> <span class="c-var">$request</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>)
+    {
+        <span class="c-var">$post</span>-&gt;<span class="c-fn">update</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>());
+        <span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">route</span>(<span class="c-str">'posts.show'</span>, <span class="c-var">$post</span>);
+    }
+}
+</code></pre>
+
+    <div class="remember-box">
+      <strong>Правило:</strong> любой CRUD-ресурс с полями <code>unique</code>/<code>exists</code>/условной обязательностью → <em>два</em> FormRequest'а. Тонкие, плоские, без <code>if</code>. Для <code>unique</code> при update — обязательно <code>ignore()</code> с ID текущей модели.
+    </div>
   </div>
 
   <div class="subsection" id="val-pitfalls">
