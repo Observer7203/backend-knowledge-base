@@ -148,6 +148,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('actions-services','as-repository',this)">Repository pattern</a>
     <a class="nav-subitem" onclick="showSub('actions-services','as-folders',this)">Куда положить: app/Services vs app/Actions</a>
     <a class="nav-subitem" onclick="showSub('actions-services','as-testing',this)">Тестирование отдельно от контроллера</a>
+    <a class="nav-subitem" onclick="showSub('actions-services','as-refactor',this)">Рефакторинг: толстый → тонкий (5 шагов)</a>
     <a class="nav-subitem" onclick="showSub('actions-services','as-practice',this)">Практика: PlaceOrder Action</a>
   </div>
   <a class="nav-item" onclick="showSection('middleware',this)"><i data-lucide="filter"></i> Middleware</a>
@@ -1236,6 +1237,20 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
       </tbody>
     </table>
     <p class="text">Подробно про Actions / Services — в KB_13 Service Container и в отдельном разделе «Actions & Services» (см. sidebar).</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="scale" style="width:14px;height:14px"></i> Толстый — <em>всегда ли</em> плохо?</div>
+    <p class="text">Толстый контроллер — <strong>антипаттерн, но не абсолютное зло</strong>. В очень маленьких проектах (пара страниц, никакой сложной логики, никто не собирается это поддерживать долго) — держать код прямо в контроллере иногда допустимо. Однако как только проект начинает расти, толстый контроллер приводит к типовым проблемам:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Сложно тестировать</strong> — нужно поднимать HTTP-окружение, моки Request, сессию, авторизацию.</li>
+      <li><strong>Сложно переиспользовать</strong> — та же операция из CLI-команды / job / другого контроллера превращается в копипаст.</li>
+      <li><strong>Нарушение SRP</strong> — контроллер знает про транзакции, платёжные шлюзы, email, склад одновременно.</li>
+      <li><strong>Бизнес-правила «размазаны»</strong> — половина в контроллере, половина в модели, что-то в middleware — концы не сойдутся.</li>
+    </ul>
+    <p class="text">Тонкий контроллер — <strong>лучшая практика для проектов любого размера</strong>, где ожидается развитие. Отвечает только за: приём + валидация запроса (FormRequest) → вызов Action/Service → формирование HTTP-ответа. Всё остальное — в отдельные классы: services, actions, events, listeners, jobs, репозитории.</p>
+
+    <div class="tip">
+      <strong>Правило-триггер:</strong> если в методе контроллера появляется <code>if</code>, цикл, вызов внешнего API, транзакция, работа с БД (кроме простого <code>find</code>), отправка письма/уведомления — <em>это нужно вынести</em>. Контроллер = «посредник», не «исполнитель».
+    </div>
   </div>
 
   <div class="subsection" id="ctrl-resource">
@@ -1776,6 +1791,193 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
 
     <div class="tip">
       Feature-тесты (через <code>$this-&gt;post()</code>) остаются — проверяют интеграцию контроллер + Action + middleware + validation. Но <em>основную</em> бизнес-логику тестируйте юнит-тестами Actions/Services — их проще писать и они на порядок быстрее.
+    </div>
+  </div>
+
+  <div class="subsection" id="as-refactor">
+    <div class="subsection-title"><i data-lucide="scissors"></i> Рефакторинг: толстый контроллер → тонкий (5 шагов)</div>
+
+    <p class="text">Пошаговый разбор реального рефакторинга: как жирный <code>OrderController::store</code> «худеет» до 4 строк. Каждый шаг — одно ответственное изменение, каждое улучшение можно смёрджить отдельно.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="alert-triangle" style="width:14px;height:14px"></i> Исходный код — жирный контроллер</div>
+    <p class="text">Что делает <code>OrderController::store</code> в исходном виде:</p>
+    <ol style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Валидация полей через <code>$request-&gt;validate()</code> (без FormRequest)</li>
+      <li>Бизнес-проверка: сумма корзины &lt; 100 → ошибка</li>
+      <li>Создание заказа в БД</li>
+      <li>Резервирование товаров на складе</li>
+      <li>Оплата через Stripe</li>
+      <li>Отправка уведомления на email <em>синхронно</em></li>
+    </ol>
+
+    <p class="text"><strong>Проблемы:</strong> валидация бизнес-правила смешана с созданием · БД и внешние сервисы (склад, Stripe) внутри контроллера · синхронная почта тормозит ответ · тестовой изоляции нет.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="milestone" style="width:14px;height:14px"></i> Шаг 1 — вынести валидацию в FormRequest</div>
+<pre><code><span class="c-comment">// app/Http/Requests/StoreOrderRequest.php</span>
+<span class="c-key">class</span> <span class="c-type">StoreOrderRequest</span> <span class="c-key">extends</span> <span class="c-type">FormRequest</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">authorize</span>(): <span class="c-key">bool</span> { <span class="c-key">return</span> <span class="c-key">true</span>; }
+
+    <span class="c-key">public function</span> <span class="c-fn">rules</span>(): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> [
+            <span class="c-str">'items'</span> =&gt; <span class="c-str">'required|array|min:1'</span>,
+            <span class="c-str">'email'</span> =&gt; <span class="c-str">'required|email'</span>,
+        ];
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">withValidator</span>(<span class="c-var">$validator</span>): <span class="c-key">void</span>
+    {
+        <span class="c-var">$validator</span>-&gt;<span class="c-fn">after</span>(<span class="c-key">function</span> (<span class="c-var">$validator</span>) {
+            <span class="c-comment">// бизнес-правило: сумма корзины >= 100</span>
+            <span class="c-key">if</span> (<span class="c-type">Cart</span>::<span class="c-fn">total</span>() &lt; <span class="c-num">100</span>) {
+                <span class="c-var">$validator</span>-&gt;<span class="c-fn">errors</span>()-&gt;<span class="c-fn">add</span>(<span class="c-str">'cart'</span>, <span class="c-str">'Минимальная сумма заказа 100'</span>);
+            }
+        });
+    }
+}
+</code></pre>
+    <p class="text">Контроллер больше не занимается валидацией. Бизнес-правила проверяются в <code>withValidator</code> — падают тем же 422, что и обычные rules.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="milestone" style="width:14px;height:14px"></i> Шаг 2 — вынести бизнес-логику в Action</div>
+<pre><code><span class="c-comment">// app/Actions/Order/PlaceOrderAction.php</span>
+<span class="c-key">namespace</span> <span class="c-type">App\Actions\Order</span>;
+
+<span class="c-key">use</span> <span class="c-type">App\Models\Order</span>;
+<span class="c-key">use</span> <span class="c-type">App\Services\InventoryService</span>;
+<span class="c-key">use</span> <span class="c-type">App\Contracts\PaymentGateway</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate\Support\Facades\DB</span>;
+<span class="c-key">use</span> <span class="c-type">App\Events\OrderPlaced</span>;
+
+<span class="c-key">class</span> <span class="c-type">PlaceOrderAction</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+        <span class="c-key">private</span> <span class="c-type">InventoryService</span> <span class="c-var">$inventory</span>,
+        <span class="c-key">private</span> <span class="c-type">PaymentGateway</span>   <span class="c-var">$paymentGateway</span>,
+    ) {}
+
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-key">array</span> <span class="c-var">$data</span>): <span class="c-type">Order</span>
+    {
+        <span class="c-key">return</span> <span class="c-type">DB</span>::<span class="c-fn">transaction</span>(<span class="c-key">function</span> () <span class="c-key">use</span> (<span class="c-var">$data</span>) {
+            <span class="c-comment">// 1. Создаём заказ</span>
+            <span class="c-var">$order</span> = <span class="c-type">Order</span>::<span class="c-fn">create</span>([
+                <span class="c-str">'email'</span> =&gt; <span class="c-var">$data</span>[<span class="c-str">'email'</span>],
+                <span class="c-str">'total'</span> =&gt; <span class="c-var">$this</span>-&gt;<span class="c-fn">calculateTotal</span>(<span class="c-var">$data</span>[<span class="c-str">'items'</span>]),
+            ]);
+
+            <span class="c-comment">// 2. Резервируем товары</span>
+            <span class="c-key">foreach</span> (<span class="c-var">$data</span>[<span class="c-str">'items'</span>] <span class="c-key">as</span> <span class="c-var">$item</span>) {
+                <span class="c-var">$this</span>-&gt;<span class="c-var">inventory</span>-&gt;<span class="c-fn">reserve</span>(<span class="c-var">$item</span>[<span class="c-str">'sku'</span>], <span class="c-var">$item</span>[<span class="c-str">'qty'</span>]);
+            }
+
+            <span class="c-comment">// 3. Оплата — через интерфейс, не hardcoded Stripe</span>
+            <span class="c-var">$this</span>-&gt;<span class="c-var">paymentGateway</span>-&gt;<span class="c-fn">charge</span>(<span class="c-var">$order</span>-&gt;<span class="c-var">total</span>, <span class="c-var">$order</span>-&gt;<span class="c-var">id</span>);
+
+            <span class="c-comment">// 4. Побочные эффекты — через событие</span>
+            <span class="c-fn">event</span>(<span class="c-key">new</span> <span class="c-type">OrderPlaced</span>(<span class="c-var">$order</span>));
+
+            <span class="c-key">return</span> <span class="c-var">$order</span>;
+        });
+    }
+
+    <span class="c-key">private function</span> <span class="c-fn">calculateTotal</span>(<span class="c-key">array</span> <span class="c-var">$items</span>): <span class="c-key">float</span> { <span class="c-comment">/* ... */</span> }
+}
+</code></pre>
+    <p class="text"><strong>Что дал этот шаг:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Зависимости <code>InventoryService</code> и <code>PaymentGateway</code> внедрены через конструктор — легко подменить в тестах.</li>
+      <li><code>DB::transaction()</code> обеспечивает атомарность: любой ошибка — откат всех операций.</li>
+      <li>Оплата ушла за интерфейс <code>PaymentGateway</code>.</li>
+      <li>Отправка письма заменена на событие <code>OrderPlaced</code> — обработается асинхронным listener'ом.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="milestone" style="width:14px;height:14px"></i> Шаг 3 — интерфейс и реализация для оплаты</div>
+<pre><code><span class="c-comment">// app/Contracts/PaymentGateway.php</span>
+<span class="c-key">interface</span> <span class="c-type">PaymentGateway</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">charge</span>(<span class="c-key">float</span> <span class="c-var">$amount</span>, <span class="c-key">int</span> <span class="c-var">$orderId</span>): <span class="c-key">void</span>;
+}
+
+<span class="c-comment">// app/Services/StripePaymentGateway.php</span>
+<span class="c-key">class</span> <span class="c-type">StripePaymentGateway</span> <span class="c-key">implements</span> <span class="c-type">PaymentGateway</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">charge</span>(<span class="c-key">float</span> <span class="c-var">$amount</span>, <span class="c-key">int</span> <span class="c-var">$orderId</span>): <span class="c-key">void</span>
+    {
+        <span class="c-comment">// вызов Stripe API</span>
+    }
+}
+
+<span class="c-comment">// Регистрируем биндинг в AppServiceProvider::register()</span>
+<span class="c-var">$this</span>-&gt;<span class="c-var">app</span>-&gt;<span class="c-fn">bind</span>(<span class="c-type">PaymentGateway</span>::<span class="c-key">class</span>, <span class="c-type">StripePaymentGateway</span>::<span class="c-key">class</span>);
+</code></pre>
+    <p class="text">Теперь Action не привязан к Stripe. Завтра меняем на <code>YooKassaPaymentGateway</code> — только биндинг в провайдере, Action не трогаем. В тестах — <code>FakePaymentGateway</code>.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="milestone" style="width:14px;height:14px"></i> Шаг 4 — событие и listener для уведомления</div>
+<pre><code><span class="c-comment">// app/Events/OrderPlaced.php</span>
+<span class="c-key">class</span> <span class="c-type">OrderPlaced</span>
+{
+    <span class="c-key">use</span> <span class="c-type">SerializesModels</span>;
+
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">public</span> <span class="c-type">Order</span> <span class="c-var">$order</span>) {}
+}
+
+<span class="c-comment">// app/Listeners/SendOrderConfirmation.php</span>
+<span class="c-key">class</span> <span class="c-type">SendOrderConfirmation</span> <span class="c-key">implements</span> <span class="c-type">ShouldQueue</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">OrderPlaced</span> <span class="c-var">$event</span>): <span class="c-key">void</span>
+    {
+        <span class="c-type">Mail</span>::<span class="c-fn">to</span>(<span class="c-var">$event</span>-&gt;<span class="c-var">order</span>-&gt;<span class="c-var">email</span>)-&gt;<span class="c-fn">send</span>(<span class="c-key">new</span> <span class="c-type">OrderPlacedMail</span>(<span class="c-var">$event</span>-&gt;<span class="c-var">order</span>));
+    }
+}
+
+<span class="c-comment">// EventServiceProvider::$listen</span>
+<span class="c-key">protected</span> <span class="c-var">$listen</span> = [
+    <span class="c-type">OrderPlaced</span>::<span class="c-key">class</span> =&gt; [<span class="c-type">SendOrderConfirmation</span>::<span class="c-key">class</span>],
+];
+</code></pre>
+    <p class="text"><code>ShouldQueue</code> у listener'а → письмо уходит через очередь, <strong>не блокируя ответ</strong>. Пользователь получает redirect за 50мс, а email доставляется параллельно.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="milestone" style="width:14px;height:14px"></i> Шаг 5 — тонкий контроллер</div>
+<pre><code><span class="c-key">class</span> <span class="c-type">OrderController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">StoreOrderRequest</span> <span class="c-var">$request</span>, <span class="c-type">PlaceOrderAction</span> <span class="c-var">$action</span>)
+    {
+        <span class="c-var">$order</span> = <span class="c-var">$action</span>-&gt;<span class="c-fn">handle</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>());
+
+        <span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">route</span>(<span class="c-str">'orders.show'</span>, <span class="c-var">$order</span>)
+                         -&gt;<span class="c-fn">with</span>(<span class="c-str">'success'</span>, <span class="c-str">'Заказ оформлен!'</span>);
+    }
+}
+</code></pre>
+    <p class="text">Контроллер стал тонким: принять запрос → передать в Action → вернуть редирект. Вся сложная логика вынесена.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="check-circle" style="width:14px;height:14px"></i> Что мы получили</div>
+    <div class="card">
+      <h3>Тестируемость</h3>
+      <p class="text"><code>PlaceOrderAction</code> тестируется <em>отдельно от HTTP</em> — просто <code>$action-&gt;handle($data)</code> с моками зависимостей. Никаких Request/Response.</p>
+    </div>
+    <div class="card">
+      <h3>Переиспользование</h3>
+      <p class="text">Один <code>PlaceOrderAction</code> можно вызывать из: контроллера, Artisan-команды, другого Action, Job, Console kernel. Логика не привязана к HTTP.</p>
+    </div>
+    <div class="card">
+      <h3>Асинхронность</h3>
+      <p class="text">Тяжёлые побочные эффекты (email) — через <code>ShouldQueue</code> listener. Ответ пользователю моментальный.</p>
+    </div>
+    <div class="card">
+      <h3>Подмена платёжного шлюза</h3>
+      <p class="text">Смена Stripe → YooKassa = одна строка биндинга в провайдере. Тесты — <code>FakePaymentGateway</code> без реальных запросов.</p>
+    </div>
+
+    <div class="remember-box">
+      <strong>Итог по практике:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><strong>Валидация</strong> (включая бизнес-правила через <code>withValidator</code>) → <code>FormRequest</code></li>
+        <li><strong>Бизнес-логика + транзакции</strong> → <code>Action</code> / <code>Service</code></li>
+        <li><strong>Побочные эффекты</strong> (почта, внешние API, уведомления) → <code>Event</code> + <code>Listener (ShouldQueue)</code> или <code>Job</code></li>
+        <li><strong>Инфраструктурные зависимости</strong> (платёж, склад) → интерфейсы + DI</li>
+        <li><strong>Контроллер</strong> — 3–4 строки: <code>$action-&gt;handle($request-&gt;validated())</code> + <code>return redirect(...)</code></li>
+      </ul>
     </div>
   </div>
 
