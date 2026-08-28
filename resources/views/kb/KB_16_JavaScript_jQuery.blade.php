@@ -518,6 +518,118 @@ pre code{background:transparent;color:inherit;padding:0;border-radius:0;font-siz
     </ul>
 
     <div class="pitfall"><strong>⚠ Классическая ошибка:</strong> <code>import useI18n from 'vue-i18n'</code> (без скобок) → в переменной <code>useI18n</code> окажется <code>undefined</code> либо весь модуль-объект (зависит от bundler'а). Вылезет ошибка типа <em>«useI18n is not a function»</em>. Проверяй скобки первым делом.</div>
+
+    <h3 class="subsection-title" style="margin-top:18px">Откуда вообще берётся имя <code>useI18n</code></h3>
+    <p style="color:var(--text2);line-height:1.75;margin-bottom:10px;font-size:13.5px">
+      Имя <strong>задаёт автор библиотеки</strong>, когда пишет <code>export</code>. У <code>vue-i18n</code> в исходниках буквально лежит:
+    </p>
+<pre><code><span class="c-comment">// где-то в node_modules/vue-i18n/dist/vue-i18n.mjs</span>
+<span class="c-key">export function</span> <span class="c-fn">useI18n</span>(<span class="c-var">options</span>) { ... }</code></pre>
+    <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
+      Слово <code>useI18n</code> они <em>сами придумали</em> и записали в коде. Могли назвать <code>useLang</code>, <code>translate</code> — но выбрали именно так. Ты как потребитель обязан импортить <strong>с точно таким именем</strong>, потому что оно жёстко зашито в их экспортах.
+    </p>
+
+    <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
+      <strong>Как посмотреть список экспортов реальной библиотеки:</strong>
+    </p>
+<pre><code><span class="c-comment"># Ищем строки export в скомпилированном dist</span>
+grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs | head -3</code></pre>
+    <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
+      В конце файла будет строка вида:
+    </p>
+<pre><code><span class="c-key">export</span> { <span class="c-fn">DatetimeFormat</span>, <span class="c-fn">I18nD</span>, <span class="c-fn">I18nInjectionKey</span>, <span class="c-fn">I18nN</span>, <span class="c-fn">I18nT</span>,
+         <span class="c-fn">NumberFormat</span>, <span class="c-fn">Translation</span>, <span class="c-var">VERSION</span>,
+         <span class="c-fn">createI18n</span>, <span class="c-fn">useI18n</span>, <span class="c-fn">vTDirective</span> };</code></pre>
+    <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
+      Это <strong>список всего, что библиотека отдаёт наружу</strong>. Каждое имя можно импортить в скобках: <code>import { createI18n }</code>, <code>import { useI18n }</code>, <code>import { Translation }</code>. Чего в списке нет — <em>импортить нельзя</em>, ошибка будет.
+    </p>
+
+    <div class="info-box success">
+      <strong>Мнемоника:</strong> «имя = договор двух сторон». Автор написал <code>export const X</code> — назначил имя. Ты пишешь <code>import { X }</code> — цитируешь его буквально. Хочешь по-своему? Только через <code>as</code>: <code>import { X as MyX }</code>.
+    </div>
+
+    <h3 class="subsection-title" style="margin-top:18px"><code>import</code> / <code>export</code> — это <em>не функции</em>, а ключевые слова</h3>
+    <p style="color:var(--text2);line-height:1.75;margin-bottom:10px;font-size:13.5px">
+      Частая путаница: «это функции же?». <strong>Нет.</strong> Это <em>ключевые слова синтаксиса</em> ES-модулей — как <code>if</code>, <code>for</code>, <code>const</code>, <code>class</code>. Часть самого языка.
+    </p>
+    <table class="data-table">
+      <thead><tr><th></th><th>Функция</th><th><code>import</code> / <code>export</code></th></tr></thead>
+      <tbody>
+        <tr><td>Скобки при вызове</td><td><code>fn(x)</code></td><td>Нет — <code>import X from 'y'</code> без <code>(...)</code></td></tr>
+        <tr><td>Где можно писать</td><td>Где угодно</td><td><strong>Только на верхнем уровне файла</strong> (не в <code>if</code>, не в функции)</td></tr>
+        <tr><td>Когда работает</td><td>В момент вызова, в runtime</td><td>В <em>фазе загрузки</em>, до запуска кода — движок парсит и строит граф зависимостей</td></tr>
+        <tr><td>Динамические имена</td><td><code>fn(variable)</code></td><td>Нельзя — путь к модулю должен быть <em>литералом</em>: <code>from './x.js'</code>, не <code>from variable</code></td></tr>
+      </tbody>
+    </table>
+
+    <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
+      <strong>Что это значит на практике:</strong> нельзя написать <code>if (условие) import X from 'y'</code>. Импорты всегда наверху файла, до любого кода. Bundler (Vite / webpack) читает их <em>до</em> запуска, чтобы понять «какой файл от какого зависит», склеить всё в бандл, вырезать неиспользуемое (tree-shaking).
+    </p>
+
+    <h3 class="subsection-title" style="margin-top:18px">Динамический <code>import()</code> — <em>единственный случай</em>, когда import похож на функцию</h3>
+    <p style="color:var(--text2);line-height:1.75;margin-bottom:10px;font-size:13.5px">
+      Отдельная штука: <code>import('./x.js')</code> со скобками — это <em>функция</em>, возвращает Promise. Используется для <strong>code splitting</strong>: подгрузить модуль не сразу, а по требованию (например, только когда пользователь открыл окно чата).
+    </p>
+<pre><code><span class="c-comment">// Обычный (статический) — сразу при загрузке страницы</span>
+<span class="c-key">import</span> { <span class="c-fn">useI18n</span> } <span class="c-key">from</span> <span class="c-str">'vue-i18n'</span>;
+
+<span class="c-comment">// Динамический — грузим только когда нужно</span>
+<span class="c-fn">button</span>.<span class="c-fn">addEventListener</span>(<span class="c-str">'click'</span>, <span class="c-key">async</span> () =&gt; {
+    <span class="c-key">const</span> { <span class="c-fn">openChat</span> } = <span class="c-key">await</span> <span class="c-fn">import</span>(<span class="c-str">'./chat.js'</span>);
+    <span class="c-fn">openChat</span>();
+});</code></pre>
+    <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
+      Здесь <code>import(...)</code> — это <em>функция</em> (со скобками), возвращающая Promise с объектом-модулем. Bundler на этой точке разрежет бандл на два файла: главный и «chat-chunk». Пользователь скачает второй только при клике.
+    </p>
+
+    <h3 class="subsection-title" style="margin-top:18px">ESM vs CommonJS — короткая история</h3>
+    <p style="color:var(--text2);line-height:1.75;margin-bottom:10px;font-size:13.5px">
+      <code>import</code> / <code>export</code> появились в <strong>ES6 (2015)</strong> — это <strong>ESM</strong> (ECMAScript Modules). До этого 10+ лет Node.js жил на <strong>CommonJS</strong> — свой формат с <code>require()</code> и <code>module.exports</code>. Обе системы до сих пор встречаются.
+    </p>
+    <table class="data-table">
+      <thead><tr><th></th><th>CommonJS (старое, Node.js)</th><th>ESM (современное, стандарт)</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Импорт</td>
+          <td><code>const X = require('mod')</code></td>
+          <td><code>import X from 'mod'</code></td>
+        </tr>
+        <tr>
+          <td>Named</td>
+          <td><code>const { X } = require('mod')</code> (деструктуризация из объекта)</td>
+          <td><code>import { X } from 'mod'</code></td>
+        </tr>
+        <tr>
+          <td>Экспорт</td>
+          <td><code>module.exports = X</code> / <code>exports.foo = 1</code></td>
+          <td><code>export default X</code> / <code>export const foo = 1</code></td>
+        </tr>
+        <tr>
+          <td>Динамика</td>
+          <td>Обычная функция — можно везде</td>
+          <td>Статический наверху, динамический через <code>import()</code></td>
+        </tr>
+        <tr>
+          <td>Файловое расширение</td>
+          <td><code>.js</code> (по умолчанию в старых Node)</td>
+          <td><code>.mjs</code> или <code>.js</code> в <code>"type": "module"</code> проекте</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="pitfall"><strong>⚠ Смесь двух форматов.</strong> В Node-мире бывает: пакет опубликован в CommonJS, а ты в проекте пишешь ESM (или наоборот). Отсюда ошибки вида <code>Cannot use import statement outside a module</code> или <code>ERR_REQUIRE_ESM</code>. Лечится: в <code>package.json</code> поставить <code>"type": "module"</code> (весь проект ESM), или использовать динамический <code>import()</code> для загрузки ESM-пакета из CJS-кода.</div>
+
+    <div class="remember-box">
+      <strong>Итог по модулям:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><code>import { X } from 'mod'</code> — <em>named</em>, имя должно совпадать с <code>export</code> автора</li>
+        <li><code>import X from 'mod'</code> — <em>default</em>, имя произвольное</li>
+        <li>Имена задаёт автор библиотеки — проверить можно <code>grep '^export' node_modules/pkg/dist/*.mjs</code></li>
+        <li><code>import</code>/<code>export</code> — ключевые слова, работают только на верхнем уровне, парсятся до запуска кода</li>
+        <li>Динамический <code>import('...')</code> — единственная «функциональная» форма, для code splitting</li>
+        <li>CommonJS (<code>require</code>) — старый Node-формат, до 2015. Сейчас — постепенно вытесняется ESM</li>
+      </ul>
+    </div>
   </div>
 
   <div class="subsection">
