@@ -967,6 +967,49 @@ npm run dev</code></pre>
 <span class="c-comment">// Использование в любом компоненте</span>
 <span class="c-key">const</span> { <span class="c-var">data</span>: <span class="c-var">users</span>, <span class="c-var">loading</span>, <span class="c-var">error</span> } = <span class="c-fn">useFetch</span>(<span class="c-str">'/api/users'</span>);</code></pre>
   </div>
+
+  <div class="subsection">
+    <h3 class="subsection-title">Готовые composables из библиотек — пример <code>vue-i18n</code></h3>
+    <p style="color:var(--text2);line-height:1.75;margin-bottom:10px;font-size:13.5px">
+      Композаблы — стандартный способ, которым Vue-библиотеки отдают API. Названия по конвенции <code>use*</code>: <code>useRoute()</code> (Vue Router), <code>useI18n()</code> (vue-i18n), <code>useStorage()</code> (VueUse). Все они возвращают <em>объект</em>, из которого удобно вытащить нужные поля деструктуризацией.
+    </p>
+    <pre><code><span class="c-comment">// Named import — потому что useI18n экспортируется как:</span>
+<span class="c-comment">// export function useI18n() { ... }  (в vue-i18n)</span>
+<span class="c-key">import</span> { <span class="c-fn">useI18n</span> } <span class="c-key">from</span> <span class="c-str">'vue-i18n'</span>;
+
+<span class="c-comment">// В &lt;script setup&gt; или в setup() — только внутри компонента</span>
+<span class="c-key">const</span> { <span class="c-var">t</span>, <span class="c-var">locale</span> } = <span class="c-fn">useI18n</span>();
+
+<span class="c-comment">// t   — функция перевода:  t('interface.hello') → 'Привет'</span>
+<span class="c-comment">// locale — реактивный ref: locale.value = 'en' переключает язык глобально</span></code></pre>
+
+    <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
+      Использование в шаблоне и логике:
+    </p>
+    <pre><code><span class="c-key">&lt;template&gt;</span>
+    &lt;h1&gt;&#123;&#123; t('interface.hello') &#125;&#125;&lt;/h1&gt;
+    &lt;p&gt;Текущий язык: &#123;&#123; locale &#125;&#125;&lt;/p&gt;
+    &lt;button @click=<span class="c-str">"setLang('en')"</span>&gt;English&lt;/button&gt;
+    &lt;button @click=<span class="c-str">"setLang('ru')"</span>&gt;Русский&lt;/button&gt;
+<span class="c-key">&lt;/template&gt;</span>
+
+<span class="c-key">&lt;script setup&gt;</span>
+<span class="c-key">import</span> { <span class="c-fn">useI18n</span> } <span class="c-key">from</span> <span class="c-str">'vue-i18n'</span>;
+<span class="c-key">const</span> { <span class="c-var">t</span>, <span class="c-var">locale</span> } = <span class="c-fn">useI18n</span>();
+
+<span class="c-key">function</span> <span class="c-fn">setLang</span>(<span class="c-var">lang</span>) {
+    <span class="c-var">locale</span>.<span class="c-var">value</span> = <span class="c-var">lang</span>;      <span class="c-comment">// .value — потому что locale это ref</span>
+}
+<span class="c-key">&lt;/script&gt;</span></code></pre>
+
+    <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
+      <strong>Почему <code>{ useI18n }</code> в скобках, а не без:</strong> <code>vue-i18n</code> экспортирует функцию как <em>named</em> (<code>export function useI18n()</code>), а не через <code>export default</code>. По правилам ES-модулей: <strong>named → фигурные скобки</strong>. Если бы был default — писали бы <code>import useI18n from 'vue-i18n'</code> без скобок. Подробно про импорты — в KB_16 → «Модули (ES6)».
+    </p>
+
+    <div class="pitfall"><strong>⚠ <code>useI18n()</code> вызывается ТОЛЬКО в setup-контексте</strong> (в <code>&lt;script setup&gt;</code> или внутри <code>setup()</code> Options API). Из обычной функции-хелпера или Vuex-модуля — не работает, вылезет <em>«Must be called at the top of a setup function»</em>. Для использования вне компонента — импортируй сам инстанс i18n: <code>import i18n from '@/i18n'; i18n.global.t('...')</code>.</div>
+
+    <div class="pitfall"><strong>⚠ Деструктуризация не ломает реактивность у <code>useI18n</code>.</strong> Возвращаемые <code>t</code>, <code>locale</code> — уже готовые ref/функция, не reactive-объект. Это отличие от <code>reactive({...})</code>, где обычная деструктуризация обрывает реактивность.</div>
+  </div>
 </div>
 
 <!-- ═════════════════════════════════════════════════════════════════════ -->

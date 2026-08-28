@@ -476,6 +476,48 @@ pre code{background:transparent;color:inherit;padding:0;border-radius:0;font-siz
 <span class="c-comment">// main.js</span>
 <span class="c-key">import</span> <span class="c-type">User</span>, { <span class="c-var">PI</span>, <span class="c-fn">sum</span> } <span class="c-key">from</span> <span class="c-str">'./utils.js'</span>;
 <span class="c-key">import</span> { <span class="c-fn">sum</span> <span class="c-key">as</span> <span class="c-fn">add</span> } <span class="c-key">from</span> <span class="c-str">'./utils.js'</span>;   <span class="c-comment">// переименовать</span></code></pre>
+
+    <h3 class="subsection-title" style="margin-top:18px">Named vs Default import — <em>фигурные скобки vs без</em></h3>
+    <p style="color:var(--text2);line-height:1.75;margin-bottom:10px;font-size:13.5px">
+      Правило простое: <strong>фигурные скобки = именованный экспорт</strong>. Без скобок — default. Именно поэтому <code>import { useI18n } from 'vue-i18n'</code> — в скобках: <code>useI18n</code> объявлен как <code>export</code> (не <code>export default</code>).
+    </p>
+    <table class="data-table">
+      <thead><tr><th>В модуле экспорт</th><th>Импорт</th></tr></thead>
+      <tbody>
+        <tr><td><code>export default X</code></td><td><code>import X from 'mod'</code> — <strong>без скобок</strong>, имя произвольное</td></tr>
+        <tr><td><code>export const X = ...</code></td><td><code>import { X } from 'mod'</code> — <strong>в скобках</strong>, имя должно совпадать</td></tr>
+        <tr><td>оба одновременно</td><td><code>import Def, { X, Y } from 'mod'</code></td></tr>
+        <tr><td>переименовать при импорте</td><td><code>import { X as MyX } from 'mod'</code></td></tr>
+        <tr><td>всё сразу как namespace</td><td><code>import * as M from 'mod'</code> → <code>M.X</code>, <code>M.Y</code></td></tr>
+      </tbody>
+    </table>
+
+    <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
+      <strong>Ключевое отличие:</strong> у default-экспорта имя при импорте <em>произвольное</em> — модуль не знает как ты его называешь. У named — имя <em>обязательно совпадает</em> с экспортом (иначе — <code>as</code>).
+    </p>
+
+    <pre><code><span class="c-comment">// Реальный пример: vue-i18n</span>
+<span class="c-comment">// Внутри библиотеки: export function useI18n() { ... }</span>
+<span class="c-comment">//                    export function createI18n() { ... }</span>
+<span class="c-comment">// Оба — named-экспорты, поэтому:</span>
+
+<span class="c-key">import</span> { <span class="c-fn">useI18n</span> } <span class="c-key">from</span> <span class="c-str">'vue-i18n'</span>;              <span class="c-comment">// ✓ в скобках</span>
+<span class="c-key">import</span> { <span class="c-fn">useI18n</span>, <span class="c-fn">createI18n</span> } <span class="c-key">from</span> <span class="c-str">'vue-i18n'</span>;  <span class="c-comment">// несколько сразу</span>
+<span class="c-key">import</span> { <span class="c-fn">useI18n</span> <span class="c-key">as</span> <span class="c-fn">useLocale</span> } <span class="c-key">from</span> <span class="c-str">'vue-i18n'</span>; <span class="c-comment">// переименовали</span>
+
+<span class="c-comment">// Если бы vue-i18n делал `export default useI18n` — было бы:</span>
+<span class="c-key">import</span> <span class="c-fn">useI18n</span> <span class="c-key">from</span> <span class="c-str">'vue-i18n'</span>;                <span class="c-comment">// без скобок</span></code></pre>
+
+    <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
+      <strong>Как узнать, что именно экспортирует модуль?</strong> Три способа:
+    </p>
+    <ul style="margin:8px 0 12px 22px;color:var(--text2);font-size:13px;line-height:1.85">
+      <li>Официальная документация — там пишут <code>import { X } from 'lib'</code>.</li>
+      <li><code>node_modules/имя-пакета/dist/</code> — открыть <code>.d.ts</code> файл, там видны все <code>export</code>.</li>
+      <li>В консоли (для установленного пакета): <code>import * as M from 'lib'; console.log(M)</code> — все именованные экспорты как поля объекта.</li>
+    </ul>
+
+    <div class="pitfall"><strong>⚠ Классическая ошибка:</strong> <code>import useI18n from 'vue-i18n'</code> (без скобок) → в переменной <code>useI18n</code> окажется <code>undefined</code> либо весь модуль-объект (зависит от bundler'а). Вылезет ошибка типа <em>«useI18n is not a function»</em>. Проверяй скобки первым делом.</div>
   </div>
 
   <div class="subsection">
@@ -732,6 +774,40 @@ pre code{background:transparent;color:inherit;padding:0;border-radius:0;font-siz
 
 <span class="c-comment">// Обмен переменных</span>
 [<span class="c-var">a</span>, <span class="c-var">b</span>] = [<span class="c-var">b</span>, <span class="c-var">a</span>];</code></pre>
+
+    <h3 class="subsection-title" style="margin-top:18px">Практический паттерн: деструктуризация <em>возвращаемого объекта функции</em></h3>
+    <p style="color:var(--text2);line-height:1.75;margin-bottom:10px;font-size:13.5px">
+      Библиотеки часто возвращают из функции <strong>объект с кучей полей</strong>, и ты вытаскиваешь <em>только нужные</em>. Классический пример — Vue-композаблы (<code>useI18n</code>, <code>useRoute</code>, <code>useStore</code>), React-хуки (<code>useState</code>), <code>fetch()</code>, чтение <code>.env</code>.
+    </p>
+    <pre><code><span class="c-comment">// vue-i18n возвращает { t, locale, tm, te, d, n, ... }</span>
+<span class="c-key">const</span> { <span class="c-var">t</span>, <span class="c-var">locale</span> } = <span class="c-fn">useI18n</span>();
+
+<span class="c-comment">// эквивалентно (без деструктуризации):</span>
+<span class="c-key">const</span> <span class="c-var">i18n</span> = <span class="c-fn">useI18n</span>();
+<span class="c-key">const</span> <span class="c-var">t</span> = <span class="c-var">i18n</span>.<span class="c-var">t</span>;
+<span class="c-key">const</span> <span class="c-var">locale</span> = <span class="c-var">i18n</span>.<span class="c-var">locale</span>;
+
+<span class="c-comment">// Только одно поле — так же нормально:</span>
+<span class="c-key">const</span> { <span class="c-var">t</span> } = <span class="c-fn">useI18n</span>();
+
+<span class="c-comment">// Переименовать:</span>
+<span class="c-key">const</span> { <span class="c-var">t</span>: <span class="c-var">translate</span> } = <span class="c-fn">useI18n</span>();
+<span class="c-fn">translate</span>(<span class="c-str">'hello'</span>);   <span class="c-comment">// теперь через новое имя</span></code></pre>
+
+    <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
+      <strong>Что там за поля</strong> в примере с <code>vue-i18n</code>:
+    </p>
+    <table class="data-table">
+      <thead><tr><th>Поле</th><th>Что это</th></tr></thead>
+      <tbody>
+        <tr><td><code>t</code></td><td>Функция перевода — <code>t('interface.hello')</code> → «Привет»</td></tr>
+        <tr><td><code>locale</code></td><td>Реактивная ссылка на текущий язык (<code>'ru'</code> / <code>'en'</code> / <code>'kz'</code>). В шаблоне видна как <code>locale</code>, менять как <code>locale.value = 'en'</code></td></tr>
+        <tr><td><code>tm</code></td><td>Перевод массива-сообщений</td></tr>
+        <tr><td><code>d</code>, <code>n</code></td><td>Форматирование даты / числа под текущий locale</td></tr>
+      </tbody>
+    </table>
+
+    <div class="pitfall"><strong>⚠ Vue-специфика:</strong> реактивные значения (<code>ref</code> / <code>reactive</code>) при <em>обычной</em> деструктуризации <strong>теряют реактивность</strong>. Решения — <code>toRefs()</code> для reactive-объектов, <code>storeToRefs()</code> для Pinia. Подробно — в разделе Vue → Реактивность.</div>
   </div>
 
   <div class="subsection">
