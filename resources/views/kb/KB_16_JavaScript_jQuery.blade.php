@@ -630,6 +630,79 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
         <li>CommonJS (<code>require</code>) — старый Node-формат, до 2015. Сейчас — постепенно вытесняется ESM</li>
       </ul>
     </div>
+
+    <h3 class="subsection-title" style="margin-top:18px"><code>import.meta</code> — метаданные ES-модуля</h3>
+    <p style="color:var(--text2);line-height:1.75;margin-bottom:10px;font-size:13.5px">
+      <code>import.meta</code> — специальный <strong>объект</strong>, доступный внутри любого ES-модуля. Содержит метаданные о текущем файле. Часть стандарта JS. Не путать со <em>ключевым словом</em> <code>import</code> — здесь <code>import</code> используется как <em>именной префикс</em>, а <code>.meta</code> — свойство.
+    </p>
+<pre><code><span class="c-comment">// В любом ESM-файле</span>
+<span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-fn">import</span>.<span class="c-var">meta</span>);
+<span class="c-comment">// { url: 'file:///project/src/api.js', env: {...} }</span>
+
+<span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-fn">import</span>.<span class="c-var">meta</span>.<span class="c-var">url</span>);
+<span class="c-comment">// путь к самому файлу — в браузере URL, в Node — file://...</span></code></pre>
+
+    <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
+      Стандарт определяет только <code>import.meta.url</code>. Всё остальное — <strong>расширения от рантайма / бандлера</strong>:
+    </p>
+    <table class="data-table">
+      <thead><tr><th>Свойство</th><th>Кто добавляет</th><th>Зачем</th></tr></thead>
+      <tbody>
+        <tr><td><code>import.meta.url</code></td><td>Стандарт JS</td><td>Путь к модулю (аналог <code>__filename</code> в CommonJS)</td></tr>
+        <tr><td><code>import.meta.env</code></td><td><strong>Vite</strong> (не стандарт)</td><td>Переменные из <code>.env</code>-файлов</td></tr>
+        <tr><td><code>import.meta.hot</code></td><td>Vite / HMR</td><td>API для hot module replacement</td></tr>
+        <tr><td><code>import.meta.glob</code></td><td>Vite</td><td>Массовый импорт файлов по glob-паттерну</td></tr>
+        <tr><td><code>import.meta.resolve</code></td><td>Node.js 20+</td><td>Резолвить URL модуля</td></tr>
+      </tbody>
+    </table>
+
+    <h3 class="subsection-title" style="margin-top:18px"><code>import.meta.env.VITE_*</code> — переменные окружения в Vite</h3>
+    <p style="color:var(--text2);line-height:1.75;margin-bottom:10px;font-size:13.5px">
+      Vite при сборке собирает <strong>все переменные</strong> из <code>.env</code>-файлов проекта, у которых имя начинается с префикса <code>VITE_</code>, и делает их доступными через <code>import.meta.env</code>. Это способ хранить настройки (URL API, публичные ключи, флаги фичей) вне кода — легко менять между dev / staging / prod без правки исходников.
+    </p>
+<pre><code><span class="c-comment"># .env.development</span>
+<span class="c-var">VITE_API_URL</span>=https://kazchess-develop.silentsoft.kz
+<span class="c-var">VITE_APP_NAME</span>=KazChess Dev
+
+<span class="c-comment"># .env.production</span>
+<span class="c-var">VITE_API_URL</span>=https://api.kazchess.kz
+<span class="c-var">VITE_APP_NAME</span>=KazChess</code></pre>
+
+<pre><code><span class="c-comment">// api_public.js</span>
+<span class="c-key">import</span> axios <span class="c-key">from</span> <span class="c-str">'axios'</span>;
+
+<span class="c-key">const</span> <span class="c-var">api</span> = axios.<span class="c-fn">create</span>({
+    <span class="c-var">baseURL</span>: <span class="c-fn">import</span>.<span class="c-var">meta</span>.<span class="c-var">env</span>.<span class="c-var">VITE_API_URL</span>,
+});
+
+<span class="c-key">export default</span> <span class="c-var">api</span>;</code></pre>
+
+    <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
+      <strong>Как это работает:</strong> Vite при сборке <em>подставляет строку в код напрямую</em>. Итоговый JS после билда выглядит так:
+    </p>
+<pre><code><span class="c-key">const</span> <span class="c-var">api</span> = axios.<span class="c-fn">create</span>({
+    <span class="c-var">baseURL</span>: <span class="c-str">'https://api.kazchess.kz'</span>,   <span class="c-comment">// ← подставилось при сборке</span>
+});</code></pre>
+
+    <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
+      Дефолтные поля <code>import.meta.env</code>:
+    </p>
+    <table class="data-table">
+      <thead><tr><th>Поле</th><th>Что</th></tr></thead>
+      <tbody>
+        <tr><td><code>import.meta.env.MODE</code></td><td><code>'development'</code> / <code>'production'</code> / <code>'test'</code> — режим сборки</td></tr>
+        <tr><td><code>import.meta.env.DEV</code></td><td><code>true</code> в dev, <code>false</code> в prod</td></tr>
+        <tr><td><code>import.meta.env.PROD</code></td><td><code>true</code> в prod-сборке</td></tr>
+        <tr><td><code>import.meta.env.BASE_URL</code></td><td>Base path приложения (из <code>vite.config.js</code>)</td></tr>
+        <tr><td><code>import.meta.env.VITE_*</code></td><td>Всё, что ты определил сам в <code>.env</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="pitfall"><strong>⚠ Только префикс <code>VITE_</code>.</strong> Переменные без префикса — <em>не попадут</em> в клиентский бандл (это защита: <code>DB_PASSWORD</code> не должен утечь в браузер). Хочешь чтобы клиент видел — префикс <code>VITE_</code>. Хочешь скрыть — оставляй без префикса, использовать только на сервере.</div>
+
+    <div class="pitfall"><strong>⚠ <code>import.meta.env</code> — фича Vite, не стандарт JS.</strong> В обычном Node.js без Vite её нет. Аналог в webpack — <code>process.env.REACT_APP_*</code> (Create React App), в Next.js — <code>process.env.NEXT_PUBLIC_*</code>. Идея та же: префикс = «можно в клиент».</div>
+
+    <div class="pitfall"><strong>⚠ Значения подставляются <em>при сборке</em>, не в рантайме.</strong> Изменил <code>.env</code> — надо пересобрать (<code>npm run build</code>) или перезапустить dev-сервер. Хочешь менять URL API без пересборки — читай его через отдельный runtime-конфиг (<code>/config.json</code>, загружаемый через fetch при старте).</div>
   </div>
 
   <div class="subsection">

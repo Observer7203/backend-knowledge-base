@@ -1165,7 +1165,84 @@ npm run dev</code></pre>
   <div class="section-title">HTTP запросы — axios vs fetch</div>
 
   <div class="subsection">
-    <h3 class="subsection-title">axios — стандарт в Vue-мире</h3>
+    <h3 class="subsection-title">Что такое axios</h3>
+    <p style="color:var(--text2);line-height:1.75;margin-bottom:10px;font-size:13.5px">
+      <strong>axios</strong> — npm-библиотека для HTTP-запросов. Ставится через <code>npm install axios</code>. Даёт удобное API поверх <code>fetch</code>: автоматический JSON-парсинг, обработка ошибок (бросает на 4xx/5xx), interceptors, встроенный timeout, cancel-токены.
+    </p>
+<pre><code><span class="c-key">import</span> axios <span class="c-key">from</span> <span class="c-str">'axios'</span>;
+
+<span class="c-comment">// Базовые вызовы</span>
+axios.<span class="c-fn">get</span>(<span class="c-str">'/users'</span>);
+axios.<span class="c-fn">post</span>(<span class="c-str">'/login'</span>, { <span class="c-var">email</span>, <span class="c-var">password</span> });
+axios.<span class="c-fn">put</span>(<span class="c-str">'/users/1'</span>, { <span class="c-var">name</span>: <span class="c-str">'Alice'</span> });
+axios.<span class="c-fn">delete</span>(<span class="c-str">'/users/1'</span>);</code></pre>
+  </div>
+
+  <div class="subsection">
+    <h3 class="subsection-title"><code>axios.create()</code> — клиент с преднастройками</h3>
+    <p style="color:var(--text2);line-height:1.75;margin-bottom:10px;font-size:13.5px">
+      Часто нужно бить в один и тот же API с одинаковыми настройками: base URL, headers, timeout, credentials. Вместо повторения — создаём <strong>инстанс-клиент</strong> через <code>axios.create({...})</code>, дальше используем его.
+    </p>
+<pre><code><span class="c-comment">// api_public.js</span>
+<span class="c-key">import</span> axios <span class="c-key">from</span> <span class="c-str">'axios'</span>;
+
+<span class="c-key">const</span> <span class="c-var">api</span> = axios.<span class="c-fn">create</span>({
+    <span class="c-var">baseURL</span>: <span class="c-fn">import</span>.<span class="c-var">meta</span>.<span class="c-var">env</span>.<span class="c-var">VITE_API_URL</span>,
+});
+
+<span class="c-key">export default</span> <span class="c-var">api</span>;
+
+<span class="c-comment">// В любом компоненте:</span>
+<span class="c-key">import</span> api <span class="c-key">from</span> <span class="c-str">'@/api_public'</span>;
+
+api.<span class="c-fn">get</span>(<span class="c-str">'/national-team/public/national-teams/'</span>);
+<span class="c-comment">// уйдёт запрос на: https://kazchess-develop.silentsoft.kz/national-team/public/national-teams/</span>
+<span class="c-comment">// (baseURL склеился с относительным путём)</span></code></pre>
+
+    <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
+      <strong>Без <code>create</code></strong> пришлось бы каждый раз писать полный URL в каждом вызове — копипаст и хардкод. Клиент-инстанс собирает это в одном месте.
+    </p>
+
+    <div class="tip">
+      <strong>Типовой набор преднастроек:</strong>
+<pre style="margin-top:8px"><code>axios.<span class="c-fn">create</span>({
+    <span class="c-var">baseURL</span>: <span class="c-fn">import</span>.<span class="c-var">meta</span>.<span class="c-var">env</span>.<span class="c-var">VITE_API_URL</span>,
+    <span class="c-var">timeout</span>: <span class="c-num">10000</span>,
+    <span class="c-var">withCredentials</span>: <span class="c-key">true</span>,        <span class="c-comment">// куки для Sanctum/сессий</span>
+    <span class="c-var">headers</span>: {
+        <span class="c-str">'Accept'</span>: <span class="c-str">'application/json'</span>,
+        <span class="c-str">'X-Requested-With'</span>: <span class="c-str">'XMLHttpRequest'</span>,
+    },
+});</code></pre>
+    </div>
+
+    <div class="pitfall"><strong>⚠ Несколько инстансов для разных API — норма.</strong> Публичный API без auth (<code>api_public</code>) + приватный с токеном (<code>api_auth</code>) + сторонний сервис — три разных инстанса. Не пихай всё в один <code>http</code>.</div>
+  </div>
+
+  <div class="subsection">
+    <h3 class="subsection-title">Что такое <code>import.meta.env.VITE_API_URL</code></h3>
+    <p style="color:var(--text2);line-height:1.75;margin-bottom:10px;font-size:13.5px">
+      <code>import.meta.env</code> — фича <strong>Vite</strong> (не стандарт JS). Vite при сборке подставляет туда все переменные из <code>.env</code>-файлов, у которых имя начинается с <code>VITE_</code>. Способ хранить настройки (URL API, публичные ключи, флаги) в отдельных <code>.env</code>-файлах вместо хардкода — легко менять между dev / staging / prod.
+    </p>
+<pre><code><span class="c-comment"># .env.development</span>
+<span class="c-var">VITE_API_URL</span>=https://kazchess-develop.silentsoft.kz
+
+<span class="c-comment"># .env.production</span>
+<span class="c-var">VITE_API_URL</span>=https://api.kazchess.kz</code></pre>
+
+    <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
+      Vite при сборке <em>заменяет</em> <code>import.meta.env.VITE_API_URL</code> на строковый литерал <em>прямо в коде</em>, до рантайма. Так же работают публичные ключи (Stripe pk_..., карта Google Maps API key и т.д.).
+    </p>
+
+    <div class="pitfall"><strong>⚠ Только префикс <code>VITE_</code>.</strong> Переменные без префикса в клиент не попадут — защита от утечек серверных секретов (<code>DB_PASSWORD</code>) в браузер.</div>
+
+    <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
+      Подробнее про <code>import.meta</code> и все его поля (<code>.url</code>, <code>.hot</code>, <code>.glob</code>) — в KB_16 «Модули (ES6)».
+    </p>
+  </div>
+
+  <div class="subsection">
+    <h3 class="subsection-title">Полная обвязка axios: interceptors + auth</h3>
     <pre><code>npm install axios</code></pre>
     <pre><code><span class="c-comment">// api/http.js — глобальная конфигурация</span>
 <span class="c-key">import</span> axios <span class="c-key">from</span> <span class="c-str">'axios'</span>;
