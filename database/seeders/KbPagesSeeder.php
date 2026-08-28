@@ -224,6 +224,20 @@ class KbPagesSeeder extends Seeder
                 'layout' => 'sidebar',
                 'sort_order' => 160,
             ],
+            [
+                'id' => 'kb18',
+                'slug' => 'KB_18_Nginx_Docker',
+                'file' => 'kb.KB_18_Nginx_Docker',
+                'title' => 'Nginx & Docker — деплой',
+                'description' => 'Практический раздел: Nginx (основы, файлы, systemctl, конфиг, server blocks, location, PHP-FPM, статика, SSL, security, LB, логи, боли), Docker (база, Dockerfile, compose, volumes, networks, Laravel), плюс systemd/SSH/cron/monitoring/CI-CD/чек-лист боевого сервера.',
+                'badge' => 'DEVOPS',
+                'badge_class' => 'badge-neutral',
+                'icon' => 'server',
+                'icon_class' => 'ic-blue',
+                'group_name' => 'Modules',
+                'layout' => 'sidebar',
+                'sort_order' => 170,
+            ],
 
             // ─── Methodology ────────────────────────────────────────────────────
             [
