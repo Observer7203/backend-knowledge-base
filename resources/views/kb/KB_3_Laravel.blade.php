@@ -193,6 +193,7 @@ ul.bullets strong{color:var(--text);}
   <a class="nav-item" onclick="showSection('api-resources',this)"><i data-lucide="file-json"></i> API Resources</a>
   <div class="nav-subgroup">
     <a class="nav-subitem" onclick="showSub('api-resources','ar-overview',this)">Зачем нужны API Resources</a>
+    <a class="nav-subitem" onclick="showSub('api-resources','ar-when-needed',this)">Всегда ли нужен Resource + альтернативы</a>
     <a class="nav-subitem" onclick="showSub('api-resources','ar-jsonresource',this)">JsonResource — один ресурс</a>
     <a class="nav-subitem" onclick="showSub('api-resources','ar-collection',this)">Collection — список ресурсов</a>
     <a class="nav-subitem" onclick="showSub('api-resources','ar-conditional',this)">Условные поля (when / whenLoaded)</a>
@@ -3536,6 +3537,80 @@ php artisan make:resource <span class="c-type">Api/V1/PostResource</span>       
     <p class="text">Файлы создаются в <code>app/Http/Resources/</code>.</p>
   </div>
 
+  <div class="subsection" id="ar-when-needed">
+    <div class="subsection-title"><i data-lucide="git-branch"></i> Всегда ли нужен Resource между Eloquent и JSON</div>
+
+    <p class="text"><strong>Короткий ответ:</strong> нет, не всегда. Resource — это <em>один из способов</em> преобразовать Eloquent-модель в JSON, но не единственный. Laravel сам умеет сериализовать модели, и для простых кейсов посредник не нужен.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="list" style="width:14px;height:14px"></i> 4 способа отдать модель как JSON</div>
+    <table class="data-table">
+      <thead><tr><th>Способ</th><th>Что делает</th><th>Когда</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>return $model;</code></td>
+          <td>Laravel сам вызовет <code>toArray()</code> → <code>toJson()</code>. Автоматическая сериализация.</td>
+          <td>CRUD, структура БД = структура ответа</td>
+        </tr>
+        <tr>
+          <td><code>return $model-&gt;toArray();</code> / <code>toJson()</code></td>
+          <td>Явное преобразование в массив или строку.</td>
+          <td>Нужно подкрутить перед отдачей (напр. <code>toArray()</code> + <code>array_merge</code>)</td>
+        </tr>
+        <tr>
+          <td><code>return response()-&gt;json($data);</code></td>
+          <td>Обёртка с контролем статуса/заголовков.</td>
+          <td>Нужен явный HTTP-статус (201, 204, 422)</td>
+        </tr>
+        <tr>
+          <td><code>return new UserResource($user);</code></td>
+          <td>Класс-трансформер: полный контроль структуры, отношений, условных полей.</td>
+          <td>Сложные API, версионирование, отличная от БД структура</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="check-circle" style="width:14px;height:14px"></i> Когда Resource <em>обязателен</em> / сильно упрощает жизнь</div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Кастомизация JSON</strong> — добавить <code>full_name</code>, отформатировать дату (<code>toIso8601String</code>), скрыть <code>password</code>/<code>remember_token</code>, переименовать ключи.</li>
+      <li><strong>Вложенные отношения</strong> — <code>PostResource</code> содержит <code>author =&gt; new UserResource($this-&gt;user)</code>, изолируя контроль поля <code>user</code> в одном месте.</li>
+      <li><strong>Единообразие</strong> — все эндпоинты используют одинаковую структуру ответа (<code>data</code>, <code>meta</code>, <code>links</code>).</li>
+      <li><strong>Пагинация</strong> — <code>UserResource::collection($users)</code> с paginator'ом сам подцепит <code>meta.total</code>, <code>meta.current_page</code>, <code>links.first</code>, <code>links.next</code>.</li>
+      <li><strong>API-версионирование</strong> — <code>App\Http\Resources\V1\UserResource</code> и <code>V2\UserResource</code> живут рядом, каждая версия своя.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="x-circle" style="width:14px;height:14px"></i> Когда Resource <em>не нужен</em></div>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Простой CRUD</strong> — если возвращаешь модель как есть, <code>return $user;</code> достаточно (Laravel сам сериализует).</li>
+      <li><strong>Быстрый прототип / MVP</strong> — где структура ещё не устоялась, ставить Resource преждевременно.</li>
+      <li><strong>Минимальная трансформация</strong> — например, вернуть массив ID: <code>return $users-&gt;pluck('id');</code>.</li>
+      <li><strong>Внутренний API между микросервисами</strong> — где контракт задаётся отдельно, а Laravel — внутренняя реализация.</li>
+    </ul>
+
+    <div class="tip">
+      <strong>Практическое правило одной фразой:</strong> если JSON-ответ <em>отличается</em> от структуры БД (добавляются поля, меняется формат, скрываются данные, вкладываются связи) — используй Resource. Если один-в-один — можно обойтись.
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="split" style="width:14px;height:14px"></i> Альтернативы Resource</div>
+    <div class="card">
+      <h3>Скрытие полей в модели: <code>$hidden</code> / <code>$visible</code></h3>
+      <p class="text">Если единственная задача — <em>скрыть чувствительные поля</em> при сериализации, Resource не обязателен. Достаточно <code>protected $hidden = ['password', 'remember_token']</code> в модели — они автоматом уйдут из <code>toArray()</code>/<code>toJson()</code>. Подробнее — в <a href="#" onclick="showSub('eloquent','el-mass-assignment',this.parentElement.parentElement); return false;">Eloquent → Mass Assignment</a>.</p>
+    </div>
+    <div class="card">
+      <h3><code>-&gt;map()</code> на коллекции</h3>
+      <p class="text"><code>return $users-&gt;map(fn ($u) =&gt; ['id' =&gt; $u-&gt;id, 'label' =&gt; $u-&gt;name]);</code> — быстрый ad-hoc трансформер. Проблема: повторяющийся код разбросан по контроллерам, менять формат — искать по всему проекту.</p>
+    </div>
+    <div class="card">
+      <h3>Presenter / DTO</h3>
+      <p class="text">Ручной класс с методом <code>present()</code> или readonly-DTO из php 8.1. Не встроенное в Laravel — но иногда используют для типизации и IDE-подсказок.</p>
+    </div>
+
+    <div class="pitfall"><strong>⚠ Не путать Resource и <code>--resource</code>-контроллер.</strong> <code>php artisan make:controller PostController --resource</code> создаёт <em>контроллер с 7 CRUD-методами</em> (см. <a href="#" onclick="showSub('controllers','ctrl-resource',this.parentElement.parentElement); return false;">ctrl-resource</a>). <code>php artisan make:resource UserResource</code> создаёт <em>трансформер JSON</em>. Слово «resource» — два разных инструмента.</div>
+
+    <div class="remember-box">
+      <strong>Итог:</strong> в современных Laravel-проектах для внешних API почти всегда используют Resource — особенно с версионированием и интеграцией с фронтендом. Для внутренних админок и CRUD-эндпоинтов часто обходятся <code>return $model;</code> + <code>$hidden</code> в модели. Не насаждай Resource ради Resource — добавляй когда появляется реальная потребность в трансформации.
+    </div>
+  </div>
+
   <div class="subsection" id="ar-jsonresource">
     <div class="subsection-title"><i data-lucide="file"></i> <code>JsonResource</code> — один ресурс</div>
     <p class="text">Наследуемся от <code>Illuminate\Http\Resources\Json\JsonResource</code>, метод <code>toArray()</code> возвращает массив, который станет JSON.</p>
@@ -3921,6 +3996,96 @@ php artisan make:resource <span class="c-type">Api/V1/PostResource</span>       
       <li>Никогда не доверяйте входящим данным без контроля — это фундаментальное правило безопасности.</li>
       <li>В Laravel 11+ и во всех современных версиях рекомендуется явно указывать <code>$fillable</code>, чтобы избежать случайных уязвимостей.</li>
     </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="eye-off" style="width:14px;height:14px"></i> Не путать: <code>$hidden</code>/<code>$visible</code> — <em>скрытие при выводе</em> (совсем другая задача)</div>
+    <p class="text">Частая путаница: <code>$hidden</code>/<code>$visible</code> — <strong>не защита от mass assignment</strong>. Это контроль того, <em>какие поля попадают в JSON/массив при сериализации</em> (при выводе, не при записи). Обе пары свойств живут в модели, но решают разные задачи:</p>
+
+    <table class="data-table">
+      <thead><tr><th></th><th><code>$fillable</code> / <code>$guarded</code></th><th><code>$hidden</code> / <code>$visible</code></th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Что защищает</strong></td>
+          <td>Массовое присваивание при <code>create</code>/<code>update</code></td>
+          <td>Утечку полей в JSON/массив при <em>выводе</em></td>
+        </tr>
+        <tr>
+          <td><strong>Направление</strong></td>
+          <td>Вход: клиент → БД</td>
+          <td>Выход: БД → клиент</td>
+        </tr>
+        <tr>
+          <td><strong>Классический пример</strong></td>
+          <td><code>is_admin</code> — не даём подставить в create</td>
+          <td><code>password</code>, <code>remember_token</code> — не показываем в API</td>
+        </tr>
+        <tr>
+          <td><strong>Когда срабатывает</strong></td>
+          <td><code>Model::create($data)</code>, <code>-&gt;update($data)</code>, <code>-&gt;fill($data)</code></td>
+          <td><code>-&gt;toArray()</code>, <code>-&gt;toJson()</code>, <code>return $model</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="lock" style="width:14px;height:14px"></i> Как работает <code>$hidden</code>/<code>$visible</code></div>
+<pre><code><span class="c-key">class</span> <span class="c-type">User</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-comment">// Скрытие при выводе (blacklist)</span>
+    <span class="c-key">protected</span> <span class="c-var">$hidden</span> = [<span class="c-str">'password'</span>, <span class="c-str">'remember_token'</span>];
+
+    <span class="c-comment">// Или — явно указать что показывать (whitelist, встречается реже)</span>
+    <span class="c-comment">// protected $visible = ['id', 'name', 'email'];</span>
+}
+
+<span class="c-comment">// В контроллере — password и remember_token не попадут в JSON автоматически</span>
+<span class="c-key">return</span> <span class="c-type">User</span>::<span class="c-fn">find</span>(<span class="c-num">1</span>);
+<span class="c-comment">// { "id": 1, "name": "Alice", "email": "..." }  ← password ушёл</span>
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="wrench" style="width:14px;height:14px"></i> Динамическое скрытие/показ для одного экземпляра</div>
+<pre><code><span class="c-comment">// Скрыть дополнительно (поверх $hidden)</span>
+<span class="c-var">$user</span>-&gt;<span class="c-fn">makeHidden</span>([<span class="c-str">'created_at'</span>, <span class="c-str">'updated_at'</span>]);
+
+<span class="c-comment">// Показать поле, скрытое глобально в $hidden (для отладки, для админки)</span>
+<span class="c-var">$user</span>-&gt;<span class="c-fn">makeVisible</span>(<span class="c-str">'remember_token'</span>);
+
+<span class="c-comment">// Работает и на коллекциях</span>
+<span class="c-var">$users</span>-&gt;<span class="c-fn">makeHidden</span>([<span class="c-str">'email'</span>, <span class="c-str">'phone'</span>]);
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hammer" style="width:14px;height:14px"></i> Полный практический пример: обе защиты вместе</div>
+<pre><code><span class="c-key">class</span> <span class="c-type">User</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-comment">// ЗАЩИТА ВХОДА — что можно массово заполнять</span>
+    <span class="c-key">protected</span> <span class="c-var">$fillable</span> = [<span class="c-str">'name'</span>, <span class="c-str">'email'</span>, <span class="c-str">'password'</span>];
+
+    <span class="c-comment">// ЗАЩИТА ВЫХОДА — что не показывать в JSON</span>
+    <span class="c-key">protected</span> <span class="c-var">$hidden</span>   = [<span class="c-str">'password'</span>, <span class="c-str">'remember_token'</span>];
+}
+
+<span class="c-comment">// Контроллер</span>
+<span class="c-var">$user</span> = <span class="c-type">User</span>::<span class="c-fn">create</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">all</span>());
+<span class="c-comment">// is_admin из запроса не попадёт в БД — не в $fillable</span>
+
+<span class="c-key">return</span> <span class="c-var">$user</span>;
+<span class="c-comment">// password и remember_token не будут в JSON-ответе — они в $hidden</span>
+</code></pre>
+
+    <div class="tip">
+      <strong>Стратегия по каждому механизму:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><code>$fillable</code> — <em>всегда</em>. Явный whitelist, безопаснее чем <code>$guarded</code>.</li>
+        <li><code>$hidden</code> — для <em>постоянных</em> правил скрытия (password, токены).</li>
+        <li><code>$visible</code> — редко, когда полей мало и хочется явно перечислить.</li>
+        <li><code>makeHidden()</code>/<code>makeVisible()</code> — для <em>временных</em> изменений в конкретном контексте.</li>
+        <li><a href="#" onclick="showSub('api-resources','ar-overview',this.parentElement.parentElement); return false;">API Resource</a> — если структура ответа сильно отличается от структуры БД (доп. поля, вложенные ресурсы, переименование).</li>
+      </ul>
+    </div>
+
+    <div class="pitfall"><strong>⚠ Не смешивать через <code>$hidden</code> "не сохранять в БД".</strong> <code>$hidden</code> НЕ влияет на запись — только на вывод. Поле <code>password</code> в БД сохранится (и должно!), <code>$hidden</code> просто не даёт ему попасть в JSON-ответ. Для «не сохранять» — не добавляй поле в <code>$fillable</code> либо не передавай в <code>create()</code>.</div>
+
+    <div class="remember-box">
+      <strong>Мнемоника:</strong> <code>fill</code>able = что можно <em>налить</em> (into) БД. <code>hidden</code> = что <em>прячем</em> (from) при выводе. Разные направления, разные задачи.
+    </div>
   </div>
 
   <div class="subsection" id="el-casts">
