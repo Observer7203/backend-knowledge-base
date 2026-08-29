@@ -425,6 +425,8 @@ class CalculatorTest extends TestCase
 }</code></pre>
 
             <h3>Essential Assertions</h3>
+            <p><strong>Assertions (утверждения)</strong> — методы класса <code>PHPUnit\Framework\TestCase</code>, доступные в любом тестовом классе Laravel (Laravel-ный <code>Tests\TestCase</code> наследует его). Каждый метод проверяет, соответствует ли <em>фактическое состояние</em> ожидаемому. Не совпало — тест валится с диагностическим сообщением.</p>
+            <p><em>Почему через <code>$this-&gt;</code>:</em> потому что тестовый класс наследует <code>TestCase</code>, где эти методы объявлены. Без них тесты не имеют смысла — код прогонится, но никто не проверит результат.</p>
             <table>
                 <tr>
                     <th>Assertion</th>
@@ -432,41 +434,140 @@ class CalculatorTest extends TestCase
                     <th>Example</th>
                 </tr>
                 <tr>
-                    <td><code>assertEquals()</code></td>
-                    <td>Check equality</td>
+                    <td><code>assertEquals($expected, $actual)</code></td>
+                    <td>Значения равны (loose <code>==</code>)</td>
                     <td><code>$this->assertEquals(5, 2+3);</code></td>
                 </tr>
                 <tr>
-                    <td><code>assertTrue()</code></td>
-                    <td>Check if true</td>
+                    <td><code>assertSame($expected, $actual)</code></td>
+                    <td>Идентичны (strict <code>===</code>, тип тоже)</td>
+                    <td><code>$this->assertSame(5, 2+3);</code> — <code>'5'</code> не пройдёт</td>
+                </tr>
+                <tr>
+                    <td><code>assertNotEquals()</code> / <code>assertNotSame()</code></td>
+                    <td>Отрицания</td>
+                    <td><code>$this->assertNotEquals(0, $count);</code></td>
+                </tr>
+                <tr>
+                    <td><code>assertTrue($condition)</code></td>
+                    <td>Выражение истинно</td>
                     <td><code>$this->assertTrue($user->isAdmin());</code></td>
                 </tr>
                 <tr>
-                    <td><code>assertFalse()</code></td>
-                    <td>Check if false</td>
+                    <td><code>assertFalse($condition)</code></td>
+                    <td>Выражение ложно</td>
                     <td><code>$this->assertFalse($user->isDeleted());</code></td>
                 </tr>
                 <tr>
-                    <td><code>assertCount()</code></td>
-                    <td>Check collection size</td>
-                    <td><code>$this->assertCount(3, $users);</code></td>
-                </tr>
-                <tr>
-                    <td><code>assertNull()</code></td>
-                    <td>Check if null</td>
+                    <td><code>assertNull($value)</code></td>
+                    <td>Значение равно <code>null</code></td>
                     <td><code>$this->assertNull($result);</code></td>
                 </tr>
                 <tr>
-                    <td><code>assertContains()</code></td>
-                    <td>Check if contains</td>
+                    <td><code>assertNotNull($value)</code></td>
+                    <td>Значение не <code>null</code></td>
+                    <td><code>$this->assertNotNull($user);</code></td>
+                </tr>
+                <tr>
+                    <td><code>assertInstanceOf($class, $object)</code></td>
+                    <td>Объект — экземпляр класса (или наследника)</td>
+                    <td><code>$this->assertInstanceOf(Order::class, $order);</code></td>
+                </tr>
+                <tr>
+                    <td><code>assertCount($n, $collection)</code></td>
+                    <td>Массив/коллекция содержит N элементов</td>
+                    <td><code>$this->assertCount(3, $users);</code></td>
+                </tr>
+                <tr>
+                    <td><code>assertEmpty()</code> / <code>assertNotEmpty()</code></td>
+                    <td>Пусто / не пусто</td>
+                    <td><code>$this->assertEmpty($errors);</code></td>
+                </tr>
+                <tr>
+                    <td><code>assertContains($needle, $haystack)</code></td>
+                    <td>Значение есть в массиве/коллекции</td>
                     <td><code>$this->assertContains('admin', $roles);</code></td>
                 </tr>
                 <tr>
-                    <td><code>assertJson()</code></td>
-                    <td>Validate JSON response</td>
-                    <td><code>$this->assertJson($response);</code></td>
+                    <td><code>assertArrayHasKey($key, $array)</code></td>
+                    <td>Массив содержит ключ</td>
+                    <td><code>$this->assertArrayHasKey('email', $data);</code></td>
+                </tr>
+                <tr>
+                    <td><code>assertGreaterThan()</code> / <code>assertLessThan()</code></td>
+                    <td>Больше / меньше</td>
+                    <td><code>$this->assertGreaterThan(0, $total);</code></td>
+                </tr>
+                <tr>
+                    <td><code>assertMatchesRegularExpression($regex, $string)</code></td>
+                    <td>Строка матчит regex</td>
+                    <td><code>$this->assertMatchesRegularExpression('/^ORD-\d+$/', $order->number);</code></td>
+                </tr>
+                <tr>
+                    <td><code>assertStringContainsString($needle, $haystack)</code></td>
+                    <td>Подстрока в строке</td>
+                    <td><code>$this->assertStringContainsString('error', $log);</code></td>
+                </tr>
+                <tr>
+                    <td><code>assertDatabaseHas($table, $data)</code> (Laravel)</td>
+                    <td>В таблице БД есть запись с этими полями</td>
+                    <td><code>$this->assertDatabaseHas('orders', ['user_id' => 1]);</code></td>
+                </tr>
+                <tr>
+                    <td><code>assertDatabaseMissing($table, $data)</code> (Laravel)</td>
+                    <td>В таблице нет записи с этими полями</td>
+                    <td><code>$this->assertDatabaseMissing('users', ['email' => 'x@y']);</code></td>
+                </tr>
+                <tr>
+                    <td><code>assertJson($response)</code> (Laravel)</td>
+                    <td>Ответ содержит JSON</td>
+                    <td><code>$response->assertJson(['status' => 'ok']);</code></td>
+                </tr>
+                <tr>
+                    <td><code>assertJsonStructure($structure)</code> (Laravel)</td>
+                    <td>JSON имеет ожидаемую структуру ключей</td>
+                    <td><code>$response->assertJsonStructure(['data' => ['id', 'total']]);</code></td>
                 </tr>
             </table>
+
+            <h3>Разбор реального теста: <code>test_order_can_be_created</code></h3>
+            <p>Типичный feature-тест, показывающий как assertion-методы работают вместе:</p>
+            <pre><code class="php-code">public function test_order_can_be_created()
+{
+    // Arrange — готовим окружение
+    $user = User::factory()->create();
+
+    // Act — одно действие
+    $response = $this->actingAs($user)->post('/orders', [
+        'items' => [['sku' => 'ABC-1', 'qty' => 2]],
+    ]);
+
+    // Assert — проверяем результат по нескольким осям
+    $response->assertStatus(201);                          // HTTP-статус
+
+    $order = Order::latest()->first();
+
+    $this->assertInstanceOf(Order::class, $order);        // тип объекта
+    $this->assertEquals($user->id, $order->user_id);      // связка user → order
+    $this->assertDatabaseHas('orders', [                  // запись в БД
+        'user_id' => $user->id,
+        'status'  => 'pending',
+    ]);
+}</code></pre>
+
+            <p><strong>Что делает каждая проверка:</strong></p>
+            <ul>
+                <li><code>assertStatus(201)</code> — HTTP-ответ 201 Created (метод <code>TestResponse</code>, не PHPUnit).</li>
+                <li><code>assertInstanceOf(Order::class, $order)</code> — <code>$order</code> — экземпляр <code>Order</code> (или наследника). Если <code>latest()->first()</code> вернул <code>null</code> — тест упадёт здесь с понятным сообщением, а не на следующей строке с непонятным «Trying to get property of non-object».</li>
+                <li><code>assertEquals($user->id, $order->user_id)</code> — заказ действительно привязан к тому пользователю, который его создавал.</li>
+                <li><code>assertDatabaseHas(...)</code> — Laravel-специфичная проверка: в таблице <code>orders</code> реально лежит строка с этими полями. Более надёжно, чем полагаться только на in-memory объект.</li>
+            </ul>
+
+            <h3>Где какие используются</h3>
+            <ul>
+                <li><strong>Unit-тесты</strong> — отдельные классы и методы (сервисы, actions, модели). Обычно только PHPUnit-ассерты: <code>assertEquals</code>, <code>assertInstanceOf</code>, <code>assertTrue</code>, <code>assertCount</code>.</li>
+                <li><strong>Feature-тесты</strong> — маршрут → контроллер → middleware → БД. PHPUnit-ассерты + Laravel: <code>assertStatus</code>, <code>assertRedirect</code>, <code>assertJson</code>, <code>assertJsonStructure</code>, <code>assertDatabaseHas</code>, <code>assertSee</code>.</li>
+            </ul>
 
             <h3>Test Lifecycle</h3>
             <pre><code class="php-code">class UserTest extends TestCase
