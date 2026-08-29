@@ -244,6 +244,7 @@ ul.bullets strong{color:var(--text);}
   <a class="nav-item" onclick="showSection('events',this)"><i data-lucide="activity"></i> Events &amp; Listeners</a>
   <div class="nav-subgroup">
     <a class="nav-subitem" onclick="showSub('events','ev-purpose',this)">Назначение</a>
+    <a class="nav-subitem" onclick="showSub('events','ev-when-to-use',this)">Когда Events нужны, а когда лишние</a>
     <a class="nav-subitem" onclick="showSub('events','ev-components',this)">Компоненты (Event/Listener/Subscriber)</a>
     <a class="nav-subitem" onclick="showSub('events','ev-event-class',this)">Event Class — DTO + Broadcasting</a>
     <a class="nav-subitem" onclick="showSub('events','ev-listener-class',this)">Listener Class — обработчик события</a>
@@ -5755,6 +5756,113 @@ php artisan migrate</code></pre>
   <div class="subsection" id="ev-purpose">
     <div class="subsection-title"><i data-lucide="book-open"></i> Назначение</div>
     <p class="text">События — механизм слабого связывания: код «эмитит» событие, не зная, кто на него подпишется. Несколько listeners могут реагировать независимо. Это основной способ организации side-effects (отправка письма после регистрации, audit-лог, обновление аналитики) без раздувания основного кода.</p>
+  </div>
+
+  <div class="subsection" id="ev-when-to-use">
+    <div class="subsection-title"><i data-lucide="git-branch"></i> Когда Events нужны, а когда лишние</div>
+
+    <p class="text">Прежде чем плодить <code>OrderCreated</code>, <code>SendOrderConfirmation</code> и т.д. — спроси себя: <strong>а нужно ли тут вообще событие?</strong> Для простого CRUD (сохранил заказ → показал в списке) Events — <em>оверинжиниринг</em>. Они нужны, только когда есть <strong>побочные эффекты</strong>, которые надо отделить от основного действия.</p>
+
+    <div class="tip">
+      <strong>Правило одной фразой:</strong> Events — не про <em>сохранение</em> и не про <em>отображение</em>. Events — про <em>побочные эффекты</em> сохранения (лог, уведомление, интеграция, аналитика).
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="x-circle" style="width:14px;height:14px"></i> Когда Events НЕ нужны</div>
+    <p class="text">Есть таблица <code>orders</code>, ты создаёшь запись через <code>Order::create()</code> и в панели выводишь список через <code>Order::all()</code> с пагинацией — <em>никакие события не требуются</em>. Это базовый CRUD, вся логика в контроллере + модели.</p>
+<pre><code><span class="c-comment">// Контроллер — тонкий, никаких event()</span>
+<span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">StoreOrderRequest</span> <span class="c-var">$request</span>)
+{
+    <span class="c-var">$order</span> = <span class="c-type">Order</span>::<span class="c-fn">create</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>());
+    <span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">route</span>(<span class="c-str">'orders.index'</span>);
+}
+
+<span class="c-comment">// В blade — простой вывод</span>
+@foreach (<span class="c-var">$orders</span> <span class="c-key">as</span> <span class="c-var">$order</span>)
+    &lt;tr&gt;&lt;td&gt;&#123;&#123; <span class="c-var">$order</span>-&gt;<span class="c-var">id</span> &#125;&#125;&lt;/td&gt;&lt;td&gt;&#123;&#123; <span class="c-var">$order</span>-&gt;<span class="c-var">total</span> &#125;&#125;&lt;/td&gt;&lt;/tr&gt;
+@endforeach
+</code></pre>
+    <p class="text">Заказ уже в БД — панель его <em>видит через SELECT</em>. Никакого <code>event(new OrderShown(...))</code> для «отображения истории платежей» — данные и так есть.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="check-circle" style="width:14px;height:14px"></i> Когда Events полезны</div>
+    <p class="text">Если при создании заказа надо <strong>дополнительно</strong>:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Записать событие в отдельную <strong>audit-таблицу</strong> (<code>order_logs</code>)</li>
+      <li>Отправить <strong>уведомление</strong> администратору (email/SMS/Slack)</li>
+      <li>Обновить <strong>агрегированные данные</strong> (статистика продаж, счётчик заказов дня)</li>
+      <li>Вызвать <strong>внешнее API</strong> (регистрация платежа в CRM, синхронизация с 1С)</li>
+      <li>Выполнить <strong>тяжёлые операции</strong>, которые не должны тормозить ответ пользователю</li>
+    </ul>
+
+    <p class="text">В этих случаях <code>Event</code> + <code>Listener</code> идеален: событие эмитится <em>один раз</em>, а слушатели реагируют <em>независимо</em> — синхронно или асинхронно через очередь.</p>
+
+<pre><code><span class="c-comment">// Событие — DTO с данными</span>
+<span class="c-key">class</span> <span class="c-type">OrderCreated</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">public</span> <span class="c-type">Order</span> <span class="c-var">$order</span>) {}
+}
+
+<span class="c-comment">// Listener 1 — синхронно, audit-лог</span>
+<span class="c-key">class</span> <span class="c-type">LogOrderCreation</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">OrderCreated</span> <span class="c-var">$event</span>): <span class="c-key">void</span>
+    {
+        <span class="c-type">OrderLog</span>::<span class="c-fn">create</span>([
+            <span class="c-str">'order_id'</span> =&gt; <span class="c-var">$event</span>-&gt;<span class="c-var">order</span>-&gt;<span class="c-var">id</span>,
+            <span class="c-str">'action'</span>   =&gt; <span class="c-str">'created'</span>,
+        ]);
+    }
+}
+
+<span class="c-comment">// Listener 2 — асинхронно, тяжёлая почта</span>
+<span class="c-key">class</span> <span class="c-type">SendOrderConfirmation</span> <span class="c-key">implements</span> <span class="c-type">ShouldQueue</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">OrderCreated</span> <span class="c-var">$event</span>): <span class="c-key">void</span>
+    {
+        <span class="c-type">Mail</span>::<span class="c-fn">to</span>(<span class="c-var">$event</span>-&gt;<span class="c-var">order</span>-&gt;<span class="c-var">email</span>)-&gt;<span class="c-fn">send</span>(<span class="c-key">new</span> <span class="c-type">OrderPlacedMail</span>(<span class="c-var">$event</span>-&gt;<span class="c-var">order</span>));
+    }
+}
+
+<span class="c-comment">// В контроллере/Action — одна строка</span>
+<span class="c-fn">event</span>(<span class="c-key">new</span> <span class="c-type">OrderCreated</span>(<span class="c-var">$order</span>));
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="scale" style="width:14px;height:14px"></i> Где граница между Action и Event</div>
+    <p class="text">Ключевое правило:</p>
+    <table class="data-table">
+      <thead><tr><th>Действие</th><th>Куда</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>Часть транзакции</strong>, влияет на целостность (резервирование товара, списание средств, изменение основного статуса)</td>
+          <td>→ <code>Action</code> / <code>Service</code>, <em>внутри</em> <code>DB::transaction</code></td>
+        </tr>
+        <tr>
+          <td><strong>Побочный эффект</strong>, не влияет на основной процесс (логи, уведомления, интеграции, аналитика)</td>
+          <td>→ <code>Event</code> + <code>Listener</code>, желательно <code>-&gt;afterCommit()</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="text">Пример: «резервировать товар на складе» — <em>часть транзакции заказа</em> (если не удалось — заказ не создать), значит в Action. «Отправить письмо о заказе» — <em>побочка</em> (если письмо не ушло — заказ всё равно создан), значит в Event.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="table-2" style="width:14px;height:14px"></i> Итоговая таблица</div>
+    <table class="data-table">
+      <thead><tr><th>Ситуация</th><th>Нужен ли Event?</th></tr></thead>
+      <tbody>
+        <tr><td>Просто создать заказ и показать в списке (CRUD)</td><td>❌ Нет</td></tr>
+        <tr><td>Дополнительно записать в лог / отправить уведомление / синхронизировать</td><td>✅ Да</td></tr>
+        <tr><td>Тяжёлые операции, которые могут тормозить ответ (почта, внешние API)</td><td>✅ Да, с <code>ShouldQueue</code></td></tr>
+        <tr><td>Действие — <em>часть транзакции</em>, влияет на целостность</td><td>❌ Нет, вынести в <code>Action</code>/<code>Service</code></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="pitfall"><strong>⚠ Антипаттерн «событие ради события».</strong> Раздувать <code>UserViewedProfile</code>, <code>OrderListRendered</code>, <code>PageOpened</code> «чтобы потом что-нибудь на них подписать» — путь к неотлаживаемому коду. Плодить события следует, когда <em>уже есть</em> конкретный слушатель, которому это событие нужно.</div>
+
+    <div class="pitfall"><strong>⚠ Не путай Event с обычным вызовом.</strong> Если у события ровно <em>один</em> listener и никакой асинхронности — это не событие, а замаскированный прямой вызов. Убери прослойку, вызови метод напрямую. Event имеет смысл когда: (а) listeners несколько, либо (б) нужна асинхронность через <code>ShouldQueue</code>, либо (в) явно хочешь развязать слои.</div>
+
+    <div class="remember-box">
+      <strong>Итог:</strong> тонкий контроллер — создание заказа в <code>Action</code>, побочные эффекты — в <code>Event</code> + <code>Listener</code>. «Отображение в панели» — просто чтение через Eloquent, никаких событий не надо. Событие уместно только когда есть <em>реальный</em> побочный эффект.
+    </div>
   </div>
 
   <div class="subsection" id="ev-components">
