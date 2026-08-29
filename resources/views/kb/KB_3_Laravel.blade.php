@@ -4086,6 +4086,83 @@ php artisan make:resource <span class="c-type">Api/V1/PostResource</span>       
     <div class="remember-box">
       <strong>Мнемоника:</strong> <code>fill</code>able = что можно <em>налить</em> (into) БД. <code>hidden</code> = что <em>прячем</em> (from) при выводе. Разные направления, разные задачи.
     </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="alert-triangle" style="width:14px;height:14px"></i> А что будет, если <em>ничего</em> не настроить?</div>
+    <p class="text">Если не определить ни <code>$hidden</code>, ни Resource, ни явный <code>select()</code> — модель уйдёт в JSON <strong>со всеми полями таблицы</strong>. Это не «тупизм фреймворка», а <em>осознанное архитектурное решение</em>: Laravel не может угадать, какие поля секретные для твоего домена.</p>
+
+<pre><code><span class="c-key">class</span> <span class="c-type">User</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-comment">// $hidden не определён — забыли</span>
+}
+
+<span class="c-comment">// В контроллере:</span>
+<span class="c-key">return</span> <span class="c-var">$user</span>;   <span class="c-comment">// либо response()->json($user)</span>
+
+<span class="c-comment">// В JSON-ответе будут ВСЕ поля таблицы:</span>
+<span class="c-comment">// id, name, email, password (хеш!), remember_token, email_verified_at,</span>
+<span class="c-comment">// created_at, updated_at, ... — всё что есть в SELECT *</span>
+</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="shield-alert" style="width:14px;height:14px"></i> Насколько это опасно — по полям</div>
+    <table class="data-table">
+      <thead><tr><th>Поле</th><th>Что даёт злоумышленнику</th><th>Уровень риска</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>password</code></td>
+          <td>Bcrypt/argon2-хеш. Для входа напрямую бесполезен, но <em>если пароль слабый</em> — можно попытаться расшифровать перебором (hashcat, rainbow tables). Плюс если один и тот же хеш всплывёт в утечках других сервисов — линк аккаунтов.</td>
+          <td>Средний — прямого входа нет, но материал для атаки</td>
+        </tr>
+        <tr>
+          <td><code>remember_token</code></td>
+          <td>Токен «запомнить меня». Пока он активен, злоумышленник может <em>восстановить сессию</em> и войти под этим пользователем без пароля — просто подставив токен в куку.</td>
+          <td><strong>Высокий</strong> — прямая компрометация аккаунта</td>
+        </tr>
+        <tr>
+          <td><code>email_verified_at</code></td>
+          <td>Раскрывает статус верификации — используется в phishing/social engineering.</td>
+          <td>Низкий</td>
+        </tr>
+        <tr>
+          <td><code>api_token</code> / <code>*_secret</code></td>
+          <td>Прямой доступ к API от имени пользователя.</td>
+          <td><strong>Критический</strong></td>
+        </tr>
+        <tr>
+          <td><code>two_factor_recovery_codes</code></td>
+          <td>Обход 2FA.</td>
+          <td><strong>Критический</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="pitfall"><strong>⚠ Реальная уязвимость.</strong> Если API возвращает модели без фильтрации — это <em>не потенциальная</em> проблема, а <em>текущая</em>. Любой авторизованный пользователь через <code>GET /api/user</code> уже видит <code>remember_token</code> в HTML/DevTools/Network — а с ним и любой посмотревший на его экран.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="help-circle" style="width:14px;height:14px"></i> Почему Laravel не скрывает всё это <em>автоматически</em></div>
+    <p class="text">Три причины архитектурного решения:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Не у всех моделей есть чувствительные поля.</strong> <code>Category</code>, <code>Tag</code>, <code>Country</code> — там всё можно показывать. Автоскрытие «магических» имён (типа <code>*_token</code>, <code>*_secret</code>) — false positive: скроет то, что не надо.</li>
+      <li><strong>Иногда токен нужен.</strong> Отладка, админ-панель, миграция сессий — там <code>remember_token</code> может быть частью ответа. Автоскрытие мешало бы.</li>
+      <li><strong>Осознанность.</strong> Разработчик должен один раз явно указать «эти — не показывать», а не полагаться на неявную «безопасность фреймворка». Такой явный контракт лучше — его видно в коде, легко ревьюить.</li>
+    </ul>
+
+    <div class="info-box success">
+      <strong>Дефолтная модель <code>User</code> из Laravel уже защищена.</strong> В стартовом шаблоне (<code>app/Models/User.php</code>) есть:
+<pre style="margin-top:6px"><code><span class="c-key">protected</span> <span class="c-var">$hidden</span> = [
+    <span class="c-str">'password'</span>,
+    <span class="c-str">'remember_token'</span>,
+];</code></pre>
+      Именно поэтому «пользователи хранятся правильно из коробки». Но <em>свои</em> модели ты обязан защищать сам — Laravel не поставит <code>$hidden</code> за тебя автоматически.
+    </div>
+
+    <div class="remember-box">
+      <strong>Что делать всегда:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li>Прошёлся по всем моделям — есть <em>любые</em> чувствительные поля (токены, секреты, приватные метаданные)? → в <code>$hidden</code>.</li>
+        <li>Для новой модели, где точно нет секретов, — <code>$hidden</code> всё равно можно оставить пустым или не определять. Никакой «магии не случится», но это осознанное решение.</li>
+        <li>Если API-структура сложнее одной модели — переходи на <a href="#" onclick="showSub('api-resources','ar-overview',this.parentElement.parentElement); return false;">API Resource</a>. Там ты <em>явно перечисляешь</em> что отдавать — забыть невозможно.</li>
+        <li>Не полагайся на <code>select()</code> в запросе как единственную защиту: другой разработчик добавит <code>User::all()</code> в другом контроллере — токен утечёт.</li>
+      </ul>
+    </div>
   </div>
 
   <div class="subsection" id="el-casts">
