@@ -3063,6 +3063,119 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
     <div class="remember-box">
       <strong>Итог.</strong> <code>passedValidation()</code> — пост-валидационный хук, который выполняется только при успешной проверке. Идеально подходит для логирования, отправки уведомлений, побочных действий, зависящих от валидных данных. Для <em>изменения</em> данных перед валидацией — используйте <code>prepareForValidation()</code>, для <em>реакции</em> на валидные данные — <code>passedValidation()</code>.
     </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="git-fork" style="width:14px;height:14px"></i> Откуда в FormRequest берутся <code>user()</code> и <code>validated()</code></div>
+    <p class="text">Частый вопрос: «в моём <code>StorePostRequest</code> нигде не написан <code>user()</code>, а он работает — почему?». Ответ — <strong>иерархия наследования</strong>. <code>FormRequest</code> расширяет обычный <code>Request</code>, поэтому получает все его методы, плюс добавляет свои — валидационные.</p>
+
+    <div class="diagram">Illuminate\Http\Request               ← базовый HTTP-запрос
+    │  всё что от Symfony\Request + user(), input(), header(),
+    │  file(), cookie(), session(), route(), ip(), method() ...
+    │
+    ▼
+Illuminate\Foundation\Http\FormRequest  ← + валидация
+    │  validated(), safe(), rules(), authorize(),
+    │  prepareForValidation(), passedValidation(), messages() ...
+    │
+    ▼
+App\Http\Requests\StorePostRequest      ← твой класс
+       (в нём ты пишешь только rules() и authorize())</div>
+
+    <p class="text"><strong>Разложение по методам:</strong></p>
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>Откуда унаследован</th><th>Что делает</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><code>$request-&gt;user()</code></td>
+          <td><code>Illuminate\Http\Request</code> (базовый)</td>
+          <td>Возвращает аутентифицированного пользователя из guard, применённого middleware (обычно <code>auth</code>). Работает в любом Request и его наследниках.</td>
+        </tr>
+        <tr>
+          <td><code>$request-&gt;input('key')</code>, <code>-&gt;all()</code>, <code>-&gt;only()</code></td>
+          <td><code>Illuminate\Http\Request</code></td>
+          <td>Доступ к <em>сырым</em> данным запроса (до валидации).</td>
+        </tr>
+        <tr>
+          <td><code>$request-&gt;route('post')</code></td>
+          <td><code>Illuminate\Http\Request</code></td>
+          <td>Route Model Binding — параметр из URL.</td>
+        </tr>
+        <tr>
+          <td><code>$request-&gt;validated()</code></td>
+          <td><strong><code>FormRequest</code></strong> (только там)</td>
+          <td>Возвращает <em>только валидные</em> поля — те, что прошли <code>rules()</code>. Всё остальное игнорируется.</td>
+        </tr>
+        <tr>
+          <td><code>$request-&gt;safe()</code></td>
+          <td><code>FormRequest</code></td>
+          <td>То же самое + удобные обёртки <code>-&gt;only(...)</code>, <code>-&gt;except(...)</code>, <code>-&gt;collect()</code>.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="tip">
+      <strong>Правило-мнемоника:</strong> всё что <em>про HTTP</em> (user, input, header, route, cookie) — в <code>Illuminate\Http\Request</code>. Всё что <em>про валидацию</em> (validated, safe, rules, authorize) — в <code>FormRequest</code>.
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="shield-check" style="width:14px;height:14px"></i> Почему <code>validated()</code> — <em>безопасный</em> способ получить данные</div>
+    <p class="text"><code>validated()</code> возвращает <strong>только те ключи</strong>, для которых определены правила в <code>rules()</code>. Всё лишнее — отсеивается автоматически. Это критично для защиты от <strong>mass-assignment</strong>:</p>
+<pre><code><span class="c-comment">// Правила</span>
+<span class="c-key">public function</span> <span class="c-fn">rules</span>(): <span class="c-key">array</span>
+{
+    <span class="c-key">return</span> [
+        <span class="c-str">'title'</span>   =&gt; <span class="c-str">'required|string'</span>,
+        <span class="c-str">'content'</span> =&gt; <span class="c-str">'required|string'</span>,
+    ];
+}
+
+<span class="c-comment">// Атакующий шлёт: {"title": "X", "content": "Y", "is_admin": true, "user_id": 999}</span>
+
+<span class="c-var">$request</span>-&gt;<span class="c-fn">all</span>();          <span class="c-comment">// ❌ вернёт ВСЁ, включая is_admin и user_id</span>
+<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>();    <span class="c-comment">// ✅ вернёт только title + content</span>
+
+<span class="c-comment">// Поэтому в контроллере:</span>
+<span class="c-type">Post</span>::<span class="c-fn">create</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>());   <span class="c-comment">// безопасно</span>
+<span class="c-type">Post</span>::<span class="c-fn">create</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">all</span>());         <span class="c-comment">// потенциальная дыра</span>
+</code></pre>
+
+    <div class="pitfall"><strong>⚠ <code>validated()</code> доступен только ПОСЛЕ прохождения валидации.</strong> Если валидация не прошла — <em>контроллер даже не будет вызван</em>. Laravel сам поймает <code>ValidationException</code>, вернёт 422 (для API) или redirect back с ошибками (для веб). Поэтому в теле контроллера ты <em>гарантированно</em> работаешь с валидными данными.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="split" style="width:14px;height:14px"></i> Почему <code>user()</code>/<code>validated()</code> используются в контроллере, а не в Action</div>
+    <p class="text">В <a href="#" onclick="showSub('actions-services','as-refactor',this.parentElement.parentElement); return false;">рефакторинге</a> ты видел паттерн:</p>
+<pre><code><span class="c-comment">// Контроллер извлекает данные из HTTP-контекста</span>
+<span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">StoreOrderRequest</span> <span class="c-var">$request</span>, <span class="c-type">PlaceOrderAction</span> <span class="c-var">$action</span>)
+{
+    <span class="c-var">$order</span> = <span class="c-var">$action</span>-&gt;<span class="c-fn">handle</span>(
+        <span class="c-var">$request</span>-&gt;<span class="c-fn">user</span>(),                    <span class="c-comment">// вытащили user</span>
+        <span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>()[<span class="c-str">'items'</span>],       <span class="c-comment">// вытащили items</span>
+    );
+    <span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">route</span>(<span class="c-str">'orders.show'</span>, <span class="c-var">$order</span>);
+}
+
+<span class="c-comment">// Action принимает уже готовые примитивы — про HTTP ничего не знает</span>
+<span class="c-key">class</span> <span class="c-type">PlaceOrderAction</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-key">array</span> <span class="c-var">$items</span>): <span class="c-type">Order</span>
+    {
+        <span class="c-comment">// ...</span>
+    }
+}
+</code></pre>
+    <p class="text">Почему Action не принимает <code>$request</code>:</p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Переиспользование.</strong> Тот же Action вызывается из Artisan-команды (<code>PlaceOrderAction</code> из <code>SyncOldOrdersCommand</code>) — там HTTP-запроса нет вообще, только массивы.</li>
+      <li><strong>Тестируемость.</strong> Юнит-тест: <code>$action-&gt;handle($user, ['items' =&gt; [...]])</code> без моков Request/Session/Auth. Быстро и просто.</li>
+      <li><strong>Разделение слоёв.</strong> HTTP-слой (Request/Response) — забота контроллера. Бизнес-логика — забота Action. Смешивать = сложнее поддерживать.</li>
+    </ul>
+
+    <div class="remember-box">
+      <strong>Итог:</strong>
+      <ul style="margin:6px 0 0 20px;line-height:1.7">
+        <li><code>$request-&gt;user()</code> — унаследован от <code>Illuminate\Http\Request</code>, работает в любом Request. Возвращает аутентифицированного пользователя из middleware <code>auth</code>.</li>
+        <li><code>$request-&gt;validated()</code> — добавлен в <code>FormRequest</code>. Возвращает <em>только валидные</em> поля из <code>rules()</code> — защита от mass-assignment.</li>
+        <li>Оба доступны потому, что <code>FormRequest extends Request</code> — стандартное PHP-наследование.</li>
+        <li>В Action их не используют — контроллер извлекает данные, Action работает с примитивами. Так Action переиспользуемый и тестируемый.</li>
+      </ul>
+    </div>
   </div>
 
   <div class="subsection" id="val-compare">
