@@ -136,6 +136,7 @@ ul.bullets strong{color:var(--text);}
   <div class="nav-group-label">Большая архитектура</div>
   <a class="nav-item" onclick="showSection('ddd',this)"><i data-lucide="boxes"></i> DDD тактика</a>
   <a class="nav-item" onclick="showSection('clean',this)"><i data-lucide="cuboid"></i> Clean / Hexagonal</a>
+  <a class="nav-item" onclick="showSection('outbox',this)"><i data-lucide="mailbox"></i> Transactional Outbox</a>
 
   <div class="nav-group-label">Применение</div>
   <a class="nav-item" onclick="showSection('practice',this)"><i data-lucide="hammer"></i> Рефакторинг bad→good</a>
@@ -722,6 +723,201 @@ ul.bullets strong{color:var(--text);}
     <div class="pitfall"><strong>6. Тестирование Use Case моками.</strong> Use Case с 5 моков &mdash; тест проверяет реализацию. Используйте in-memory implementations.</div>
     <div class="pitfall"><strong>7. Hexagonal без портов.</strong> «У нас Hexagonal» &mdash; но интерфейсы Repository отсутствуют. Это не Hexagonal.</div>
     <div class="pitfall"><strong>8. Postel's Law нарушение.</strong> Принимать строгие типы, возвращать лояльные. Часто наоборот &mdash; контракт асимметричен.</div>
+  </div>
+</div>
+
+<div id="sec-outbox" class="section">
+  <div class="section-title">Transactional Outbox — надёжная публикация событий</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-triangle"></i> Проблема: dual-write (двойная запись)</div>
+    <p class="text">Классический сценарий в микросервисах: сервис заказов должен <em>одновременно</em>:</p>
+    <ul style="margin:8px 0 14px 22px;color:var(--text2);font-size:13px;line-height:1.85">
+      <li>Сохранить заказ в свою БД (<code>orders</code>).</li>
+      <li>Опубликовать событие <code>OrderCreated</code> в брокер (Kafka / RabbitMQ / SNS).</li>
+    </ul>
+    <p class="text">Это <strong>две разные системы</strong>. Атомарной транзакции между ними не бывает без сложных протоколов вроде 2PC. Значит возможны рассогласованные состояния:</p>
+
+    <table class="data-table">
+      <tr><th>Что произошло</th><th>Последствие</th></tr>
+      <tr><td>Заказ сохранён ✅, событие <em>не</em> отправлено ❌ (упал брокер / сеть)</td><td>Другие сервисы никогда не узнают о заказе. Оплата не спишется, склад не зарезервирует, письмо не уйдёт.</td></tr>
+      <tr><td>Событие отправлено ✅, транзакция откачена ❌ (упал SQL после публикации)</td><td>Downstream начнёт обрабатывать <em>несуществующий</em> заказ — грязные данные в других сервисах.</td></tr>
+    </table>
+
+    <div class="pitfall"><strong>Наивное «решение», которое НЕ работает:</strong> <code>DB::transaction(fn () => { $order-&gt;save(); Kafka::publish(...); });</code>. Publish не в БД — <code>rollback</code> Laravel не откатит уже отправленное сообщение. Аналогично «сначала опубликую, потом сохраню» — брокер не откатывается по сигналу приложения.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="lightbulb"></i> Решение: паттерн Transactional Outbox</div>
+    <p class="text">Идея: <strong>перенести публикацию в БД</strong>. В той же транзакции, что сохраняет заказ, пишем ещё одну строку — в служебную таблицу <code>outbox</code>. Отдельный процесс (<em>relay</em>) читает outbox и публикует события в брокер уже вне транзакции.</p>
+
+    <div class="diagram">┌─────────────────────────────────────────────────┐
+│   Сервис заказов (одна транзакция БД)           │
+│                                                 │
+│  BEGIN                                          │
+│    INSERT INTO orders   (id, total, ...)  ✅    │
+│    INSERT INTO outbox   (event_type,            │
+│                          payload, ...)     ✅    │
+│  COMMIT                                         │
+│                                                 │
+└──────────┬──────────────────────────────────────┘
+           │  (данные и событие сохранены атомарно)
+           ▼
+   ┌───────────────────┐
+   │  Relay worker     │  постоянно опрашивает outbox
+   │  (отдельный       │  WHERE published_at IS NULL
+   │   процесс)        │  FOR UPDATE SKIP LOCKED
+   └────────┬──────────┘
+            │  publish
+            ▼
+   ┌───────────────────┐
+   │  Broker           │  Kafka / RabbitMQ / SNS
+   │  (Kafka/RMQ/...)  │
+   └───────────────────┘
+            │  успех → UPDATE outbox SET published_at = now()
+            ▼
+     downstream сервисы</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="list-ordered"></i> Шаги паттерна</div>
+    <ol style="margin:8px 0 14px 22px;color:var(--text2);font-size:13px;line-height:1.85">
+      <li><strong>BEGIN</strong> транзакции БД.</li>
+      <li><strong>Сохранение бизнес-данных.</strong> <code>INSERT INTO orders ...</code></li>
+      <li><strong>Сохранение события в outbox.</strong> <code>INSERT INTO outbox (event_type, payload_json, aggregate_id, created_at)</code>.</li>
+      <li><strong>COMMIT.</strong> Либо всё сохранилось, либо ничего — атомарно.</li>
+      <li><strong>Relay-процесс</strong> опрашивает outbox, забирает не-отправленные события.</li>
+      <li><strong>Publish в брокер.</strong> Успешно → пометить <code>published_at = now()</code> (или удалить строку). Неуспешно → оставить как есть, следующий цикл повторит.</li>
+    </ol>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="database"></i> Схема таблицы outbox</div>
+<pre><code><span class="c-key">CREATE TABLE</span> <span class="c-type">outbox</span> (
+    <span class="c-var">id</span>            <span class="c-type">BIGSERIAL PRIMARY KEY</span>,
+    <span class="c-var">aggregate_type</span> <span class="c-type">VARCHAR(64)</span>  <span class="c-key">NOT NULL</span>,   <span class="c-comment">-- 'Order', 'Payment', ...</span>
+    <span class="c-var">aggregate_id</span>   <span class="c-type">VARCHAR(64)</span>  <span class="c-key">NOT NULL</span>,   <span class="c-comment">-- для routing и порядка</span>
+    <span class="c-var">event_type</span>     <span class="c-type">VARCHAR(64)</span>  <span class="c-key">NOT NULL</span>,   <span class="c-comment">-- 'OrderCreated', 'OrderPaid'</span>
+    <span class="c-var">payload</span>        <span class="c-type">JSONB</span>        <span class="c-key">NOT NULL</span>,   <span class="c-comment">-- сериализованное событие</span>
+    <span class="c-var">created_at</span>     <span class="c-type">TIMESTAMPTZ</span>  <span class="c-key">NOT NULL DEFAULT</span> <span class="c-fn">now</span>(),
+    <span class="c-var">published_at</span>   <span class="c-type">TIMESTAMPTZ</span>  <span class="c-key">NULL</span>              <span class="c-comment">-- NULL = ещё не отправлено</span>
+);
+
+<span class="c-comment">-- Индекс для быстрого поиска не-отправленных</span>
+<span class="c-key">CREATE INDEX</span> <span class="c-key">ON</span> <span class="c-type">outbox</span> (<span class="c-var">created_at</span>) <span class="c-key">WHERE</span> <span class="c-var">published_at</span> <span class="c-key">IS NULL</span>;</code></pre>
+    <p class="text">Индекс <em>частичный</em> — по «горячей» части (не-опубликованные): выборка воркера всегда быстрая, даже когда в таблице миллион старых записей.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="hammer"></i> Laravel — реализация в Action</div>
+<pre><code><span class="c-key">final class</span> <span class="c-type">PlaceOrderAction</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-key">array</span> <span class="c-var">$data</span>): <span class="c-type">Order</span>
+    {
+        <span class="c-key">return</span> <span class="c-type">DB</span>::<span class="c-fn">transaction</span>(<span class="c-key">function</span> () <span class="c-key">use</span> (<span class="c-var">$data</span>) {
+            <span class="c-comment">// 1. Основные данные</span>
+            <span class="c-var">$order</span> = <span class="c-type">Order</span>::<span class="c-fn">create</span>(<span class="c-var">$data</span>);
+
+            <span class="c-comment">// 2. Событие в outbox — та же транзакция</span>
+            <span class="c-type">DB</span>::<span class="c-fn">table</span>(<span class="c-str">'outbox'</span>)-&gt;<span class="c-fn">insert</span>([
+                <span class="c-str">'aggregate_type'</span> =&gt; <span class="c-str">'Order'</span>,
+                <span class="c-str">'aggregate_id'</span>   =&gt; <span class="c-var">$order</span>-&gt;<span class="c-var">id</span>,
+                <span class="c-str">'event_type'</span>     =&gt; <span class="c-str">'OrderCreated'</span>,
+                <span class="c-str">'payload'</span>        =&gt; <span class="c-fn">json_encode</span>([
+                    <span class="c-str">'order_id'</span> =&gt; <span class="c-var">$order</span>-&gt;<span class="c-var">id</span>,
+                    <span class="c-str">'total'</span>    =&gt; <span class="c-var">$order</span>-&gt;<span class="c-var">total</span>,
+                    <span class="c-str">'items'</span>    =&gt; <span class="c-var">$order</span>-&gt;<span class="c-var">items</span>-&gt;<span class="c-fn">toArray</span>(),
+                ]),
+                <span class="c-str">'created_at'</span>     =&gt; <span class="c-fn">now</span>(),
+            ]);
+
+            <span class="c-key">return</span> <span class="c-var">$order</span>;
+            <span class="c-comment">// COMMIT — обе записи атомарно</span>
+        });
+    }
+}</code></pre>
+    <p class="text">Обрати внимание: <strong>никакого <code>Kafka::publish()</code> внутри транзакции</strong>. Публикация — забота отдельного воркера. Даже если Kafka лежит — заказ создан, событие ждёт в БД.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="repeat"></i> Relay — отдельный воркер</div>
+<pre><code><span class="c-comment">// app/Console/Commands/RelayOutboxCommand.php</span>
+<span class="c-key">final class</span> <span class="c-type">RelayOutboxCommand</span> <span class="c-key">extends</span> <span class="c-type">Command</span>
+{
+    <span class="c-key">protected</span> <span class="c-var">$signature</span> = <span class="c-str">'outbox:relay'</span>;
+
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">KafkaProducer</span> <span class="c-var">$kafka</span>): <span class="c-key">int</span>
+    {
+        <span class="c-key">while</span> (<span class="c-key">true</span>) {
+            <span class="c-type">DB</span>::<span class="c-fn">transaction</span>(<span class="c-key">function</span> () <span class="c-key">use</span> (<span class="c-var">$kafka</span>) {
+                <span class="c-comment">// SKIP LOCKED — параллельные воркеры не мешают друг другу</span>
+                <span class="c-var">$events</span> = <span class="c-type">DB</span>::<span class="c-fn">select</span>(<span class="c-str">"
+                    SELECT * FROM outbox
+                    WHERE published_at IS NULL
+                    ORDER BY id
+                    LIMIT 100
+                    FOR UPDATE SKIP LOCKED
+                "</span>);
+
+                <span class="c-key">foreach</span> (<span class="c-var">$events</span> <span class="c-key">as</span> <span class="c-var">$e</span>) {
+                    <span class="c-var">$kafka</span>-&gt;<span class="c-fn">publish</span>(<span class="c-var">$e</span>-&gt;<span class="c-var">event_type</span>, <span class="c-var">$e</span>-&gt;<span class="c-var">aggregate_id</span>, <span class="c-var">$e</span>-&gt;<span class="c-var">payload</span>);
+                    <span class="c-type">DB</span>::<span class="c-fn">table</span>(<span class="c-str">'outbox'</span>)-&gt;<span class="c-fn">where</span>(<span class="c-str">'id'</span>, <span class="c-var">$e</span>-&gt;<span class="c-var">id</span>)
+                        -&gt;<span class="c-fn">update</span>([<span class="c-str">'published_at'</span> =&gt; <span class="c-fn">now</span>()]);
+                }
+            });
+
+            <span class="c-key">if</span> (<span class="c-fn">empty</span>(<span class="c-var">$events</span>)) <span class="c-fn">sleep</span>(<span class="c-num">1</span>);   <span class="c-comment">// нечего делать — пауза</span>
+        }
+    }
+}</code></pre>
+    <p class="text">Запуск: <code>supervisord</code> / <code>systemd</code> держит команду постоянно. Несколько воркеров можно запустить параллельно — <code>SKIP LOCKED</code> гарантирует, что каждое событие возьмёт только один.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="check-circle-2"></i> Ключевые преимущества</div>
+    <div class="card">
+      <h3>Надёжность и атомарность</h3>
+      <p class="text">Событие создаётся <em>тогда и только тогда</em>, когда данные сохранены. Не бывает «заказ есть, а событие потерялось».</p>
+    </div>
+    <div class="card">
+      <h3>At-Least-Once delivery</h3>
+      <p class="text">Даже если relay упал <em>после</em> publish, но <em>до</em> обновления <code>published_at</code> — следующий запуск повторит. Гарантия «хотя бы один раз».</p>
+    </div>
+    <div class="card">
+      <h3>Без 2PC / XA</h3>
+      <p class="text">Distributed transactions сложны, медленны, требуют координатора. Outbox достигает того же эффекта только средствами обычной SQL-транзакции.</p>
+    </div>
+    <div class="card">
+      <h3>Отладка через SQL</h3>
+      <p class="text">Все события в таблице — можно посмотреть <code>SELECT * FROM outbox WHERE published_at IS NULL</code> и понять, что застряло. С Kafka log ты этого не увидишь напрямую.</p>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Важные нюансы</div>
+    <div class="pitfall"><strong>1. Потребители обязаны быть идемпотентными.</strong> «At-least-once» означает: событие может прийти <em>2+ раз</em> (relay упал после publish, но до update). Consumer должен корректно обработать дубли — обычно по <code>event_id</code> в отдельной таблице <code>processed_events</code>.</div>
+    <div class="pitfall"><strong>2. Порядок событий.</strong> Для одного <code>aggregate_id</code> порядок должен сохраняться. Один relay-процесс на partition/aggregate решает это; распараллеливание — по <code>aggregate_id</code> (Kafka partition key).</div>
+    <div class="pitfall"><strong>3. Разрастание таблицы.</strong> После publish можно либо удалять, либо чистить cron'ом старше N дней (<code>DELETE FROM outbox WHERE published_at &lt; now() - interval '7 days'</code>). Иначе таблица становится терабайтной.</div>
+    <div class="pitfall"><strong>4. Полётов транзакции нет.</strong> Если <code>Kafka::publish</code> внутри <code>DB::transaction</code> — паттерн сломан. Publish <em>всегда</em> отдельно, после COMMIT'а бизнес-транзакции.</div>
+    <div class="pitfall"><strong>5. Latency: событие появится через ~1 сек.</strong> Между COMMIT'ом заказа и приходом в consumer — задержка на цикл relay. Обычно приемлема, но для «мгновенных» сценариев (real-time уведомления в браузере) — сомнительно.</div>
+    <div class="pitfall"><strong>6. Change Data Capture (CDC) как альтернатива.</strong> Debezium читает WAL PostgreSQL и публикует изменения напрямую — своя реализация Outbox не нужна. Плюс: даже <em>прямые UPDATE в БД</em> порождают события. Минус: инфраструктура сложнее.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> Когда применять</div>
+    <ul style="margin:8px 0 14px 22px;color:var(--text2);font-size:13px;line-height:1.85">
+      <li><strong>Микросервисы</strong>, где надо гарантированно уведомить downstream о доменных событиях.</li>
+      <li><strong>Модульные монолиты</strong> с eventual consistency между модулями (даже без брокера — тот же паттерн для отложенных Jobs).</li>
+      <li><strong>Интеграция с внешними API</strong>: платёжный вебхук, отправка в CRM, синхронизация с 1С. Всё, где потеря = деньги/данные.</li>
+    </ul>
+    <p class="text"><strong>Когда <em>не</em> нужен:</strong> монолит, всё в одной БД, обработка синхронная — просто дёргай event listener напрямую. Для маленьких проектов outbox — оверинжиниринг.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="check-square"></i> Итог</div>
+    <div class="info-box success">
+      Transactional Outbox — стандартный способ надёжной коммуникации между сервисами <em>без</em> распределённых транзакций. Гарантирует, что событие уйдёт тогда и только тогда, когда бизнес-данные закоммичены. Плата: at-least-once вместо exactly-once (лечится идемпотентностью consumer'ов), задержка ~1 сек, нужен relay-процесс и таблица <code>outbox</code>. На типовом Laravel — реализуется за один вечер, но экономит недели отладки «где мои события».
+    </div>
   </div>
 </div>
 
