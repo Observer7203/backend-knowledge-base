@@ -1443,6 +1443,218 @@ Limit  (actual time=<span class="c-num">120.4</span>..<span class="c-num">120.5<
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="corner-down-right"></i> <code>RETURNING</code> — killer-фича PostgreSQL для очередей и пулов</div>
+
+    <p class="text"><strong>RETURNING</strong> — расширение SQL, которое позволяет <code>INSERT</code>/<code>UPDATE</code>/<code>DELETE</code> вернуть данные изменённых строк <em>в том же ответе</em>, как если бы вы сделали SELECT сразу. Поддерживается в PostgreSQL нативно, MySQL добавил похожее только в 8.0.21+ и <em>только</em> для <code>DELETE</code> (для UPDATE/INSERT — нет).</p>
+
+    <p class="text"><strong>Обычный ответ UPDATE</strong> в MySQL/стандартном SQL — только <em>количество затронутых строк</em> (affected rows). Чтобы получить сами данные, нужно делать второй запрос — <code>SELECT</code>. <code>RETURNING</code> убирает эту двухшаговость.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="package" style="width:14px;height:14px"></i> Классический пример — «выдача ключа из пула»</div>
+    <p class="text">Задача: в таблице <code>stock_pool</code> лежат ключи активации (Steam-keys, лицензионные коды). При заказе надо взять <em>один свободный</em> и намертво привязать к <code>order_id</code>. В условиях 1000 rps любой race condition = «два клиента получили один и тот же ключ».</p>
+
+<pre><code><span class="c-comment">-- PostgreSQL: один атомарный оператор</span>
+<span class="c-key">UPDATE</span> <span class="c-type">stock_pool</span>
+   <span class="c-key">SET</span> <span class="c-var">order_id</span> = <span class="c-str">'ord_1'</span>,
+       <span class="c-var">issued_at</span> = <span class="c-fn">now</span>()
+ <span class="c-key">WHERE</span> <span class="c-var">id</span> = (
+       <span class="c-key">SELECT</span> <span class="c-var">id</span> <span class="c-key">FROM</span> <span class="c-type">stock_pool</span>
+        <span class="c-key">WHERE</span> <span class="c-var">sku</span> = <span class="c-str">'KEY-GTA5'</span> <span class="c-key">AND</span> <span class="c-var">order_id</span> <span class="c-key">IS NULL</span>
+        <span class="c-key">ORDER BY</span> <span class="c-var">id</span>
+        <span class="c-key">LIMIT</span> <span class="c-num">1</span>
+        <span class="c-key">FOR UPDATE SKIP LOCKED</span>
+ )
+<span class="c-key">RETURNING</span> <span class="c-var">code</span>;</code></pre>
+
+    <p class="text">Что этот запрос делает в один оператор:</p>
+    <ul class="bullets">
+      <li>Находит первый свободный ключ (<code>order_id IS NULL</code>) с блокировкой строки.</li>
+      <li><code>FOR UPDATE SKIP LOCKED</code> — если 10 параллельных воркеров уже держат первые 10 ключей, перепрыгнет их и возьмёт 11-й.</li>
+      <li>Привязывает его к заказу (<code>UPDATE ... SET</code>).</li>
+      <li>Возвращает сам код (<code>RETURNING code</code>) — приложение получает готовое значение в ответе.</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="shield-check" style="width:14px;height:14px"></i> Что даёт <code>RETURNING</code> по сравнению с UPDATE+SELECT</div>
+    <table class="data-table">
+      <tr><th>Аспект</th><th>UPDATE + отдельный SELECT (MySQL)</th><th>UPDATE ... RETURNING (PG)</th></tr>
+      <tr><td><strong>Атомарность</strong></td><td>Между двумя запросами есть окно, где другой процесс может изменить строку → race condition, «не тот ключ»</td><td>Захват, изменение и выборка — <em>один оператор</em>, гонки не бывает</td></tr>
+      <tr><td><strong>Round-trip</strong></td><td>2 сетевых вызова к БД</td><td>1 сетевой вызов</td></tr>
+      <tr><td><strong>Синхронность с SKIP LOCKED</strong></td><td>Второй SELECT должен повторно применять сложную логику — легко потерять «правильный» ключ</td><td>Возвращает <em>именно ту</em> строку, которая прошла блокировку в этом запросе</td></tr>
+      <tr><td><strong>Латентность на 1000 rps</strong></td><td>+2×RTT на каждый заказ = десятки мс задержки</td><td>1×RTT — вдвое быстрее</td></tr>
+    </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="list" style="width:14px;height:14px"></i> Другие типичные применения <code>RETURNING</code></div>
+    <ul class="bullets">
+      <li><strong>Получить сгенерированный ID при INSERT.</strong> <code>INSERT INTO orders (...) VALUES (...) RETURNING id;</code> — не нужно потом делать <code>SELECT lastval()</code> или <code>currval()</code>.</li>
+      <li><strong>Аудит удалений.</strong> <code>DELETE FROM sessions WHERE expires_at &lt; now() RETURNING id, user_id;</code> — сразу знаешь, кого выкинул.</li>
+      <li><strong>UPSERT с результатом.</strong> <code>INSERT ... ON CONFLICT DO UPDATE ... RETURNING id, xmax = 0 AS inserted;</code> — сразу видно, вставил ты новую строку или обновил старую.</li>
+      <li><strong>Массовые операции с обратной связью.</strong> <code>UPDATE ... WHERE ... RETURNING id;</code> — вернёт ID всех затронутых строк, не нужен второй запрос.</li>
+    </ul>
+
+    <div class="info-box warning">
+      <strong>MySQL-эквивалент:</strong> прямого RETURNING для UPDATE/INSERT нет. Обходные пути: <code>LAST_INSERT_ID()</code> для авто-инкремента после INSERT (только последний ID, не колонки); транзакция <code>BEGIN; UPDATE ... ; SELECT ... FROM ... WHERE ...; COMMIT</code> с блокировкой <code>FOR UPDATE</code> — работает, но многословнее и на high-throughput проектах менее удобно.
+    </div>
+
+    <div class="pitfall"><strong>Laravel:</strong> прямой поддержки <code>RETURNING</code> в Query Builder нет — используйте <code>DB::selectOne('UPDATE ... RETURNING code', [...])</code> либо <code>DB::statement</code> + <code>PDO::fetchColumn</code>. Для INSERT — <code>DB::table(...)-&gt;insertGetId(...)</code> работает и в MySQL (через LAST_INSERT_ID), и в PG (через RETURNING id) прозрачно.</div>
+
+    <div class="remember-box">
+      <strong>Итог:</strong> в PostgreSQL <code>RETURNING</code> — не «удобство», а <em>ключевой инструмент</em> для реализации очередей, пулов, атомарной выдачи ресурсов. Он превращает потенциально небезопасную двухшаговую операцию в один надёжный атомарный запрос.
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare-arrows"></i> Partial index — путаница терминов MySQL vs PostgreSQL</div>
+
+    <p class="text">Одно слово «partial index» — <strong>две совсем разные фичи</strong> в MySQL и PostgreSQL. Классический источник недопонимания на собеседованиях и в переводимых статьях.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="filter" style="width:14px;height:14px"></i> PostgreSQL: partial index = индекс по подмножеству строк (<code>WHERE</code>)</div>
+    <p class="text">PostgreSQL позволяет индексировать <em>не всю таблицу</em>, а только строки, удовлетворяющие условию:</p>
+<pre><code><span class="c-comment">-- Индексируем только 'pending' задачи (обычно 0.1% от всех записей)</span>
+<span class="c-key">CREATE INDEX</span> <span class="c-key">ON</span> <span class="c-type">jobs</span> (<span class="c-var">run_at</span>) <span class="c-key">WHERE</span> <span class="c-var">status</span> = <span class="c-str">'pending'</span>;
+
+<span class="c-comment">-- Индекс на активные заказы</span>
+<span class="c-key">CREATE INDEX</span> <span class="c-key">ON</span> <span class="c-type">orders</span> (<span class="c-var">created_at</span>) <span class="c-key">WHERE</span> <span class="c-var">status</span> <span class="c-key">IN</span> (<span class="c-str">'paid'</span>, <span class="c-str">'delivering'</span>);
+
+<span class="c-comment">-- Уникальность только для не-отменённых доставок</span>
+<span class="c-key">CREATE UNIQUE INDEX</span> <span class="c-key">ON</span> <span class="c-type">deliveries</span> (<span class="c-var">order_id</span>) <span class="c-key">WHERE</span> <span class="c-var">status</span> &lt;&gt; <span class="c-str">'cancelled'</span>;</code></pre>
+    <p class="text"><strong>Что даёт:</strong></p>
+    <ul class="bullets">
+      <li>Индекс <em>физически меньше</em> — только N строк из миллиона. Меньше RAM, дольше держится в кеше.</li>
+      <li><code>INSERT</code>/<code>UPDATE</code> быстрее — индекс обновляется только для строк, попадающих под условие.</li>
+      <li>Запросы к «горячему подмножеству» — молниеносные (индекс маленький, всё в памяти).</li>
+      <li>Уникальность «с условием» — обычный UNIQUE не может выразить «уникально только для активных».</li>
+    </ul>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="scissors" style="width:14px;height:14px"></i> MySQL: partial index = префиксный индекс (первые N символов)</div>
+    <p class="text">В MySQL термин «partial index» — это <strong>префикс колонки</strong>, а не подмножество строк. Индексируются <em>все</em> записи, но не целиком — только первые N символов длинного VARCHAR/TEXT:</p>
+<pre><code><span class="c-comment">-- Индексируем только первые 10 символов колонки 'name'</span>
+<span class="c-key">CREATE INDEX</span> <span class="c-var">idx_name</span> <span class="c-key">ON</span> <span class="c-type">users</span> (<span class="c-var">name</span>(<span class="c-num">10</span>));
+
+<span class="c-comment">-- Экономит место, если N символов уже дают достаточную селективность</span>
+<span class="c-key">CREATE INDEX</span> <span class="c-var">idx_email</span> <span class="c-key">ON</span> <span class="c-type">users</span> (<span class="c-var">email</span>(<span class="c-num">20</span>));</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="table-2" style="width:14px;height:14px"></i> Сравнительная таблица</div>
+    <table class="data-table">
+      <tr><th>Характеристика</th><th>PostgreSQL «partial»</th><th>MySQL «partial»</th></tr>
+      <tr><td><strong>Что индексируется</strong></td><td>Подмножество <em>строк</em>, соответствующих WHERE</td><td><em>Все строки</em>, но часть значения колонки (префикс)</td></tr>
+      <tr><td><strong>Синтаксис</strong></td><td><code>WHERE condition</code> в CREATE INDEX</td><td><code>(column(N))</code> в CREATE INDEX</td></tr>
+      <tr><td><strong>Основная цель</strong></td><td>Уменьшить индекс + ускорить запросы к «горячему» подмножеству</td><td>Экономия места для длинных строк (VARCHAR/TEXT)</td></tr>
+      <tr><td><strong>Поддержка условной уникальности</strong></td><td>Да: <code>UNIQUE ... WHERE ...</code></td><td>Нет — префиксный индекс не про это</td></tr>
+      <tr><td><strong>Поддержка</strong></td><td>С 1990-х, нативная</td><td>Условный WHERE-индекс — <em>отсутствует</em>, запрос на фичу отклонён</td></tr>
+    </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="wrench" style="width:14px;height:14px"></i> Как получить эффект PG partial index в MySQL</div>
+    <ul class="bullets">
+      <li><strong>Generated columns.</strong> Создаёшь виртуальную колонку, равную полю только при условии, иначе <code>NULL</code>; индексируешь её. NULL-значения в B-tree занимают минимум места.
+<pre style="margin-top:6px"><code><span class="c-key">ALTER TABLE</span> <span class="c-type">jobs</span>
+  <span class="c-key">ADD COLUMN</span> <span class="c-var">run_at_pending</span> <span class="c-type">TIMESTAMP</span>
+    <span class="c-key">GENERATED ALWAYS AS</span> (<span class="c-key">IF</span>(<span class="c-var">status</span> = <span class="c-str">'pending'</span>, <span class="c-var">run_at</span>, <span class="c-key">NULL</span>)) <span class="c-key">VIRTUAL</span>,
+  <span class="c-key">ADD INDEX</span> (<span class="c-var">run_at_pending</span>);</code></pre>
+      </li>
+      <li><strong>Секционирование (partitioning).</strong> Таблицу делят на разделы по значению колонки (например, по статусу или дате), индекс есть только на нужном разделе.</li>
+      <li><strong>Отдельная таблица для «горячих» строк.</strong> <code>jobs</code> + <code>jobs_pending</code>, куда триггер переносит записи при смене статуса. Радикально, но иногда лечит production.</li>
+    </ul>
+
+    <div class="pitfall"><strong>На собеседовании:</strong> если тебя спросят «какие бывают partial indexes» — уточни, о какой СУБД речь. В контексте PostgreSQL это <em>условные индексы</em>, в MySQL — <em>префиксные</em>. Смешивать нельзя.</div>
+
+    <div class="remember-box">
+      <strong>Мнемоника:</strong> в PG «partial» = «частичная <em>выборка строк</em>» (WHERE). В MySQL «partial» = «частичное <em>значение колонки</em>» (первые N символов). Одно слово, две разные оптимизации.
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="award"></i> Почему выбрать PostgreSQL на новом проекте — аргументы «за»</div>
+
+    <p class="text">Если новый Laravel-проект стартует с чистого листа и есть свобода выбора СУБД — <strong>PostgreSQL</strong> чаще всего выигрышный вариант. Не потому что «модно», а потому что для типичных бэкенд-задач (очереди, транзакции с побочками, атомарная выдача ресурсов, консистентность денежных операций) PG даёт из коробки несколько вещей, которых в MySQL просто нет.</p>
+
+    <div class="info-box primary">
+      <strong>Аргумент на собеседовании:</strong> выбрать «MySQL, потому что я его знаю» — слабый сигнал. Выбрать «Postgres» и назвать 3 конкретных технических причины (RETURNING + SKIP LOCKED, предсказуемая изоляция, частичные индексы) — сильный.
+    </div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="shield-check" style="width:14px;height:14px"></i> 1. Предсказуемая изоляция без «сюрпризов»</div>
+    <p class="text">PostgreSQL по умолчанию — <code>READ COMMITTED</code>, поведение точно такое, как в учебнике: транзакция видит все закоммиченные изменения на момент каждого SELECT.</p>
+    <p class="text">MySQL/InnoDB по умолчанию — <code>REPEATABLE READ</code> с <strong>нестандартной семантикой</strong>: обычный SELECT читает снапшот на момент начала транзакции, а <code>SELECT ... FOR UPDATE</code> — <em>последнюю закоммиченную версию</em>. Две строки подряд в одной транзакции видят разные данные:</p>
+<pre><code><span class="c-comment">-- MySQL, REPEATABLE READ. Между двумя SELECT кто-то закоммитил UPDATE.</span>
+<span class="c-key">BEGIN</span>;
+<span class="c-key">SELECT</span> <span class="c-var">balance</span> <span class="c-key">FROM</span> <span class="c-var">accounts</span> <span class="c-key">WHERE</span> <span class="c-var">id</span> = <span class="c-num">1</span>;             <span class="c-comment">-- 100 (снапшот)</span>
+<span class="c-key">SELECT</span> <span class="c-var">balance</span> <span class="c-key">FROM</span> <span class="c-var">accounts</span> <span class="c-key">WHERE</span> <span class="c-var">id</span> = <span class="c-num">1</span> <span class="c-key">FOR UPDATE</span>;  <span class="c-comment">-- 150 (последняя)</span>
+<span class="c-comment">-- Классическая мина: логика решает по первому SELECT, обновление ушло по второму.</span></code></pre>
+    <p class="text">Для 90% CRUD это неважно. Для «ровно один раз под 50 параллельными запросами» — это источник багов, которые невозможно объяснить, глядя в свой код.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="lock" style="width:14px;height:14px"></i> 2. Отсутствие gap-локов при <code>FOR UPDATE</code></div>
+    <p class="text">InnoDB при <code>SELECT ... FOR UPDATE</code> блокирует не только строки, но и <strong>промежутки между ними</strong> (next-key locking) — чтобы защититься от «фантомов». Побочка: дедлоки там, где их логически быть не должно, особенно при выборке из очереди по условию (<code>WHERE status = 'pending' LIMIT 10 FOR UPDATE</code>).</p>
+    <p class="text">В PostgreSQL — MVCC без gap-локов: блокируются <em>только реально найденные строки</em>. Меньше сюрпризов, проще отлаживать конкуренцию.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="dollar-sign" style="width:14px;height:14px"></i> 3. Отложенные ограничения (<code>DEFERRABLE</code>) — для журналов и денежных проводок</div>
+    <p class="text">Классический случай: двойная запись в бухгалтерии. Каждая проводка = минимум две строки, и <em>сумма проводки обязана быть нулём</em>. Но <em>во время вставки первой строки</em> сумма ещё не ноль — ограничение упало бы, если проверяется построчно.</p>
+    <p class="text">PostgreSQL умеет проверять ограничения <strong>в момент COMMIT</strong>, а не после каждой строки:</p>
+<pre><code><span class="c-key">ALTER TABLE</span> <span class="c-type">ledger_entries</span>
+  <span class="c-key">ADD CONSTRAINT</span> <span class="c-var">balanced</span>
+  <span class="c-key">CHECK</span> (...)
+  <span class="c-key">DEFERRABLE INITIALLY DEFERRED</span>;
+<span class="c-comment">-- Проверка сработает только на COMMIT</span></code></pre>
+    <p class="text">В MySQL такого механизма нет — пришлось бы городить триггеры или проверять в коде приложения.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="fingerprint" style="width:14px;height:14px"></i> 4. Advisory locks — блокировка «по имени» без реальной строки</div>
+    <p class="text">Классический кейс: <em>«вебхук от платёжки пришёл раньше, чем создался заказ»</em> — надо сериализовать обработчиков, но строки в БД ещё нет. PostgreSQL умеет транзакционные advisory locks — «именной» лок, который сам отпустится при COMMIT/ROLLBACK:</p>
+<pre><code><span class="c-key">SELECT</span> <span class="c-fn">pg_advisory_xact_lock</span>(<span class="c-fn">hashtext</span>(<span class="c-str">'ord_1'</span>));
+<span class="c-comment">-- Второй воркер с тем же 'ord_1' будет ждать первого</span>
+<span class="c-comment">-- При commit/rollback лок освободится автоматически</span></code></pre>
+    <p class="text">В MySQL есть <code>GET_LOCK('name')</code>, но он привязан к <em>сессии</em>, а не к транзакции — при откате не освобождается, надо явно <code>RELEASE_LOCK</code>. Утечки локов после исключений — типичная беда.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="alert-triangle" style="width:14px;height:14px"></i> 5. <code>INSERT IGNORE</code> в MySQL — тихо опасен</div>
+    <p class="text"><code>INSERT IGNORE</code> в MySQL <strong>глушит все ошибки</strong>, а не только нарушение уникальности: обрезанные строки, неверные типы, нарушение внешних ключей. Вставил мусор — молча получил 0 rows, а потом полдня ищешь, где данные пропали.</p>
+    <p class="text">PostgreSQL <code>ON CONFLICT (event_id) DO NOTHING</code> реагирует <em>только на конкретный конфликт по конкретному индексу</em>. Всё остальное честно падает исключением. Для дедупликации платёжных событий, идемпотентности вебхуков — разница принципиальная.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="plus-circle" style="width:14px;height:14px"></i> 6. Приятные мелочи</div>
+    <table class="data-table">
+      <tr><th>Фича</th><th>Что даёт</th></tr>
+      <tr><td><strong>Транзакционный DDL</strong></td><td>Миграция упала на 5-м шаге — откатились все 5. В MySQL DDL коммитится сам собой, и остаёшься с полусхемой (в prod — кошмар).</td></tr>
+      <tr><td><strong><code>EXPLAIN (ANALYZE, BUFFERS)</code></strong></td><td>Реальное время по узлам, факт vs. оценка, попадания в кеш. Ловля bottleneck'ов на порядок точнее, чем в MySQL EXPLAIN.</td></tr>
+      <tr><td><strong>JSONB + GIN-индексы</strong></td><td>Сырые payload'ы вебхуков / ответы поставщиков лежат «как есть», индексируются нативно (<code>WHERE data @&gt; '{"status":"paid"}'</code>). В MySQL — только через generated columns.</td></tr>
+      <tr><td><strong><code>CHECK</code> constraints</strong></td><td>Работают. В MySQL до 8.0.16 <code>CHECK</code> молча игнорировался — парсился и выбрасывался, будто его нет.</td></tr>
+      <tr><td><strong><code>timestamptz</code></strong></td><td>Реально хранит таймзону + UTC-нормализация. MySQL <code>DATETIME</code> — «голая» строка без таймзоны, приложение должно всё разруливать само.</td></tr>
+      <tr><td><strong>Массивы, ranges, custom-типы</strong></td><td>Нативные, работают в WHERE/индексах. MySQL — нет вообще.</td></tr>
+    </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="arrow-right"></i> Что переносится <em>без боли</em> — шпаргалка</div>
+    <p class="text">SQL, который ты знаешь по MySQL, переносится почти весь. Отличия в диалекте — минут на 30 чтения:</p>
+    <table class="data-table">
+      <tr><th>MySQL</th><th>PostgreSQL</th></tr>
+      <tr><td><code>`col`</code> (backticks)</td><td><code>"col"</code> (двойные кавычки, часто вообще не нужны)</td></tr>
+      <tr><td><code>AUTO_INCREMENT</code></td><td><code>GENERATED ALWAYS AS IDENTITY</code> / <code>SERIAL</code></td></tr>
+      <tr><td><code>IFNULL(a, b)</code></td><td><code>COALESCE(a, b)</code> (тоже работает в MySQL)</td></tr>
+      <tr><td><code>CONCAT(a, b)</code></td><td><code>a || b</code></td></tr>
+      <tr><td><code>INSERT IGNORE</code></td><td><code>INSERT ... ON CONFLICT DO NOTHING</code></td></tr>
+      <tr><td><code>ON DUPLICATE KEY UPDATE</code></td><td><code>ON CONFLICT (col) DO UPDATE SET ...</code></td></tr>
+      <tr><td><code>DATETIME</code></td><td><code>timestamptz</code></td></tr>
+      <tr><td><code>SHOW TABLES</code></td><td><code>\dt</code> в psql</td></tr>
+      <tr><td><code>LIMIT 10 OFFSET 5</code></td><td>Так же</td></tr>
+      <tr><td>SELECT / JOIN / GROUP BY / оконные функции</td><td>Идентично (один стандарт)</td></tr>
+    </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="package"></i> Ставить ничего не надо — Docker</div>
+<pre><code><span class="c-comment"># docker-compose.yml</span>
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: gamer_market
+      POSTGRES_PASSWORD: secret
+    ports: [<span class="c-str">"5432:5432"</span>]</code></pre>
+    <p class="text">Одна команда <code>docker compose up -d</code> — БД готова. Проверяющий делает то же самое одной командой.</p>
+    <p class="text">В Laravel — драйвер <code>pgsql</code> вместо <code>mysql</code>, в <code>.env</code>: <code>DB_CONNECTION=pgsql</code>, <code>DB_PORT=5432</code>. PDO-код (<code>prepare</code>/<code>execute</code>/<code>fetch</code>) — не меняется. Eloquent абстрагирует диалект автоматически.</p>
+
+    <div class="remember-box">
+      <strong>3 аргумента, которые прозвучат на защите архитектуры:</strong>
+      <ol style="margin:6px 0 0 20px;line-height:1.7">
+        <li><code>RETURNING</code> + <code>FOR UPDATE SKIP LOCKED</code> — атомарный захват из очереди/пула одним запросом.</li>
+        <li>Предсказуемая изоляция <code>READ COMMITTED</code> без gap-локов — конкуренция ведёт себя так, как объясняешь.</li>
+        <li>Частичные индексы + честный <code>EXPLAIN ANALYZE</code> — точечная оптимизация «горячего» подмножества данных.</li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="search"></i> Full-Text Search: внутри СУБД или специальный движок?</div>
     <table class="data-table">
       <tr><th>Решение</th><th>Когда подходит</th></tr>
