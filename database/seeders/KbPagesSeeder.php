@@ -238,6 +238,20 @@ class KbPagesSeeder extends Seeder
                 'layout' => 'sidebar',
                 'sort_order' => 170,
             ],
+            [
+                'id' => 'kb19',
+                'slug' => 'KB_19_Python',
+                'file' => 'kb.KB_19_Python',
+                'title' => 'Python — база + веб',
+                'description' => 'Python 3.11+ для backend-разработчика (PHP/Laravel): установка, синтаксис, типы, ООП, модули, venv/uv, исключения, декораторы, type hints, async. Django/FastAPI/Flask, requests/httpx, pytest, ruff/mypy. Python vs PHP — мосты для быстрого перехода.',
+                'badge' => 'LANGUAGE',
+                'badge_class' => 'badge-neutral',
+                'icon' => 'code-2',
+                'icon_class' => 'ic-blue',
+                'group_name' => 'Modules',
+                'layout' => 'sidebar',
+                'sort_order' => 180,
+            ],
 
             // ─── Methodology ────────────────────────────────────────────────────
             [
