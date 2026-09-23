@@ -661,13 +661,300 @@ unique_users = <span class="c-fn">list</span>(<span class="c-fn">set</span>(user
 <!-- ═══════════════════════════ STUB SECTIONS ═══════════════════════════ -->
 
 <div id="sec-strings" class="section">
-  <div class="section-title">Строки + f-strings</div>
-  <div class="stub"><strong>В разработке.</strong> f-strings (Python 3.6+), <code>.format()</code>, <code>%</code>-форматирование, методы str (upper/lower/split/join/strip/replace), regex через <code>re</code>, encoding UTF-8, bytes vs str.</div>
+  <div class="section-title">Строки + f-strings + regex</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="type"></i> Литералы строк</div>
+<pre><code>a = <span class="c-str">"hello"</span>              <span class="c-comment"># двойные</span>
+b = <span class="c-str">'hello'</span>              <span class="c-comment"># одинарные — эквивалентны</span>
+c = <span class="c-str">"""multi
+line string"""</span>          <span class="c-comment"># тройные — многострочная</span>
+d = <span class="c-str">r"C:\path\file"</span>     <span class="c-comment"># raw — не экранирует \n \t \</span>
+e = <span class="c-str">b"bytes"</span>             <span class="c-comment"># bytes (не str)</span>
+f = <span class="c-fn">f</span><span class="c-str">"Hi {name}"</span>         <span class="c-comment"># f-string — интерполяция</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="sparkles"></i> f-strings — стандарт (Python 3.6+)</div>
+<pre><code>name = <span class="c-str">"Alice"</span>
+age = <span class="c-num">30</span>
+price = <span class="c-num">1234.5678</span>
+
+<span class="c-fn">f</span><span class="c-str">"Hi, {name}!"</span>                       <span class="c-comment"># "Hi, Alice!"</span>
+<span class="c-fn">f</span><span class="c-str">"{name} is {age} years old"</span>          <span class="c-comment"># подстановка нескольких</span>
+<span class="c-fn">f</span><span class="c-str">"{name.upper()}"</span>                    <span class="c-comment"># выражения — не только имена</span>
+<span class="c-fn">f</span><span class="c-str">"total: {a + b}"</span>                    <span class="c-comment"># арифметика внутри</span>
+
+<span class="c-comment"># Форматирование</span>
+<span class="c-fn">f</span><span class="c-str">"{price:.2f}"</span>                       <span class="c-comment"># "1234.57" — округление до 2</span>
+<span class="c-fn">f</span><span class="c-str">"{price:,.2f}"</span>                      <span class="c-comment"># "1,234.57" — с разделителем</span>
+<span class="c-fn">f</span><span class="c-str">"{price:10.2f}"</span>                     <span class="c-comment"># "   1234.57" — ширина 10, padding</span>
+<span class="c-fn">f</span><span class="c-str">"{price:&gt;10}"</span>                       <span class="c-comment"># выравнивание вправо</span>
+<span class="c-fn">f</span><span class="c-str">"{price:&lt;10}"</span>                       <span class="c-comment"># влево</span>
+<span class="c-fn">f</span><span class="c-str">"{price:^10}"</span>                       <span class="c-comment"># по центру</span>
+<span class="c-fn">f</span><span class="c-str">"{age:03d}"</span>                         <span class="c-comment"># "030" — паддинг нулями</span>
+<span class="c-fn">f</span><span class="c-str">"{price:.0%}"</span>                       <span class="c-comment"># проценты</span>
+<span class="c-fn">f</span><span class="c-str">"{now:%Y-%m-%d %H:%M}"</span>              <span class="c-comment"># дата (datetime)</span>
+
+<span class="c-comment"># Debug (Python 3.8+) — печатает имя + значение</span>
+<span class="c-fn">f</span><span class="c-str">"{name=}"</span>                            <span class="c-comment"># "name='Alice'"</span>
+<span class="c-fn">f</span><span class="c-str">"{price=:.2f}"</span>                      <span class="c-comment"># "price=1234.57"</span>
+
+<span class="c-comment"># repr vs str внутри f-string</span>
+<span class="c-fn">f</span><span class="c-str">"{name!r}"</span>                          <span class="c-comment"># "'Alice'" — через repr()</span>
+<span class="c-fn">f</span><span class="c-str">"{name!s}"</span>                          <span class="c-comment"># "Alice"</span></code></pre>
+
+    <div class="info-box success">
+      <strong>Правило:</strong> в новом коде — только f-strings. <code>.format()</code> и <code>%</code>-форматирование — устаревшее, встречается только в legacy. f-strings быстрее (в 2-3 раза), читаемее, поддерживают все выражения.
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="wrench"></i> Основные методы <code>str</code></div>
+    <table class="data-table">
+      <tr><th>Метод</th><th>Что делает</th><th>Пример</th></tr>
+      <tr><td><code>.upper()</code>, <code>.lower()</code>, <code>.title()</code>, <code>.capitalize()</code></td><td>Регистр</td><td><code>"hello".upper()</code> → <code>"HELLO"</code></td></tr>
+      <tr><td><code>.strip()</code>, <code>.lstrip()</code>, <code>.rstrip()</code></td><td>Убрать whitespace (или указанные символы)</td><td><code>"  hi  ".strip()</code> → <code>"hi"</code></td></tr>
+      <tr><td><code>.split(sep)</code></td><td>Разбить на list по разделителю</td><td><code>"a,b,c".split(",")</code> → <code>["a","b","c"]</code></td></tr>
+      <tr><td><code>sep.join(iterable)</code></td><td>Собрать iterable в строку</td><td><code>",".join(["a","b"])</code> → <code>"a,b"</code></td></tr>
+      <tr><td><code>.replace(old, new)</code></td><td>Заменить подстроку</td><td><code>"a-b".replace("-", "_")</code></td></tr>
+      <tr><td><code>.startswith(x)</code>, <code>.endswith(x)</code></td><td>Проверка префикса/суффикса</td><td><code>"file.jpg".endswith(".jpg")</code></td></tr>
+      <tr><td><code>.find(x)</code>, <code>.index(x)</code></td><td>Позиция первого вхождения (find → -1, index → ValueError)</td><td><code>"hello".find("l")</code> → <code>2</code></td></tr>
+      <tr><td><code>x in string</code></td><td>Проверка вхождения</td><td><code>"lo" in "hello"</code> → <code>True</code></td></tr>
+      <tr><td><code>.count(x)</code></td><td>Число вхождений</td><td><code>"aaa".count("a")</code> → <code>3</code></td></tr>
+      <tr><td><code>.isdigit()</code>, <code>.isalpha()</code>, <code>.isalnum()</code></td><td>Проверка типа</td><td><code>"123".isdigit()</code> → <code>True</code></td></tr>
+      <tr><td><code>.zfill(n)</code>, <code>.center(n)</code>, <code>.ljust(n)</code>, <code>.rjust(n)</code></td><td>Паддинг</td><td><code>"5".zfill(3)</code> → <code>"005"</code></td></tr>
+      <tr><td><code>.splitlines()</code></td><td>Разбить по \n / \r\n</td><td>Кросс-платформенно</td></tr>
+      <tr><td><code>.encode(enc)</code></td><td>str → bytes</td><td><code>"hi".encode("utf-8")</code></td></tr>
+    </table>
+
+    <p class="text"><strong>Все методы возвращают НОВУЮ строку</strong> — str immutable. <code>s.upper()</code> не меняет <code>s</code>, а возвращает новую.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="scissors"></i> Slicing (срезы)</div>
+<pre><code>s = <span class="c-str">"hello world"</span>
+
+s[<span class="c-num">0</span>]                    <span class="c-comment"># "h"</span>
+s[-<span class="c-num">1</span>]                   <span class="c-comment"># "d"</span>
+s[<span class="c-num">0</span>:<span class="c-num">5</span>]                  <span class="c-comment"># "hello"</span>
+s[:<span class="c-num">5</span>]                   <span class="c-comment"># "hello" — с начала</span>
+s[<span class="c-num">6</span>:]                   <span class="c-comment"># "world" — до конца</span>
+s[::-<span class="c-num">1</span>]                 <span class="c-comment"># "dlrow olleh" — reverse</span>
+s[::<span class="c-num">2</span>]                  <span class="c-comment"># "hlowrd" — каждый второй</span>
+<span class="c-fn">len</span>(s)                 <span class="c-comment"># 11</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="regex"></i> Regex — модуль <code>re</code></div>
+<pre><code><span class="c-key">import</span> re
+
+<span class="c-comment"># Основные функции</span>
+re.<span class="c-fn">search</span>(pattern, string)     <span class="c-comment"># найти первое → Match | None</span>
+re.<span class="c-fn">match</span>(pattern, string)      <span class="c-comment"># только с НАЧАЛА строки</span>
+re.<span class="c-fn">fullmatch</span>(pattern, string)  <span class="c-comment"># вся строка целиком</span>
+re.<span class="c-fn">findall</span>(pattern, string)    <span class="c-comment"># все совпадения → list</span>
+re.<span class="c-fn">finditer</span>(pattern, string)   <span class="c-comment"># все → iterator Match'ей (для больших текстов)</span>
+re.<span class="c-fn">sub</span>(pattern, repl, string)  <span class="c-comment"># замена</span>
+re.<span class="c-fn">split</span>(pattern, string)     <span class="c-comment"># split по regex</span>
+
+<span class="c-comment"># Пример: проверить email</span>
+<span class="c-key">if</span> re.<span class="c-fn">fullmatch</span>(<span class="c-fn">r</span><span class="c-str">"[\w.+-]+@[\w-]+\.[\w.-]+"</span>, email):
+    <span class="c-fn">print</span>(<span class="c-str">"looks like email"</span>)
+
+<span class="c-comment"># Захват групп</span>
+m = re.<span class="c-fn">search</span>(<span class="c-fn">r</span><span class="c-str">"(\d+)-(\d+)"</span>, <span class="c-str">"order 42-100"</span>)
+<span class="c-key">if</span> m:
+    <span class="c-fn">print</span>(m.<span class="c-fn">group</span>(<span class="c-num">0</span>))         <span class="c-comment"># "42-100" — вся сматченная строка</span>
+    <span class="c-fn">print</span>(m.<span class="c-fn">group</span>(<span class="c-num">1</span>))         <span class="c-comment"># "42"</span>
+    <span class="c-fn">print</span>(m.<span class="c-fn">group</span>(<span class="c-num">2</span>))         <span class="c-comment"># "100"</span>
+    <span class="c-fn">print</span>(m.<span class="c-fn">groups</span>())         <span class="c-comment"># ("42", "100")</span>
+
+<span class="c-comment"># Именованные группы</span>
+m = re.<span class="c-fn">search</span>(<span class="c-fn">r</span><span class="c-str">"(?P&lt;year&gt;\d{4})-(?P&lt;month&gt;\d{2})"</span>, <span class="c-str">"2026-09"</span>)
+m.<span class="c-fn">group</span>(<span class="c-str">"year"</span>)              <span class="c-comment"># "2026"</span>
+
+<span class="c-comment"># Компиляция для повторного использования (быстрее)</span>
+EMAIL_RE = re.<span class="c-fn">compile</span>(<span class="c-fn">r</span><span class="c-str">"[\w.+-]+@[\w-]+\.[\w.-]+"</span>)
+EMAIL_RE.<span class="c-fn">fullmatch</span>(email)</code></pre>
+
+    <div class="info-box primary">
+      <strong>Правило:</strong> паттерны — всегда <em>raw strings</em> (<code>r"..."</code>), иначе <code>\d</code>, <code>\s</code>, <code>\n</code> будут интерпретироваться Python-ом до regex-движка. Флаг <code>re.IGNORECASE</code> для case-insensitive, <code>re.MULTILINE</code> — <code>^</code>/<code>$</code> на каждой строке.
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="binary"></i> str vs bytes — кодировки</div>
+    <p class="text">В Python 3 <code>str</code> — это <strong>Unicode</strong> (последовательность code point'ов). <code>bytes</code> — <strong>сырые байты</strong>. Между ними — явная конвертация через кодировку.</p>
+<pre><code>s = <span class="c-str">"Привет"</span>                    <span class="c-comment"># str (unicode)</span>
+b = s.<span class="c-fn">encode</span>(<span class="c-str">"utf-8"</span>)             <span class="c-comment"># bytes: b'\xd0\x9f\xd1\x80\xd0\xb8...'</span>
+s2 = b.<span class="c-fn">decode</span>(<span class="c-str">"utf-8"</span>)            <span class="c-comment"># обратно в str</span>
+
+<span class="c-comment"># Файлы</span>
+<span class="c-key">with</span> <span class="c-fn">open</span>(<span class="c-str">"file.txt"</span>, encoding=<span class="c-str">"utf-8"</span>) <span class="c-key">as</span> f:  <span class="c-comment"># явно всегда utf-8</span>
+    text = f.<span class="c-fn">read</span>()
+
+<span class="c-comment"># Бинарные — bytes</span>
+<span class="c-key">with</span> <span class="c-fn">open</span>(<span class="c-str">"image.png"</span>, <span class="c-str">"rb"</span>) <span class="c-key">as</span> f:
+    data = f.<span class="c-fn">read</span>()             <span class="c-comment"># bytes</span></code></pre>
+
+    <div class="pitfall"><strong>⚠ Никогда не полагайся на дефолтный encoding.</strong> <code>open("f.txt")</code> без явного <code>encoding="utf-8"</code> — на Windows возьмёт cp1251, на Linux — utf-8. Один и тот же код будет ломаться на разных ОС.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
+    <div class="pitfall"><strong>1. Конкатенация <code>+</code> в цикле — медленно.</strong> Каждый <code>+</code> создаёт новую строку. Для N-строк — <code>"".join(list_of_strings)</code>, работает за O(n) вместо O(n²).</div>
+    <div class="pitfall"><strong>2. <code>.replace()</code> не regex.</strong> Убрать все пробелы — <code>s.replace(" ", "")</code>; но убрать любые whitespace — <code>re.sub(r"\s+", "", s)</code>.</div>
+    <div class="pitfall"><strong>3. Split пустой строки.</strong> <code>"".split(",")</code> → <code>[""]</code>, не <code>[]</code>. Проверяй <code>if s</code> перед split.</div>
+    <div class="pitfall"><strong>4. <code>str.format()</code> с dict — точки не работают.</strong> <code>"{d.name}".format(d=obj)</code> — обращение по атрибуту, не по ключу dict. Используй f-string.</div>
+    <div class="pitfall"><strong>5. Regex без raw string.</strong> <code>"\d+"</code> в Python 3.12+ выдаёт <code>DeprecationWarning</code>. Всегда <code>r"\d+"</code>.</div>
+  </div>
 </div>
 
 <div id="sec-control" class="section">
-  <div class="section-title">Условия + циклы</div>
-  <div class="stub"><strong>В разработке.</strong> <code>if/elif/else</code>, тернарник <code>x if cond else y</code>, <code>for x in iterable</code>, <code>range()</code>, <code>enumerate()</code>, <code>zip()</code>, <code>while</code>, <code>break/continue</code>, <code>else</code> в цикле (сработает если <code>break</code> не было), <code>match/case</code> (Python 3.10+).</div>
+  <div class="section-title">Условия + циклы + match/case</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-branch"></i> if / elif / else + тернарник</div>
+<pre><code><span class="c-key">if</span> age &gt;= <span class="c-num">18</span>:
+    status = <span class="c-str">"adult"</span>
+<span class="c-key">elif</span> age &gt;= <span class="c-num">13</span>:
+    status = <span class="c-str">"teen"</span>
+<span class="c-key">else</span>:
+    status = <span class="c-str">"child"</span>
+
+<span class="c-comment"># Тернарник: value_if_true if condition else value_if_false</span>
+status = <span class="c-str">"adult"</span> <span class="c-key">if</span> age &gt;= <span class="c-num">18</span> <span class="c-key">else</span> <span class="c-str">"minor"</span>
+
+<span class="c-comment"># Не путать с C-style — синтаксис Python другой:</span>
+<span class="c-comment"># ❌ status = age &gt;= 18 ? "adult" : "minor"   — SyntaxError</span>
+
+<span class="c-comment"># Chained comparisons — красивая питоническая фича</span>
+<span class="c-key">if</span> <span class="c-num">18</span> &lt;= age &lt; <span class="c-num">65</span>:                <span class="c-comment"># эквивалент age &gt;= 18 and age &lt; 65</span>
+    ...
+
+<span class="c-comment"># Walrus operator := (Python 3.8+) — присвоить внутри выражения</span>
+<span class="c-key">if</span> (n := <span class="c-fn">len</span>(items)) &gt; <span class="c-num">10</span>:
+    <span class="c-fn">print</span>(<span class="c-fn">f</span><span class="c-str">"too many: {n}"</span>)</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="repeat"></i> Циклы <code>for</code> и <code>while</code></div>
+<pre><code><span class="c-comment"># for — обход iterable (list/tuple/dict/str/set/generator)</span>
+<span class="c-key">for</span> user <span class="c-key">in</span> users:
+    <span class="c-fn">print</span>(user)
+
+<span class="c-comment"># range(start, stop, step)</span>
+<span class="c-key">for</span> i <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">10</span>):           <span class="c-comment"># 0..9</span>
+    ...
+<span class="c-key">for</span> i <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">1</span>, <span class="c-num">11</span>):        <span class="c-comment"># 1..10</span>
+    ...
+<span class="c-key">for</span> i <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">0</span>, <span class="c-num">100</span>, <span class="c-num">10</span>):    <span class="c-comment"># 0, 10, 20, ..., 90</span>
+    ...
+
+<span class="c-comment"># while — пока условие true</span>
+<span class="c-key">while</span> queue:
+    task = queue.<span class="c-fn">pop</span>()
+    <span class="c-fn">process</span>(task)
+
+<span class="c-comment"># break / continue — как везде</span>
+<span class="c-key">for</span> item <span class="c-key">in</span> items:
+    <span class="c-key">if</span> item.is_bad:
+        <span class="c-key">continue</span>
+    <span class="c-key">if</span> item.is_stop:
+        <span class="c-key">break</span>
+    <span class="c-fn">process</span>(item)</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="list-checks"></i> Питонические паттерны обхода</div>
+<pre><code><span class="c-comment"># enumerate — индекс + значение</span>
+<span class="c-key">for</span> i, user <span class="c-key">in</span> <span class="c-fn">enumerate</span>(users):
+    <span class="c-fn">print</span>(<span class="c-fn">f</span><span class="c-str">"{i}: {user}"</span>)
+
+<span class="c-key">for</span> i, user <span class="c-key">in</span> <span class="c-fn">enumerate</span>(users, start=<span class="c-num">1</span>):    <span class="c-comment"># с 1</span>
+    ...
+
+<span class="c-comment"># zip — параллельный обход двух iterables</span>
+names = [<span class="c-str">"Alice"</span>, <span class="c-str">"Bob"</span>]
+ages  = [<span class="c-num">30</span>, <span class="c-num">25</span>]
+<span class="c-key">for</span> name, age <span class="c-key">in</span> <span class="c-fn">zip</span>(names, ages):
+    <span class="c-fn">print</span>(name, age)
+
+<span class="c-comment"># dict — .items(), .keys(), .values()</span>
+<span class="c-key">for</span> key, value <span class="c-key">in</span> user.<span class="c-fn">items</span>():
+    ...
+
+<span class="c-comment"># reversed — обход в обратном порядке</span>
+<span class="c-key">for</span> item <span class="c-key">in</span> <span class="c-fn">reversed</span>(items):
+    ...
+
+<span class="c-comment"># sorted — обход отсортированного</span>
+<span class="c-key">for</span> user <span class="c-key">in</span> <span class="c-fn">sorted</span>(users, key=<span class="c-key">lambda</span> u: u.age):
+    ...</code></pre>
+
+    <div class="pitfall"><strong>⚠ Не используй <code>for i in range(len(items))</code></strong> — это анти-паттерн. Питонично:
+      <ul style="margin-top:6px">
+        <li>нужно только значение → <code>for item in items</code></li>
+        <li>нужен индекс + значение → <code>for i, item in enumerate(items)</code></li>
+        <li>обход двух списков — <code>for a, b in zip(list1, list2)</code></li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="corner-down-left"></i> <code>else</code> в цикле — редкая, но живая конструкция</div>
+<pre><code><span class="c-comment"># else срабатывает если цикл завершился БЕЗ break</span>
+<span class="c-key">for</span> item <span class="c-key">in</span> items:
+    <span class="c-key">if</span> item.is_target:
+        <span class="c-fn">print</span>(<span class="c-str">"found!"</span>)
+        <span class="c-key">break</span>
+<span class="c-key">else</span>:
+    <span class="c-fn">print</span>(<span class="c-str">"not found"</span>)   <span class="c-comment"># сработает только если target не встретился</span></code></pre>
+    <p class="text">Кто это придумал — вопрос философский. Практика — заменяют flag-переменной для читаемости.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="split"></i> <code>match / case</code> — pattern matching (Python 3.10+)</div>
+    <p class="text">Мощная замена switch — не просто сравнение по значению, а <em>деструктуризация</em>:</p>
+<pre><code><span class="c-comment"># Простой — как switch</span>
+<span class="c-key">match</span> status:
+    <span class="c-key">case</span> <span class="c-str">"active"</span>:
+        <span class="c-fn">handle_active</span>()
+    <span class="c-key">case</span> <span class="c-str">"paused"</span> | <span class="c-str">"stopped"</span>:      <span class="c-comment"># несколько значений</span>
+        <span class="c-fn">handle_off</span>()
+    <span class="c-key">case</span> _:                          <span class="c-comment"># default</span>
+        <span class="c-fn">handle_unknown</span>()
+
+<span class="c-comment"># Деструктуризация — вот где magic</span>
+<span class="c-key">match</span> event:
+    <span class="c-key">case</span> {<span class="c-str">"type"</span>: <span class="c-str">"order.created"</span>, <span class="c-str">"data"</span>: {<span class="c-str">"id"</span>: order_id}}:
+        <span class="c-fn">process_order</span>(order_id)
+    <span class="c-key">case</span> {<span class="c-str">"type"</span>: <span class="c-str">"payment.received"</span>, <span class="c-str">"data"</span>: {<span class="c-str">"amount"</span>: amount, <span class="c-str">"currency"</span>: cur}}:
+        <span class="c-fn">record_payment</span>(amount, cur)
+    <span class="c-key">case</span> {<span class="c-str">"type"</span>: <span class="c-str">"error"</span>, <span class="c-str">"message"</span>: msg}:
+        logger.<span class="c-fn">error</span>(msg)
+
+<span class="c-comment"># Классы + деструктуризация</span>
+<span class="c-key">match</span> shape:
+    <span class="c-key">case</span> <span class="c-type">Circle</span>(radius=r):
+        <span class="c-key">return</span> <span class="c-num">3.14</span> * r ** <span class="c-num">2</span>
+    <span class="c-key">case</span> <span class="c-type">Rectangle</span>(width=w, height=h):
+        <span class="c-key">return</span> w * h
+
+<span class="c-comment"># Guard — доп условие</span>
+<span class="c-key">match</span> point:
+    <span class="c-key">case</span> (x, y) <span class="c-key">if</span> x == y:
+        <span class="c-fn">print</span>(<span class="c-str">"on diagonal"</span>)</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
+    <div class="pitfall"><strong>1. Модификация коллекции во время обхода.</strong> <code>for x in list: list.remove(x)</code> — пропустит элементы. Обходи копию (<code>list[:]</code>) или собери в новый.</div>
+    <div class="pitfall"><strong>2. <code>range()</code> — не список.</strong> В Python 3 это ленивый iterator. Хочешь список — <code>list(range(10))</code>. Для миллионных диапазонов важно.</div>
+    <div class="pitfall"><strong>3. <code>zip()</code> обрезает до самого короткого.</strong> Для строгой проверки — <code>zip(a, b, strict=True)</code> (Python 3.10+), кинет <code>ValueError</code>.</div>
+    <div class="pitfall"><strong>4. <code>match</code> ≠ switch.</strong> <code>case &lt;VAR&gt;:</code> без точки — это захват (bind), а не сравнение. <code>case value:</code> просто присвоит <em>что угодно</em> в <code>value</code>. Для сравнения с константой класса — <code>case Color.RED:</code>.</div>
+  </div>
 </div>
 
 <div id="sec-functions" class="section">
@@ -840,8 +1127,107 @@ funcs = [<span class="c-key">lambda</span> i=i: i <span class="c-key">for</span>
 </div>
 
 <div id="sec-collections" class="section">
-  <div class="section-title">list / dict / set comprehensions</div>
-  <div class="stub"><strong>В разработке.</strong> Питоничный способ трансформации коллекций: <code>[x*2 for x in nums]</code>, <code>[x for x in nums if x &gt; 0]</code>, <code>{k: v.upper() for k, v in d.items()}</code>, <code>{x for x in nums}</code>, вложенные comprehensions, generator expressions <code>(x*2 for x in nums)</code>.</div>
+  <div class="section-title">Comprehensions — list / dict / set / generator</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="wand-2"></i> List comprehension — питоничная замена map/filter</div>
+<pre><code><span class="c-comment"># [expression for item in iterable if condition]</span>
+
+<span class="c-comment"># Простое преобразование</span>
+squared = [x ** <span class="c-num">2</span> <span class="c-key">for</span> x <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">10</span>)]
+<span class="c-comment"># [0, 1, 4, 9, 16, 25, 36, 49, 64, 81]</span>
+
+<span class="c-comment"># С фильтром</span>
+positives = [x <span class="c-key">for</span> x <span class="c-key">in</span> nums <span class="c-key">if</span> x &gt; <span class="c-num">0</span>]
+
+<span class="c-comment"># Оба сразу</span>
+even_squares = [x ** <span class="c-num">2</span> <span class="c-key">for</span> x <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">20</span>) <span class="c-key">if</span> x % <span class="c-num">2</span> == <span class="c-num">0</span>]
+
+<span class="c-comment"># Извлечение из объектов</span>
+emails = [user.email <span class="c-key">for</span> user <span class="c-key">in</span> users <span class="c-key">if</span> user.is_active]
+
+<span class="c-comment"># if/else в expression — тернарник (тогда if НЕ фильтр, а часть выражения)</span>
+labels = [<span class="c-str">"adult"</span> <span class="c-key">if</span> u.age &gt;= <span class="c-num">18</span> <span class="c-key">else</span> <span class="c-str">"minor"</span> <span class="c-key">for</span> u <span class="c-key">in</span> users]</code></pre>
+
+    <div class="info-box success">
+      <strong>Правило:</strong> comprehension короче, быстрее и питоничнее чем <code>map()</code>/<code>filter()</code>. В новом коде — только comprehensions. <code>map</code>/<code>filter</code> остались в лямбда-мире функционального программирования.
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="braces"></i> Dict comprehension</div>
+<pre><code><span class="c-comment"># {key_expr: value_expr for item in iterable if condition}</span>
+
+<span class="c-comment"># Из пары списков</span>
+names = [<span class="c-str">"Alice"</span>, <span class="c-str">"Bob"</span>, <span class="c-str">"Charlie"</span>]
+ages  = [<span class="c-num">30</span>, <span class="c-num">25</span>, <span class="c-num">35</span>]
+user_ages = {n: a <span class="c-key">for</span> n, a <span class="c-key">in</span> <span class="c-fn">zip</span>(names, ages)}
+<span class="c-comment"># {"Alice": 30, "Bob": 25, "Charlie": 35}</span>
+
+<span class="c-comment"># Инверсия dict</span>
+inverted = {v: k <span class="c-key">for</span> k, v <span class="c-key">in</span> d.<span class="c-fn">items</span>()}
+
+<span class="c-comment"># Трансформация значений</span>
+upper_d = {k: v.<span class="c-fn">upper</span>() <span class="c-key">for</span> k, v <span class="c-key">in</span> d.<span class="c-fn">items</span>()}
+
+<span class="c-comment"># Индекс по id</span>
+users_by_id = {u.id: u <span class="c-key">for</span> u <span class="c-key">in</span> users}
+
+<span class="c-comment"># С фильтром</span>
+active = {k: v <span class="c-key">for</span> k, v <span class="c-key">in</span> d.<span class="c-fn">items</span>() <span class="c-key">if</span> v.is_active}</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="circle"></i> Set comprehension</div>
+<pre><code>unique_tags = {tag <span class="c-key">for</span> post <span class="c-key">in</span> posts <span class="c-key">for</span> tag <span class="c-key">in</span> post.tags}
+
+<span class="c-comment"># Уникальные домены email-ов</span>
+domains = {email.<span class="c-fn">split</span>(<span class="c-str">"@"</span>)[<span class="c-num">1</span>] <span class="c-key">for</span> email <span class="c-key">in</span> emails}</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="zap"></i> Generator expression — <em>ленивая</em> версия</div>
+    <p class="text">Просто скобки <code>(...)</code> вместо <code>[...]</code> — но получается <strong>генератор</strong>, а не список. Не занимает память под все элементы сразу, вычисляет по одному.</p>
+<pre><code><span class="c-comment"># List — сразу все 10^9 чисел в памяти. Убьёт RAM.</span>
+<span class="c-fn">sum</span>([x ** <span class="c-num">2</span> <span class="c-key">for</span> x <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">10</span> ** <span class="c-num">9</span>)])
+
+<span class="c-comment"># Generator — по одному, память O(1)</span>
+<span class="c-fn">sum</span>(x ** <span class="c-num">2</span> <span class="c-key">for</span> x <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">10</span> ** <span class="c-num">9</span>))
+
+<span class="c-comment"># При передаче в функцию скобки comprehension'а можно опустить</span>
+<span class="c-fn">any</span>(u.is_admin <span class="c-key">for</span> u <span class="c-key">in</span> users)
+<span class="c-fn">max</span>(o.total <span class="c-key">for</span> o <span class="c-key">in</span> orders)</code></pre>
+
+    <div class="info-box primary">
+      <strong>Правило:</strong> результат нужен как список (обход несколько раз, индексация, <code>len</code>) → list comprehension. Однократный обход + большая последовательность → generator expression.
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layers"></i> Вложенные comprehensions</div>
+<pre><code><span class="c-comment"># Уплощение matrix — 2D → 1D</span>
+matrix = [[<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>], [<span class="c-num">4</span>, <span class="c-num">5</span>, <span class="c-num">6</span>], [<span class="c-num">7</span>, <span class="c-num">8</span>, <span class="c-num">9</span>]]
+flat = [x <span class="c-key">for</span> row <span class="c-key">in</span> matrix <span class="c-key">for</span> x <span class="c-key">in</span> row]
+<span class="c-comment"># [1, 2, 3, 4, 5, 6, 7, 8, 9]</span>
+<span class="c-comment"># Читай как: for row in matrix: for x in row: yield x</span>
+
+<span class="c-comment"># Комбинации</span>
+pairs = [(a, b) <span class="c-key">for</span> a <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">3</span>) <span class="c-key">for</span> b <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">3</span>) <span class="c-key">if</span> a != b]</code></pre>
+
+    <div class="pitfall"><strong>⚠ Три уровня вложенности — уже нечитабельно.</strong> Разбивай на обычные циклы или вспомогательные функции.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> PHP-аналоги</div>
+    <table class="data-table">
+      <tr><th>PHP</th><th>Python</th></tr>
+      <tr><td><code>array_map(fn($x) =&gt; $x * 2, $nums)</code></td><td><code>[x * 2 for x in nums]</code></td></tr>
+      <tr><td><code>array_filter($nums, fn($x) =&gt; $x &gt; 0)</code></td><td><code>[x for x in nums if x &gt; 0]</code></td></tr>
+      <tr><td><code>array_combine($keys, $values)</code></td><td><code>{k: v for k, v in zip(keys, values)}</code></td></tr>
+      <tr><td><code>array_column($users, 'email')</code></td><td><code>[u["email"] for u in users]</code></td></tr>
+      <tr><td><code>array_unique($items)</code></td><td><code>list({x for x in items})</code></td></tr>
+    </table>
+  </div>
 </div>
 
 <div id="sec-oop" class="section">
@@ -1380,8 +1766,157 @@ f.<span class="c-fn">close</span>()                          <span class="c-comm
 </div>
 
 <div id="sec-files" class="section">
-  <div class="section-title">Работа с файлами + JSON + CSV</div>
-  <div class="stub"><strong>В разработке.</strong> <code>open()</code> и <code>with</code>, режимы <code>r/w/a/rb/wb</code>, encoding, <code>json.load/dump</code>, <code>csv.reader/writer</code>, <code>pathlib.Path</code> (современный способ работы с путями), stream vs read all.</div>
+  <div class="section-title">Файлы + JSON + CSV + pathlib</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="file-text"></i> <code>open()</code> и режимы</div>
+<pre><code><span class="c-comment"># Всегда через with — гарантированное закрытие</span>
+<span class="c-key">with</span> <span class="c-fn">open</span>(<span class="c-str">"data.txt"</span>, encoding=<span class="c-str">"utf-8"</span>) <span class="c-key">as</span> f:
+    content = f.<span class="c-fn">read</span>()
+
+<span class="c-comment"># Режимы</span>
+<span class="c-fn">open</span>(path, <span class="c-str">"r"</span>)                <span class="c-comment"># чтение (default) — если файла нет, FileNotFoundError</span>
+<span class="c-fn">open</span>(path, <span class="c-str">"w"</span>)                <span class="c-comment"># запись — создаст / ПЕРЕЗАПИШЕТ</span>
+<span class="c-fn">open</span>(path, <span class="c-str">"a"</span>)                <span class="c-comment"># append — создаст / допишет в конец</span>
+<span class="c-fn">open</span>(path, <span class="c-str">"x"</span>)                <span class="c-comment"># exclusive create — упадёт если файл есть</span>
+<span class="c-fn">open</span>(path, <span class="c-str">"r+"</span>)               <span class="c-comment"># чтение + запись</span>
+<span class="c-fn">open</span>(path, <span class="c-str">"rb"</span>)               <span class="c-comment"># binary read (для картинок, PDF)</span>
+<span class="c-fn">open</span>(path, <span class="c-str">"wb"</span>)               <span class="c-comment"># binary write</span>
+
+<span class="c-comment"># Три способа чтения</span>
+<span class="c-key">with</span> <span class="c-fn">open</span>(<span class="c-str">"log.txt"</span>) <span class="c-key">as</span> f:
+    all_at_once = f.<span class="c-fn">read</span>()          <span class="c-comment"># одна строка</span>
+    <span class="c-comment"># или</span>
+    lines = f.<span class="c-fn">readlines</span>()           <span class="c-comment"># список строк (все в память)</span>
+    <span class="c-comment"># или (лучший для больших файлов) — построчно</span>
+    <span class="c-key">for</span> line <span class="c-key">in</span> f:
+        <span class="c-fn">process</span>(line.<span class="c-fn">rstrip</span>())        <span class="c-comment"># O(1) память</span>
+
+<span class="c-comment"># Запись</span>
+<span class="c-key">with</span> <span class="c-fn">open</span>(<span class="c-str">"out.txt"</span>, <span class="c-str">"w"</span>, encoding=<span class="c-str">"utf-8"</span>) <span class="c-key">as</span> f:
+    f.<span class="c-fn">write</span>(<span class="c-str">"one line\n"</span>)
+    f.<span class="c-fn">writelines</span>([<span class="c-str">"a\n"</span>, <span class="c-str">"b\n"</span>])   <span class="c-comment"># не добавит \n сам!</span></code></pre>
+
+    <div class="pitfall"><strong>⚠ Всегда указывай <code>encoding="utf-8"</code>.</strong> Без него берётся дефолтный OS — на Windows это cp1251, на Linux utf-8. Один код будет ломаться на разных ОС.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="folder-tree"></i> <code>pathlib.Path</code> — современная работа с путями</div>
+    <p class="text">Забудь про <code>os.path.join</code>, <code>os.path.exists</code>, <code>os.listdir</code>. <code>pathlib</code> (Python 3.4+) — ООП-обёртка, чище и переносимо.</p>
+<pre><code><span class="c-key">from</span> pathlib <span class="c-key">import</span> Path
+
+p = <span class="c-fn">Path</span>(<span class="c-str">"/var/log/app.log"</span>)
+p = <span class="c-fn">Path</span>(<span class="c-str">"data"</span>) / <span class="c-str">"users.json"</span>       <span class="c-comment"># склейка через /</span>
+p = <span class="c-type">Path</span>.<span class="c-fn">home</span>() / <span class="c-str">".config"</span> / <span class="c-str">"app"</span>     <span class="c-comment"># $HOME/.config/app</span>
+
+<span class="c-comment"># Свойства</span>
+p.name                          <span class="c-comment"># "app.log"</span>
+p.stem                          <span class="c-comment"># "app" (без расширения)</span>
+p.suffix                        <span class="c-comment"># ".log"</span>
+p.parent                        <span class="c-comment"># Path("/var/log")</span>
+p.parts                         <span class="c-comment"># ("/", "var", "log", "app.log")</span>
+p.absolute()                    <span class="c-comment"># абсолютный путь</span>
+
+<span class="c-comment"># Проверки</span>
+p.<span class="c-fn">exists</span>()
+p.<span class="c-fn">is_file</span>()
+p.<span class="c-fn">is_dir</span>()
+
+<span class="c-comment"># Операции</span>
+p.<span class="c-fn">mkdir</span>(parents=<span class="c-key">True</span>, exist_ok=<span class="c-key">True</span>)     <span class="c-comment"># создать директорию (рекурсивно, no-op если есть)</span>
+p.<span class="c-fn">unlink</span>(missing_ok=<span class="c-key">True</span>)                <span class="c-comment"># удалить файл</span>
+p.<span class="c-fn">rename</span>(<span class="c-fn">Path</span>(<span class="c-str">"new_name.log"</span>))
+p.<span class="c-fn">rmdir</span>()                                <span class="c-comment"># удалить пустую директорию</span>
+
+<span class="c-comment"># Обход директории</span>
+<span class="c-key">for</span> item <span class="c-key">in</span> <span class="c-fn">Path</span>(<span class="c-str">"."</span>).<span class="c-fn">iterdir</span>():           <span class="c-comment"># прямые потомки</span>
+    <span class="c-fn">print</span>(item)
+
+<span class="c-key">for</span> py <span class="c-key">in</span> <span class="c-fn">Path</span>(<span class="c-str">"src"</span>).<span class="c-fn">rglob</span>(<span class="c-str">"*.py"</span>):       <span class="c-comment">// рекурсивно по glob</span>
+    <span class="c-fn">print</span>(py)
+
+<span class="c-comment"># Чтение / запись — методы прямо на Path</span>
+text = <span class="c-fn">Path</span>(<span class="c-str">"config.txt"</span>).<span class="c-fn">read_text</span>(encoding=<span class="c-str">"utf-8"</span>)
+<span class="c-fn">Path</span>(<span class="c-str">"out.txt"</span>).<span class="c-fn">write_text</span>(<span class="c-str">"hello"</span>, encoding=<span class="c-str">"utf-8"</span>)
+data = <span class="c-fn">Path</span>(<span class="c-str">"image.png"</span>).<span class="c-fn">read_bytes</span>()</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="braces"></i> JSON — модуль <code>json</code></div>
+<pre><code><span class="c-key">import</span> json
+
+<span class="c-comment"># Из строки → Python-объект</span>
+data = <span class="c-fn">json</span>.<span class="c-fn">loads</span>(<span class="c-str">'{"name": "Alice", "age": 30}'</span>)
+<span class="c-comment"># data = {"name": "Alice", "age": 30}</span>
+
+<span class="c-comment"># Python-объект → строку</span>
+s = <span class="c-fn">json</span>.<span class="c-fn">dumps</span>(data)
+s = <span class="c-fn">json</span>.<span class="c-fn">dumps</span>(data, indent=<span class="c-num">2</span>, ensure_ascii=<span class="c-key">False</span>)
+<span class="c-comment"># ensure_ascii=False — не эскейпить кириллицу в \uXXXX</span>
+
+<span class="c-comment"># Из / в файл — load/dump без "s"</span>
+<span class="c-key">with</span> <span class="c-fn">open</span>(<span class="c-str">"data.json"</span>, encoding=<span class="c-str">"utf-8"</span>) <span class="c-key">as</span> f:
+    data = <span class="c-fn">json</span>.<span class="c-fn">load</span>(f)
+
+<span class="c-key">with</span> <span class="c-fn">open</span>(<span class="c-str">"out.json"</span>, <span class="c-str">"w"</span>, encoding=<span class="c-str">"utf-8"</span>) <span class="c-key">as</span> f:
+    <span class="c-fn">json</span>.<span class="c-fn">dump</span>(data, f, indent=<span class="c-num">2</span>, ensure_ascii=<span class="c-key">False</span>)
+
+<span class="c-comment"># Соответствия типов</span>
+<span class="c-comment"># JSON     → Python</span>
+<span class="c-comment"># object   → dict</span>
+<span class="c-comment"># array    → list</span>
+<span class="c-comment"># string   → str</span>
+<span class="c-comment"># number   → int / float</span>
+<span class="c-comment"># true     → True</span>
+<span class="c-comment"># null     → None</span>
+
+<span class="c-comment"># Ошибки</span>
+<span class="c-key">try</span>:
+    data = <span class="c-fn">json</span>.<span class="c-fn">loads</span>(payload)
+<span class="c-key">except</span> <span class="c-type">json</span>.<span class="c-type">JSONDecodeError</span> <span class="c-key">as</span> e:
+    logger.<span class="c-fn">error</span>(<span class="c-fn">f</span><span class="c-str">"bad JSON: {e}"</span>)</code></pre>
+
+    <div class="pitfall"><strong>⚠ <code>datetime</code> не сериализуется по умолчанию.</strong> <code>json.dumps({"created": datetime.now()})</code> → <code>TypeError</code>. Решения: конвертировать в строку заранее (<code>.isoformat()</code>), либо <code>json.dumps(..., default=str)</code>, либо использовать Pydantic.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="table"></i> CSV — модуль <code>csv</code></div>
+<pre><code><span class="c-key">import</span> csv
+
+<span class="c-comment"># Чтение — обычные списки-строки</span>
+<span class="c-key">with</span> <span class="c-fn">open</span>(<span class="c-str">"users.csv"</span>, encoding=<span class="c-str">"utf-8"</span>) <span class="c-key">as</span> f:
+    reader = <span class="c-fn">csv</span>.<span class="c-fn">reader</span>(f)
+    header = <span class="c-fn">next</span>(reader)          <span class="c-comment"># первая строка — обычно шапка</span>
+    <span class="c-key">for</span> row <span class="c-key">in</span> reader:
+        <span class="c-fn">print</span>(row)              <span class="c-comment"># ['Alice', '30', 'a@b.c']</span>
+
+<span class="c-comment"># Чтение как dict — DictReader (питоничнее)</span>
+<span class="c-key">with</span> <span class="c-fn">open</span>(<span class="c-str">"users.csv"</span>, encoding=<span class="c-str">"utf-8"</span>) <span class="c-key">as</span> f:
+    <span class="c-key">for</span> row <span class="c-key">in</span> <span class="c-fn">csv</span>.<span class="c-fn">DictReader</span>(f):
+        <span class="c-fn">print</span>(row[<span class="c-str">"name"</span>], row[<span class="c-str">"email"</span>])
+
+<span class="c-comment"># Запись</span>
+<span class="c-key">with</span> <span class="c-fn">open</span>(<span class="c-str">"out.csv"</span>, <span class="c-str">"w"</span>, encoding=<span class="c-str">"utf-8"</span>, newline=<span class="c-str">""</span>) <span class="c-key">as</span> f:
+    <span class="c-comment"># newline="" — обязательно, иначе на Windows \r\r\n</span>
+    writer = <span class="c-fn">csv</span>.<span class="c-fn">DictWriter</span>(f, fieldnames=[<span class="c-str">"name"</span>, <span class="c-str">"age"</span>])
+    writer.<span class="c-fn">writeheader</span>()
+    writer.<span class="c-fn">writerow</span>({<span class="c-str">"name"</span>: <span class="c-str">"Alice"</span>, <span class="c-str">"age"</span>: <span class="c-num">30</span>})
+    writer.<span class="c-fn">writerows</span>([{<span class="c-str">"name"</span>: <span class="c-str">"Bob"</span>, <span class="c-str">"age"</span>: <span class="c-num">25</span>}])
+
+<span class="c-comment"># Кастомный разделитель — TSV, semicolon</span>
+reader = <span class="c-fn">csv</span>.<span class="c-fn">reader</span>(f, delimiter=<span class="c-str">";"</span>)</code></pre>
+
+    <div class="pitfall"><strong>⚠ Excel «съедает» leading zeros.</strong> Если открываешь CSV в Excel — <code>"00123"</code> станет <code>123</code>. Не проблема Python, но пользователи ругаются. Для reliable выгрузки в Excel — <code>.xlsx</code> через <code>openpyxl</code>.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
+    <div class="pitfall"><strong>1. Забыл <code>with</code>.</strong> <code>f = open(path)</code> без <code>close()</code> — файл висит открытым, на Windows его нельзя переименовать, на Linux — деcкриптор течёт.</div>
+    <div class="pitfall"><strong>2. Загрузка гигабайтного файла в память.</strong> <code>f.read()</code> прочтёт всё сразу. Для больших — <code>for line in f</code> или чтение чанками <code>f.read(8192)</code>.</div>
+    <div class="pitfall"><strong>3. <code>json.dumps</code> без <code>ensure_ascii=False</code>.</strong> Кириллица превратится в <code>При...</code> — читабельно, но раздутый файл. Всегда <code>ensure_ascii=False</code> для внутреннего использования.</div>
+    <div class="pitfall"><strong>4. <code>csv</code> без <code>newline=""</code>.</strong> На Windows будут двойные переносы строк.</div>
+    <div class="pitfall"><strong>5. Относительные пути.</strong> <code>open("data.txt")</code> откроет от <em>текущей рабочей директории</em>, а не от файла со скриптом. Лучше: <code>Path(__file__).parent / "data.txt"</code>.</div>
+  </div>
 </div>
 
 <div id="sec-decorators" class="section">
@@ -1789,13 +2324,349 @@ engine = <span class="c-fn">create_async_engine</span>(<span class="c-str">"post
 </div>
 
 <div id="sec-generators" class="section">
-  <div class="section-title">Генераторы + iterators</div>
-  <div class="stub"><strong>В разработке.</strong> Iterator protocol (<code>__iter__</code> + <code>__next__</code>), генератор через <code>yield</code>, generator expressions, ленивые вычисления (для больших файлов/потоков), <code>itertools</code> (chain, islice, cycle, groupby).</div>
+  <div class="section-title">Генераторы + iterators + itertools</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="book-open"></i> Iterator protocol</div>
+    <p class="text"><strong>Iterable</strong> — объект, у которого есть <code>__iter__()</code>. Возвращает <strong>iterator</strong>. Iterator — объект с <code>__next__()</code>, возвращает следующий элемент, кидает <code>StopIteration</code> когда всё кончилось. <code>for x in obj:</code> — сахар над этим протоколом.</p>
+<pre><code><span class="c-comment"># Внутри for крутится примерно вот это:</span>
+it = <span class="c-fn">iter</span>(users)          <span class="c-comment"># получить iterator из iterable</span>
+<span class="c-key">while</span> <span class="c-key">True</span>:
+    <span class="c-key">try</span>:
+        user = <span class="c-fn">next</span>(it)     <span class="c-comment"># next() зовёт __next__()</span>
+    <span class="c-key">except</span> <span class="c-type">StopIteration</span>:
+        <span class="c-key">break</span>
+    <span class="c-fn">process</span>(user)
+
+<span class="c-comment"># Свой iterator — редко, обычно используем генератор (см. ниже)</span>
+<span class="c-key">class</span> <span class="c-type">Counter</span>:
+    <span class="c-key">def</span> <span class="c-fn">__init__</span>(<span class="c-key">self</span>, limit): <span class="c-key">self</span>.n, <span class="c-key">self</span>.limit = <span class="c-num">0</span>, limit
+    <span class="c-key">def</span> <span class="c-fn">__iter__</span>(<span class="c-key">self</span>): <span class="c-key">return</span> <span class="c-key">self</span>
+    <span class="c-key">def</span> <span class="c-fn">__next__</span>(<span class="c-key">self</span>):
+        <span class="c-key">if</span> <span class="c-key">self</span>.n &gt;= <span class="c-key">self</span>.limit: <span class="c-key">raise</span> <span class="c-type">StopIteration</span>
+        <span class="c-key">self</span>.n += <span class="c-num">1</span>
+        <span class="c-key">return</span> <span class="c-key">self</span>.n
+
+<span class="c-key">for</span> i <span class="c-key">in</span> <span class="c-fn">Counter</span>(<span class="c-num">3</span>): <span class="c-fn">print</span>(i)     <span class="c-comment"># 1, 2, 3</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="repeat"></i> Генератор через <code>yield</code></div>
+    <p class="text">Функция с <code>yield</code> — <strong>генератор</strong>. При вызове не выполняется сразу, возвращает generator-объект. Каждый <code>next()</code> исполняет до следующего <code>yield</code>, потом заморозит состояние.</p>
+<pre><code><span class="c-key">def</span> <span class="c-fn">count_up_to</span>(limit):
+    n = <span class="c-num">1</span>
+    <span class="c-key">while</span> n &lt;= limit:
+        <span class="c-key">yield</span> n
+        n += <span class="c-num">1</span>
+
+gen = <span class="c-fn">count_up_to</span>(<span class="c-num">3</span>)   <span class="c-comment"># НИЧЕГО не выполнилось; gen — генератор-объект</span>
+<span class="c-fn">next</span>(gen)               <span class="c-comment"># 1</span>
+<span class="c-fn">next</span>(gen)               <span class="c-comment"># 2</span>
+<span class="c-fn">next</span>(gen)               <span class="c-comment"># 3</span>
+<span class="c-fn">next</span>(gen)               <span class="c-comment"># StopIteration</span>
+
+<span class="c-comment"># Обычно через for</span>
+<span class="c-key">for</span> n <span class="c-key">in</span> <span class="c-fn">count_up_to</span>(<span class="c-num">10</span>):
+    <span class="c-fn">print</span>(n)
+
+<span class="c-comment"># Или превратить в list (загрузит всё в память)</span>
+<span class="c-fn">list</span>(<span class="c-fn">count_up_to</span>(<span class="c-num">100</span>))</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="zap"></i> Зачем это надо — ленивость</div>
+    <p class="text"><strong>Главный use-case</strong>: обработка больших потоков данных без загрузки всего в память.</p>
+<pre><code><span class="c-comment"># ❌ Загрузим весь 10GB лог в память — OOM</span>
+<span class="c-key">def</span> <span class="c-fn">read_all</span>(path):
+    <span class="c-key">with</span> <span class="c-fn">open</span>(path) <span class="c-key">as</span> f:
+        <span class="c-key">return</span> f.<span class="c-fn">readlines</span>()      <span class="c-comment"># list всех строк</span>
+
+<span class="c-comment"># ✅ Читаем по строке, память O(1)</span>
+<span class="c-key">def</span> <span class="c-fn">read_lazy</span>(path):
+    <span class="c-key">with</span> <span class="c-fn">open</span>(path) <span class="c-key">as</span> f:
+        <span class="c-key">for</span> line <span class="c-key">in</span> f:
+            <span class="c-key">yield</span> line.<span class="c-fn">rstrip</span>()
+
+<span class="c-comment"># Пайплайн — можно накладывать фильтры/преобразования лениво</span>
+<span class="c-key">def</span> <span class="c-fn">errors_only</span>(lines):
+    <span class="c-key">for</span> line <span class="c-key">in</span> lines:
+        <span class="c-key">if</span> <span class="c-str">"ERROR"</span> <span class="c-key">in</span> line:
+            <span class="c-key">yield</span> line
+
+<span class="c-key">def</span> <span class="c-fn">parse_json</span>(lines):
+    <span class="c-key">for</span> line <span class="c-key">in</span> lines:
+        <span class="c-key">yield</span> <span class="c-fn">json</span>.<span class="c-fn">loads</span>(line)
+
+<span class="c-comment"># Читаем 10GB, фильтруем, парсим — всё лениво, память O(1)</span>
+<span class="c-key">for</span> event <span class="c-key">in</span> <span class="c-fn">parse_json</span>(<span class="c-fn">errors_only</span>(<span class="c-fn">read_lazy</span>(<span class="c-str">"app.log"</span>))):
+    <span class="c-fn">save_to_db</span>(event)</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-fork"></i> <code>yield from</code> — делегирование</div>
+<pre><code><span class="c-key">def</span> <span class="c-fn">flatten</span>(matrix):
+    <span class="c-key">for</span> row <span class="c-key">in</span> matrix:
+        <span class="c-key">yield from</span> row              <span class="c-comment"># yield каждого элемента row</span>
+
+<span class="c-comment"># Эквивалент:</span>
+<span class="c-comment"># for row in matrix:</span>
+<span class="c-comment">#     for x in row:</span>
+<span class="c-comment">#         yield x</span>
+
+<span class="c-fn">list</span>(<span class="c-fn">flatten</span>([[<span class="c-num">1</span>, <span class="c-num">2</span>], [<span class="c-num">3</span>, <span class="c-num">4</span>]]))   <span class="c-comment"># [1, 2, 3, 4]</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="library"></i> <code>itertools</code> — стандартная библиотека</div>
+    <table class="data-table">
+      <tr><th>Функция</th><th>Что делает</th></tr>
+      <tr><td><code>chain(a, b, c)</code></td><td>Соединяет несколько iterables в один</td></tr>
+      <tr><td><code>islice(it, start, stop, step)</code></td><td>Срез iterator'а (нельзя срезать generator обычным <code>[:]</code>)</td></tr>
+      <tr><td><code>count(start, step)</code></td><td>Бесконечный счётчик <code>start, start+step, ...</code></td></tr>
+      <tr><td><code>cycle(iterable)</code></td><td>Бесконечно повторяет</td></tr>
+      <tr><td><code>repeat(x, n)</code></td><td>Повторяет <code>x</code> N раз (или бесконечно)</td></tr>
+      <tr><td><code>groupby(iterable, key)</code></td><td>Группировка <em>подряд идущих</em> одинаковых (не как SQL GROUP BY)</td></tr>
+      <tr><td><code>combinations(it, r)</code></td><td>Все сочетания по r элементов</td></tr>
+      <tr><td><code>permutations(it, r)</code></td><td>Все перестановки</td></tr>
+      <tr><td><code>product(a, b)</code></td><td>Декартово произведение</td></tr>
+      <tr><td><code>batched(it, n)</code> (Python 3.12+)</td><td>Разбить на батчи размером n</td></tr>
+      <tr><td><code>takewhile(pred, it)</code>, <code>dropwhile</code></td><td>Пока условие true / после того как false</td></tr>
+    </table>
+
+<pre><code><span class="c-key">from</span> itertools <span class="c-key">import</span> chain, islice, batched
+
+<span class="c-comment"># Соединить несколько источников</span>
+<span class="c-key">for</span> item <span class="c-key">in</span> <span class="c-fn">chain</span>(users_db, users_api, users_cache):
+    ...
+
+<span class="c-comment"># Взять первые 100 из бесконечного generator</span>
+<span class="c-key">for</span> line <span class="c-key">in</span> <span class="c-fn">islice</span>(read_lazy(<span class="c-str">"huge.log"</span>), <span class="c-num">100</span>):
+    ...
+
+<span class="c-comment"># Батчи по 100 — для bulk-INSERT в БД</span>
+<span class="c-key">for</span> chunk <span class="c-key">in</span> <span class="c-fn">batched</span>(records, <span class="c-num">100</span>):
+    User.bulk_create(chunk)</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
+    <div class="pitfall"><strong>1. Генератор — <em>одноразовый</em>.</strong> После полного обхода — пустой. <code>list(gen)</code> дважды — второй раз получишь <code>[]</code>. Хочешь повторный обход — заверни в list.</div>
+    <div class="pitfall"><strong>2. Нельзя <code>len(generator)</code>.</strong> Длина неизвестна. <code>sum(1 for _ in gen)</code> посчитает (но выпьет генератор).</div>
+    <div class="pitfall"><strong>3. Нельзя индексировать <code>gen[5]</code>.</strong> Только последовательный доступ. Для 5-го элемента — <code>next(islice(gen, 5, 6))</code>.</div>
+    <div class="pitfall"><strong>4. Забыл, что generator ленивый.</strong> <code>gen = (fn(x) for x in items)</code> — <code>fn</code> ещё не вызвана. Ошибки внутри <code>fn</code> вылезут только при обходе, не при создании.</div>
+    <div class="pitfall"><strong>5. <code>yield</code> внутри <code>with</code>-блока и досрочный exit.</strong> Если генератор бросили не дочитав — <code>__exit__</code> вызовется через GC (не сразу). Для файлов/соединений лучше <code>contextmanager</code> обёртка.</div>
+  </div>
+
+  <div class="remember-box">
+    <strong>Итог:</strong> генератор через <code>yield</code> — стандартный питонический способ обработки потоков без загрузки в память. Read → filter → transform → save — пайплайн из генераторов. Для обычных задач хватает <code>yield</code> в def + <code>for</code>; <code>itertools</code> — когда нужны chain/batched/groupby.
+  </div>
 </div>
 
 <div id="sec-django" class="section">
-  <div class="section-title">Django — обзор</div>
-  <div class="stub"><strong>В разработке.</strong> Django как «Python Laravel»: batteries included (ORM, admin, auth, templates, migrations). <code>django-admin startproject</code>, структура apps, MVT-паттерн (Model-View-Template), Django ORM с примерами, миграции, Django REST Framework для API. Где Django лучше FastAPI (сайты с админкой) и хуже (микросервисы, real-time).</div>
+  <div class="section-title">Django — «Python Laravel»</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="book-open"></i> Что это</div>
+    <p class="text"><strong>Django</strong> (с 2005) — full-stack framework: ORM, миграции, admin-панель, auth, templates, sessions, forms, i18n. По философии — <em>batteries included</em>: почти всё что нужно для сайта, уже внутри.</p>
+
+    <div class="analogy">
+      <strong>Аналогия для PHP-разработчика:</strong> Django ≈ Laravel в мире Python. ORM ≈ Eloquent, миграции ≈ Laravel migrations, admin ≈ Nova/Filament (только из коробки), templates ≈ Blade, forms ≈ FormRequest. Философия «convention over configuration» тоже похожа.
+    </div>
+
+    <p class="text"><strong>На чём построены:</strong> Instagram, Pinterest, Disqus, Bitbucket, Mozilla, Washington Post. К 2026 — по-прежнему стандарт для «сайта с админкой», но для чистых API проиграл FastAPI.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="download"></i> Быстрый старт</div>
+<pre><code>uv add django
+uv run django-admin startproject myapp .
+uv run python manage.py startapp users
+uv run python manage.py migrate
+uv run python manage.py runserver
+<span class="c-comment"># http://localhost:8000</span></code></pre>
+    <p class="text">Структура:</p>
+<pre><code>myapp/
+├── manage.py                <span class="c-comment"># CLI как artisan</span>
+├── myapp/
+│   ├── settings.py          <span class="c-comment"># конфиг всего</span>
+│   ├── urls.py              <span class="c-comment"># роуты</span>
+│   ├── wsgi.py / asgi.py    <span class="c-comment"># entry points для сервера</span>
+├── users/                   <span class="c-comment"># app</span>
+│   ├── models.py            <span class="c-comment"># модели БД</span>
+│   ├── views.py             <span class="c-comment"># контроллеры</span>
+│   ├── urls.py
+│   ├── admin.py             <span class="c-comment"># регистрация в admin-панели</span>
+│   ├── migrations/
+│   └── templates/</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layers"></i> MVT-паттерн (Model — View — Template)</div>
+    <p class="text">Django-версия MVC. «View» здесь — не то же, что вью в Laravel: это <em>контроллер</em>. «Template» — HTML-шаблон (Blade-аналог).</p>
+<pre><code><span class="c-comment"># users/models.py</span>
+<span class="c-key">from</span> django.db <span class="c-key">import</span> models
+
+<span class="c-key">class</span> <span class="c-type">User</span>(models.<span class="c-type">Model</span>):
+    name = models.<span class="c-fn">CharField</span>(max_length=<span class="c-num">100</span>)
+    email = models.<span class="c-fn">EmailField</span>(unique=<span class="c-key">True</span>)
+    created_at = models.<span class="c-fn">DateTimeField</span>(auto_now_add=<span class="c-key">True</span>)
+
+    <span class="c-key">def</span> <span class="c-fn">__str__</span>(<span class="c-key">self</span>):
+        <span class="c-key">return</span> <span class="c-key">self</span>.name
+
+<span class="c-comment"># users/views.py</span>
+<span class="c-key">from</span> django.shortcuts <span class="c-key">import</span> render, get_object_or_404
+<span class="c-key">from</span> .models <span class="c-key">import</span> User
+
+<span class="c-key">def</span> <span class="c-fn">user_list</span>(request):
+    users = User.objects.<span class="c-fn">all</span>()
+    <span class="c-key">return</span> <span class="c-fn">render</span>(request, <span class="c-str">"users/list.html"</span>, {<span class="c-str">"users"</span>: users})
+
+<span class="c-key">def</span> <span class="c-fn">user_detail</span>(request, pk):
+    user = <span class="c-fn">get_object_or_404</span>(User, pk=pk)
+    <span class="c-key">return</span> <span class="c-fn">render</span>(request, <span class="c-str">"users/detail.html"</span>, {<span class="c-str">"user"</span>: user})
+
+<span class="c-comment"># users/urls.py</span>
+<span class="c-key">from</span> django.urls <span class="c-key">import</span> path
+<span class="c-key">from</span> . <span class="c-key">import</span> views
+
+urlpatterns = [
+    <span class="c-fn">path</span>(<span class="c-str">""</span>, views.user_list, name=<span class="c-str">"user_list"</span>),
+    <span class="c-fn">path</span>(<span class="c-str">"&lt;int:pk&gt;/"</span>, views.user_detail, name=<span class="c-str">"user_detail"</span>),
+]</code></pre>
+
+    <p class="text">Template (аналог Blade):</p>
+<pre><code>&lt;!-- users/templates/users/list.html --&gt;
+&#123;% extends "base.html" %&#125;
+
+&#123;% block content %&#125;
+&lt;ul&gt;
+    &#123;% for user in users %&#125;
+        &lt;li&gt;&lt;a href="&#123;% url 'user_detail' user.pk %&#125;"&gt;&#123;&#123; user.name &#125;&#125;&lt;/a&gt;&lt;/li&gt;
+    &#123;% empty %&#125;
+        &lt;li&gt;Пользователей нет&lt;/li&gt;
+    &#123;% endfor %&#125;
+&lt;/ul&gt;
+&#123;% endblock %&#125;</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="database"></i> Django ORM — сила фреймворка</div>
+<pre><code><span class="c-comment"># CRUD</span>
+u = User.objects.<span class="c-fn">create</span>(name=<span class="c-str">"Alice"</span>, email=<span class="c-str">"a@b.c"</span>)
+User.objects.<span class="c-fn">get</span>(pk=<span class="c-num">1</span>)                             <span class="c-comment"># найти один или DoesNotExist</span>
+User.objects.<span class="c-fn">filter</span>(name__startswith=<span class="c-str">"A"</span>)             <span class="c-comment"># QuerySet</span>
+User.objects.<span class="c-fn">exclude</span>(is_active=<span class="c-key">False</span>)
+User.objects.<span class="c-fn">filter</span>(age__gte=<span class="c-num">18</span>, name__icontains=<span class="c-str">"ali"</span>)
+
+<span class="c-comment"># Обновление</span>
+u.name = <span class="c-str">"Bob"</span>
+u.<span class="c-fn">save</span>()
+
+<span class="c-comment"># Bulk update</span>
+User.objects.<span class="c-fn">filter</span>(is_active=<span class="c-key">False</span>).<span class="c-fn">update</span>(archived=<span class="c-key">True</span>)
+
+<span class="c-comment"># Удаление</span>
+u.<span class="c-fn">delete</span>()
+
+<span class="c-comment"># Связи (аналог relations в Eloquent)</span>
+<span class="c-key">class</span> <span class="c-type">Post</span>(models.<span class="c-type">Model</span>):
+    author = models.<span class="c-fn">ForeignKey</span>(User, on_delete=models.CASCADE, related_name=<span class="c-str">"posts"</span>)
+    title = models.<span class="c-fn">CharField</span>(max_length=<span class="c-num">200</span>)
+
+<span class="c-comment"># Обход:</span>
+user.posts.<span class="c-fn">all</span>()                    <span class="c-comment"># все посты юзера</span>
+post.author.name                    <span class="c-comment"># автор поста</span>
+
+<span class="c-comment"># Оптимизация N+1</span>
+User.objects.<span class="c-fn">prefetch_related</span>(<span class="c-str">"posts"</span>)          <span class="c-comment"># посты одним запросом</span>
+Post.objects.<span class="c-fn">select_related</span>(<span class="c-str">"author"</span>)             <span class="c-comment"># join с author</span>
+
+<span class="c-comment"># Агрегация</span>
+<span class="c-key">from</span> django.db.models <span class="c-key">import</span> Count, Sum, Avg
+User.objects.<span class="c-fn">annotate</span>(posts_count=<span class="c-fn">Count</span>(<span class="c-str">"posts"</span>))
+User.objects.<span class="c-fn">aggregate</span>(total_age=<span class="c-fn">Sum</span>(<span class="c-str">"age"</span>))</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-branch"></i> Миграции</div>
+<pre><code><span class="c-comment"># Сгенерировать по изменениям в models.py</span>
+python manage.py makemigrations
+<span class="c-comment"># Migrations for 'users':</span>
+<span class="c-comment">#   users/migrations/0002_user_phone.py</span>
+
+<span class="c-comment"># Применить</span>
+python manage.py migrate
+
+<span class="c-comment"># Откатить</span>
+python manage.py migrate users <span class="c-num">0001</span>
+
+<span class="c-comment"># SQL который выполнится</span>
+python manage.py sqlmigrate users <span class="c-num">0002</span></code></pre>
+    <p class="text">В отличие от Laravel — <em>ORM автогенерит миграции сам</em>. Меняешь <code>models.py</code>, запускаешь <code>makemigrations</code> — Django поймёт диф и напишет миграцию.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="shield"></i> Admin-панель — killer feature</div>
+<pre><code><span class="c-comment"># users/admin.py</span>
+<span class="c-key">from</span> django.contrib <span class="c-key">import</span> admin
+<span class="c-key">from</span> .models <span class="c-key">import</span> User
+
+<span class="c-key">@admin</span>.<span class="c-fn">register</span>(User)
+<span class="c-key">class</span> <span class="c-type">UserAdmin</span>(admin.<span class="c-type">ModelAdmin</span>):
+    list_display = [<span class="c-str">"name"</span>, <span class="c-str">"email"</span>, <span class="c-str">"created_at"</span>]
+    list_filter = [<span class="c-str">"is_active"</span>]
+    search_fields = [<span class="c-str">"name"</span>, <span class="c-str">"email"</span>]
+    ordering = [<span class="c-str">"-created_at"</span>]</code></pre>
+    <p class="text">Одна регистрация — и в <code>/admin/</code> получаешь готовую CRUD-панель с фильтрами, поиском, пермишенами. Это причина почему Django до сих пор берут для внутренних систем и админок.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="rocket"></i> Django REST Framework (DRF)</div>
+    <p class="text">Для API поверх Django ставят <strong>DRF</strong> — отдельный пакет:</p>
+<pre><code>uv add djangorestframework
+
+<span class="c-comment"># users/serializers.py — аналог Pydantic-моделей</span>
+<span class="c-key">from</span> rest_framework <span class="c-key">import</span> serializers
+<span class="c-key">from</span> .models <span class="c-key">import</span> User
+
+<span class="c-key">class</span> <span class="c-type">UserSerializer</span>(serializers.<span class="c-type">ModelSerializer</span>):
+    <span class="c-key">class</span> <span class="c-type">Meta</span>:
+        model = User
+        fields = [<span class="c-str">"id"</span>, <span class="c-str">"name"</span>, <span class="c-str">"email"</span>, <span class="c-str">"created_at"</span>]
+
+<span class="c-comment"># users/views.py</span>
+<span class="c-key">from</span> rest_framework <span class="c-key">import</span> viewsets
+<span class="c-key">from</span> .models <span class="c-key">import</span> User
+<span class="c-key">from</span> .serializers <span class="c-key">import</span> UserSerializer
+
+<span class="c-key">class</span> <span class="c-type">UserViewSet</span>(viewsets.<span class="c-type">ModelViewSet</span>):
+    queryset = User.objects.<span class="c-fn">all</span>()
+    serializer_class = UserSerializer
+<span class="c-comment"># Всё — 5 CRUD endpoints готовы (GET list, POST create, GET/PUT/DELETE detail)</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> Django vs FastAPI — когда что</div>
+    <table class="data-table">
+      <tr><th>Задача</th><th>Django</th><th>FastAPI</th></tr>
+      <tr><td>Сайт с админкой</td><td>✅ Идеально</td><td>Не подходит</td></tr>
+      <tr><td>Внутренняя система с CRUD-формами</td><td>✅ Огромная экономия времени</td><td>Больше кода писать</td></tr>
+      <tr><td>Публичный REST API</td><td>DRF — работает, но многословно</td><td>✅ Стандарт 2026</td></tr>
+      <tr><td>Микросервис / AI-backend</td><td>Тяжеловат</td><td>✅ Быстро и легко</td></tr>
+      <tr><td>WebSocket / real-time</td><td>Django Channels — через костыли</td><td>✅ Async из коробки</td></tr>
+      <tr><td>Стартап-прототип с сайтом</td><td>✅ Мгновенно рабочий MVP</td><td>Придётся собирать всё</td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
+    <div class="pitfall"><strong>1. Django async частичный.</strong> В 4.1+ async views есть, но большинство ORM и middleware — sync. Для полноценного async — FastAPI.</div>
+    <div class="pitfall"><strong>2. Fat models vs fat views.</strong> В Django принято класть бизнес-логику в модель (<code>User.register(...)</code>), а не в view. Обратно от Laravel «тонкий контроллер + Service».</div>
+    <div class="pitfall"><strong>3. Signals — глобальный event bus.</strong> Мощно, но приводит к «магии» — трудно отладить кто на что подписан. Использовать умеренно.</div>
+    <div class="pitfall"><strong>4. N+1 — легко получить.</strong> <code>for post in posts: print(post.author.name)</code> — запрос на каждый автор. Спасение — <code>select_related</code>/<code>prefetch_related</code>.</div>
+    <div class="pitfall"><strong>5. <code>QuerySet</code> ленивый.</strong> <code>qs = User.objects.filter(...)</code> — SQL ещё не выполнен. Вызовется при <code>for</code>, <code>list()</code>, <code>len()</code>. Кешируется после первого обхода.</div>
+  </div>
 </div>
 
 <div id="sec-fastapi" class="section">
@@ -2006,48 +2877,1150 @@ app.<span class="c-fn">include_router</span>(users_router, prefix=<span class="c
 </div>
 
 <div id="sec-flask" class="section">
-  <div class="section-title">Flask — обзор</div>
-  <div class="stub"><strong>В разработке.</strong> Микрофреймворк для маленьких сервисов и прототипов. <code>Flask(__name__)</code>, роуты, Jinja2 (аналог Blade), Flask-SQLAlchemy, Flask-Login. Где Flask ещё живёт: legacy, микро-скрипты, обучение основам WSGI. Для нового кода чаще выбирают FastAPI.</div>
+  <div class="section-title">Flask — микрофреймворк</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="beaker"></i> Что это</div>
+    <p class="text"><strong>Flask</strong> (с 2010) — микрофреймворк: даёт роутинг + шаблоны + <code>request</code>/<code>response</code>. Всё остальное (ORM, форма, auth) — плагины по выбору. Долгое время был «PHP для Python» — быстро написать что-то маленькое.</p>
+
+    <p class="text"><strong>К 2026:</strong> уступает FastAPI. Для нового кода выбирают FastAPI (async + type hints + автодоки). Flask остался в: legacy-системах, обучении (простой для входа), небольших скриптах-веб-инструментах.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="hammer"></i> Минимальный старт</div>
+<pre><code>uv add flask
+
+<span class="c-comment"># app.py</span>
+<span class="c-key">from</span> flask <span class="c-key">import</span> Flask, request, jsonify
+
+app = <span class="c-fn">Flask</span>(__name__)
+
+<span class="c-key">@app</span>.<span class="c-fn">route</span>(<span class="c-str">"/"</span>)
+<span class="c-key">def</span> <span class="c-fn">home</span>():
+    <span class="c-key">return</span> <span class="c-str">"Hello!"</span>
+
+<span class="c-key">@app</span>.<span class="c-fn">route</span>(<span class="c-str">"/users/&lt;int:user_id&gt;"</span>, methods=[<span class="c-str">"GET"</span>])
+<span class="c-key">def</span> <span class="c-fn">get_user</span>(user_id):
+    <span class="c-key">return</span> <span class="c-fn">jsonify</span>({<span class="c-str">"id"</span>: user_id, <span class="c-str">"name"</span>: <span class="c-str">"Alice"</span>})
+
+<span class="c-key">@app</span>.<span class="c-fn">route</span>(<span class="c-str">"/users"</span>, methods=[<span class="c-str">"POST"</span>])
+<span class="c-key">def</span> <span class="c-fn">create_user</span>():
+    data = request.<span class="c-fn">get_json</span>()          <span class="c-comment"># ручной парсинг</span>
+    <span class="c-key">if</span> <span class="c-key">not</span> data <span class="c-key">or</span> <span class="c-str">"name"</span> <span class="c-key">not in</span> data:
+        <span class="c-key">return</span> <span class="c-fn">jsonify</span>({<span class="c-str">"error"</span>: <span class="c-str">"name required"</span>}), <span class="c-num">400</span>
+    <span class="c-key">return</span> <span class="c-fn">jsonify</span>({<span class="c-str">"created"</span>: data}), <span class="c-num">201</span>
+
+<span class="c-key">if</span> __name__ == <span class="c-str">"__main__"</span>:
+    app.<span class="c-fn">run</span>(debug=<span class="c-key">True</span>)</code></pre>
+<pre><code>python app.py
+<span class="c-comment"># http://localhost:5000</span></code></pre>
+
+    <p class="text">Обрати внимание — валидация вручную (сравни с <code>Pydantic</code> в FastAPI, где просто аннотация типа). Это основной минус.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="puzzle"></i> Экосистема плагинов</div>
+    <table class="data-table">
+      <tr><th>Задача</th><th>Плагин</th></tr>
+      <tr><td>ORM</td><td>Flask-SQLAlchemy</td></tr>
+      <tr><td>Миграции</td><td>Flask-Migrate (Alembic)</td></tr>
+      <tr><td>Формы + CSRF</td><td>Flask-WTF</td></tr>
+      <tr><td>Auth (сессии)</td><td>Flask-Login</td></tr>
+      <tr><td>JWT</td><td>Flask-JWT-Extended</td></tr>
+      <tr><td>REST</td><td>Flask-RESTful, Flask-Smorest</td></tr>
+      <tr><td>Admin-панель</td><td>Flask-Admin</td></tr>
+    </table>
+    <p class="text">В сумме получается тот же Django, только собираешь его сам из кубиков.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Когда сегодня стоит выбрать Flask</div>
+    <ul class="bullets">
+      <li>Мини-скрипт с 3-5 endpoint'ами (webhook receiver, health-check server)</li>
+      <li>Проект на legacy Python 2 / 3.6 (FastAPI требует 3.7+)</li>
+      <li>Обучение — синтаксис проще чем у FastAPI, меньше «магии»</li>
+      <li>Работаешь в существующем Flask-проекте</li>
+    </ul>
+    <p class="text"><strong>Для нового REST-API в 2026 — берут FastAPI</strong>, не Flask. Скорость разработки выше за счёт Pydantic и автодоки.</p>
+  </div>
 </div>
 
 <div id="sec-framework-compare" class="section">
-  <div class="section-title">Django vs FastAPI vs Flask — что выбрать</div>
-  <div class="stub"><strong>В разработке.</strong> Полная сравнительная таблица (батарейки, скорость, async, экосистема, кривая обучения). Выбор в зависимости от задачи: сайт с админкой → Django, HTTP-API/микросервис → FastAPI, микро-скрипт/легаси → Flask.</div>
+  <div class="section-title">Django vs FastAPI vs Flask — итоговое сравнение</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> Полная таблица</div>
+    <table class="data-table">
+      <tr><th>Аспект</th><th>Django</th><th>FastAPI</th><th>Flask</th></tr>
+      <tr><td>Тип</td><td>Full-stack</td><td>Micro / API-first</td><td>Micro</td></tr>
+      <tr><td>Год</td><td>2005</td><td>2018</td><td>2010</td></tr>
+      <tr><td>Философия</td><td>Batteries included</td><td>Type-driven, async-first</td><td>Do-it-yourself</td></tr>
+      <tr><td>Async</td><td>Частично (4.1+)</td><td>✅ Первого класса</td><td>❌ (только Quart-fork)</td></tr>
+      <tr><td>ORM в комплекте</td><td>✅ Django ORM</td><td>❌ (SQLAlchemy отдельно)</td><td>❌ (Flask-SQLAlchemy отдельно)</td></tr>
+      <tr><td>Admin-панель</td><td>✅ Из коробки</td><td>❌</td><td>Flask-Admin (отдельно)</td></tr>
+      <tr><td>Auth-система</td><td>✅ Полная</td><td>Собирать (FastAPI Users / OAuth2)</td><td>Flask-Login</td></tr>
+      <tr><td>Валидация</td><td>Django Forms / DRF Serializers</td><td>✅ Pydantic на type hints</td><td>Вручную / Flask-WTF</td></tr>
+      <tr><td>Автодоки OpenAPI</td><td>Через DRF + drf-spectacular</td><td>✅ Автоматически</td><td>Через плагин Flask-Smorest</td></tr>
+      <tr><td>Templates</td><td>✅ Django templates</td><td>Jinja2 через Starlette</td><td>✅ Jinja2</td></tr>
+      <tr><td>Миграции</td><td>✅ Автогенерация</td><td>Alembic отдельно</td><td>Flask-Migrate</td></tr>
+      <tr><td>Скорость (RPS)</td><td>Средняя</td><td>✅ Высокая (async)</td><td>Средняя</td></tr>
+      <tr><td>Кривая обучения</td><td>Крутая — много концепций</td><td>Пологая, но нужны type hints</td><td>Очень пологая</td></tr>
+      <tr><td>Комьюнити 2026</td><td>Огромное, зрелое</td><td>Взрывной рост, активное</td><td>Стабильное, но растёт медленно</td></tr>
+      <tr><td>Кто использует</td><td>Instagram, Pinterest, Reddit</td><td>Netflix, Uber, Microsoft</td><td>Небольшие сервисы, скрипты</td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="target"></i> Правило выбора</div>
+    <div class="card">
+      <h3>Сайт с админкой, внутренняя система, e-commerce</h3>
+      <p class="text">→ <strong>Django</strong>. Batteries included окупятся за 1-2 недели: admin, auth, ORM, миграции — всё уже настроено. Не изобретай стек.</p>
+    </div>
+    <div class="card">
+      <h3>Публичный REST API, микросервис, AI-backend</h3>
+      <p class="text">→ <strong>FastAPI</strong>. Async из коробки, Pydantic для валидации, автогенерация OpenAPI. Стандарт нового Python-backend в 2026.</p>
+    </div>
+    <div class="card">
+      <h3>Мини-скрипт, webhook receiver, prototype</h3>
+      <p class="text">→ <strong>Flask</strong> — если проект действительно <em>минимальный</em> (3-5 endpoints, никаких перспектив роста). Иначе всё равно FastAPI.</p>
+    </div>
+    <div class="card">
+      <h3>Работа с существующим кодом</h3>
+      <p class="text">→ <strong>что уже стоит</strong>. Переписывать legacy Flask на FastAPI ради «модно» — редко того стоит. Мигрируй только новые модули.</p>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="lightbulb"></i> Гибридный подход в реальности</div>
+    <p class="text">Крупные компании часто <em>смешивают</em>:</p>
+    <ul class="bullets">
+      <li><strong>Django</strong> — «основной сайт» с админкой + бизнес-логика</li>
+      <li><strong>FastAPI</strong> — новые публичные API-эндпоинты, микросервисы, ML-inference</li>
+      <li>Общая база данных через одну ORM (обычно SQLAlchemy)</li>
+    </ul>
+    <p class="text">Так на разные задачи используется правильный инструмент, без религиозных войн.</p>
+  </div>
+
+  <div class="remember-box">
+    <strong>Итог одной фразой:</strong> Django для сайтов, FastAPI для API, Flask для мини-задач. В 2026 доля FastAPI растёт быстрее всех остальных Python-фреймворков вместе взятых.
+  </div>
 </div>
 
 <div id="sec-db" class="section">
-  <div class="section-title">Работа с БД — psycopg2 / SQLAlchemy / Django ORM</div>
-  <div class="stub"><strong>В разработке.</strong> Три уровня: <code>psycopg2</code> (сырые SQL для PostgreSQL, аналог PDO), SQLAlchemy (query builder + ORM, аналог Doctrine), Django ORM (тесная интеграция с Django). Async-варианты: <code>asyncpg</code>, SQLAlchemy 2.0 async. Alembic для миграций.</div>
+  <div class="section-title">БД в Python — psycopg / SQLAlchemy / Alembic</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layers-3"></i> Три уровня работы с БД</div>
+    <table class="data-table">
+      <tr><th>Уровень</th><th>Инструменты</th><th>PHP-аналог</th></tr>
+      <tr><td>1. Сырые SQL</td><td><code>psycopg</code> (PG), <code>mysql-connector</code>, <code>sqlite3</code> (stdlib)</td><td>PDO</td></tr>
+      <tr><td>2. Query Builder + Core ORM</td><td>SQLAlchemy Core</td><td>Laravel Query Builder</td></tr>
+      <tr><td>3. Full ORM</td><td>SQLAlchemy ORM, Django ORM</td><td>Eloquent, Doctrine</td></tr>
+    </table>
+    <p class="text">Для нового backend-проекта на FastAPI — стандарт <strong>SQLAlchemy 2.0 async</strong>. Для Django-проекта — Django ORM (входит).</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="terminal"></i> Сырые SQL — <code>psycopg</code></div>
+    <p class="text"><code>psycopg</code> (v3, 2021) — актуальный драйвер PostgreSQL. Старая версия <code>psycopg2</code> — legacy, но ещё популярна. Аналог PDO — прямой доступ к SQL.</p>
+<pre><code>uv add "psycopg[binary]"
+
+<span class="c-key">import</span> psycopg
+
+<span class="c-key">with</span> psycopg.<span class="c-fn">connect</span>(<span class="c-str">"postgresql://user:pass@localhost/mydb"</span>) <span class="c-key">as</span> conn:
+    <span class="c-key">with</span> conn.<span class="c-fn">cursor</span>() <span class="c-key">as</span> cur:
+        <span class="c-comment"># SELECT с параметрами (защита от SQL-injection)</span>
+        cur.<span class="c-fn">execute</span>(<span class="c-str">"SELECT id, name FROM users WHERE age &gt; %s"</span>, (<span class="c-num">18</span>,))
+        rows = cur.<span class="c-fn">fetchall</span>()          <span class="c-comment"># list of tuples</span>
+        <span class="c-key">for</span> id, name <span class="c-key">in</span> rows:
+            <span class="c-fn">print</span>(id, name)
+
+        <span class="c-comment"># INSERT + RETURNING</span>
+        cur.<span class="c-fn">execute</span>(
+            <span class="c-str">"INSERT INTO users (name, email) VALUES (%s, %s) RETURNING id"</span>,
+            (<span class="c-str">"Alice"</span>, <span class="c-str">"a@b.c"</span>),
+        )
+        new_id = cur.<span class="c-fn">fetchone</span>()[<span class="c-num">0</span>]
+
+    conn.<span class="c-fn">commit</span>()
+
+<span class="c-comment"># Row factory — получить dict вместо tuple</span>
+<span class="c-key">from</span> psycopg.rows <span class="c-key">import</span> dict_row
+<span class="c-key">with</span> psycopg.<span class="c-fn">connect</span>(DSN, row_factory=dict_row) <span class="c-key">as</span> conn:
+    <span class="c-key">with</span> conn.<span class="c-fn">cursor</span>() <span class="c-key">as</span> cur:
+        cur.<span class="c-fn">execute</span>(<span class="c-str">"SELECT id, name FROM users"</span>)
+        <span class="c-key">for</span> row <span class="c-key">in</span> cur:
+            <span class="c-fn">print</span>(row[<span class="c-str">"name"</span>])</code></pre>
+
+    <div class="pitfall"><strong>⚠ Только параметризация через <code>%s</code>, никогда f-string / concat.</strong> <code>cur.execute(f"SELECT ... WHERE id = {user_input}")</code> — SQL-инъекция. Всегда <code>cur.execute("... WHERE id = %s", (user_input,))</code> — драйвер эскейпит.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="database"></i> SQLAlchemy 2.0 — стандарт для FastAPI</div>
+    <p class="text">SQLAlchemy — de-facto ORM в Python-экосистеме (кроме Django-проектов). Версия 2.0 (2023) кардинально переработана: новый API, полноценный async, отличные type hints.</p>
+<pre><code>uv add "sqlalchemy[asyncio]" "asyncpg"
+
+<span class="c-comment"># models.py — декларация моделей</span>
+<span class="c-key">from</span> sqlalchemy.orm <span class="c-key">import</span> DeclarativeBase, Mapped, mapped_column
+<span class="c-key">from</span> sqlalchemy <span class="c-key">import</span> String, ForeignKey
+<span class="c-key">from</span> datetime <span class="c-key">import</span> datetime
+
+<span class="c-key">class</span> <span class="c-type">Base</span>(<span class="c-type">DeclarativeBase</span>): <span class="c-key">pass</span>
+
+<span class="c-key">class</span> <span class="c-type">User</span>(<span class="c-type">Base</span>):
+    __tablename__ = <span class="c-str">"users"</span>
+
+    id: <span class="c-type">Mapped</span>[<span class="c-type">int</span>] = <span class="c-fn">mapped_column</span>(primary_key=<span class="c-key">True</span>)
+    name: <span class="c-type">Mapped</span>[<span class="c-type">str</span>] = <span class="c-fn">mapped_column</span>(<span class="c-fn">String</span>(<span class="c-num">100</span>))
+    email: <span class="c-type">Mapped</span>[<span class="c-type">str</span>] = <span class="c-fn">mapped_column</span>(<span class="c-fn">String</span>(<span class="c-num">200</span>), unique=<span class="c-key">True</span>)
+    created_at: <span class="c-type">Mapped</span>[<span class="c-type">datetime</span>] = <span class="c-fn">mapped_column</span>(default=<span class="c-type">datetime</span>.utcnow)</code></pre>
+
+<pre><code><span class="c-comment"># database.py — async engine + session</span>
+<span class="c-key">from</span> sqlalchemy.ext.asyncio <span class="c-key">import</span> create_async_engine, AsyncSession, async_sessionmaker
+
+engine = <span class="c-fn">create_async_engine</span>(<span class="c-str">"postgresql+asyncpg://user:pass@localhost/mydb"</span>)
+AsyncSessionLocal = <span class="c-fn">async_sessionmaker</span>(engine, expire_on_commit=<span class="c-key">False</span>)
+
+<span class="c-key">async def</span> <span class="c-fn">get_db</span>():                     <span class="c-comment"># для FastAPI Depends()</span>
+    <span class="c-key">async with</span> <span class="c-fn">AsyncSessionLocal</span>() <span class="c-key">as</span> session:
+        <span class="c-key">yield</span> session</code></pre>
+
+<pre><code><span class="c-comment"># Использование в FastAPI</span>
+<span class="c-key">from</span> sqlalchemy <span class="c-key">import</span> select, insert, update, delete
+
+<span class="c-key">@app</span>.<span class="c-fn">get</span>(<span class="c-str">"/users/{id}"</span>)
+<span class="c-key">async def</span> <span class="c-fn">get_user</span>(id: <span class="c-type">int</span>, db: <span class="c-type">AsyncSession</span> = <span class="c-fn">Depends</span>(get_db)):
+    <span class="c-comment"># SELECT one</span>
+    user = <span class="c-key">await</span> db.<span class="c-fn">get</span>(User, id)
+    <span class="c-key">if</span> <span class="c-key">not</span> user:
+        <span class="c-key">raise</span> <span class="c-fn">HTTPException</span>(<span class="c-num">404</span>)
+    <span class="c-key">return</span> user
+
+<span class="c-key">@app</span>.<span class="c-fn">get</span>(<span class="c-str">"/users"</span>)
+<span class="c-key">async def</span> <span class="c-fn">list_users</span>(db: <span class="c-type">AsyncSession</span> = <span class="c-fn">Depends</span>(get_db)):
+    <span class="c-comment"># SELECT many</span>
+    stmt = <span class="c-fn">select</span>(User).<span class="c-fn">where</span>(User.name.<span class="c-fn">ilike</span>(<span class="c-str">"a%"</span>)).<span class="c-fn">limit</span>(<span class="c-num">100</span>)
+    result = <span class="c-key">await</span> db.<span class="c-fn">execute</span>(stmt)
+    <span class="c-key">return</span> result.<span class="c-fn">scalars</span>().<span class="c-fn">all</span>()
+
+<span class="c-key">@app</span>.<span class="c-fn">post</span>(<span class="c-str">"/users"</span>)
+<span class="c-key">async def</span> <span class="c-fn">create_user</span>(payload: <span class="c-type">CreateUserRequest</span>, db: <span class="c-type">AsyncSession</span> = <span class="c-fn">Depends</span>(get_db)):
+    user = <span class="c-type">User</span>(name=payload.name, email=payload.email)
+    db.<span class="c-fn">add</span>(user)
+    <span class="c-key">await</span> db.<span class="c-fn">commit</span>()
+    <span class="c-key">await</span> db.<span class="c-fn">refresh</span>(user)                <span class="c-comment"># подтянуть id, created_at</span>
+    <span class="c-key">return</span> user</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="link-2"></i> Связи и оптимизация N+1</div>
+<pre><code><span class="c-comment"># Связь один-ко-многим</span>
+<span class="c-key">class</span> <span class="c-type">Post</span>(<span class="c-type">Base</span>):
+    __tablename__ = <span class="c-str">"posts"</span>
+    id: <span class="c-type">Mapped</span>[<span class="c-type">int</span>] = <span class="c-fn">mapped_column</span>(primary_key=<span class="c-key">True</span>)
+    author_id: <span class="c-type">Mapped</span>[<span class="c-type">int</span>] = <span class="c-fn">mapped_column</span>(<span class="c-fn">ForeignKey</span>(<span class="c-str">"users.id"</span>))
+    title: <span class="c-type">Mapped</span>[<span class="c-type">str</span>]
+    author: <span class="c-type">Mapped</span>[<span class="c-str">"User"</span>] = <span class="c-fn">relationship</span>(back_populates=<span class="c-str">"posts"</span>)
+
+<span class="c-key">class</span> <span class="c-type">User</span>(<span class="c-type">Base</span>):
+    ...
+    posts: <span class="c-type">Mapped</span>[<span class="c-type">list</span>[<span class="c-str">"Post"</span>]] = <span class="c-fn">relationship</span>(back_populates=<span class="c-str">"author"</span>)
+
+<span class="c-comment"># Оптимизация — selectinload = prefetch, joinedload = JOIN</span>
+<span class="c-key">from</span> sqlalchemy.orm <span class="c-key">import</span> selectinload
+
+stmt = <span class="c-fn">select</span>(User).<span class="c-fn">options</span>(<span class="c-fn">selectinload</span>(User.posts))
+<span class="c-comment"># Один запрос за юзерами + один за всеми постами (через IN)</span>
+
+<span class="c-comment"># Без — N+1: SELECT users, потом на каждого — SELECT posts</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-branch"></i> Alembic — миграции</div>
+    <p class="text">Стандарт для миграций SQLAlchemy. Работает как <code>artisan migrate</code> в Laravel — генерация SQL по diff моделей.</p>
+<pre><code>uv add alembic
+
+alembic init migrations              <span class="c-comment"># создать конфиг</span>
+
+<span class="c-comment"># Настроить alembic/env.py — указать target_metadata = Base.metadata</span>
+
+<span class="c-comment"># Автогенерация по diff моделей</span>
+alembic revision --autogenerate -m <span class="c-str">"add users table"</span>
+
+<span class="c-comment"># Применить все миграции</span>
+alembic upgrade head
+
+<span class="c-comment"># Откатить одну</span>
+alembic downgrade -<span class="c-num">1</span>
+
+<span class="c-comment"># Показать текущую версию</span>
+alembic current
+
+<span class="c-comment"># История</span>
+alembic history</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
+    <div class="pitfall"><strong>1. Смешивание sync и async в SQLAlchemy.</strong> Sync-код (<code>session.query(...)</code>) не работает в async-сессии. Один стек — либо весь sync, либо весь async.</div>
+    <div class="pitfall"><strong>2. Забыл <code>await db.commit()</code>.</strong> Изменения не сохранятся. В отличие от Django/Laravel, где транзакция автозакрывается — SQLAlchemy требует явного commit.</div>
+    <div class="pitfall"><strong>3. Ленивая загрузка в async.</strong> <code>user.posts</code> без предварительной <code>selectinload</code> в async — <code>MissingGreenlet</code> exception. Async не умеет ленивую подгрузку — грузи заранее.</div>
+    <div class="pitfall"><strong>4. Возврат SQLAlchemy-модели напрямую из FastAPI.</strong> Утечка полей + ленивые relations. Используй Pydantic-схему через <code>response_model</code>.</div>
+    <div class="pitfall"><strong>5. Одна сессия на весь запрос.</strong> Не создавай <code>AsyncSession()</code> в каждой функции — используй Depends() и один shared через request. Иначе connection pool не окупится.</div>
+    <div class="pitfall"><strong>6. Alembic autogenerate — не серебряная пуля.</strong> Не увидит переименование колонки (сгенерит DROP + CREATE — потеряет данные). Проверяй сгенерённые миграции перед применением.</div>
+  </div>
+
+  <div class="remember-box">
+    <strong>Итог:</strong> для FastAPI-стека — SQLAlchemy 2.0 async + Alembic + asyncpg. Для Django — Django ORM. Для мини-скрипта — <code>psycopg</code> напрямую. Всегда параметризованные запросы. В async — <code>selectinload</code> для relations, чтобы избежать <code>MissingGreenlet</code>.
+  </div>
 </div>
 
 <div id="sec-http" class="section">
   <div class="section-title">HTTP-клиенты — requests / httpx</div>
-  <div class="stub"><strong>В разработке.</strong> <code>requests</code> — де-факто стандарт для sync (аналог Guzzle). <code>httpx</code> — современный, поддерживает и sync, и async, тот же API. Retry, timeout, session, авторизация, JSON и form-data, streaming большие ответы, mocking для тестов (<code>respx</code>).</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> requests vs httpx — что выбрать</div>
+    <table class="data-table">
+      <tr><th></th><th><code>requests</code></th><th><code>httpx</code></th></tr>
+      <tr><td>Год</td><td>2011</td><td>2019</td></tr>
+      <tr><td>API</td><td>Простой, стандартный</td><td>Такой же — можно мигрировать с sed</td></tr>
+      <tr><td>Async</td><td>❌ Нет</td><td>✅ Sync + Async в одном пакете</td></tr>
+      <tr><td>HTTP/2</td><td>❌ Нет</td><td>✅ Да</td></tr>
+      <tr><td>Timeout по умолчанию</td><td>❌ Нет (висит навсегда)</td><td>✅ 5 секунд</td></tr>
+      <tr><td>Проверка типов</td><td>Слабая</td><td>Полные type hints</td></tr>
+    </table>
+    <p class="text"><strong>Для нового кода — <code>httpx</code></strong>. <code>requests</code> — для legacy или совсем маленьких скриптов.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="download"></i> Базовый GET / POST</div>
+<pre><code>uv add httpx
+
+<span class="c-key">import</span> httpx
+
+<span class="c-comment"># GET</span>
+r = httpx.<span class="c-fn">get</span>(<span class="c-str">"https://api.example.com/users/1"</span>)
+r.status_code                       <span class="c-comment"># 200</span>
+r.text                              <span class="c-comment"># raw body как строка</span>
+r.<span class="c-fn">json</span>()                            <span class="c-comment"># JSON → dict</span>
+r.headers[<span class="c-str">"content-type"</span>]
+
+<span class="c-comment"># Query params</span>
+r = httpx.<span class="c-fn">get</span>(<span class="c-str">"https://api.ex.com/search"</span>, params={<span class="c-str">"q"</span>: <span class="c-str">"python"</span>, <span class="c-str">"limit"</span>: <span class="c-num">10</span>})
+<span class="c-comment"># автосклейка → ?q=python&amp;limit=10</span>
+
+<span class="c-comment"># POST JSON</span>
+r = httpx.<span class="c-fn">post</span>(<span class="c-str">"https://api.ex.com/users"</span>, json={<span class="c-str">"name"</span>: <span class="c-str">"Alice"</span>})
+<span class="c-comment"># Content-Type: application/json автоматически</span>
+
+<span class="c-comment"># POST form-data</span>
+r = httpx.<span class="c-fn">post</span>(url, data={<span class="c-str">"name"</span>: <span class="c-str">"Alice"</span>})
+<span class="c-comment"># Content-Type: application/x-www-form-urlencoded</span>
+
+<span class="c-comment"># POST file (multipart)</span>
+<span class="c-key">with</span> <span class="c-fn">open</span>(<span class="c-str">"img.png"</span>, <span class="c-str">"rb"</span>) <span class="c-key">as</span> f:
+    r = httpx.<span class="c-fn">post</span>(url, files={<span class="c-str">"image"</span>: f})
+
+<span class="c-comment"># Headers</span>
+r = httpx.<span class="c-fn">get</span>(url, headers={<span class="c-str">"Authorization"</span>: <span class="c-fn">f</span><span class="c-str">"Bearer {token}"</span>})
+
+<span class="c-comment"># Timeout</span>
+r = httpx.<span class="c-fn">get</span>(url, timeout=<span class="c-num">10.0</span>)     <span class="c-comment"># обязательно ставить!</span>
+
+<span class="c-comment"># Обработка ошибок HTTP-статусов</span>
+r.<span class="c-fn">raise_for_status</span>()                <span class="c-comment"># бросит HTTPStatusError если 4xx/5xx</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="package"></i> Client — переиспользование соединений</div>
+    <p class="text">Прямой вызов <code>httpx.get()</code> — каждый раз новое TCP-соединение. Для 10+ запросов к одному хосту используй <strong>Client</strong>:</p>
+<pre><code><span class="c-comment"># Sync client</span>
+<span class="c-key">with</span> httpx.<span class="c-fn">Client</span>(
+    base_url=<span class="c-str">"https://api.example.com"</span>,
+    headers={<span class="c-str">"Authorization"</span>: <span class="c-fn">f</span><span class="c-str">"Bearer {token}"</span>},
+    timeout=<span class="c-num">10.0</span>,
+) <span class="c-key">as</span> client:
+    r1 = client.<span class="c-fn">get</span>(<span class="c-str">"/users/1"</span>)
+    r2 = client.<span class="c-fn">get</span>(<span class="c-str">"/users/2"</span>)
+    r3 = client.<span class="c-fn">post</span>(<span class="c-str">"/users"</span>, json={...})
+<span class="c-comment"># Соединение переиспользуется, ~10× быстрее</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="zap"></i> Async — <code>AsyncClient</code></div>
+<pre><code><span class="c-key">import</span> asyncio, httpx
+
+<span class="c-key">async def</span> <span class="c-fn">fetch_all</span>(urls):
+    <span class="c-key">async with</span> httpx.<span class="c-type">AsyncClient</span>(timeout=<span class="c-num">10.0</span>) <span class="c-key">as</span> client:
+        tasks = [client.<span class="c-fn">get</span>(u) <span class="c-key">for</span> u <span class="c-key">in</span> urls]
+        responses = <span class="c-key">await</span> asyncio.<span class="c-fn">gather</span>(*tasks)
+        <span class="c-key">return</span> [r.<span class="c-fn">json</span>() <span class="c-key">for</span> r <span class="c-key">in</span> responses]
+
+data = asyncio.<span class="c-fn">run</span>(<span class="c-fn">fetch_all</span>([<span class="c-str">"url1"</span>, <span class="c-str">"url2"</span>, <span class="c-str">"url3"</span>]))
+<span class="c-comment"># Три запроса параллельно</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="repeat-2"></i> Retry с tenacity</div>
+    <p class="text">В <code>httpx</code>/<code>requests</code> нет retry из коробки. Стандарт — библиотека <code>tenacity</code>:</p>
+<pre><code>uv add tenacity
+
+<span class="c-key">from</span> tenacity <span class="c-key">import</span> retry, stop_after_attempt, wait_exponential
+
+<span class="c-key">@retry</span>(
+    stop=<span class="c-fn">stop_after_attempt</span>(<span class="c-num">3</span>),
+    wait=<span class="c-fn">wait_exponential</span>(multiplier=<span class="c-num">1</span>, min=<span class="c-num">2</span>, max=<span class="c-num">10</span>),
+)
+<span class="c-key">def</span> <span class="c-fn">fetch</span>(url):
+    r = httpx.<span class="c-fn">get</span>(url, timeout=<span class="c-num">5.0</span>)
+    r.<span class="c-fn">raise_for_status</span>()
+    <span class="c-key">return</span> r.<span class="c-fn">json</span>()</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="test-tube"></i> Mocking в тестах — respx</div>
+<pre><code>uv add --dev respx pytest
+
+<span class="c-key">import</span> respx, httpx, pytest
+
+<span class="c-key">@respx</span>.<span class="c-fn">mock</span>
+<span class="c-key">def</span> <span class="c-fn">test_fetch_user</span>():
+    route = respx.<span class="c-fn">get</span>(<span class="c-str">"https://api.ex.com/users/1"</span>).<span class="c-fn">mock</span>(
+        return_value=httpx.<span class="c-fn">Response</span>(<span class="c-num">200</span>, json={<span class="c-str">"id"</span>: <span class="c-num">1</span>, <span class="c-str">"name"</span>: <span class="c-str">"Alice"</span>})
+    )
+    result = <span class="c-fn">fetch_user</span>(<span class="c-num">1</span>)
+    <span class="c-key">assert</span> result[<span class="c-str">"name"</span>] == <span class="c-str">"Alice"</span>
+    <span class="c-key">assert</span> route.<span class="c-fn">called</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
+    <div class="pitfall"><strong>1. Забыл <code>timeout</code>.</strong> В <code>requests</code> нет дефолта — запрос висит навсегда. В <code>httpx</code> дефолт 5 сек. Всегда указывай явно.</div>
+    <div class="pitfall"><strong>2. Ошибки HTTP-статусов не бросаются автоматически.</strong> <code>r = httpx.get(...)</code> с 500 не выкинет exception, только <code>r.status_code == 500</code>. Явно — <code>r.raise_for_status()</code>.</div>
+    <div class="pitfall"><strong>3. <code>r.text</code> может не быть JSON.</strong> Сначала проверь <code>r.headers.get("content-type")</code>, потом <code>r.json()</code>. Или <code>try/except JSONDecodeError</code>.</div>
+    <div class="pitfall"><strong>4. Sync-клиент в async endpoint (FastAPI).</strong> <code>httpx.get()</code> внутри <code>async def</code> блокирует event loop. Используй <code>httpx.AsyncClient</code>.</div>
+    <div class="pitfall"><strong>5. Большие ответы в память.</strong> <code>r.content</code> прочитает весь response. Для 10GB-файла — <code>httpx.stream("GET", url) as r: for chunk in r.iter_bytes()</code>.</div>
+    <div class="pitfall"><strong>6. Verify SSL.</strong> <code>httpx.get(url, verify=False)</code> — отключает проверку сертификата. НИКОГДА в проде, только для тестового localhost.</div>
+  </div>
 </div>
 
 <div id="sec-pandas" class="section">
-  <div class="section-title">Pandas — базово</div>
-  <div class="stub"><strong>В разработке.</strong> DataFrame и Series, чтение CSV/Excel/JSON, фильтрация, groupby + агрегация, слияние (merge/join), обработка NaN. Практический минимум для backend-разработчика: конвертация форматов, разовые ETL-задачи, генерация отчётов.</div>
+  <div class="section-title">Pandas — базово для backend-разработчика</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="book-open"></i> Зачем backend-разработчику Pandas</div>
+    <p class="text">Полноценный курс по Pandas — отдельная тема (это data-science стандарт). Для backend-разработчика полезно знать <em>минимум</em> — для разовых задач:</p>
+    <ul class="bullets">
+      <li>«Конвертнуть CSV в JSON / из Excel в БД / из БД в отчёт»</li>
+      <li>Быстрое исследование данных перед миграцией</li>
+      <li>Мини-ETL — раз в сутки достать данные, обработать, сохранить</li>
+      <li>Ad-hoc отчёты — «сгруппируй по клиенту, посчитай сумму, отсортируй»</li>
+    </ul>
+    <p class="text"><strong>Не для</strong>: production real-time API — pandas тяжёлый, для этого SQL/SQLAlchemy.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="download"></i> Установка + первый DataFrame</div>
+<pre><code>uv add pandas openpyxl                <span class="c-comment"># openpyxl — для xlsx</span>
+
+<span class="c-key">import</span> pandas <span class="c-key">as</span> pd
+
+<span class="c-comment"># Из dict / list</span>
+df = pd.<span class="c-fn">DataFrame</span>({
+    <span class="c-str">"name"</span>: [<span class="c-str">"Alice"</span>, <span class="c-str">"Bob"</span>, <span class="c-str">"Charlie"</span>],
+    <span class="c-str">"age"</span>: [<span class="c-num">30</span>, <span class="c-num">25</span>, <span class="c-num">35</span>],
+    <span class="c-str">"city"</span>: [<span class="c-str">"NY"</span>, <span class="c-str">"LA"</span>, <span class="c-str">"NY"</span>],
+})
+
+<span class="c-comment"># Из файлов</span>
+df = pd.<span class="c-fn">read_csv</span>(<span class="c-str">"data.csv"</span>)
+df = pd.<span class="c-fn">read_excel</span>(<span class="c-str">"data.xlsx"</span>, sheet_name=<span class="c-str">"Users"</span>)
+df = pd.<span class="c-fn">read_json</span>(<span class="c-str">"data.json"</span>)
+df = pd.<span class="c-fn">read_sql</span>(<span class="c-str">"SELECT * FROM users"</span>, connection)
+
+<span class="c-comment"># Выгрузка</span>
+df.<span class="c-fn">to_csv</span>(<span class="c-str">"out.csv"</span>, index=<span class="c-key">False</span>)
+df.<span class="c-fn">to_excel</span>(<span class="c-str">"out.xlsx"</span>, index=<span class="c-key">False</span>)
+df.<span class="c-fn">to_json</span>(<span class="c-str">"out.json"</span>, orient=<span class="c-str">"records"</span>)
+df.<span class="c-fn">to_sql</span>(<span class="c-str">"users"</span>, connection, if_exists=<span class="c-str">"append"</span>)</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="eye"></i> Просмотр данных</div>
+<pre><code>df.<span class="c-fn">head</span>(<span class="c-num">10</span>)                    <span class="c-comment"># первые 10</span>
+df.<span class="c-fn">tail</span>(<span class="c-num">5</span>)                     <span class="c-comment"># последние 5</span>
+df.<span class="c-fn">sample</span>(<span class="c-num">3</span>)                   <span class="c-comment"># случайные 3</span>
+df.shape                        <span class="c-comment"># (rows, cols) — (3, 3)</span>
+df.columns                      <span class="c-comment"># Index(['name', 'age', 'city'])</span>
+df.dtypes                       <span class="c-comment"># типы колонок</span>
+df.<span class="c-fn">info</span>()                     <span class="c-comment"># сводка + типы + non-null count</span>
+df.<span class="c-fn">describe</span>()                 <span class="c-comment"># статистика по числовым колонкам</span>
+<span class="c-fn">len</span>(df)                        <span class="c-comment"># число строк</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="filter"></i> Фильтрация и выборка</div>
+<pre><code><span class="c-comment"># Выбрать колонку → Series</span>
+df[<span class="c-str">"age"</span>]
+
+<span class="c-comment"># Несколько колонок → DataFrame</span>
+df[[<span class="c-str">"name"</span>, <span class="c-str">"age"</span>]]
+
+<span class="c-comment"># Фильтр по условию — как WHERE в SQL</span>
+df[df[<span class="c-str">"age"</span>] &gt; <span class="c-num">30</span>]
+df[(df[<span class="c-str">"age"</span>] &gt; <span class="c-num">25</span>) &amp; (df[<span class="c-str">"city"</span>] == <span class="c-str">"NY"</span>)]        <span class="c-comment"># &amp; — AND</span>
+df[df[<span class="c-str">"city"</span>].<span class="c-fn">isin</span>([<span class="c-str">"NY"</span>, <span class="c-str">"LA"</span>])]                    <span class="c-comment"># IN</span>
+df[df[<span class="c-str">"name"</span>].<span class="c-fn">str</span>.<span class="c-fn">startswith</span>(<span class="c-str">"A"</span>)]                <span class="c-comment"># LIKE</span>
+
+<span class="c-comment"># .query() — SQL-подобный синтаксис</span>
+df.<span class="c-fn">query</span>(<span class="c-str">"age &gt; 25 and city == 'NY'"</span>)
+
+<span class="c-comment"># Доступ по индексу</span>
+df.<span class="c-fn">iloc</span>[<span class="c-num">0</span>]              <span class="c-comment"># первая строка (по позиции)</span>
+df.<span class="c-fn">loc</span>[<span class="c-num">0</span>, <span class="c-str">"name"</span>]       <span class="c-comment"># cell — строка 0, колонка name</span>
+
+<span class="c-comment"># Сортировка</span>
+df.<span class="c-fn">sort_values</span>(<span class="c-str">"age"</span>, ascending=<span class="c-key">False</span>)</code></pre>
+
+    <div class="pitfall"><strong>⚠ Логические операторы — <code>&amp;</code>/<code>|</code>/<code>~</code>, не <code>and</code>/<code>or</code>/<code>not</code>.</strong> Из-за перегрузки операторов Pandas. И скобки вокруг каждого условия обязательны.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-merge"></i> Группировка и агрегация — как SQL GROUP BY</div>
+<pre><code><span class="c-comment"># Сколько людей в каждом городе</span>
+df.<span class="c-fn">groupby</span>(<span class="c-str">"city"</span>).<span class="c-fn">size</span>()
+<span class="c-comment"># city</span>
+<span class="c-comment"># LA    1</span>
+<span class="c-comment"># NY    2</span>
+
+<span class="c-comment"># Средний возраст по городам</span>
+df.<span class="c-fn">groupby</span>(<span class="c-str">"city"</span>)[<span class="c-str">"age"</span>].<span class="c-fn">mean</span>()
+
+<span class="c-comment"># Несколько агрегатов сразу</span>
+df.<span class="c-fn">groupby</span>(<span class="c-str">"city"</span>).<span class="c-fn">agg</span>({
+    <span class="c-str">"age"</span>: [<span class="c-str">"mean"</span>, <span class="c-str">"max"</span>, <span class="c-str">"count"</span>],
+    <span class="c-str">"name"</span>: <span class="c-str">"count"</span>,
+})
+
+<span class="c-comment"># Двойная группировка</span>
+df.<span class="c-fn">groupby</span>([<span class="c-str">"city"</span>, <span class="c-str">"department"</span>])[<span class="c-str">"salary"</span>].<span class="c-fn">sum</span>()</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="link"></i> Merge — как JOIN</div>
+<pre><code>users = pd.<span class="c-fn">DataFrame</span>({<span class="c-str">"id"</span>: [<span class="c-num">1</span>, <span class="c-num">2</span>], <span class="c-str">"name"</span>: [<span class="c-str">"Alice"</span>, <span class="c-str">"Bob"</span>]})
+orders = pd.<span class="c-fn">DataFrame</span>({<span class="c-str">"user_id"</span>: [<span class="c-num">1</span>, <span class="c-num">1</span>, <span class="c-num">2</span>], <span class="c-str">"total"</span>: [<span class="c-num">100</span>, <span class="c-num">200</span>, <span class="c-num">300</span>]})
+
+<span class="c-comment"># INNER JOIN</span>
+pd.<span class="c-fn">merge</span>(users, orders, left_on=<span class="c-str">"id"</span>, right_on=<span class="c-str">"user_id"</span>)
+
+<span class="c-comment"># LEFT JOIN</span>
+pd.<span class="c-fn">merge</span>(users, orders, left_on=<span class="c-str">"id"</span>, right_on=<span class="c-str">"user_id"</span>, how=<span class="c-str">"left"</span>)
+
+<span class="c-comment"># Все виды: 'inner' (default), 'left', 'right', 'outer', 'cross'</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="edit"></i> Работа с NaN и колонками</div>
+<pre><code><span class="c-comment"># NaN — как NULL в SQL</span>
+df.<span class="c-fn">isna</span>()                    <span class="c-comment"># булевая маска — где NaN</span>
+df.<span class="c-fn">isna</span>().<span class="c-fn">sum</span>()              <span class="c-comment"># сколько NaN по каждой колонке</span>
+df.<span class="c-fn">dropna</span>()                  <span class="c-comment"># удалить строки с NaN</span>
+df.<span class="c-fn">fillna</span>(<span class="c-num">0</span>)                 <span class="c-comment"># заменить на 0</span>
+df[<span class="c-str">"age"</span>].<span class="c-fn">fillna</span>(df[<span class="c-str">"age"</span>].<span class="c-fn">mean</span>())    <span class="c-comment"># заменить на среднее</span>
+
+<span class="c-comment"># Новая колонка на основе других</span>
+df[<span class="c-str">"is_adult"</span>] = df[<span class="c-str">"age"</span>] &gt;= <span class="c-num">18</span>
+df[<span class="c-str">"full"</span>] = df[<span class="c-str">"name"</span>] + <span class="c-str">" ("</span> + df[<span class="c-str">"city"</span>] + <span class="c-str">")"</span>
+
+<span class="c-comment"># apply — применить функцию</span>
+df[<span class="c-str">"age_group"</span>] = df[<span class="c-str">"age"</span>].<span class="c-fn">apply</span>(<span class="c-key">lambda</span> x: <span class="c-str">"adult"</span> <span class="c-key">if</span> x &gt;= <span class="c-num">18</span> <span class="c-key">else</span> <span class="c-str">"minor"</span>)
+
+<span class="c-comment"># Удалить колонку</span>
+df = df.<span class="c-fn">drop</span>(columns=[<span class="c-str">"city"</span>])
+df = df.<span class="c-fn">drop</span>([<span class="c-num">0</span>, <span class="c-num">2</span>])                        <span class="c-comment"># удалить строки 0 и 2</span>
+
+<span class="c-comment"># Переименовать</span>
+df = df.<span class="c-fn">rename</span>(columns={<span class="c-str">"age"</span>: <span class="c-str">"years"</span>})</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
+    <div class="pitfall"><strong>1. SettingWithCopyWarning.</strong> <code>df[df.age &gt; 18]["name"] = "X"</code> — модифицирует копию, не оригинал. Пиши через <code>.loc</code>: <code>df.loc[df.age &gt; 18, "name"] = "X"</code>.</div>
+    <div class="pitfall"><strong>2. Pandas в памяти держит всё сразу.</strong> Для 10GB CSV — не влезет. Читай кусками: <code>pd.read_csv(..., chunksize=100_000)</code> — генератор по чанкам.</div>
+    <div class="pitfall"><strong>3. <code>df.iterrows()</code> — медленно.</strong> Обход по строкам в 100 раз медленнее векторных операций. Используй <code>apply</code> или векторизацию.</div>
+    <div class="pitfall"><strong>4. Не используй Pandas в HTTP-endpoint.</strong> 200MB импорт + инициализация — не для request-response. Для API — SQL/SQLAlchemy.</div>
+    <div class="pitfall"><strong>5. Даты — <code>pd.to_datetime()</code>.</strong> После <code>read_csv</code> даты часто строки. Явно приведи: <code>df["date"] = pd.to_datetime(df["date"])</code>.</div>
+  </div>
+
+  <div class="remember-box">
+    <strong>Итог:</strong> для backend — Pandas это «SQL для CSV/Excel/JSON». Знать <code>read_csv</code>/<code>to_csv</code>, фильтрацию, <code>groupby</code>, <code>merge</code>, <code>fillna</code>. Хватит на 95% разовых задач. Для production real-time — оставь Pandas data-инженерам.
+  </div>
 </div>
 
 <div id="sec-testing" class="section">
   <div class="section-title">pytest + fixtures</div>
-  <div class="stub"><strong>В разработке.</strong> Почему pytest, а не unittest. Простой тест — обычная функция <code>test_*</code>. Fixtures (аналог setUp), параметризация <code>@pytest.mark.parametrize</code>, mocking через <code>unittest.mock</code>, тестирование async, coverage через <code>pytest-cov</code>. Пример pytest на FastAPI-приложении.</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="book-open"></i> Почему pytest, а не unittest</div>
+    <p class="text><code>unittest</code> в stdlib — как JUnit: класс наследуется от <code>TestCase</code>, методы <code>test_*</code>, ассерты через <code>self.assertEqual(...)</code>. Многословно. <strong>pytest</strong> (внешний, но де-факто стандарт) — тесты пишутся как <em>обычные функции</em> с обычным <code>assert</code>, плюс мощная система fixtures.</p>
+<pre><code><span class="c-comment"># unittest — многословно</span>
+<span class="c-key">import</span> unittest
+
+<span class="c-key">class</span> <span class="c-type">TestMath</span>(unittest.<span class="c-type">TestCase</span>):
+    <span class="c-key">def</span> <span class="c-fn">test_add</span>(<span class="c-key">self</span>):
+        <span class="c-key">self</span>.<span class="c-fn">assertEqual</span>(<span class="c-num">1</span> + <span class="c-num">1</span>, <span class="c-num">2</span>)
+
+<span class="c-comment"># pytest — просто</span>
+<span class="c-key">def</span> <span class="c-fn">test_add</span>():
+    <span class="c-key">assert</span> <span class="c-num">1</span> + <span class="c-num">1</span> == <span class="c-num">2</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="download"></i> Установка + структура</div>
+<pre><code>uv add --dev pytest pytest-cov
+
+<span class="c-comment"># Структура проекта</span>
+myapp/
+├── src/
+│   └── calc.py
+└── tests/
+    ├── test_calc.py           <span class="c-comment"># файлы test_*.py или *_test.py</span>
+    └── conftest.py            <span class="c-comment"># общие fixtures</span>
+
+<span class="c-comment"># Запуск</span>
+uv run pytest                    <span class="c-comment"># все тесты</span>
+uv run pytest tests/test_calc.py <span class="c-comment"># конкретный файл</span>
+uv run pytest -k <span class="c-str">"test_add"</span>       <span class="c-comment"># по имени</span>
+uv run pytest -v                 <span class="c-comment"># verbose</span>
+uv run pytest -x                 <span class="c-comment"># остановиться на первой ошибке</span>
+uv run pytest --pdb              <span class="c-comment"># дебаггер при падении</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="check-square"></i> Тесты и assert</div>
+<pre><code><span class="c-comment"># tests/test_calc.py</span>
+<span class="c-key">from</span> src.calc <span class="c-key">import</span> add, divide
+
+<span class="c-key">def</span> <span class="c-fn">test_add_positive</span>():
+    <span class="c-key">assert</span> <span class="c-fn">add</span>(<span class="c-num">2</span>, <span class="c-num">3</span>) == <span class="c-num">5</span>
+
+<span class="c-key">def</span> <span class="c-fn">test_add_negative</span>():
+    <span class="c-key">assert</span> <span class="c-fn">add</span>(-<span class="c-num">2</span>, <span class="c-num">3</span>) == <span class="c-num">1</span>
+
+<span class="c-comment"># Ожидание исключения</span>
+<span class="c-key">import</span> pytest
+
+<span class="c-key">def</span> <span class="c-fn">test_divide_by_zero</span>():
+    <span class="c-key">with</span> pytest.<span class="c-fn">raises</span>(<span class="c-type">ZeroDivisionError</span>):
+        <span class="c-fn">divide</span>(<span class="c-num">10</span>, <span class="c-num">0</span>)
+
+<span class="c-key">def</span> <span class="c-fn">test_divide_by_zero_message</span>():
+    <span class="c-key">with</span> pytest.<span class="c-fn">raises</span>(<span class="c-type">ValueError</span>, match=<span class="c-str">"cannot divide"</span>):
+        <span class="c-fn">divide</span>(<span class="c-num">10</span>, <span class="c-num">0</span>)
+
+<span class="c-comment"># Приблизительное сравнение float</span>
+<span class="c-key">def</span> <span class="c-fn">test_float</span>():
+    <span class="c-key">assert</span> <span class="c-num">0.1</span> + <span class="c-num">0.2</span> == pytest.<span class="c-fn">approx</span>(<span class="c-num">0.3</span>)
+
+<span class="c-comment"># Пропуск тестов</span>
+<span class="c-key">@pytest</span>.<span class="c-fn">mark</span>.<span class="c-fn">skip</span>(reason=<span class="c-str">"not implemented yet"</span>)
+<span class="c-key">def</span> <span class="c-fn">test_todo</span>(): ...
+
+<span class="c-key">@pytest</span>.<span class="c-fn">mark</span>.<span class="c-fn">skipif</span>(sys.version_info &lt; (<span class="c-num">3</span>, <span class="c-num">11</span>), reason=<span class="c-str">"needs 3.11+"</span>)
+<span class="c-key">def</span> <span class="c-fn">test_new_syntax</span>(): ...</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="package"></i> Fixtures — заменяют setUp/tearDown</div>
+<pre><code><span class="c-comment"># tests/conftest.py — общие fixtures</span>
+<span class="c-key">import</span> pytest
+
+<span class="c-key">@pytest</span>.<span class="c-fn">fixture</span>
+<span class="c-key">def</span> <span class="c-fn">sample_user</span>():
+    <span class="c-key">return</span> {<span class="c-str">"name"</span>: <span class="c-str">"Alice"</span>, <span class="c-str">"age"</span>: <span class="c-num">30</span>}
+
+<span class="c-key">@pytest</span>.<span class="c-fn">fixture</span>
+<span class="c-key">def</span> <span class="c-fn">db_session</span>():
+    <span class="c-comment"># setup</span>
+    engine = <span class="c-fn">create_engine</span>(<span class="c-str">"sqlite:///:memory:"</span>)
+    <span class="c-type">Base</span>.metadata.<span class="c-fn">create_all</span>(engine)
+    session = <span class="c-fn">Session</span>(engine)
+
+    <span class="c-key">yield</span> session               <span class="c-comment"># тут выполняется тест</span>
+
+    <span class="c-comment"># teardown</span>
+    session.<span class="c-fn">close</span>()
+    engine.<span class="c-fn">dispose</span>()
+
+<span class="c-comment"># Тест получает fixture через параметр — DI</span>
+<span class="c-key">def</span> <span class="c-fn">test_user_name</span>(sample_user):
+    <span class="c-key">assert</span> sample_user[<span class="c-str">"name"</span>] == <span class="c-str">"Alice"</span>
+
+<span class="c-key">def</span> <span class="c-fn">test_db</span>(db_session):
+    user = <span class="c-type">User</span>(name=<span class="c-str">"Bob"</span>)
+    db_session.<span class="c-fn">add</span>(user)
+    db_session.<span class="c-fn">commit</span>()
+    <span class="c-key">assert</span> user.id <span class="c-key">is not None</span>
+
+<span class="c-comment"># Scope — как долго живёт fixture</span>
+<span class="c-key">@pytest</span>.<span class="c-fn">fixture</span>(scope=<span class="c-str">"function"</span>)   <span class="c-comment"># default — на каждый тест</span>
+<span class="c-key">@pytest</span>.<span class="c-fn">fixture</span>(scope=<span class="c-str">"module"</span>)     <span class="c-comment"># один раз на модуль</span>
+<span class="c-key">@pytest</span>.<span class="c-fn">fixture</span>(scope=<span class="c-str">"session"</span>)    <span class="c-comment"># один раз на всю сессию</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="repeat"></i> Параметризация</div>
+<pre><code><span class="c-key">@pytest</span>.<span class="c-fn">mark</span>.<span class="c-fn">parametrize</span>(<span class="c-str">"a, b, expected"</span>, [
+    (<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>),
+    (<span class="c-num">0</span>, <span class="c-num">0</span>, <span class="c-num">0</span>),
+    (-<span class="c-num">1</span>, <span class="c-num">1</span>, <span class="c-num">0</span>),
+    (<span class="c-num">100</span>, <span class="c-num">200</span>, <span class="c-num">300</span>),
+])
+<span class="c-key">def</span> <span class="c-fn">test_add</span>(a, b, expected):
+    <span class="c-key">assert</span> <span class="c-fn">add</span>(a, b) == expected
+
+<span class="c-comment"># Запустится 4 раза, каждый — отдельный тест в отчёте</span>
+
+<span class="c-comment"># С id для читаемых имён</span>
+<span class="c-key">@pytest</span>.<span class="c-fn">mark</span>.<span class="c-fn">parametrize</span>(<span class="c-str">"email, valid"</span>, [
+    (<span class="c-str">"a@b.c"</span>, <span class="c-key">True</span>),
+    (<span class="c-str">"nope"</span>, <span class="c-key">False</span>),
+    (<span class="c-str">""</span>, <span class="c-key">False</span>),
+], ids=[<span class="c-str">"valid"</span>, <span class="c-str">"no-at"</span>, <span class="c-str">"empty"</span>])
+<span class="c-key">def</span> <span class="c-fn">test_email</span>(email, valid):
+    <span class="c-key">assert</span> <span class="c-fn">is_valid_email</span>(email) == valid</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="tag"></i> Mocking через <code>unittest.mock</code></div>
+<pre><code><span class="c-key">from</span> unittest.mock <span class="c-key">import</span> Mock, MagicMock, patch
+
+<span class="c-comment"># Простой mock</span>
+mock = <span class="c-fn">Mock</span>()
+mock.<span class="c-fn">some_method</span>.return_value = <span class="c-str">"hello"</span>
+mock.<span class="c-fn">some_method</span>()                <span class="c-comment"># "hello"</span>
+mock.<span class="c-fn">some_method</span>.<span class="c-fn">assert_called_once_with</span>()
+
+<span class="c-comment"># patch — подменить объект в модуле</span>
+<span class="c-key">@patch</span>(<span class="c-str">"src.services.email.send"</span>)
+<span class="c-key">def</span> <span class="c-fn">test_register</span>(mock_send):
+    mock_send.return_value = <span class="c-key">True</span>
+    <span class="c-fn">register_user</span>(<span class="c-str">"Alice"</span>)
+    mock_send.<span class="c-fn">assert_called_once</span>()
+
+<span class="c-comment"># patch как context manager</span>
+<span class="c-key">def</span> <span class="c-fn">test_register_ctx</span>():
+    <span class="c-key">with</span> <span class="c-fn">patch</span>(<span class="c-str">"src.services.email.send"</span>) <span class="c-key">as</span> mock_send:
+        <span class="c-fn">register_user</span>(<span class="c-str">"Alice"</span>)
+        mock_send.<span class="c-fn">assert_called_once</span>()</code></pre>
+
+    <div class="pitfall"><strong>⚠ Патчить надо там где ИСПОЛЬЗУЕТСЯ, не где ОБЪЯВЛЕНО.</strong> <code>register_user</code> внутри делает <code>from src.email import send; send(...)</code> — <code>@patch("src.email.send")</code> НЕ сработает. Патчи <code>@patch("src.users.send")</code> — там где импортировано.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="zap"></i> Async-тесты и FastAPI</div>
+<pre><code>uv add --dev pytest-asyncio httpx
+
+<span class="c-comment"># tests/test_api.py</span>
+<span class="c-key">import</span> pytest
+<span class="c-key">from</span> httpx <span class="c-key">import</span> AsyncClient
+<span class="c-key">from</span> main <span class="c-key">import</span> app
+
+<span class="c-key">@pytest</span>.<span class="c-fn">mark</span>.<span class="c-fn">asyncio</span>
+<span class="c-key">async def</span> <span class="c-fn">test_create_user</span>():
+    <span class="c-key">async with</span> <span class="c-fn">AsyncClient</span>(app=app, base_url=<span class="c-str">"http://test"</span>) <span class="c-key">as</span> client:
+        r = <span class="c-key">await</span> client.<span class="c-fn">post</span>(<span class="c-str">"/users"</span>, json={<span class="c-str">"name"</span>: <span class="c-str">"Alice"</span>, <span class="c-str">"email"</span>: <span class="c-str">"a@b.c"</span>})
+        <span class="c-key">assert</span> r.status_code == <span class="c-num">201</span>
+        <span class="c-key">assert</span> r.<span class="c-fn">json</span>()[<span class="c-str">"name"</span>] == <span class="c-str">"Alice"</span></code></pre>
+
+    <p class="text">В <code>pyproject.toml</code>:</p>
+<pre><code>[tool.pytest.ini_options]
+asyncio_mode = <span class="c-str">"auto"</span>              <span class="c-comment"># тогда @mark.asyncio не нужен</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="percent"></i> Coverage</div>
+<pre><code>uv run pytest --cov=src --cov-report=term-missing
+<span class="c-comment"># покажет процент покрытия + строки без тестов</span>
+
+uv run pytest --cov=src --cov-report=html
+<span class="c-comment"># сгенерит htmlcov/ с интерактивным HTML-отчётом</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
+    <div class="pitfall"><strong>1. <code>test_</code> префикс обязателен.</strong> pytest автоматически находит функции <code>test_*</code>. Опечатался в <code>tests_*</code> — тест не запустится.</div>
+    <div class="pitfall"><strong>2. Fixture без параметра — не вызовется.</strong> <code>def test_x():</code> без параметра <code>sample_user</code> — fixture не будет использована.</div>
+    <div class="pitfall"><strong>3. Тесты должны быть независимы.</strong> Один тест не должен полагаться на состояние от другого. Fixtures с правильным scope сбрасывают состояние.</div>
+    <div class="pitfall"><strong>4. Не тестировать реальные внешние API.</strong> Медленно, flaky. Мокируй через <code>respx</code> для HTTP, <code>@patch</code> для остального.</div>
+    <div class="pitfall"><strong>5. <code>tmp_path</code> fixture</strong> — встроенная в pytest, даёт временную директорию, автоматически чистится. Не создавай файлы в <code>/tmp</code> руками.</div>
+  </div>
+
+  <div class="remember-box">
+    <strong>Итог:</strong> pytest — простой синтаксис, мощные fixtures. Файлы <code>test_*.py</code>, функции <code>test_*</code>, обычный <code>assert</code>. <code>@parametrize</code> для табличных тестов. <code>@patch</code>/<code>respx</code> для моков. Плюс <code>pytest-cov</code> для покрытия.
+  </div>
 </div>
 
 <div id="sec-logging" class="section">
-  <div class="section-title">Логирование</div>
-  <div class="stub"><strong>В разработке.</strong> Модуль <code>logging</code> из stdlib: loggers, handlers, formatters, levels. Настройка через <code>dictConfig</code>. Структурированные логи (JSON) через <code>python-json-logger</code>. Rich как красивый вывод в консоль для разработки. Сборка в ELK/Loki.</div>
+  <div class="section-title">Логирование — модуль <code>logging</code></div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-triangle"></i> Забудь про <code>print()</code> в проде</div>
+    <p class="text"><code>print()</code> ходит в stdout без метаданных (когда? что за модуль? какой уровень?). В проде — обязательно <code>logging</code>: уровни, timestamps, форматирование, разные handlers (файл + консоль + Sentry), config без правки кода.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layers"></i> Базовое использование</div>
+<pre><code><span class="c-key">import</span> logging
+
+logger = logging.<span class="c-fn">getLogger</span>(__name__)      <span class="c-comment"># имя = имя модуля</span>
+
+logger.<span class="c-fn">debug</span>(<span class="c-str">"detailed info"</span>)                   <span class="c-comment"># 10 — только для разработки</span>
+logger.<span class="c-fn">info</span>(<span class="c-str">"user created"</span>)                    <span class="c-comment"># 20 — обычные события</span>
+logger.<span class="c-fn">warning</span>(<span class="c-str">"deprecated call"</span>)              <span class="c-comment"># 30 — стоит обратить внимание</span>
+logger.<span class="c-fn">error</span>(<span class="c-str">"failed to save"</span>)                 <span class="c-comment"># 40 — операция провалилась</span>
+logger.<span class="c-fn">critical</span>(<span class="c-str">"db down"</span>)                    <span class="c-comment"># 50 — сервис умирает</span>
+
+<span class="c-comment"># Форматирование через параметры (не f-string!)</span>
+logger.<span class="c-fn">info</span>(<span class="c-str">"user %s created with id %d"</span>, name, user_id)
+
+<span class="c-comment"># Исключение — с traceback</span>
+<span class="c-key">try</span>:
+    <span class="c-fn">something</span>()
+<span class="c-key">except</span> <span class="c-type">Exception</span>:
+    logger.<span class="c-fn">exception</span>(<span class="c-str">"unexpected"</span>)     <span class="c-comment"># == error() + traceback</span></code></pre>
+
+    <div class="pitfall"><strong>⚠ Не используй f-string в логах.</strong> <code>logger.info(f"user {name}")</code> сформирует строку ВСЕГДА, даже если этот уровень отключён. <code>logger.info("user %s", name)</code> — форматирование только когда handler решил залогировать. На горячем пути экономия времени.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="settings"></i> Настройка через <code>dictConfig</code></div>
+<pre><code><span class="c-key">import</span> logging.config
+
+LOGGING = {
+    <span class="c-str">"version"</span>: <span class="c-num">1</span>,
+    <span class="c-str">"disable_existing_loggers"</span>: <span class="c-key">False</span>,
+    <span class="c-str">"formatters"</span>: {
+        <span class="c-str">"standard"</span>: {
+            <span class="c-str">"format"</span>: <span class="c-str">"%(asctime)s [%(levelname)s] %(name)s: %(message)s"</span>,
+        },
+        <span class="c-str">"json"</span>: {
+            <span class="c-str">"()"</span>: <span class="c-str">"pythonjsonlogger.jsonlogger.JsonFormatter"</span>,
+            <span class="c-str">"format"</span>: <span class="c-str">"%(asctime)s %(levelname)s %(name)s %(message)s"</span>,
+        },
+    },
+    <span class="c-str">"handlers"</span>: {
+        <span class="c-str">"console"</span>: {
+            <span class="c-str">"class"</span>: <span class="c-str">"logging.StreamHandler"</span>,
+            <span class="c-str">"formatter"</span>: <span class="c-str">"standard"</span>,
+            <span class="c-str">"level"</span>: <span class="c-str">"INFO"</span>,
+        },
+        <span class="c-str">"file"</span>: {
+            <span class="c-str">"class"</span>: <span class="c-str">"logging.handlers.RotatingFileHandler"</span>,
+            <span class="c-str">"filename"</span>: <span class="c-str">"/var/log/app.log"</span>,
+            <span class="c-str">"maxBytes"</span>: <span class="c-num">10</span> * <span class="c-num">1024</span> * <span class="c-num">1024</span>,   <span class="c-comment"># 10 MB</span>
+            <span class="c-str">"backupCount"</span>: <span class="c-num">5</span>,                    <span class="c-comment"># хранить 5 файлов</span>
+            <span class="c-str">"formatter"</span>: <span class="c-str">"json"</span>,
+            <span class="c-str">"level"</span>: <span class="c-str">"WARNING"</span>,
+        },
+    },
+    <span class="c-str">"loggers"</span>: {
+        <span class="c-str">""</span>: {                                <span class="c-comment"># root logger</span>
+            <span class="c-str">"handlers"</span>: [<span class="c-str">"console"</span>, <span class="c-str">"file"</span>],
+            <span class="c-str">"level"</span>: <span class="c-str">"INFO"</span>,
+        },
+        <span class="c-str">"myapp.db"</span>: {                        <span class="c-comment"># специфичный логгер</span>
+            <span class="c-str">"level"</span>: <span class="c-str">"DEBUG"</span>,
+        },
+    },
+}
+
+logging.config.<span class="c-fn">dictConfig</span>(LOGGING)</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="braces"></i> Структурированные логи (JSON)</div>
+    <p class="text">Для сборки в ELK / Loki / Datadog — логи в JSON. Каждая строка — валидный JSON, поля удобно фильтровать.</p>
+<pre><code>uv add python-json-logger
+
+<span class="c-comment"># Уже настроен в LOGGING выше (formatters.json)</span>
+<span class="c-comment"># Дополнительные поля — через extra:</span>
+logger.<span class="c-fn">info</span>(<span class="c-str">"user created"</span>, extra={<span class="c-str">"user_id"</span>: <span class="c-num">42</span>, <span class="c-str">"ip"</span>: <span class="c-str">"1.1.1.1"</span>})
+<span class="c-comment"># {"asctime": "...", "levelname": "INFO", "name": "myapp", </span>
+<span class="c-comment">#  "message": "user created", "user_id": 42, "ip": "1.1.1.1"}</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="palette"></i> Красивый вывод для разработки — <code>rich</code></div>
+<pre><code>uv add rich
+
+<span class="c-key">from</span> rich.logging <span class="c-key">import</span> RichHandler
+
+logging.<span class="c-fn">basicConfig</span>(
+    level=<span class="c-str">"INFO"</span>,
+    format=<span class="c-str">"%(message)s"</span>,
+    handlers=[<span class="c-fn">RichHandler</span>()],
+)
+<span class="c-comment"># В консоли — цветные уровни, красивые traceback, таблицы для extra полей</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
+    <div class="pitfall"><strong>1. <code>logger = logging.getLogger(__name__)</code></strong> — во ВСЕХ модулях. Так каждый модуль пишет со своим именем, и можно фильтровать в конфиге <code>myapp.users.service</code>.</div>
+    <div class="pitfall"><strong>2. Не логгировать secrets.</strong> Пароли, токены, номера карт — никогда в логи. Middleware / фильтр должен вырезать.</div>
+    <div class="pitfall"><strong>3. Не крутить <code>logger.debug()</code> на горячем пути.</strong> Даже если DEBUG отключён — Python вычислит аргументы. Оборачивай в <code>if logger.isEnabledFor(logging.DEBUG):</code>.</div>
+    <div class="pitfall"><strong>4. <code>RotatingFileHandler</code> и Docker.</strong> В контейнерах пиши в stdout/stderr — Docker/K8s сами соберут. Файлы = нет reproducibility.</div>
+    <div class="pitfall"><strong>5. FastAPI/Django — свой logger.</strong> Uvicorn пишет свой access-log, Django свой. Настраивай их отдельно, не переопределяй root грубо.</div>
+  </div>
 </div>
 
 <div id="sec-tools" class="section">
   <div class="section-title">ruff / black / mypy — инструменты качества</div>
-  <div class="stub"><strong>В разработке.</strong> <code>black</code> — автоформатирование (без обсуждений). <code>ruff</code> — линтер + форматтер, супербыстрый (на Rust), в 2026 заменяет flake8/isort/pylint/pyupgrade. <code>mypy</code> — статический типизатор. Настройка в <code>pyproject.toml</code>, интеграция pre-commit hooks, GitHub Actions.</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="rocket"></i> Стандартный tooling 2026</div>
+    <table class="data-table">
+      <tr><th>Инструмент</th><th>Роль</th></tr>
+      <tr><td><code>ruff</code></td><td>Линтер + форматтер. На Rust, 10-100× быстрее flake8. К 2026 <strong>заменил</strong> flake8, isort, pylint, pyupgrade.</td></tr>
+      <tr><td><code>mypy</code></td><td>Статический тайп-чекер. Проверяет type hints, находит ошибки до runtime.</td></tr>
+      <tr><td><code>black</code></td><td>Автоформатирование «no options». Стандарт много лет — но ruff format его вытесняет (совместимый).</td></tr>
+      <tr><td><code>pre-commit</code></td><td>Хуки для запуска ruff/mypy/black перед git commit.</td></tr>
+    </table>
+    <p class="text"><strong>Мнемоника:</strong> <code>ruff</code> — стилистика + мелкие баги; <code>mypy</code> — типы; <code>black</code>/<code>ruff format</code> — форматирование.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="zap"></i> Ruff — линтер + форматтер</div>
+<pre><code>uv add --dev ruff
+
+<span class="c-comment"># Линт</span>
+uv run ruff check src/
+uv run ruff check src/ --fix          <span class="c-comment"># автофиксы</span>
+
+<span class="c-comment"># Форматирование (замена black)</span>
+uv run ruff format src/
+
+<span class="c-comment"># Конфиг — pyproject.toml</span>
+[tool.ruff]
+line-length = <span class="c-num">100</span>
+target-version = <span class="c-str">"py313"</span>
+extend-exclude = [<span class="c-str">"migrations"</span>]
+
+[tool.ruff.lint]
+select = [
+    <span class="c-str">"E"</span>,      <span class="c-comment"># pycodestyle errors</span>
+    <span class="c-str">"F"</span>,      <span class="c-comment"># pyflakes</span>
+    <span class="c-str">"I"</span>,      <span class="c-comment"># isort — сортировка импортов</span>
+    <span class="c-str">"UP"</span>,     <span class="c-comment"># pyupgrade — новый синтаксис</span>
+    <span class="c-str">"B"</span>,      <span class="c-comment"># bugbear — типовые баги</span>
+    <span class="c-str">"SIM"</span>,    <span class="c-comment"># simplify</span>
+    <span class="c-str">"N"</span>,      <span class="c-comment"># PEP 8 naming</span>
+]
+ignore = [<span class="c-str">"E501"</span>]                <span class="c-comment"># line too long — ruff format сам разрулит</span>
+
+[tool.ruff.lint.per-file-ignores]
+<span class="c-str">"tests/*"</span> = [<span class="c-str">"S101"</span>]           <span class="c-comment"># asserts разрешены в тестах</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="check-check"></i> mypy — статические типы</div>
+<pre><code>uv add --dev mypy
+
+uv run mypy src/                       <span class="c-comment"># проверить</span>
+
+<span class="c-comment"># Конфиг — pyproject.toml</span>
+[tool.mypy]
+python_version = <span class="c-str">"3.13"</span>
+strict = <span class="c-key">true</span>                        <span class="c-comment"># включает все проверки</span>
+warn_unused_ignores = <span class="c-key">true</span>
+warn_return_any = <span class="c-key">true</span>
+
+<span class="c-comment"># Для сторонних библиотек без стабов</span>
+[[tool.mypy.overrides]]
+module = [<span class="c-str">"legacy_lib.*"</span>, <span class="c-str">"untyped_pkg.*"</span>]
+ignore_missing_imports = <span class="c-key">true</span></code></pre>
+    <p class="text">На существующем проекте <code>strict = true</code> сразу — больно. Включай постепенно: сначала для новых модулей через <code>per-module</code> overrides, потом расширяй.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-branch"></i> pre-commit — автоматизация</div>
+<pre><code>uv add --dev pre-commit
+
+<span class="c-comment"># .pre-commit-config.yaml</span>
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.10.0
+    hooks:
+      - id: mypy
+
+<span class="c-comment"># Установить хуки</span>
+uv run pre-commit install
+
+<span class="c-comment"># Теперь при каждом `git commit` — прогонятся автоматом</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="cog"></i> В CI (GitHub Actions)</div>
+<pre><code><span class="c-comment"># .github/workflows/lint.yml</span>
+name: lint
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - <span class="c-fn">uses</span>: actions/checkout@v4
+      - <span class="c-fn">uses</span>: astral-sh/setup-uv@v3
+      - <span class="c-fn">run</span>: uv sync --dev
+      - <span class="c-fn">run</span>: uv run ruff check src/
+      - <span class="c-fn">run</span>: uv run ruff format --check src/
+      - <span class="c-fn">run</span>: uv run mypy src/
+      - <span class="c-fn">run</span>: uv run pytest --cov</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
+    <div class="pitfall"><strong>1. Не конфликтуют ли ruff и black?</strong> Нет — <code>ruff format</code> написан как замена black с той же логикой. Держи одно (лучше ruff).</div>
+    <div class="pitfall"><strong>2. mypy strict на legacy проекте — фиаско.</strong> Могут выпасть тысячи ошибок за час. Включай постепенно, файл за файлом.</div>
+    <div class="pitfall"><strong>3. Игнорировать надо явно.</strong> <code># noqa: E501</code> для ruff, <code># type: ignore[assignment]</code> для mypy. Всегда указывай КОД ошибки, не голое <code>noqa</code> — иначе спрячешь новые баги.</div>
+    <div class="pitfall"><strong>4. <code>ruff --fix</code> — автозамены.</strong> Просмотри diff перед commit — иногда меняет семантику (например, <code>UP</code>-правила модернизирующие синтаксис).</div>
+    <div class="pitfall"><strong>5. IDE интеграция.</strong> VS Code — расширения Ruff и Pylance. PyCharm — встроено. Настрой format-on-save.</div>
+  </div>
+
+  <div class="remember-box">
+    <strong>Итог:</strong> для нового проекта — <code>ruff</code> + <code>mypy</code> + <code>pre-commit</code> в <code>pyproject.toml</code>. В CI — те же три команды. Всё быстро (ruff на Rust), настройка в одном файле, стандарт индустрии 2026.
+  </div>
 </div>
 
 <div id="sec-interview" class="section">
-  <div class="section-title">FAQ на собеседовании (Python для backend)</div>
-  <div class="stub"><strong>В разработке.</strong> Топ-30 вопросов: GIL, mutable vs immutable, разница dict/list/set, list vs tuple, декораторы, генераторы vs list, ==/is/is not, args/kwargs, closures + late binding, __init__ vs __new__, MRO при множественном наследовании, async vs threading vs multiprocessing, type hints и когда мешают, dataclass vs namedtuple vs Pydantic.</div>
+  <div class="section-title">FAQ на собеседовании — Python для backend</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="brain"></i> Топ-25 вопросов на middle/senior Python-backend</div>
+    <div class="card">
+      <h3>1. Что такое GIL?</h3>
+      <p class="text">Global Interpreter Lock — mutex в CPython, разрешающий выполнять Python-bytecode только одному потоку в один момент. Из-за него <code>threading</code> не даёт истинного параллелизма для CPU-bound задач (для этого — <code>multiprocessing</code>). Для I/O-bound работает (поток отпускает GIL на I/O). В Python 3.13 экспериментально можно собирать без GIL, но production ещё далеко.</p>
+    </div>
+    <div class="card">
+      <h3>2. Mutable vs immutable — почему важно</h3>
+      <p class="text">Immutable: <code>int</code>, <code>float</code>, <code>str</code>, <code>tuple</code>, <code>bool</code>, <code>None</code>, <code>frozenset</code>. Mutable: <code>list</code>, <code>dict</code>, <code>set</code>. Immutable — можно использовать как ключи в dict/set (потому что есть <code>__hash__</code>). Mutable default arg в функции — <em>классический баг</em> (создаётся ОДИН раз при определении, разделяется между вызовами).</p>
+    </div>
+    <div class="card">
+      <h3>3. <code>list</code> vs <code>tuple</code></h3>
+      <p class="text">Tuple неизменяем, немного быстрее, может быть ключом dict. Семантически — «фиксированный набор» (координаты, RGB). List — «однородная коллекция, длина меняется» (список пользователей).</p>
+    </div>
+    <div class="card">
+      <h3>4. <code>==</code> vs <code>is</code></h3>
+      <p class="text"><code>==</code> — сравнение значений (<code>__eq__</code>). <code>is</code> — сравнение идентичности (<em>тот же объект в памяти</em>). Для None — только <code>x is None</code>. Small int'ы (-5..256) и короткие строки кешируются, поэтому <code>a = 5; b = 5; a is b</code> — <code>True</code>, но это implementation detail.</p>
+    </div>
+    <div class="card">
+      <h3>5. <code>*args</code> и <code>**kwargs</code></h3>
+      <p class="text">Переменное число аргументов. <code>*args</code> — tuple позиционных, <code>**kwargs</code> — dict именованных. Также используются для «прозрачного прокси»: <code>def wrapper(*a, **kw): return func(*a, **kw)</code>.</p>
+    </div>
+    <div class="card">
+      <h3>6. Что такое декоратор</h3>
+      <p class="text">Функция, оборачивающая другую функцию. <code>@decorator</code> — сахар над <code>func = decorator(func)</code>. Внутри своего декоратора обязательно <code>@functools.wraps(func)</code> — сохраняет метаданные оригинала. Используется для сквозных обязанностей: логирование, retry, кеш, auth.</p>
+    </div>
+    <div class="card">
+      <h3>7. Генератор vs list — когда что</h3>
+      <p class="text">Генератор ленивый — не хранит все элементы в памяти. Для миллионных потоков (лог-файлы, БД-выборки) — генератор. Для повторного обхода / индексации / <code>len()</code> — list. <code>yield</code> в функции превращает её в генератор.</p>
+    </div>
+    <div class="card">
+      <h3>8. Замыкания (closures) и late binding</h3>
+      <p class="text">Внутренняя функция запоминает переменные внешней. Late binding: <code>[lambda: i for i in range(3)]</code> — все lambda ссылаются на ОДНУ <code>i</code>, к моменту вызова = 2. Фикс: <code>lambda i=i: i</code> (захват через default).</p>
+    </div>
+    <div class="card">
+      <h3>9. <code>__init__</code> vs <code>__new__</code></h3>
+      <p class="text"><code>__new__</code> — создаёт объект (возвращает instance). <code>__init__</code> — инициализирует уже созданный. 95% времени пишешь только <code>__init__</code>. <code>__new__</code> нужен для immutable-типов (наследники <code>str</code>/<code>tuple</code>) и метаклассов.</p>
+    </div>
+    <div class="card">
+      <h3>10. MRO и множественное наследование</h3>
+      <p class="text">Method Resolution Order — порядок, в котором Python ищет метод в родителях. Алгоритм <strong>C3 linearization</strong>. Проверить: <code>ClassName.__mro__</code>. При diamond inheritance (D наследует B и C, обе наследуют A) — MRO гарантирует, что A встретится один раз.</p>
+    </div>
+    <div class="card">
+      <h3>11. asyncio vs threading vs multiprocessing</h3>
+      <p class="text"><strong>asyncio</strong> — concurrent I/O в одном потоке, тысячи «задач» без overhead. <strong>threading</strong> — I/O-bound + legacy, GIL мешает CPU. <strong>multiprocessing</strong> — отдельные процессы, обходит GIL, для CPU-heavy (обработка изображений, ML-inference).</p>
+    </div>
+    <div class="card">
+      <h3>12. <code>@classmethod</code> vs <code>@staticmethod</code></h3>
+      <p class="text"><code>@classmethod</code> — первый аргумент <code>cls</code>, знает свой класс. Используется для альтернативных конструкторов (<code>User.from_dict(...)</code>). <code>@staticmethod</code> — обычная функция в namespace класса, ни <code>self</code>, ни <code>cls</code>.</p>
+    </div>
+    <div class="card">
+      <h3>13. <code>@property</code></h3>
+      <p class="text">Метод, вызываемый как атрибут. Позволяет добавить валидацию/вычисление без изменения интерфейса. Питонический подход: начинай с публичного атрибута, при необходимости — превращай в property.</p>
+    </div>
+    <div class="card">
+      <h3>14. <code>dataclass</code> vs <code>namedtuple</code> vs <code>Pydantic</code></h3>
+      <p class="text"><strong>dataclass</strong> — стандартный способ создать DTO с <code>__init__</code>/<code>__eq__</code>/<code>__repr__</code>. <strong>namedtuple</strong> — легковесный immutable, доступ по атрибуту и по индексу. <strong>Pydantic</strong> — тот же dataclass + <em>валидация в runtime</em>, конвертация типов, JSON serialization. Для внешних данных (API-вход) — Pydantic.</p>
+    </div>
+    <div class="card">
+      <h3>15. Type hints — enforcement?</h3>
+      <p class="text">Нет. Python <em>не проверяет</em> их в runtime — только подсказки. Проверяет отдельный tool (<code>mypy</code>). В runtime валидацию делает Pydantic (использует те же аннотации).</p>
+    </div>
+    <div class="card">
+      <h3>16. Оптимизация N+1 в SQLAlchemy / Django</h3>
+      <p class="text">SQLAlchemy: <code>selectinload</code> (2 запроса через IN) / <code>joinedload</code> (JOIN одним запросом). Django: <code>prefetch_related</code> / <code>select_related</code>. Правило: <code>selectinload</code>/<code>prefetch_related</code> для 1-N, <code>joinedload</code>/<code>select_related</code> для N-1 (FK).</p>
+    </div>
+    <div class="card">
+      <h3>17. EAFP vs LBYL</h3>
+      <p class="text">Easier to Ask Forgiveness than Permission — попробуй, поймай исключение. Look Before You Leap — проверь условие ДО. Питонично — EAFP. Пример: <code>try: v = d[k] except KeyError: ...</code> вместо <code>if k in d: v = d[k]</code>. Но <code>d.get(k)</code> ещё лучше.</p>
+    </div>
+    <div class="card">
+      <h3>18. Context manager — <code>with</code></h3>
+      <p class="text">Гарантированное освобождение ресурсов через <code>__enter__</code>/<code>__exit__</code>. Свой — либо класс с этими методами, либо декоратор <code>@contextmanager</code> над функцией с <code>yield</code>.</p>
+    </div>
+    <div class="card">
+      <h3>19. <code>venv</code> зачем — если можно ставить пакеты глобально</h3>
+      <p class="text">Разные проекты требуют разных версий одних и тех же библиотек. venv — изолированный интерпретатор со своим <code>site-packages/</code>. С 2024 Ubuntu 24.04 глобально ставить <em>вообще запрещено</em> (PEP 668). В 2026 — стандарт <code>uv</code>.</p>
+    </div>
+    <div class="card">
+      <h3>20. FastAPI vs Django — когда что</h3>
+      <p class="text">Django — сайт с админкой, batteries included. FastAPI — REST API / микросервис / AI-backend, async first, автогенерация OpenAPI. Flask — legacy или мини-скрипт. Гибрид тоже норма: Django для сайта + FastAPI для новых API.</p>
+    </div>
+    <div class="card">
+      <h3>21. Duck typing и Protocol</h3>
+      <p class="text">«Если крякает как утка — то утка». Не проверяется <code>isinstance</code>, работает если у объекта есть нужные методы. <code>typing.Protocol</code> — «структурный интерфейс», проверяемый статически (mypy) без наследования.</p>
+    </div>
+    <div class="card">
+      <h3>22. Как сериализовать datetime в JSON</h3>
+      <p class="text"><code>json.dumps({"created": datetime.now()})</code> кинет <code>TypeError</code>. Решения: <code>default=str</code> в <code>dumps</code>, или предварительно <code>.isoformat()</code>, или использовать Pydantic (сам сериализует).</p>
+    </div>
+    <div class="card">
+      <h3>23. Разница между <code>Exception</code> и <code>BaseException</code></h3>
+      <p class="text"><code>BaseException</code> — корень всей иерархии, содержит <code>KeyboardInterrupt</code> и <code>SystemExit</code>. <code>Exception</code> — базовый для обычных ошибок. <strong>Никогда не ловить <code>BaseException</code></strong> — заблокируешь Ctrl+C.</p>
+    </div>
+    <div class="card">
+      <h3>24. Что такое <code>__slots__</code></h3>
+      <p class="text">Класс-атрибут, ограничивающий разрешённые instance-атрибуты. Экономит память (нет <code>__dict__</code>), быстрее доступ. Полезно для классов с миллионами инстансов. Ломает multiple inheritance и dynamic attributes. В <code>@dataclass(slots=True)</code> — из коробки.</p>
+    </div>
+    <div class="card">
+      <h3>25. WSGI vs ASGI</h3>
+      <p class="text">WSGI (2003) — sync-интерфейс для веб-серверов (Flask, Django до 3.0). ASGI (2018) — async-версия (FastAPI, Django 3+). ASGI умеет WebSocket, long-polling, HTTP/2. Uvicorn — популярный ASGI-сервер, gunicorn+uvicorn workers — производственная связка.</p>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="lightbulb"></i> Общие советы на собес</div>
+    <ul class="bullets">
+      <li>«Как проверить» → всегда пишу тест на pytest, для API — <code>httpx.AsyncClient(app=app)</code>.</li>
+      <li>«Как деплоить» → Docker с multi-stage build; runtime — Python slim, зависимости через uv.</li>
+      <li>«Где хранить конфиг» → <code>pydantic-settings</code>: типизированный класс, читает <code>.env</code> и env-переменные.</li>
+      <li>«Как логировать» → <code>logging.getLogger(__name__)</code>, JSON-formatter для сбора в ELK/Loki.</li>
+      <li>«Что улучшить в существующем коде» → type hints, ruff+mypy, замена <code>requests</code>→<code>httpx</code>, sync-код блокирующий event loop.</li>
+    </ul>
+  </div>
+
+  <div class="remember-box">
+    <strong>Финальный итог по KB_19:</strong> для PHP-разработчика Python — за 2-4 недели становится продуктивным. Стек 2026: <code>uv</code> + <code>ruff</code> + <code>mypy</code> + <code>FastAPI</code> + <code>SQLAlchemy 2 async</code> + <code>Pydantic</code> + <code>pytest</code> + <code>httpx</code> + <code>Docker</code>. Django — если нужен сайт с админкой. AI/ML — отдельная тропа (PyTorch, LangChain, Anthropic SDK).
+  </div>
 </div>
 
 </div><!-- /main -->
