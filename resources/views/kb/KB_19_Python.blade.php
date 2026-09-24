@@ -144,6 +144,7 @@ ol.numbered strong{color:var(--text);}
   <a class="nav-item" onclick="showSection('control',this)"><i data-lucide="git-branch"></i> Условия + циклы</a>
   <a class="nav-item" onclick="showSection('functions',this)"><i data-lucide="function-square"></i> Функции + lambda</a>
   <a class="nav-item" onclick="showSection('collections',this)"><i data-lucide="list"></i> list/dict/set comprehensions</a>
+  <a class="nav-item" onclick="showSection('builtins',this)"><i data-lucide="library"></i> Встроенные функции</a>
 
   <div class="nav-group-label">Продвинуто</div>
   <a class="nav-item" onclick="showSection('oop',this)"><i data-lucide="boxes"></i> ООП + классы + dunder</a>
@@ -1227,6 +1228,207 @@ pairs = [(a, b) <span class="c-key">for</span> a <span class="c-key">in</span> <
       <tr><td><code>array_column($users, 'email')</code></td><td><code>[u["email"] for u in users]</code></td></tr>
       <tr><td><code>array_unique($items)</code></td><td><code>list({x for x in items})</code></td></tr>
     </table>
+  </div>
+</div>
+
+<!-- ═══════════════════════════ BUILTINS ═══════════════════════════ -->
+<div id="sec-builtins" class="section">
+  <div class="section-title">Встроенные функции Python — справочник</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="book-open"></i> Что это и зачем</div>
+    <p class="text">Python предоставляет ~70 функций <em>без импорта</em> — они всегда доступны из любого модуля. Живут в модуле <code>builtins</code>, автоматически загружаемом. Полный список: <code>dir(__builtins__)</code> (там ~150 имён, включая исключения типа <code>ValueError</code>).</p>
+
+    <div class="info-box success">
+      <strong>Правило:</strong> не зубри всё. Реально в 90% кода нужны 15: <code>print</code>, <code>input</code>, <code>len</code>, <code>range</code>, <code>enumerate</code>, <code>zip</code>, <code>sorted</code>, <code>min</code>, <code>max</code>, <code>sum</code>, <code>int</code>, <code>str</code>, <code>list</code>, <code>isinstance</code>, <code>open</code>. Остальные — по мере необходимости.
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="printer"></i> Ввод / вывод</div>
+    <table class="data-table">
+      <tr><th>Функция</th><th>Что делает</th><th>Пример</th></tr>
+      <tr><td><code>print(*args, sep=' ', end='\n')</code></td><td>Вывод в консоль</td><td><code>print("a", "b", sep="-")</code> → <code>a-b</code></td></tr>
+      <tr><td><code>input(prompt="")</code></td><td>Читает строку от пользователя (всегда <code>str</code>)</td><td><code>name = input("Имя: ")</code></td></tr>
+      <tr><td><code>open(path, mode, encoding)</code></td><td>Открыть файл (использовать через <code>with</code>)</td><td><code>with open("f.txt", "r", encoding="utf-8") as f:</code></td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="ruler"></i> Длина, тип, проверка</div>
+    <table class="data-table">
+      <tr><th>Функция</th><th>Что делает</th><th>Пример</th></tr>
+      <tr><td><code>len(x)</code></td><td>Длина коллекции / строки</td><td><code>len("hello")</code> → <code>5</code></td></tr>
+      <tr><td><code>type(x)</code></td><td>Класс объекта</td><td><code>type(42)</code> → <code>&lt;class 'int'&gt;</code></td></tr>
+      <tr><td><code>isinstance(x, T)</code></td><td>Экземпляр класса <code>T</code> (учитывает наследников) — <strong>предпочтительнее</strong> <code>type(x) == T</code></td><td><code>isinstance(42, (int, str))</code> → <code>True</code> (можно кортеж типов)</td></tr>
+      <tr><td><code>callable(x)</code></td><td>Можно ли вызвать <code>x()</code></td><td><code>callable(print)</code> → <code>True</code>; <code>callable(42)</code> → <code>False</code></td></tr>
+      <tr><td><code>issubclass(A, B)</code></td><td><code>A</code> — подкласс <code>B</code></td><td><code>issubclass(bool, int)</code> → <code>True</code></td></tr>
+    </table>
+
+    <div class="pitfall"><strong>⚠ Правило:</strong> <code>isinstance(x, T)</code> — <em>всегда</em> вместо <code>type(x) == T</code>. Первое учитывает наследование (<code>isinstance(True, int)</code> → <code>True</code>, потому что <code>bool</code> — наследник <code>int</code>). Второе — строгое сравнение классов.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="repeat-2"></i> Приведение типов (конструкторы)</div>
+    <table class="data-table">
+      <tr><th>Функция</th><th>Что делает</th><th>Пример</th></tr>
+      <tr><td><code>int(x)</code></td><td>В целое (обрезает дробь, НЕ округляет)</td><td><code>int("42")</code> → <code>42</code>; <code>int(3.9)</code> → <code>3</code></td></tr>
+      <tr><td><code>int(x, base)</code></td><td>Парсинг с системой счисления</td><td><code>int("ff", 16)</code> → <code>255</code></td></tr>
+      <tr><td><code>float(x)</code></td><td>В float</td><td><code>float("3.14")</code> → <code>3.14</code></td></tr>
+      <tr><td><code>str(x)</code></td><td>В строку (через <code>__str__</code>)</td><td><code>str([1, 2])</code> → <code>"[1, 2]"</code></td></tr>
+      <tr><td><code>bool(x)</code></td><td>В True/False (falsy: 0, "", [], {}, None)</td><td><code>bool([])</code> → <code>False</code>; <code>bool("hi")</code> → <code>True</code></td></tr>
+      <tr><td><code>list(x)</code></td><td>Список из iterable</td><td><code>list("abc")</code> → <code>['a', 'b', 'c']</code></td></tr>
+      <tr><td><code>tuple(x)</code></td><td>Кортеж</td><td><code>tuple([1, 2])</code> → <code>(1, 2)</code></td></tr>
+      <tr><td><code>set(x)</code></td><td>Множество (уникальные)</td><td><code>set([1, 1, 2])</code> → <code>{1, 2}</code></td></tr>
+      <tr><td><code>dict(x)</code></td><td>Словарь</td><td><code>dict(a=1, b=2)</code> → <code>{'a': 1, 'b': 2}</code></td></tr>
+      <tr><td><code>bytes(x)</code>, <code>bytearray(x)</code></td><td>Бинарные типы</td><td><code>bytes("hi", "utf-8")</code></td></tr>
+      <tr><td><code>frozenset(x)</code></td><td>Неизменяемое множество (hashable — можно как ключ dict)</td><td><code>frozenset([1, 2])</code></td></tr>
+    </table>
+
+    <div class="pitfall"><strong>⚠ <code>int(3.9)</code> = <code>3</code>, не <code>4</code></strong> — обрезает к нулю. Для правильного округления — <code>round(3.9)</code>.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="repeat"></i> Итерация</div>
+    <table class="data-table">
+      <tr><th>Функция</th><th>Что делает</th><th>Пример</th></tr>
+      <tr><td><code>range(stop)</code>, <code>range(start, stop, step)</code></td><td>Ленивая последовательность чисел</td><td><code>list(range(0, 10, 2))</code> → <code>[0, 2, 4, 6, 8]</code></td></tr>
+      <tr><td><code>enumerate(x, start=0)</code></td><td>Пары <code>(index, value)</code></td><td><code>list(enumerate("ab"))</code> → <code>[(0, 'a'), (1, 'b')]</code></td></tr>
+      <tr><td><code>zip(a, b, ..., strict=False)</code></td><td>Параллельный обход. <code>strict=True</code> (3.10+) кинет ошибку при разной длине</td><td><code>list(zip([1, 2], ["a", "b"]))</code> → <code>[(1, 'a'), (2, 'b')]</code></td></tr>
+      <tr><td><code>reversed(x)</code></td><td>Итератор в обратном порядке (без изменения оригинала)</td><td><code>list(reversed([1, 2, 3]))</code> → <code>[3, 2, 1]</code></td></tr>
+      <tr><td><code>iter(x)</code></td><td>Получить iterator</td><td><code>it = iter([1, 2, 3]); next(it)</code> → <code>1</code></td></tr>
+      <tr><td><code>next(it, default)</code></td><td>Следующий элемент или <code>default</code> вместо <code>StopIteration</code></td><td><code>next(it, "!")</code> → <code>"!"</code></td></tr>
+      <tr><td><code>map(f, x)</code></td><td>Применить <code>f</code> к каждому (ленивый)</td><td><code>list(map(str, [1, 2, 3]))</code> → <code>['1', '2', '3']</code></td></tr>
+      <tr><td><code>filter(f, x)</code></td><td>Оставить элементы, где <code>f(x)</code> истинно</td><td><code>list(filter(lambda n: n &gt; 0, [1, -2, 3]))</code> → <code>[1, 3]</code></td></tr>
+    </table>
+
+    <div class="info-box primary">
+      <strong>Питоничнее:</strong> <code>map</code>/<code>filter</code> в новом коде обычно заменяют <a href="#" onclick="showSection('collections', document.querySelector('[onclick*=collections]')); return false;">comprehension</a> — короче и читаемее:
+      <br><code>list(map(str, nums))</code> → <code>[str(n) for n in nums]</code>
+      <br><code>list(filter(lambda n: n &gt; 0, nums))</code> → <code>[n for n in nums if n &gt; 0]</code>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="arrow-up-down"></i> Сортировка и границы</div>
+    <table class="data-table">
+      <tr><th>Функция</th><th>Что делает</th><th>Пример</th></tr>
+      <tr><td><code>sorted(x, key=None, reverse=False)</code></td><td>Отсортированная <em>копия</em> (в отличие от <code>list.sort()</code>)</td><td><code>sorted(users, key=lambda u: u.age)</code></td></tr>
+      <tr><td><code>min(x, key=None, default=...)</code></td><td>Минимум</td><td><code>min(users, key=lambda u: u.age)</code></td></tr>
+      <tr><td><code>max(x, key=None, default=...)</code></td><td>Максимум</td><td><code>max([1, 2, 3])</code> → <code>3</code></td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="calculator"></i> Математика</div>
+    <table class="data-table">
+      <tr><th>Функция</th><th>Что делает</th><th>Пример</th></tr>
+      <tr><td><code>sum(x, start=0)</code></td><td>Сумма</td><td><code>sum([1, 2, 3])</code> → <code>6</code>; <code>sum([1, 2], 10)</code> → <code>13</code></td></tr>
+      <tr><td><code>abs(x)</code></td><td>Модуль</td><td><code>abs(-5)</code> → <code>5</code></td></tr>
+      <tr><td><code>round(x, ndigits=None)</code></td><td>Округление (bankers' rounding — половина к чётному)</td><td><code>round(3.14159, 2)</code> → <code>3.14</code>; <code>round(2.5)</code> → <code>2</code> (!!!) </td></tr>
+      <tr><td><code>pow(base, exp, mod=None)</code></td><td>Степень. С <code>mod</code> — эффективно для больших чисел (крипта)</td><td><code>pow(2, 10, 100)</code> → <code>24</code></td></tr>
+      <tr><td><code>divmod(a, b)</code></td><td>Частное + остаток одним вызовом</td><td><code>divmod(7, 2)</code> → <code>(3, 1)</code></td></tr>
+      <tr><td><code>bin(x)</code>, <code>oct(x)</code>, <code>hex(x)</code></td><td>В строковое представление системы счисления</td><td><code>hex(255)</code> → <code>'0xff'</code></td></tr>
+      <tr><td><code>ord(char)</code></td><td>Char → int (Unicode code point)</td><td><code>ord("A")</code> → <code>65</code></td></tr>
+      <tr><td><code>chr(n)</code></td><td>Int → char (Unicode)</td><td><code>chr(65)</code> → <code>'A'</code></td></tr>
+    </table>
+
+    <div class="pitfall"><strong>⚠ <code>round(2.5)</code> → <code>2</code>, не <code>3</code>.</strong> Python использует <em>bankers' rounding</em> (half to even) — половина округляется к чётному. Это стандарт IEEE 754 для избежания статистического смещения. Не баг — фича.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="check-check"></i> Логика</div>
+    <table class="data-table">
+      <tr><th>Функция</th><th>Что делает</th><th>Пример</th></tr>
+      <tr><td><code>all(x)</code></td><td>Все элементы truthy? Пустой → <code>True</code></td><td><code>all([True, True])</code> → <code>True</code>; <code>all([])</code> → <code>True</code></td></tr>
+      <tr><td><code>any(x)</code></td><td>Хоть один truthy? Пустой → <code>False</code></td><td><code>any([False, True])</code> → <code>True</code>; <code>any([])</code> → <code>False</code></td></tr>
+    </table>
+
+    <p class="text"><strong>Реальный use-case:</strong></p>
+<pre><code><span class="c-comment"># Все users имеют email?</span>
+<span class="c-key">if</span> <span class="c-fn">all</span>(u.email <span class="c-key">for</span> u <span class="c-key">in</span> users):
+    <span class="c-fn">send_bulk</span>(users)
+
+<span class="c-comment"># Есть хоть один админ?</span>
+<span class="c-key">if</span> <span class="c-fn">any</span>(u.is_admin <span class="c-key">for</span> u <span class="c-key">in</span> users):
+    ...
+
+<span class="c-comment"># Ленивое короткое замыкание — как в SQL EXISTS</span>
+<span class="c-comment"># При первом True в any / False в all — обход прекращается</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="search"></i> Отладка и интроспекция</div>
+    <table class="data-table">
+      <tr><th>Функция</th><th>Что делает</th><th>Пример</th></tr>
+      <tr><td><code>help(x)</code></td><td>Показать docstring / документацию</td><td><code>help(str.split)</code></td></tr>
+      <tr><td><code>dir(x)</code></td><td>Список атрибутов и методов объекта</td><td><code>dir("hi")</code> → <code>[..., 'split', 'upper', ...]</code></td></tr>
+      <tr><td><code>repr(x)</code></td><td>«Отладочное» представление (видны escape-символы, кавычки)</td><td><code>repr("hi\n")</code> → <code>"'hi\\n'"</code></td></tr>
+      <tr><td><code>id(x)</code></td><td>Адрес объекта в памяти (для <code>is</code>)</td><td><code>id(42)</code></td></tr>
+      <tr><td><code>hash(x)</code></td><td>Хеш immutable-объекта. Для list — ошибка (unhashable)</td><td><code>hash((1, 2))</code> ✓; <code>hash([1, 2])</code> ✗</td></tr>
+      <tr><td><code>getattr(obj, name, default)</code></td><td>Атрибут по имени (динамически), с дефолтом</td><td><code>getattr(user, "email", "none")</code></td></tr>
+      <tr><td><code>setattr(obj, name, value)</code></td><td>Установить атрибут по имени</td><td><code>setattr(user, "role", "admin")</code></td></tr>
+      <tr><td><code>hasattr(obj, name)</code></td><td>Есть ли атрибут</td><td><code>hasattr(user, "email")</code></td></tr>
+      <tr><td><code>delattr(obj, name)</code></td><td>Удалить атрибут</td><td>—</td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="globe"></i> Область видимости</div>
+    <table class="data-table">
+      <tr><th>Функция</th><th>Что делает</th><th>Пример</th></tr>
+      <tr><td><code>vars(x)</code></td><td><code>__dict__</code> объекта (атрибуты как словарь)</td><td><code>vars(user)</code> → <code>{'name': 'Alice', ...}</code></td></tr>
+      <tr><td><code>vars()</code> (без аргумента)</td><td>То же что <code>locals()</code></td><td>—</td></tr>
+      <tr><td><code>globals()</code></td><td>Словарь глобальных переменных модуля</td><td>Отладка, метапрограммирование</td></tr>
+      <tr><td><code>locals()</code></td><td>Словарь локальных переменных (для чтения; изменения не сохранятся)</td><td>Отладка</td></tr>
+    </table>
+
+    <p class="text"><strong>Используются редко</strong> — в основном для отладки и метапрограммирования (декораторы, ORM, тестовые фреймворки).</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="skull"></i> Опасное: <code>eval</code> / <code>exec</code></div>
+<pre><code><span class="c-fn">eval</span>(<span class="c-str">"2 + 3"</span>)              <span class="c-comment"># 5 — выполнить ВЫРАЖЕНИЕ, вернуть значение</span>
+<span class="c-fn">eval</span>(<span class="c-str">"len('hi')"</span>)          <span class="c-comment"># 2</span>
+
+<span class="c-fn">exec</span>(<span class="c-str">"x = 5\nprint(x)"</span>)     <span class="c-comment"># выполнить ИНСТРУКЦИИ, вернуть None</span></code></pre>
+
+    <div class="pitfall"><strong>⚠ КРИТИЧНО:</strong> <code>eval</code>/<code>exec</code> на пользовательских данных = RCE. <code>eval(user_input)</code> с вводом <code>"__import__('os').system('rm -rf /')"</code> — уничтожит сервер. Использовать <strong>только</strong> для доверенных строк (свои шаблоны, тесты), никогда для внешнего ввода.</div>
+
+    <p class="text"><strong>Безопасные альтернативы:</strong></p>
+    <ul class="bullets">
+      <li>Парсинг чисел из строки → <code>int(s)</code> / <code>float(s)</code>, а не <code>eval(s)</code></li>
+      <li>Парсинг литералов (числа, строки, списки, dict) → <code>ast.literal_eval(s)</code> — <em>только литералы</em>, никаких вызовов функций</li>
+      <li>Парсинг математических выражений → библиотека <code>sympy</code> или свой AST-парсер</li>
+      <li>Динамическое выполнение кода из БД → крайне пересматривай архитектуру, обычно есть безопасное решение</li>
+    </ul>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="grid-3x3"></i> Полная картина по категориям</div>
+    <table class="data-table">
+      <tr><th>Категория</th><th>Функции</th></tr>
+      <tr><td>Ввод/вывод</td><td><code>print</code>, <code>input</code>, <code>open</code></td></tr>
+      <tr><td>Длина / тип</td><td><code>len</code>, <code>type</code>, <code>isinstance</code>, <code>issubclass</code>, <code>callable</code></td></tr>
+      <tr><td>Приведение</td><td><code>int</code>, <code>float</code>, <code>str</code>, <code>bool</code>, <code>list</code>, <code>tuple</code>, <code>set</code>, <code>dict</code>, <code>bytes</code>, <code>frozenset</code></td></tr>
+      <tr><td>Итерация</td><td><code>range</code>, <code>enumerate</code>, <code>zip</code>, <code>reversed</code>, <code>iter</code>, <code>next</code>, <code>map</code>, <code>filter</code></td></tr>
+      <tr><td>Сортировка</td><td><code>sorted</code>, <code>min</code>, <code>max</code></td></tr>
+      <tr><td>Математика</td><td><code>sum</code>, <code>abs</code>, <code>round</code>, <code>pow</code>, <code>divmod</code>, <code>bin</code>, <code>hex</code>, <code>oct</code>, <code>ord</code>, <code>chr</code></td></tr>
+      <tr><td>Логика</td><td><code>all</code>, <code>any</code></td></tr>
+      <tr><td>Интроспекция</td><td><code>help</code>, <code>dir</code>, <code>repr</code>, <code>id</code>, <code>hash</code>, <code>getattr</code>/<code>setattr</code>/<code>hasattr</code>, <code>vars</code>, <code>globals</code>, <code>locals</code></td></tr>
+      <tr><td>Опасное</td><td><code>eval</code>, <code>exec</code>, <code>compile</code></td></tr>
+    </table>
+  </div>
+
+  <div class="remember-box">
+    <strong>Что запомнить:</strong>
+    <ul style="margin:6px 0 0 20px;line-height:1.7">
+      <li><strong>90% кода</strong> использует ~15 функций: <code>print</code>, <code>input</code>, <code>len</code>, <code>range</code>, <code>enumerate</code>, <code>zip</code>, <code>sorted</code>, <code>min</code>/<code>max</code>/<code>sum</code>, <code>int</code>/<code>str</code>/<code>list</code>, <code>isinstance</code>, <code>open</code></li>
+      <li><code>iter</code>/<code>next</code>/<code>map</code>/<code>filter</code> — низкоуровневые, чаще заменяются <a href="#" onclick="showSection('collections', document.querySelector('[onclick*=collections]')); return false;">comprehensions</a></li>
+      <li><code>eval</code>/<code>exec</code> — почти никогда не нужны и <strong>опасны</strong>; для литералов — <code>ast.literal_eval</code></li>
+      <li><code>vars</code>/<code>globals</code>/<code>locals</code>/<code>getattr</code>/<code>setattr</code> — метапрограммирование и отладка</li>
+      <li>Полный список — <code>dir(__builtins__)</code>, ~150 имён с исключениями (ValueError, TypeError...)</li>
+    </ul>
   </div>
 </div>
 
