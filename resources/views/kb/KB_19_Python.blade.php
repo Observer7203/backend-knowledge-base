@@ -166,7 +166,13 @@ ol.numbered strong{color:var(--text);}
   <div class="nav-group-label">Данные и HTTP</div>
   <a class="nav-item" onclick="showSection('db',this)"><i data-lucide="database"></i> БД: psycopg2 / SQLAlchemy</a>
   <a class="nav-item" onclick="showSection('http',this)"><i data-lucide="globe"></i> HTTP: requests / httpx</a>
-  <a class="nav-item" onclick="showSection('pandas',this)"><i data-lucide="table"></i> Pandas базово</a>
+
+  <div class="nav-group-label">ML / Data-стек</div>
+  <a class="nav-item" onclick="showSection('numpy',this)"><i data-lucide="grid-3x3"></i> NumPy — фундамент</a>
+  <a class="nav-item" onclick="showSection('pandas',this)"><i data-lucide="table"></i> Pandas — всерьёз</a>
+  <a class="nav-item" onclick="showSection('plotting',this)"><i data-lucide="line-chart"></i> matplotlib / seaborn</a>
+  <a class="nav-item" onclick="showSection('jupyter',this)"><i data-lucide="notebook-pen"></i> Jupyter Notebooks</a>
+  <a class="nav-item" onclick="showSection('algorithms',this)"><i data-lucide="workflow"></i> Алгопаттерны на массивах</a>
 
   <div class="nav-group-final">Инструменты</div>
   <a class="nav-item" onclick="showSection('testing',this)"><i data-lucide="test-tube"></i> pytest + fixtures</a>
@@ -3506,8 +3512,270 @@ data = asyncio.<span class="c-fn">run</span>(<span class="c-fn">fetch_all</span>
   </div>
 </div>
 
+<!-- ═══════════════════════════ NUMPY ═══════════════════════════ -->
+<div id="sec-numpy" class="section">
+  <div class="section-title">NumPy — фундамент ML/Data-стека</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="book-open"></i> Что это и зачем</div>
+    <p class="text"><strong>NumPy</strong> — библиотека для работы с многомерными массивами (<code>ndarray</code>) и векторизованных вычислений. На нём построены Pandas, scikit-learn, PyTorch, TensorFlow, SciPy. Для ML — <em>обязательный</em> фундамент.</p>
+
+    <div class="analogy">
+      <strong>Аналогия:</strong> Python-список — «универсальная тележка» (в неё можно положить любую вещь, но проверять тип и обрабатывать каждый элемент нужно вручную). NumPy-массив — «промышленный конвейер»: все элементы одного типа, операции применяются <em>ко всем сразу</em> в C-коде, минуя интерпретатор. Векторизованный <code>a * 2</code> в 50-100 раз быстрее <code>[x*2 for x in list]</code>.
+    </div>
+
+    <div class="why-box">
+      <strong>Почему это критично:</strong> в ML данные — это матрицы (features × samples), тензоры (batch × height × width × channels). Обучение = миллионы умножений/сложений на массивах. Без векторизации вычисления медленнее в 100+ раз. PyTorch/TensorFlow — та же идея, только с автодифференцированием и GPU.
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="download"></i> Установка</div>
+<pre><code>uv add numpy
+
+<span class="c-key">import</span> numpy <span class="c-key">as</span> np      <span class="c-comment"># общепринятый alias, всегда np</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="grid-3x3"></i> Создание массивов (<code>ndarray</code>)</div>
+<pre><code><span class="c-comment"># Из Python-списка</span>
+a = np.<span class="c-fn">array</span>([<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>, <span class="c-num">4</span>])                <span class="c-comment"># 1D — вектор</span>
+b = np.<span class="c-fn">array</span>([[<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>], [<span class="c-num">4</span>, <span class="c-num">5</span>, <span class="c-num">6</span>]])     <span class="c-comment"># 2D — матрица</span>
+c = np.<span class="c-fn">array</span>([[[<span class="c-num">1</span>], [<span class="c-num">2</span>]], [[<span class="c-num">3</span>], [<span class="c-num">4</span>]]]) <span class="c-comment"># 3D — тензор</span>
+
+<span class="c-comment"># Из «шаблонов»</span>
+np.<span class="c-fn">zeros</span>((<span class="c-num">3</span>, <span class="c-num">4</span>))                       <span class="c-comment"># матрица 3×4 из нулей</span>
+np.<span class="c-fn">ones</span>((<span class="c-num">2</span>, <span class="c-num">3</span>))                        <span class="c-comment"># из единиц</span>
+np.<span class="c-fn">full</span>((<span class="c-num">2</span>, <span class="c-num">2</span>), <span class="c-num">7</span>)                     <span class="c-comment"># заполнить константой</span>
+np.<span class="c-fn">eye</span>(<span class="c-num">3</span>)                              <span class="c-comment"># единичная 3×3</span>
+np.<span class="c-fn">arange</span>(<span class="c-num">0</span>, <span class="c-num">10</span>, <span class="c-num">2</span>)                    <span class="c-comment"># [0, 2, 4, 6, 8] — как range</span>
+np.<span class="c-fn">linspace</span>(<span class="c-num">0</span>, <span class="c-num">1</span>, <span class="c-num">11</span>)                  <span class="c-comment"># 11 точек от 0 до 1</span>
+
+<span class="c-comment"># Случайные</span>
+np.random.<span class="c-fn">rand</span>(<span class="c-num">3</span>, <span class="c-num">4</span>)                    <span class="c-comment"># uniform [0, 1)</span>
+np.random.<span class="c-fn">randn</span>(<span class="c-num">3</span>, <span class="c-num">4</span>)                   <span class="c-comment"># normal (0, 1)</span>
+np.random.<span class="c-fn">randint</span>(<span class="c-num">0</span>, <span class="c-num">10</span>, size=(<span class="c-num">2</span>, <span class="c-num">3</span>))    <span class="c-comment"># целые</span>
+
+<span class="c-comment"># Свойства</span>
+a.shape                             <span class="c-comment"># (4,) — размеры</span>
+b.shape                             <span class="c-comment"># (2, 3)</span>
+a.ndim                              <span class="c-comment"># 1 — размерность</span>
+b.ndim                              <span class="c-comment"># 2</span>
+a.dtype                             <span class="c-comment"># int64 — тип элементов</span>
+a.size                              <span class="c-comment"># 4 — общее число элементов</span></code></pre>
+
+    <div class="pitfall"><strong>⚠ Массивы одного типа.</strong> В отличие от list, ndarray хранит элементы <em>одного dtype</em>. <code>np.array([1, "hello"])</code> сконвертит всё в строки. Задавать явно: <code>np.array([1, 2], dtype=np.float32)</code>.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="zap"></i> Векторизация — главная идея</div>
+<pre><code>a = np.<span class="c-fn">array</span>([<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>, <span class="c-num">4</span>])
+
+<span class="c-comment"># Арифметика — поэлементно, БЕЗ циклов</span>
+a * <span class="c-num">2</span>              <span class="c-comment"># [2, 4, 6, 8]</span>
+a + <span class="c-num">10</span>             <span class="c-comment"># [11, 12, 13, 14]</span>
+a ** <span class="c-num">2</span>             <span class="c-comment"># [1, 4, 9, 16]</span>
+a &gt; <span class="c-num">2</span>              <span class="c-comment"># [False, False, True, True]  — булева маска</span>
+
+<span class="c-comment"># Между массивами — тоже поэлементно</span>
+b = np.<span class="c-fn">array</span>([<span class="c-num">10</span>, <span class="c-num">20</span>, <span class="c-num">30</span>, <span class="c-num">40</span>])
+a + b               <span class="c-comment"># [11, 22, 33, 44]</span>
+a * b               <span class="c-comment"># [10, 40, 90, 160]  — НЕ матричное умножение</span>
+a @ b               <span class="c-comment"># 300 — скалярное произведение (dot product)</span>
+
+<span class="c-comment"># Универсальные функции (ufuncs) — векторизованные</span>
+np.<span class="c-fn">sqrt</span>(a)          <span class="c-comment"># [1., 1.41, 1.73, 2.]</span>
+np.<span class="c-fn">exp</span>(a)           <span class="c-comment"># e^x</span>
+np.<span class="c-fn">log</span>(a)           <span class="c-comment"># ln</span>
+np.<span class="c-fn">sin</span>(a)
+np.<span class="c-fn">abs</span>(a)</code></pre>
+
+    <div class="info-box success">
+      <strong>Скорость:</strong> цикл Python по массиву из 1млн — ~200ms. Векторизованный <code>a * 2</code> — ~2ms. Разница <strong>100×</strong>. Не пиши <code>for i in range(len(a)): a[i] += 1</code> — пиши <code>a += 1</code>.
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="expand"></i> Broadcasting — арифметика массивов разной формы</div>
+    <p class="text">NumPy автоматически «растягивает» меньший массив, если операция это допускает. Одно из самых мощных свойств.</p>
+<pre><code>a = np.<span class="c-fn">array</span>([[<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>],       <span class="c-comment"># shape (2, 3)</span>
+              [<span class="c-num">4</span>, <span class="c-num">5</span>, <span class="c-num">6</span>]])
+row = np.<span class="c-fn">array</span>([<span class="c-num">10</span>, <span class="c-num">20</span>, <span class="c-num">30</span>])       <span class="c-comment"># shape (3,)</span>
+
+a + row
+<span class="c-comment"># [[11, 22, 33],</span>
+<span class="c-comment">#  [14, 25, 36]]</span>
+<span class="c-comment"># row «растянут» на 2 строки, потом поэлементно</span>
+
+<span class="c-comment"># Классический use-case: нормализация features</span>
+<span class="c-comment"># X shape (n_samples, n_features), mean shape (n_features,)</span>
+X_normalized = (X - X.<span class="c-fn">mean</span>(axis=<span class="c-num">0</span>)) / X.<span class="c-fn">std</span>(axis=<span class="c-num">0</span>)</code></pre>
+
+    <p class="text"><strong>Правила broadcasting</strong> (упрощённо):</p>
+    <ol class="numbered">
+      <li>Сравнивают формы <em>с конца</em>.</li>
+      <li>Размерности совпадают → ок.</li>
+      <li>Одна из размерностей = 1 → «растягивается» до другой.</li>
+      <li>Иначе — ошибка.</li>
+    </ol>
+<pre><code><span class="c-comment"># Совместимые</span>
+(<span class="c-num">3</span>, <span class="c-num">4</span>) + (<span class="c-num">4</span>,)       <span class="c-comment"># (3,4) + (1,4) → (3,4) ✓</span>
+(<span class="c-num">3</span>, <span class="c-num">4</span>) + (<span class="c-num">3</span>, <span class="c-num">1</span>)     <span class="c-comment">→ (3,4) ✓</span>
+(<span class="c-num">2</span>, <span class="c-num">1</span>, <span class="c-num">4</span>) + (<span class="c-num">3</span>, <span class="c-num">4</span>)  <span class="c-comment">→ (2,3,4) ✓</span>
+
+<span class="c-comment"># Несовместимые — ValueError</span>
+(<span class="c-num">3</span>, <span class="c-num">4</span>) + (<span class="c-num">3</span>,)       <span class="c-comment">❌ операнды не совпадают</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="scissors"></i> Индексация и срезы</div>
+<pre><code>a = np.<span class="c-fn">arange</span>(<span class="c-num">10</span>).<span class="c-fn">reshape</span>(<span class="c-num">2</span>, <span class="c-num">5</span>)
+<span class="c-comment"># [[0, 1, 2, 3, 4],</span>
+<span class="c-comment">#  [5, 6, 7, 8, 9]]</span>
+
+<span class="c-comment"># Обычный slicing</span>
+a[<span class="c-num">0</span>]                <span class="c-comment"># [0, 1, 2, 3, 4] — вся строка 0</span>
+a[<span class="c-num">0</span>, <span class="c-num">2</span>]             <span class="c-comment"># 2 — элемент (row 0, col 2)</span>
+a[:, <span class="c-num">1</span>]             <span class="c-comment"># [1, 6] — колонка 1 целиком</span>
+a[:, <span class="c-num">1</span>:<span class="c-num">3</span>]           <span class="c-comment"># колонки 1..2</span>
+a[<span class="c-num">0</span>, ::<span class="c-num">2</span>]           <span class="c-comment"># [0, 2, 4] — каждый второй в строке 0</span>
+
+<span class="c-comment"># Fancy indexing — по массиву индексов</span>
+a[[<span class="c-num">0</span>, <span class="c-num">1</span>], [<span class="c-num">2</span>, <span class="c-num">3</span>]]     <span class="c-comment"># [2, 8] — a[0,2], a[1,3]</span>
+
+<span class="c-comment"># Булева маска — самый частый паттерн</span>
+mask = a &gt; <span class="c-num">3</span>            <span class="c-comment"># маска той же формы, что и a</span>
+a[mask]                <span class="c-comment"># все элементы &gt; 3 — [4, 5, 6, 7, 8, 9]</span>
+a[a % <span class="c-num">2</span> == <span class="c-num">0</span>]         <span class="c-comment"># все чётные</span>
+
+<span class="c-comment"># Модификация через маску</span>
+a[a &lt; <span class="c-num">5</span>] = <span class="c-num">0</span>           <span class="c-comment"># все &lt; 5 → 0</span></code></pre>
+
+    <div class="pitfall"><strong>⚠ Срез — это VIEW, не копия.</strong> <code>b = a[:, 1:3]; b[0, 0] = 99</code> изменит <em>оригинал</em> <code>a</code>. Хочешь копию — явно <code>a[:, 1:3].copy()</code>. В Pandas та же ловушка (SettingWithCopyWarning).</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="axis-3d"></i> Оси (axis) и агрегации</div>
+    <p class="text">Ось (axis) — направление, вдоль которого агрегируем. Для 2D-матрицы: <code>axis=0</code> — по столбцам (сжимает строки), <code>axis=1</code> — по строкам (сжимает столбцы). Классическая путаница — запоминай: <em>axis = «размерность, которая исчезает»</em>.</p>
+<pre><code>a = np.<span class="c-fn">array</span>([[<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>],
+              [<span class="c-num">4</span>, <span class="c-num">5</span>, <span class="c-num">6</span>]])            <span class="c-comment"># shape (2, 3)</span>
+
+a.<span class="c-fn">sum</span>()                              <span class="c-comment"># 21 — сумма всего</span>
+a.<span class="c-fn">sum</span>(axis=<span class="c-num">0</span>)                        <span class="c-comment"># [5, 7, 9] — по столбцам (shape (3,))</span>
+a.<span class="c-fn">sum</span>(axis=<span class="c-num">1</span>)                        <span class="c-comment"># [6, 15] — по строкам (shape (2,))</span>
+
+<span class="c-comment"># Все агрегации имеют axis</span>
+a.<span class="c-fn">mean</span>(axis=<span class="c-num">0</span>)                       <span class="c-comment"># среднее по столбцам</span>
+a.<span class="c-fn">max</span>(axis=<span class="c-num">1</span>)                        <span class="c-comment"># max в каждой строке</span>
+a.<span class="c-fn">std</span>(axis=<span class="c-num">0</span>)                        <span class="c-comment"># стандартное отклонение</span>
+a.<span class="c-fn">argmax</span>(axis=<span class="c-num">1</span>)                     <span class="c-comment"># индекс максимума в строке</span>
+a.<span class="c-fn">cumsum</span>(axis=<span class="c-num">0</span>)                     <span class="c-comment"># накопительная сумма</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="shuffle"></i> Reshape и manipulation</div>
+<pre><code>a = np.<span class="c-fn">arange</span>(<span class="c-num">12</span>)                    <span class="c-comment"># [0, 1, ..., 11]</span>
+
+a.<span class="c-fn">reshape</span>(<span class="c-num">3</span>, <span class="c-num">4</span>)                    <span class="c-comment"># (3, 4)</span>
+a.<span class="c-fn">reshape</span>(<span class="c-num">2</span>, <span class="c-num">2</span>, <span class="c-num">3</span>)                 <span class="c-comment"># (2, 2, 3)</span>
+a.<span class="c-fn">reshape</span>(-<span class="c-num">1</span>, <span class="c-num">3</span>)                   <span class="c-comment"># -1 = «посчитай сам» → (4, 3)</span>
+
+<span class="c-comment"># Транспонирование</span>
+b = a.<span class="c-fn">reshape</span>(<span class="c-num">3</span>, <span class="c-num">4</span>)
+b.T                                <span class="c-comment"># shape (4, 3)</span>
+
+<span class="c-comment"># Уплощение</span>
+b.<span class="c-fn">flatten</span>()                          <span class="c-comment"># копия, 1D</span>
+b.<span class="c-fn">ravel</span>()                            <span class="c-comment"># view, 1D (быстрее)</span>
+
+<span class="c-comment"># Добавить размерность</span>
+a[np.newaxis, :]                   <span class="c-comment"># (12,) → (1, 12)</span>
+a[:, np.newaxis]                   <span class="c-comment"># (12,) → (12, 1)</span>
+a[<span class="c-key">None</span>, :]                          <span class="c-comment"># то же — None = np.newaxis</span>
+
+<span class="c-comment"># Склейка</span>
+np.<span class="c-fn">concatenate</span>([a, a], axis=<span class="c-num">0</span>)       <span class="c-comment"># по оси 0</span>
+np.<span class="c-fn">vstack</span>([a, a])                    <span class="c-comment"># вертикально (по строкам)</span>
+np.<span class="c-fn">hstack</span>([a, a])                    <span class="c-comment"># горизонтально (по столбцам)</span>
+np.<span class="c-fn">stack</span>([a, a])                     <span class="c-comment"># добавляет новую ось</span>
+
+<span class="c-comment"># Split — обратная операция</span>
+np.<span class="c-fn">split</span>(a, <span class="c-num">3</span>)                      <span class="c-comment"># на 3 равные части</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="calculator"></i> Линейная алгебра</div>
+<pre><code>A = np.<span class="c-fn">array</span>([[<span class="c-num">1</span>, <span class="c-num">2</span>], [<span class="c-num">3</span>, <span class="c-num">4</span>]])
+B = np.<span class="c-fn">array</span>([[<span class="c-num">5</span>, <span class="c-num">6</span>], [<span class="c-num">7</span>, <span class="c-num">8</span>]])
+
+A @ B                              <span class="c-comment"># матричное умножение (Python 3.5+)</span>
+np.<span class="c-fn">dot</span>(A, B)                        <span class="c-comment"># то же, для legacy</span>
+A * B                              <span class="c-comment"># поэлементно (Hadamard), НЕ матричное</span>
+
+np.linalg.<span class="c-fn">inv</span>(A)                    <span class="c-comment"># обратная матрица</span>
+np.linalg.<span class="c-fn">det</span>(A)                    <span class="c-comment"># определитель</span>
+np.linalg.<span class="c-fn">solve</span>(A, b)                <span class="c-comment"># решить систему A·x = b</span>
+np.linalg.<span class="c-fn">eig</span>(A)                    <span class="c-comment"># собственные значения/векторы</span>
+np.linalg.<span class="c-fn">norm</span>(a)                   <span class="c-comment"># норма (по умолчанию L2)</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="hammer"></i> Практический пример: нормализация данных</div>
+<pre><code><span class="c-key">import</span> numpy <span class="c-key">as</span> np
+
+<span class="c-comment"># 100 samples × 4 features</span>
+X = np.random.<span class="c-fn">rand</span>(<span class="c-num">100</span>, <span class="c-num">4</span>)
+
+<span class="c-comment"># Z-score normalization: (x - mean) / std</span>
+X_norm = (X - X.<span class="c-fn">mean</span>(axis=<span class="c-num">0</span>)) / X.<span class="c-fn">std</span>(axis=<span class="c-num">0</span>)
+<span class="c-comment"># mean/std shape (4,) → broadcasting до (100, 4)</span>
+
+<span class="c-comment"># Min-max normalization: (x - min) / (max - min)</span>
+X_scaled = (X - X.<span class="c-fn">min</span>(axis=<span class="c-num">0</span>)) / (X.<span class="c-fn">max</span>(axis=<span class="c-num">0</span>) - X.<span class="c-fn">min</span>(axis=<span class="c-num">0</span>))
+
+<span class="c-comment"># Проверка</span>
+X_norm.<span class="c-fn">mean</span>(axis=<span class="c-num">0</span>)                 <span class="c-comment"># ≈ [0, 0, 0, 0]</span>
+X_norm.<span class="c-fn">std</span>(axis=<span class="c-num">0</span>)                  <span class="c-comment"># ≈ [1, 1, 1, 1]</span>
+
+<span class="c-comment"># Разделение на train/test</span>
+np.random.<span class="c-fn">seed</span>(<span class="c-num">42</span>)
+indices = np.random.<span class="c-fn">permutation</span>(<span class="c-fn">len</span>(X))
+train_idx = indices[:<span class="c-num">80</span>]
+test_idx = indices[<span class="c-num">80</span>:]
+
+X_train = X[train_idx]
+X_test = X[test_idx]</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
+    <div class="pitfall"><strong>1. Срез — view, не копия.</strong> Модификация среза меняет оригинал. Явно <code>.copy()</code> если нужен независимый массив.</div>
+    <div class="pitfall"><strong>2. <code>a * b</code> vs <code>a @ b</code>.</strong> Первое — поэлементное умножение (Hadamard product), второе — матричное. Классическая ошибка при переходе с MATLAB.</div>
+    <div class="pitfall"><strong>3. Целочисленное переполнение.</strong> <code>np.int8</code> вмещает -128..127. <code>np.array([120], dtype=np.int8) + 100</code> → <code>-36</code>. В ML обычно <code>float32</code>/<code>float64</code>.</div>
+    <div class="pitfall"><strong>4. <code>axis=0</code> vs <code>axis=1</code>.</strong> Путаница почти у всех новичков. Запомни: axis = «размерность, которая исчезает». <code>axis=0</code> в матрице (rows, cols) — исчезают rows, остаются cols.</div>
+    <div class="pitfall"><strong>5. Python-цикл по ndarray = убийство производительности.</strong> Всегда ищи векторизованное решение. Если реально нужен цикл — используй <code>numba</code> с <code>@jit</code>.</div>
+    <div class="pitfall"><strong>6. NaN распространяется.</strong> <code>np.array([1, np.nan, 3]).sum()</code> → <code>nan</code>. Для игнорирования: <code>np.nansum</code>, <code>np.nanmean</code>, <code>np.nanstd</code>.</div>
+  </div>
+
+  <div class="remember-box">
+    <strong>Итог:</strong> NumPy — <em>обязательный</em> первый шаг перед ML. Ключевые понятия: <code>ndarray</code>, <code>shape</code>/<code>dtype</code>/<code>axis</code>, векторизация (<code>a * 2</code> вместо цикла), broadcasting (<code>a + row</code>), reshape/transpose. Pandas и PyTorch — надстройки над этим фундаментом.
+  </div>
+</div>
+
+<!-- ═══════════════════════════ PANDAS ═══════════════════════════ -->
 <div id="sec-pandas" class="section">
-  <div class="section-title">Pandas — базово для backend-разработчика</div>
+  <div class="section-title">Pandas — от базы до реальных задач</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="book-open"></i> Зачем нужен Pandas</div>
+    <p class="text"><strong>Pandas</strong> — DataFrame (таблица) + Series (колонка) на основе NumPy. Стандарт для анализа данных, ETL, подготовки датасетов под ML. Умеет читать всё (CSV/Excel/JSON/SQL/Parquet), фильтровать, группировать, объединять, обрабатывать пропуски. Обязательный инструмент data-стека.</p>
+    <ul class="bullets">
+      <li>Backend-разработчику: конвертация CSV↔JSON↔Excel, разовый ETL, отчёты, миграции</li>
+      <li><strong>Для ML: подготовка признаков перед обучением</strong> — очистка, преобразование, agrgегация, объединение источников</li>
+      <li>Data-инженеру: пайплайны обработки, Airflow-задачи</li>
+    </ul>
+    <p class="text"><strong>Когда НЕ Pandas:</strong> production real-time API (тяжёлая инициализация), потоки &gt;RAM (используй Polars / Dask / DuckDB / чанки).</p>
+  </div>
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="book-open"></i> Зачем backend-разработчику Pandas</div>
@@ -3656,7 +3924,555 @@ df = df.<span class="c-fn">rename</span>(columns={<span class="c-str">"age"</spa
   </div>
 
   <div class="remember-box">
-    <strong>Итог:</strong> для backend — Pandas это «SQL для CSV/Excel/JSON». Знать <code>read_csv</code>/<code>to_csv</code>, фильтрацию, <code>groupby</code>, <code>merge</code>, <code>fillna</code>. Хватит на 95% разовых задач. Для production real-time — оставь Pandas data-инженерам.
+    <strong>Итог:</strong> для backend — Pandas это «SQL для CSV/Excel/JSON». Знать <code>read_csv</code>/<code>to_csv</code>, фильтрацию, <code>groupby</code>, <code>merge</code>, <code>fillna</code>. Хватит на 95% разовых задач. Для ML — обязательно + <code>concat</code>, <code>pivot</code>, работа с датами, оптимизация типов. Для production real-time — оставь Pandas data-инженерам.
+  </div>
+</div>
+
+<!-- ═══════════════════════════ PLOTTING ═══════════════════════════ -->
+<div id="sec-plotting" class="section">
+  <div class="section-title">matplotlib и seaborn — визуализация</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="book-open"></i> Что и зачем</div>
+    <p class="text">В ML/DS <strong>90% работы — понимать данные</strong>. Гистограмма распределения, scatter корреляций, heatmap важностей, learning curves — без графиков вслепую. Стандартные библиотеки:</p>
+    <ul class="bullets">
+      <li><strong>matplotlib</strong> (с 2003) — фундамент, низкоуровневый API, полный контроль. Все другие библиотеки под капотом рисуют через matplotlib.</li>
+      <li><strong>seaborn</strong> — обёртка над matplotlib, красивые дефолты, статистические графики (regplot, boxplot, heatmap) из коробки.</li>
+      <li><strong>plotly</strong> — интерактивные графики (zoom, hover), для веба и дашбордов.</li>
+    </ul>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="download"></i> Установка</div>
+<pre><code>uv add matplotlib seaborn
+
+<span class="c-key">import</span> matplotlib.pyplot <span class="c-key">as</span> plt      <span class="c-comment"># стандартный alias</span>
+<span class="c-key">import</span> seaborn <span class="c-key">as</span> sns
+<span class="c-key">import</span> numpy <span class="c-key">as</span> np</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="line-chart"></i> Базовые графики matplotlib</div>
+<pre><code><span class="c-comment"># Простой line-plot</span>
+x = np.<span class="c-fn">linspace</span>(<span class="c-num">0</span>, <span class="c-num">10</span>, <span class="c-num">100</span>)
+y = np.<span class="c-fn">sin</span>(x)
+
+plt.<span class="c-fn">plot</span>(x, y)
+plt.<span class="c-fn">xlabel</span>(<span class="c-str">"x"</span>)
+plt.<span class="c-fn">ylabel</span>(<span class="c-str">"sin(x)"</span>)
+plt.<span class="c-fn">title</span>(<span class="c-str">"Sine wave"</span>)
+plt.<span class="c-fn">grid</span>(<span class="c-key">True</span>)
+plt.<span class="c-fn">show</span>()
+
+<span class="c-comment"># Несколько линий</span>
+plt.<span class="c-fn">plot</span>(x, np.<span class="c-fn">sin</span>(x), label=<span class="c-str">"sin"</span>)
+plt.<span class="c-fn">plot</span>(x, np.<span class="c-fn">cos</span>(x), label=<span class="c-str">"cos"</span>)
+plt.<span class="c-fn">legend</span>()
+
+<span class="c-comment"># Гистограмма — распределение</span>
+data = np.random.<span class="c-fn">randn</span>(<span class="c-num">1000</span>)
+plt.<span class="c-fn">hist</span>(data, bins=<span class="c-num">30</span>, edgecolor=<span class="c-str">"black"</span>)
+
+<span class="c-comment"># Scatter — корреляции</span>
+plt.<span class="c-fn">scatter</span>(x, y, c=<span class="c-str">"red"</span>, alpha=<span class="c-num">0.5</span>, s=<span class="c-num">30</span>)
+
+<span class="c-comment"># Bar chart</span>
+plt.<span class="c-fn">bar</span>([<span class="c-str">"A"</span>, <span class="c-str">"B"</span>, <span class="c-str">"C"</span>], [<span class="c-num">10</span>, <span class="c-num">20</span>, <span class="c-num">15</span>])</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layout-grid"></i> Subplot — несколько графиков</div>
+<pre><code>fig, axes = plt.<span class="c-fn">subplots</span>(<span class="c-num">2</span>, <span class="c-num">2</span>, figsize=(<span class="c-num">10</span>, <span class="c-num">8</span>))
+
+axes[<span class="c-num">0</span>, <span class="c-num">0</span>].<span class="c-fn">plot</span>(x, np.<span class="c-fn">sin</span>(x))
+axes[<span class="c-num">0</span>, <span class="c-num">0</span>].<span class="c-fn">set_title</span>(<span class="c-str">"sin"</span>)
+
+axes[<span class="c-num">0</span>, <span class="c-num">1</span>].<span class="c-fn">plot</span>(x, np.<span class="c-fn">cos</span>(x))
+axes[<span class="c-num">0</span>, <span class="c-num">1</span>].<span class="c-fn">set_title</span>(<span class="c-str">"cos"</span>)
+
+axes[<span class="c-num">1</span>, <span class="c-num">0</span>].<span class="c-fn">hist</span>(data)
+axes[<span class="c-num">1</span>, <span class="c-num">1</span>].<span class="c-fn">scatter</span>(x, y)
+
+plt.<span class="c-fn">tight_layout</span>()             <span class="c-comment"># auto-spacing</span>
+plt.<span class="c-fn">savefig</span>(<span class="c-str">"plots.png"</span>, dpi=<span class="c-num">150</span>)
+plt.<span class="c-fn">show</span>()</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="palette"></i> seaborn — статистика из коробки</div>
+<pre><code><span class="c-key">import</span> seaborn <span class="c-key">as</span> sns
+<span class="c-key">import</span> pandas <span class="c-key">as</span> pd
+
+sns.<span class="c-fn">set_theme</span>(style=<span class="c-str">"whitegrid"</span>)      <span class="c-comment"># красивая сетка</span>
+
+<span class="c-comment"># Данные</span>
+tips = sns.<span class="c-fn">load_dataset</span>(<span class="c-str">"tips"</span>)          <span class="c-comment"># встроенный dataset</span>
+
+<span class="c-comment"># Scatter с регрессией одной строкой</span>
+sns.<span class="c-fn">regplot</span>(data=tips, x=<span class="c-str">"total_bill"</span>, y=<span class="c-str">"tip"</span>)
+
+<span class="c-comment"># Boxplot — распределение по категориям</span>
+sns.<span class="c-fn">boxplot</span>(data=tips, x=<span class="c-str">"day"</span>, y=<span class="c-str">"total_bill"</span>)
+
+<span class="c-comment"># Violin plot — boxplot + KDE</span>
+sns.<span class="c-fn">violinplot</span>(data=tips, x=<span class="c-str">"day"</span>, y=<span class="c-str">"tip"</span>, hue=<span class="c-str">"sex"</span>)
+
+<span class="c-comment"># Heatmap — корреляция признаков (ML-must)</span>
+sns.<span class="c-fn">heatmap</span>(df.<span class="c-fn">corr</span>(), annot=<span class="c-key">True</span>, cmap=<span class="c-str">"coolwarm"</span>, fmt=<span class="c-str">".2f"</span>)
+
+<span class="c-comment"># Pairplot — все пары признаков сразу</span>
+sns.<span class="c-fn">pairplot</span>(tips, hue=<span class="c-str">"sex"</span>)
+
+<span class="c-comment"># Гистограмма + KDE</span>
+sns.<span class="c-fn">histplot</span>(tips, x=<span class="c-str">"total_bill"</span>, kde=<span class="c-key">True</span>, bins=<span class="c-num">30</span>)
+
+<span class="c-comment"># Countplot — счёт по категориям (как bar от Pandas)</span>
+sns.<span class="c-fn">countplot</span>(data=tips, x=<span class="c-str">"day"</span>, hue=<span class="c-str">"sex"</span>)</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="target"></i> ML-must-know: 4 графика для EDA</div>
+    <table class="data-table">
+      <tr><th>График</th><th>Зачем в ML</th></tr>
+      <tr><td><strong>Histogram / KDE</strong></td><td>Распределение признака. Гауссово? Skewed? Нужна ли нормализация / логарифмирование?</td></tr>
+      <tr><td><strong>Heatmap correlations</strong> (<code>df.corr()</code>)</td><td>Найти мультиколлинеарность — если два признака сильно коррелируют, один можно выкинуть</td></tr>
+      <tr><td><strong>Scatter target vs feature</strong></td><td>Есть ли линейная зависимость? Выбросы?</td></tr>
+      <tr><td><strong>Learning curves</strong> (train/val loss vs epoch)</td><td>Overfit? Underfit? Пора остановить обучение?</td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="hammer"></i> Практический пример: EDA</div>
+<pre><code><span class="c-key">import</span> pandas <span class="c-key">as</span> pd
+<span class="c-key">import</span> seaborn <span class="c-key">as</span> sns
+<span class="c-key">import</span> matplotlib.pyplot <span class="c-key">as</span> plt
+
+df = pd.<span class="c-fn">read_csv</span>(<span class="c-str">"data.csv"</span>)
+
+<span class="c-comment"># 1. Обзор данных</span>
+df.<span class="c-fn">info</span>()
+df.<span class="c-fn">describe</span>()
+
+<span class="c-comment"># 2. Распределения всех числовых</span>
+df.<span class="c-fn">hist</span>(figsize=(<span class="c-num">12</span>, <span class="c-num">8</span>), bins=<span class="c-num">30</span>)
+plt.<span class="c-fn">tight_layout</span>()
+
+<span class="c-comment"># 3. Heatmap корреляций</span>
+plt.<span class="c-fn">figure</span>(figsize=(<span class="c-num">10</span>, <span class="c-num">8</span>))
+sns.<span class="c-fn">heatmap</span>(df.<span class="c-fn">corr</span>(numeric_only=<span class="c-key">True</span>), annot=<span class="c-key">True</span>, cmap=<span class="c-str">"coolwarm"</span>, center=<span class="c-num">0</span>)
+
+<span class="c-comment"># 4. Отношения target ↔ признаки</span>
+sns.<span class="c-fn">pairplot</span>(df, hue=<span class="c-str">"target"</span>, diag_kind=<span class="c-str">"kde"</span>)
+
+<span class="c-comment"># 5. Проверка баланса классов</span>
+sns.<span class="c-fn">countplot</span>(data=df, x=<span class="c-str">"target"</span>)</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
+    <div class="pitfall"><strong>1. <code>plt.show()</code> в скрипте / <code>%matplotlib inline</code> в ноутбуке.</strong> В Jupyter графики рендерятся inline автоматически с 3+, показ <code>plt.show()</code> необязателен.</div>
+    <div class="pitfall"><strong>2. Не забывай <code>plt.figure(figsize=...)</code></strong> — иначе всё будет квадратные микро-графики 6×4.</div>
+    <div class="pitfall"><strong>3. Легенды и подписи осей.</strong> Без них график непонятен спустя неделю. Дисциплина: всегда xlabel + ylabel + title.</div>
+    <div class="pitfall"><strong>4. Не смешивай plt и axes API</strong> в одной ячейке. Или plt.plot()/plt.title() (state-based), или fig, ax = plt.subplots(); ax.plot(); ax.set_title() (object-based). Второй чище для сложных фигур.</div>
+    <div class="pitfall"><strong>5. plt.close("all")</strong> в конце скриптов — иначе память с figures копится, особенно в цикле.</div>
+  </div>
+
+  <div class="remember-box">
+    <strong>Итог:</strong> для EDA в ML — seaborn (быстрые красивые графики) поверх matplotlib. Must-know: <code>hist</code>, <code>scatter</code>, <code>heatmap</code>, <code>pairplot</code>. Для production-дашбордов — plotly. Инлайн-графики в Jupyter — стандартный workflow ML.
+  </div>
+</div>
+
+<!-- ═══════════════════════════ JUPYTER ═══════════════════════════ -->
+<div id="sec-jupyter" class="section">
+  <div class="section-title">Jupyter Notebooks — рабочая среда ML</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="book-open"></i> Что это и зачем</div>
+    <p class="text"><strong>Jupyter Notebook</strong> — интерактивная среда, где код разбит на <em>ячейки</em>, каждая выполняется отдельно, состояние переменных сохраняется между ячейками. Файл <code>.ipynb</code> — JSON с ячейками (код + markdown + результаты выполнения). Для ML — стандартная среда, а не <code>.py</code>-скрипты.</p>
+
+    <div class="analogy">
+      <strong>Аналогия:</strong> обычный Python-скрипт — «спектакль», который прогоняешь от начала до конца. Jupyter — <em>«ремонтная мастерская»</em>: разложил детали на верстаке, вертишь каждую, смотришь, правишь. Загрузил датасет один раз, потом 50 ячеек экспериментов с ним.
+    </div>
+
+    <p class="text"><strong>Почему в ML именно так:</strong></p>
+    <ul class="bullets">
+      <li>Загрузка данных занимает 10-60 секунд — глупо перезапускать при каждой правке</li>
+      <li>Обучение модели — минуты/часы, тоже не хочешь повторять при исследовании результата</li>
+      <li>Графики видны сразу под кодом, легко сравнивать эксперименты</li>
+      <li>Комбинация кода + markdown + графиков = живой отчёт для команды</li>
+    </ul>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="download"></i> Установка + запуск</div>
+<pre><code>uv add jupyter
+
+<span class="c-comment"># Классический Jupyter</span>
+uv run jupyter notebook
+
+<span class="c-comment"># JupyterLab (современный UI)</span>
+uv add jupyterlab
+uv run jupyter lab
+
+<span class="c-comment"># Или просто открой .ipynb в VS Code — встроенная поддержка</span>
+<span class="c-comment"># PyCharm Professional тоже умеет</span></code></pre>
+
+    <p class="text"><strong>Cloud-варианты</strong> (без установки):</p>
+    <ul class="bullets">
+      <li><strong>Google Colab</strong> (colab.research.google.com) — бесплатно, GPU/TPU по подписке. Стандарт для learning.</li>
+      <li><strong>Kaggle Notebooks</strong> — с встроенным доступом к датасетам</li>
+      <li><strong>Deepnote</strong>, <strong>Databricks</strong> — enterprise-платформы</li>
+    </ul>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="mouse-pointer-click"></i> Основные горячие клавиши</div>
+    <table class="data-table">
+      <tr><th>Клавиша</th><th>Что делает</th></tr>
+      <tr><td><code>Shift + Enter</code></td><td>Выполнить ячейку, перейти к следующей</td></tr>
+      <tr><td><code>Ctrl + Enter</code></td><td>Выполнить, остаться на этой</td></tr>
+      <tr><td><code>Alt + Enter</code></td><td>Выполнить + вставить новую ячейку снизу</td></tr>
+      <tr><td><code>Esc</code></td><td>Выйти из режима редактирования (command mode)</td></tr>
+      <tr><td><code>A</code> / <code>B</code> (в command mode)</td><td>Вставить ячейку выше / ниже</td></tr>
+      <tr><td><code>DD</code></td><td>Удалить ячейку</td></tr>
+      <tr><td><code>M</code> / <code>Y</code></td><td>Переключить в markdown / в code</td></tr>
+      <tr><td><code>Z</code></td><td>Undo удаления ячейки</td></tr>
+      <tr><td><code>Ctrl + /</code></td><td>Комментировать/раскомментировать строку</td></tr>
+      <tr><td><code>Tab</code></td><td>Автокомплит</td></tr>
+      <tr><td><code>Shift + Tab</code></td><td>Показать docstring функции под курсором</td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="percent"></i> Магические команды (magics)</div>
+<pre><code><span class="c-comment"># %% — cell magic, применяется к всей ячейке</span>
+<span class="c-comment"># % — line magic, к одной строке</span>
+
+%time         <span class="c-fn">expensive_function</span>()      <span class="c-comment"># замерить время одной операции</span>
+%%time                                    <span class="c-comment"># замерить время ВСЕЙ ячейки</span>
+<span class="c-fn">stuff</span>()
+<span class="c-fn">more_stuff</span>()
+
+%timeit <span class="c-fn">expensive</span>()                      <span class="c-comment"># усреднение по N запусков (для микро-бенчей)</span>
+
+%matplotlib inline                        <span class="c-comment"># графики inline (default в новых Jupyter)</span>
+%matplotlib widget                        <span class="c-comment"># интерактивные</span>
+
+%load_ext autoreload                      <span class="c-comment"># авто-перезагрузка своих модулей</span>
+%autoreload <span class="c-num">2</span>
+
+%who                                      <span class="c-comment"># список переменных в namespace</span>
+%whos                                     <span class="c-comment"># с типами и деталями</span>
+%reset                                    <span class="c-comment"># очистить весь namespace</span>
+
+<span class="c-comment"># Запуск shell-команд — префикс !</span>
+!ls -la
+!pip list
+!git status
+
+<span class="c-comment"># Присвоить результат shell в переменную</span>
+files = !ls *.csv</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="clipboard-list"></i> Типичный workflow ML-исследования</div>
+<pre><code><span class="c-comment"># Ячейка 1 — импорты (один раз)</span>
+<span class="c-key">import</span> pandas <span class="c-key">as</span> pd
+<span class="c-key">import</span> numpy <span class="c-key">as</span> np
+<span class="c-key">import</span> matplotlib.pyplot <span class="c-key">as</span> plt
+<span class="c-key">import</span> seaborn <span class="c-key">as</span> sns
+
+<span class="c-comment"># Ячейка 2 — загрузка данных (тяжёлая, один раз)</span>
+df = pd.<span class="c-fn">read_csv</span>(<span class="c-str">"train.csv"</span>)
+df.shape
+
+<span class="c-comment"># Ячейка 3 — беглый обзор</span>
+df.<span class="c-fn">head</span>()
+
+<span class="c-comment"># Ячейка 4 — распределения</span>
+df.<span class="c-fn">hist</span>(figsize=(<span class="c-num">12</span>, <span class="c-num">8</span>))
+plt.<span class="c-fn">tight_layout</span>()
+
+<span class="c-comment"># Ячейка 5 — корреляции</span>
+sns.<span class="c-fn">heatmap</span>(df.<span class="c-fn">corr</span>(numeric_only=<span class="c-key">True</span>), annot=<span class="c-key">True</span>)
+
+<span class="c-comment"># Ячейка 6 — feature engineering</span>
+df[<span class="c-str">"age_group"</span>] = pd.<span class="c-fn">cut</span>(df[<span class="c-str">"age"</span>], bins=[<span class="c-num">0</span>, <span class="c-num">18</span>, <span class="c-num">65</span>, <span class="c-num">100</span>])
+
+<span class="c-comment"># Ячейка 7 — обучение модели</span>
+<span class="c-key">from</span> sklearn.ensemble <span class="c-key">import</span> RandomForestClassifier
+model = <span class="c-fn">RandomForestClassifier</span>()
+model.<span class="c-fn">fit</span>(X_train, y_train)
+
+<span class="c-comment"># Ячейка 8 — оценка</span>
+score = model.<span class="c-fn">score</span>(X_test, y_test)
+<span class="c-fn">print</span>(<span class="c-fn">f</span><span class="c-str">"Accuracy: {score:.3f}"</span>)</code></pre>
+    <p class="text">Данные загружены один раз (ячейка 2). Экспериментируешь в ячейках 4-8 без повторной загрузки. Обучил модель раз — тестируешь на разных данных, не переобучая.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
+    <div class="pitfall"><strong>1. Скрытое состояние.</strong> Ячейки можно выполнять в любом порядке — переменная <code>x</code> может быть от ячейки 5, а не от ячейки 3. Заканчивая работу: <em>Kernel → Restart &amp; Run All</em> — проверить что notebook воспроизводим сверху вниз.</div>
+    <div class="pitfall"><strong>2. Утечка памяти при переменных.</strong> Тяжёлый DataFrame в переменной живёт до перезапуска kernel. <code>del df; import gc; gc.collect()</code> — если нужно освободить.</div>
+    <div class="pitfall"><strong>3. Git diff нечитаем.</strong> .ipynb — JSON с outputs. Diff в PR — ад. Решения: <code>nbstripout</code> (убирает outputs при commit), <code>jupytext</code> (парная .py-версия для diff), <code>ReviewNB</code>.</div>
+    <div class="pitfall"><strong>4. Notebook — не production.</strong> Для реального deploy — переноси код в <code>.py</code>-модули, notebook оставь для experiments. Не запускать <code>jupyter nbconvert --execute prod.ipynb</code> в cron — хрупко.</div>
+    <div class="pitfall"><strong>5. Долгие вычисления без прогресса.</strong> Для циклов используй <code>from tqdm.auto import tqdm; for x in tqdm(items):</code> — прогресс-бар.</div>
+    <div class="pitfall"><strong>6. Секреты в ноутбуке.</strong> API-ключ прямо в ячейке = утечёт в git. Читай из <code>.env</code>: <code>from dotenv import load_dotenv; load_dotenv(); os.getenv("API_KEY")</code>.</div>
+  </div>
+
+  <div class="remember-box">
+    <strong>Итог:</strong> для ML — Jupyter Notebook (или Colab) стандарт. Ячейки + <code>Shift+Enter</code>, magic-команды (<code>%time</code>, <code>%matplotlib inline</code>), <code>tqdm</code> для прогресса. Для production — переноси в модули. Git через <code>nbstripout</code> / <code>jupytext</code>.
+  </div>
+</div>
+
+<!-- ═══════════════════════════ ALGORITHMS ═══════════════════════════ -->
+<div id="sec-algorithms" class="section">
+  <div class="section-title">Алгоритмические паттерны на массивах</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="book-open"></i> Зачем это знать</div>
+    <p class="text">На собеседованиях (особенно ML/DS) и в тестах — <em>обязательный</em> навык. Задача: «найди пару чисел с суммой X», «максимальную подстроку без повторов», «скользящее окно из K чисел». Без знания паттернов пишешь O(n²) там, где нужен O(n).</p>
+
+    <div class="analogy">
+      <strong>Ключевая идея:</strong> вместо вложенных циклов держи <em>дополнительное состояние</em> (индекс, сумму, счётчик, словарь) и обрабатывай массив за <em>один</em> проход.
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="arrow-right"></i> 1. Проход с накоплением (running sum)</div>
+    <p class="text">Считать что-то по мере прохода: сумму, произведение, максимум, счётчик.</p>
+<pre><code><span class="c-comment"># Задача: сумма всех положительных</span>
+<span class="c-key">def</span> <span class="c-fn">sum_positive</span>(nums):
+    total = <span class="c-num">0</span>
+    <span class="c-key">for</span> n <span class="c-key">in</span> nums:
+        <span class="c-key">if</span> n &gt; <span class="c-num">0</span>:
+            total += n
+    <span class="c-key">return</span> total
+
+<span class="c-comment"># Задача: максимальная сумма подряд идущих (Kadane's algorithm)</span>
+<span class="c-key">def</span> <span class="c-fn">max_subarray_sum</span>(nums):
+    max_sum = current = nums[<span class="c-num">0</span>]
+    <span class="c-key">for</span> n <span class="c-key">in</span> nums[<span class="c-num">1</span>:]:
+        current = <span class="c-fn">max</span>(n, current + n)
+        max_sum = <span class="c-fn">max</span>(max_sum, current)
+    <span class="c-key">return</span> max_sum
+
+<span class="c-fn">max_subarray_sum</span>([-<span class="c-num">2</span>, <span class="c-num">1</span>, -<span class="c-num">3</span>, <span class="c-num">4</span>, -<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">1</span>, -<span class="c-num">5</span>, <span class="c-num">4</span>])   <span class="c-comment"># 6 (от [4,-1,2,1])</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare-arrows"></i> 2. Два указателя (two pointers)</div>
+    <p class="text">Два индекса, движущиеся навстречу или в одном направлении. Заменяет вложенный цикл O(n²) на O(n).</p>
+<pre><code><span class="c-comment"># Задача: есть ли в отсортированном массиве пара с суммой = target</span>
+<span class="c-key">def</span> <span class="c-fn">has_pair_sum</span>(nums, target):
+    left, right = <span class="c-num">0</span>, <span class="c-fn">len</span>(nums) - <span class="c-num">1</span>
+    <span class="c-key">while</span> left &lt; right:
+        s = nums[left] + nums[right]
+        <span class="c-key">if</span> s == target:
+            <span class="c-key">return</span> <span class="c-key">True</span>
+        <span class="c-key">elif</span> s &lt; target:
+            left += <span class="c-num">1</span>        <span class="c-comment"># нужна большая сумма → сдвиг вправо</span>
+        <span class="c-key">else</span>:
+            right -= <span class="c-num">1</span>       <span class="c-comment"># нужна меньшая → сдвиг влево</span>
+    <span class="c-key">return</span> <span class="c-key">False</span>
+
+<span class="c-fn">has_pair_sum</span>([<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">4</span>, <span class="c-num">7</span>, <span class="c-num">11</span>, <span class="c-num">15</span>], <span class="c-num">9</span>)     <span class="c-comment"># True (2 + 7)</span>
+
+<span class="c-comment"># Задача: удалить дубликаты in-place</span>
+<span class="c-key">def</span> <span class="c-fn">remove_duplicates</span>(nums):
+    <span class="c-key">if</span> <span class="c-key">not</span> nums:
+        <span class="c-key">return</span> <span class="c-num">0</span>
+    write = <span class="c-num">1</span>
+    <span class="c-key">for</span> read <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">1</span>, <span class="c-fn">len</span>(nums)):
+        <span class="c-key">if</span> nums[read] != nums[read - <span class="c-num">1</span>]:
+            nums[write] = nums[read]
+            write += <span class="c-num">1</span>
+    <span class="c-key">return</span> write
+
+<span class="c-comment"># Задача: разворот массива in-place</span>
+<span class="c-key">def</span> <span class="c-fn">reverse</span>(nums):
+    left, right = <span class="c-num">0</span>, <span class="c-fn">len</span>(nums) - <span class="c-num">1</span>
+    <span class="c-key">while</span> left &lt; right:
+        nums[left], nums[right] = nums[right], nums[left]
+        left += <span class="c-num">1</span>
+        right -= <span class="c-num">1</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="scan"></i> 3. Скользящее окно (sliding window)</div>
+    <p class="text">Два указателя движутся в <em>одном</em> направлении, поддерживая «окно» — подмассив/подстроку. Классика для «максимум/минимум/сумма подмассива длины K», «подстрока с условием».</p>
+<pre><code><span class="c-comment"># Задача: максимальная сумма подмассива длины K</span>
+<span class="c-key">def</span> <span class="c-fn">max_sum_window</span>(nums, k):
+    window = <span class="c-fn">sum</span>(nums[:k])
+    max_sum = window
+    <span class="c-key">for</span> i <span class="c-key">in</span> <span class="c-fn">range</span>(k, <span class="c-fn">len</span>(nums)):
+        window += nums[i] - nums[i - k]     <span class="c-comment"># сдвинули окно на 1</span>
+        max_sum = <span class="c-fn">max</span>(max_sum, window)
+    <span class="c-key">return</span> max_sum
+
+<span class="c-fn">max_sum_window</span>([<span class="c-num">1</span>, <span class="c-num">4</span>, <span class="c-num">2</span>, <span class="c-num">10</span>, <span class="c-num">23</span>, <span class="c-num">3</span>, <span class="c-num">1</span>, <span class="c-num">0</span>, <span class="c-num">20</span>], <span class="c-num">4</span>)   <span class="c-comment"># 39</span>
+
+<span class="c-comment"># Задача: длина максимальной подстроки без повторов</span>
+<span class="c-key">def</span> <span class="c-fn">longest_unique</span>(s):
+    seen = {}                       <span class="c-comment"># char → last index</span>
+    left = <span class="c-num">0</span>
+    best = <span class="c-num">0</span>
+    <span class="c-key">for</span> right, ch <span class="c-key">in</span> <span class="c-fn">enumerate</span>(s):
+        <span class="c-key">if</span> ch <span class="c-key">in</span> seen <span class="c-key">and</span> seen[ch] &gt;= left:
+            left = seen[ch] + <span class="c-num">1</span>     <span class="c-comment"># сдвинуть окно после дубликата</span>
+        seen[ch] = right
+        best = <span class="c-fn">max</span>(best, right - left + <span class="c-num">1</span>)
+    <span class="c-key">return</span> best
+
+<span class="c-fn">longest_unique</span>(<span class="c-str">"abcabcbb"</span>)         <span class="c-comment"># 3 (abc)</span>
+<span class="c-fn">longest_unique</span>(<span class="c-str">"pwwkew"</span>)           <span class="c-comment"># 3 (wke)</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="table-2"></i> 4. Prefix sum — предвычисление префиксных сумм</div>
+    <p class="text">Заранее считаем массив префиксных сумм. Потом сумма любого подмассива [i..j] — за O(1) вместо O(j-i).</p>
+<pre><code>nums = [<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>, <span class="c-num">4</span>, <span class="c-num">5</span>]
+prefix = [<span class="c-num">0</span>]                       <span class="c-comment"># prefix[i] = sum(nums[:i])</span>
+<span class="c-key">for</span> n <span class="c-key">in</span> nums:
+    prefix.<span class="c-fn">append</span>(prefix[-<span class="c-num">1</span>] + n)
+<span class="c-comment"># prefix = [0, 1, 3, 6, 10, 15]</span>
+
+<span class="c-comment"># Сумма nums[1..3] (индексы включительно) — за O(1)</span>
+prefix[<span class="c-num">4</span>] - prefix[<span class="c-num">1</span>]              <span class="c-comment"># 10 - 1 = 9 (2+3+4)</span>
+
+<span class="c-comment"># Полезно если запросов сумм МНОГО — предвычислили один раз</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="hash"></i> 5. Hash-map + один проход</div>
+    <p class="text">Классический паттерн «two sum» — за один проход через словарь. Меняет O(n²) на O(n) за счёт O(n) памяти.</p>
+<pre><code><span class="c-comment"># Задача: индексы двух чисел с суммой = target (LeetCode #1)</span>
+<span class="c-key">def</span> <span class="c-fn">two_sum</span>(nums, target):
+    seen = {}                       <span class="c-comment"># value → index</span>
+    <span class="c-key">for</span> i, n <span class="c-key">in</span> <span class="c-fn">enumerate</span>(nums):
+        need = target - n
+        <span class="c-key">if</span> need <span class="c-key">in</span> seen:
+            <span class="c-key">return</span> [seen[need], i]
+        seen[n] = i
+    <span class="c-key">return</span> []
+
+<span class="c-fn">two_sum</span>([<span class="c-num">2</span>, <span class="c-num">7</span>, <span class="c-num">11</span>, <span class="c-num">15</span>], <span class="c-num">9</span>)      <span class="c-comment"># [0, 1]</span>
+
+<span class="c-comment"># Задача: подсчёт частот</span>
+<span class="c-key">from</span> collections <span class="c-key">import</span> Counter
+freq = <span class="c-fn">Counter</span>([<span class="c-str">"a"</span>, <span class="c-str">"b"</span>, <span class="c-str">"a"</span>, <span class="c-str">"c"</span>, <span class="c-str">"a"</span>])
+<span class="c-comment"># Counter({'a': 3, 'b': 1, 'c': 1})</span>
+freq.<span class="c-fn">most_common</span>(<span class="c-num">2</span>)              <span class="c-comment"># [('a', 3), ('b', 1)]</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="split"></i> 6. Fast/slow pointers (заяц и черепаха)</div>
+    <p class="text">Два указателя с разной скоростью. Найти середину списка, обнаружить цикл в связном списке, найти дубликат в массиве.</p>
+<pre><code><span class="c-comment"># Задача: найти дубликат в массиве где числа 1..n, размер n+1</span>
+<span class="c-key">def</span> <span class="c-fn">find_duplicate</span>(nums):
+    slow = fast = nums[<span class="c-num">0</span>]
+    <span class="c-key">while</span> <span class="c-key">True</span>:
+        slow = nums[slow]
+        fast = nums[nums[fast]]
+        <span class="c-key">if</span> slow == fast:
+            <span class="c-key">break</span>
+    <span class="c-comment"># Найти вход в цикл</span>
+    slow = nums[<span class="c-num">0</span>]
+    <span class="c-key">while</span> slow != fast:
+        slow = nums[slow]
+        fast = nums[fast]
+    <span class="c-key">return</span> slow
+
+<span class="c-fn">find_duplicate</span>([<span class="c-num">1</span>, <span class="c-num">3</span>, <span class="c-num">4</span>, <span class="c-num">2</span>, <span class="c-num">2</span>])   <span class="c-comment"># 2</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="target"></i> 7. Бинарный поиск</div>
+<pre><code><span class="c-comment"># Индекс в отсортированном массиве</span>
+<span class="c-key">def</span> <span class="c-fn">bsearch</span>(nums, target):
+    left, right = <span class="c-num">0</span>, <span class="c-fn">len</span>(nums) - <span class="c-num">1</span>
+    <span class="c-key">while</span> left &lt;= right:
+        mid = (left + right) // <span class="c-num">2</span>
+        <span class="c-key">if</span> nums[mid] == target:
+            <span class="c-key">return</span> mid
+        <span class="c-key">elif</span> nums[mid] &lt; target:
+            left = mid + <span class="c-num">1</span>
+        <span class="c-key">else</span>:
+            right = mid - <span class="c-num">1</span>
+    <span class="c-key">return</span> -<span class="c-num">1</span>
+
+<span class="c-comment"># Готовое из stdlib — bisect</span>
+<span class="c-key">import</span> bisect
+bisect.<span class="c-fn">bisect_left</span>([<span class="c-num">1</span>, <span class="c-num">3</span>, <span class="c-num">5</span>, <span class="c-num">7</span>], <span class="c-num">3</span>)      <span class="c-comment"># 1 — куда вставить 3</span>
+bisect.<span class="c-fn">insort</span>(a, x)                             <span class="c-comment"># вставить с сохранением сортировки</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="check-square"></i> Cheatsheet: какой паттерн под какую задачу</div>
+    <table class="data-table">
+      <tr><th>Задача</th><th>Паттерн</th><th>Сложность</th></tr>
+      <tr><td>«Есть ли пара с суммой X» (сортированный)</td><td>Два указателя</td><td>O(n)</td></tr>
+      <tr><td>«Есть ли пара с суммой X» (произвольный)</td><td>Hash-map</td><td>O(n) time, O(n) memory</td></tr>
+      <tr><td>«Максимум/минимум подмассива длины K»</td><td>Sliding window</td><td>O(n)</td></tr>
+      <tr><td>«Подстрока/подмассив с условием»</td><td>Sliding window + hash</td><td>O(n)</td></tr>
+      <tr><td>«Сумма любого подмассива» (много запросов)</td><td>Prefix sum</td><td>O(n) prep + O(1) query</td></tr>
+      <tr><td>«Топ-K частых»</td><td><code>Counter.most_common</code></td><td>O(n log k)</td></tr>
+      <tr><td>«Индекс в сортированном»</td><td>Binary search / <code>bisect</code></td><td>O(log n)</td></tr>
+      <tr><td>«Цикл в связном списке / дубликат»</td><td>Fast/slow pointers</td><td>O(n) time, O(1) memory</td></tr>
+      <tr><td>«Максимальная сумма подряд»</td><td>Kadane (running max)</td><td>O(n)</td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="lightbulb"></i> Питоничные trick'и</div>
+<pre><code><span class="c-comment"># Обмен переменных без временной</span>
+a, b = b, a
+
+<span class="c-comment"># Развёртка сложных данных</span>
+first, *rest = [<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>, <span class="c-num">4</span>]     <span class="c-comment"># first=1, rest=[2,3,4]</span>
+first, *middle, last = <span class="c-fn">range</span>(<span class="c-num">10</span>)    <span class="c-comment"># first=0, middle=[1..8], last=9</span>
+
+<span class="c-comment"># Одна строка для условной вставки</span>
+result = [x <span class="c-key">if</span> x &gt; <span class="c-num">0</span> <span class="c-key">else</span> <span class="c-num">0</span> <span class="c-key">for</span> x <span class="c-key">in</span> nums]
+
+<span class="c-comment"># zip для параллельного обхода</span>
+<span class="c-key">for</span> a, b <span class="c-key">in</span> <span class="c-fn">zip</span>(nums, nums[<span class="c-num">1</span>:]):     <span class="c-comment"># пары соседей</span>
+    ...
+
+<span class="c-comment"># Обход в обратном</span>
+<span class="c-key">for</span> i <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-fn">len</span>(nums) - <span class="c-num">1</span>, -<span class="c-num">1</span>, -<span class="c-num">1</span>):
+    ...
+<span class="c-comment"># или</span>
+<span class="c-key">for</span> x <span class="c-key">in</span> <span class="c-fn">reversed</span>(nums):
+    ...
+
+<span class="c-comment"># Проверка на палиндром одной строкой</span>
+s == s[::-<span class="c-num">1</span>]
+
+<span class="c-comment"># Уникальные + отсортированные + сохранить порядок первых вхождений</span>
+<span class="c-key">from</span> collections <span class="c-key">import</span> OrderedDict
+<span class="c-fn">list</span>(<span class="c-fn">OrderedDict</span>.<span class="c-fn">fromkeys</span>([<span class="c-num">3</span>, <span class="c-num">1</span>, <span class="c-num">3</span>, <span class="c-num">2</span>, <span class="c-num">1</span>]))   <span class="c-comment"># [3, 1, 2]
+
+<span class="c-comment"># Инициализация словаря значениями по умолчанию</span>
+<span class="c-key">from</span> collections <span class="c-key">import</span> defaultdict
+counts = <span class="c-fn">defaultdict</span>(<span class="c-fn">int</span>)              <span class="c-comment"># без KeyError</span>
+groups = <span class="c-fn">defaultdict</span>(<span class="c-fn">list</span>)             <span class="c-comment"># группировка</span>
+<span class="c-key">for</span> item <span class="c-key">in</span> items:
+    groups[item.category].<span class="c-fn">append</span>(item)</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
+    <div class="pitfall"><strong>1. Слайс — копия.</strong> <code>nums[:]</code> создаёт новый список. Для больших массивов дорого. Итерируй через индексы или используй view (numpy).</div>
+    <div class="pitfall"><strong>2. Модификация массива при итерации.</strong> <code>for x in nums: nums.remove(x)</code> — пропустит элементы. Итерируй по копии либо строй новый список.</div>
+    <div class="pitfall"><strong>3. Целочисленное деление.</strong> <code>mid = (l + r) // 2</code> — <em>двойной</em> слэш. Одинарный <code>/</code> в Python 3 всегда float.</div>
+    <div class="pitfall"><strong>4. Переполнение — нет.</strong> Python int безграничен. В отличие от C/Java <code>(l + r) / 2</code> не переполнится. Всё равно пиши <code>l + (r - l) // 2</code> для переноса кода на другие языки.</div>
+    <div class="pitfall"><strong>5. Пустой массив.</strong> Всегда проверяй edge case: <code>if not nums: return</code>. Ошибки типа <code>max([])</code> = <code>ValueError</code>.</div>
+    <div class="pitfall"><strong>6. Комментировать сложность.</strong> На собесе в решении пиши <code># Time: O(n), Space: O(1)</code>. Показывает что понимаешь что написал.</div>
+  </div>
+
+  <div class="remember-box">
+    <strong>Итог:</strong> запомни 6 паттернов и когда каждый применять — покрывает 80% алгоритмических задач на массивах / строках. Ключевая мысль: <em>вместо вложенных циклов — одно дополнительное состояние (указатель, словарь, окно)</em>. Питонические trick'и (<code>zip</code>, <code>enumerate</code>, <code>Counter</code>, <code>defaultdict</code>, <code>bisect</code>) экономят строки и делают решение читаемее.
   </div>
 </div>
 
