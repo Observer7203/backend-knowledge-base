@@ -1010,29 +1010,137 @@ ages  = [<span class="c-num">30</span>, <span class="c-num">25</span>]
   </div>
 
   <div class="subsection">
-    <div class="subsection-title"><i data-lucide="expand"></i> <code>*args</code> и <code>**kwargs</code> — переменное число аргументов</div>
-<pre><code><span class="c-key">def</span> <span class="c-fn">sum_all</span>(*args):             <span class="c-comment"># args — tuple</span>
+    <div class="subsection-title"><i data-lucide="expand"></i> <code>*args</code> и <code>**kwargs</code> — «собирают» и «раскрывают»</div>
+
+    <div class="info-box primary">
+      <strong>Ключевая идея:</strong> <code>*</code> и <code>**</code> — <em>одна операция в две стороны</em>:
+      <ul style="margin:6px 0 0 20px">
+        <li>В <code>def</code> — <strong>СОБИРАЮТ</strong> много аргументов в один (много → одно)</li>
+        <li>При вызове — <strong>РАСКРЫВАЮТ</strong> одну коллекцию во много аргументов (одно → много)</li>
+      </ul>
+      Один <code>*</code> — работает с <em>позиционными</em>. Два <code>**</code> — с <em>именованными</em>.
+    </div>
+
+    <p class="text"><strong>Сторона 1: в <code>def</code> — собирают</strong></p>
+<pre><code><span class="c-comment"># *args — собрать все позиционные в кортеж</span>
+<span class="c-key">def</span> <span class="c-fn">sum_all</span>(*args):
     <span class="c-key">return</span> <span class="c-fn">sum</span>(args)
 
-<span class="c-fn">sum_all</span>(<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>, <span class="c-num">4</span>)            <span class="c-comment"># 10</span>
+<span class="c-fn">sum_all</span>(<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>, <span class="c-num">4</span>)
+<span class="c-comment"># sum_all(1, 2, 3, 4)</span>
+<span class="c-comment">#         └──┬───────┘</span>
+<span class="c-comment">#       *args собирает всё это</span>
+<span class="c-comment">#            ↓</span>
+<span class="c-comment">#        args = (1, 2, 3, 4)   ← кортеж</span>
 
-<span class="c-key">def</span> <span class="c-fn">make_dict</span>(**kwargs):        <span class="c-comment"># kwargs — dict</span>
+<span class="c-comment"># **kwargs — собрать все именованные в словарь</span>
+<span class="c-key">def</span> <span class="c-fn">make_dict</span>(**kwargs):
     <span class="c-key">return</span> kwargs
 
-<span class="c-fn">make_dict</span>(name=<span class="c-str">"Alice"</span>, age=<span class="c-num">30</span>)  <span class="c-comment"># {"name": "Alice", "age": 30}</span>
+<span class="c-fn">make_dict</span>(name=<span class="c-str">"Alice"</span>, age=<span class="c-num">30</span>)
+<span class="c-comment"># kwargs = {"name": "Alice", "age": 30}   ← словарь</span>
 
-<span class="c-comment"># Комбинация — всё сразу</span>
+<span class="c-comment"># Комбинация — обычная / позиционные / именованные</span>
 <span class="c-key">def</span> <span class="c-fn">log</span>(level, *messages, **extras):
     <span class="c-fn">print</span>(level, messages, extras)
 
 <span class="c-fn">log</span>(<span class="c-str">"INFO"</span>, <span class="c-str">"user"</span>, <span class="c-str">"created"</span>, user_id=<span class="c-num">42</span>, ip=<span class="c-str">"1.1.1.1"</span>)
+<span class="c-comment">#     ↓         └────┬─────┘   └──────┬───────────┘</span>
+<span class="c-comment">#   level      *messages           **extras</span>
+<span class="c-comment">#              ("user","created")  {"user_id":42,"ip":"1.1.1.1"}</span></code></pre>
 
-<span class="c-comment"># Unpacking при ВЫЗОВЕ — обратная операция</span>
-args = [<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>]
-<span class="c-fn">sum_all</span>(*args)                <span class="c-comment"># раскроет list в аргументы</span>
+    <p class="text"><strong>Сторона 2: при вызове — раскрывают</strong> (обратная операция)</p>
+<pre><code><span class="c-comment"># * при вызове — раскрыть список в позиционные</span>
+<span class="c-key">def</span> <span class="c-fn">add</span>(a, b, c):
+    <span class="c-key">return</span> a + b + c
+
+nums = [<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>]
+<span class="c-fn">add</span>(nums)                <span class="c-comment"># ❌ TypeError — передался ОДИН список</span>
+<span class="c-fn">add</span>(*nums)               <span class="c-comment"># ✅ = add(1, 2, 3) → 6</span>
+
+<span class="c-comment"># ** при вызове — раскрыть словарь в именованные</span>
+<span class="c-key">def</span> <span class="c-fn">create_user</span>(name, age): ...
 
 kwargs = {<span class="c-str">"name"</span>: <span class="c-str">"Alice"</span>, <span class="c-str">"age"</span>: <span class="c-num">30</span>}
-<span class="c-fn">create_user</span>(**kwargs)         <span class="c-comment"># раскроет dict в keyword args</span></code></pre>
+<span class="c-fn">create_user</span>(**kwargs)     <span class="c-comment"># = create_user(name="Alice", age=30)</span></code></pre>
+
+    <p class="text"><strong>Одна таблица — обе стороны:</strong></p>
+    <table class="data-table">
+      <tr><th>Место</th><th>Символ</th><th>Что делает</th><th>Направление</th></tr>
+      <tr><td>в <code>def</code></td><td><code>*args</code></td><td>СОБИРАЕТ позиционные → кортеж</td><td>много → один</td></tr>
+      <tr><td>в <code>def</code></td><td><code>**kwargs</code></td><td>СОБИРАЕТ именованные → словарь</td><td>много → один</td></tr>
+      <tr><td>при вызове</td><td><code>f(*list)</code></td><td>РАСКРЫВАЕТ список → позиционные</td><td>один → много</td></tr>
+      <tr><td>при вызове</td><td><code>f(**dict)</code></td><td>РАСКРЫВАЕТ словарь → именованные</td><td>один → много</td></tr>
+    </table>
+
+    <p class="text"><strong>Мнемоника:</strong> в <code>def</code> — «звёздочка <em>собирает</em>» (много в одно). При вызове — «звёздочка <em>раскрывает</em>» (одно в много). Это обратные операции одного механизма.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="rotate-cw" style="width:14px;height:14px"></i> Полный цикл — собери и раскрой</div>
+<pre><code><span class="c-key">def</span> <span class="c-fn">f</span>(*args, **kwargs):
+    <span class="c-fn">print</span>(<span class="c-str">"args   ="</span>, args, <span class="c-fn">type</span>(args).__name__)
+    <span class="c-fn">print</span>(<span class="c-str">"kwargs ="</span>, kwargs, <span class="c-fn">type</span>(kwargs).__name__)
+
+<span class="c-fn">f</span>(<span class="c-num">1</span>, <span class="c-num">2</span>, x=<span class="c-num">10</span>, y=<span class="c-num">20</span>)
+<span class="c-comment"># args   = (1, 2) tuple                     ← позиционные → КОРТЕЖ</span>
+<span class="c-comment"># kwargs = {'x': 10, 'y': 20} dict          ← именованные → СЛОВАРЬ</span>
+
+<span class="c-comment"># Раскрыть их и передать в другую функцию</span>
+<span class="c-key">def</span> <span class="c-fn">g</span>(a, b, x, y): <span class="c-key">return</span> a + b + x + y
+
+args = [<span class="c-num">1</span>, <span class="c-num">2</span>]
+kwargs = {<span class="c-str">"x"</span>: <span class="c-num">10</span>, <span class="c-str">"y"</span>: <span class="c-num">20</span>}
+<span class="c-fn">g</span>(*args, **kwargs)                        <span class="c-comment"># = g(1, 2, x=10, y=20) → 33</span></code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="microscope" style="width:14px;height:14px"></i> Разбор строки <code>print("args =", args, type(args).__name__)</code></div>
+    <p class="text">Три аргумента через запятую — <code>print</code> напечатает их через пробел:</p>
+    <ol class="numbered">
+      <li><code>"args ="</code> — обычная строка-подпись</li>
+      <li><code>args</code> — переменная (кортеж, собранный <code>*args</code>)</li>
+      <li><code>type(args).__name__</code> — <strong>цепочка</strong>:
+        <ul class="bullets">
+          <li><code>type(args)</code> → <code>&lt;class 'tuple'&gt;</code> (объект-класс)</li>
+          <li><code>.__name__</code> → <code>'tuple'</code> (имя класса как строка, без обёртки <code>&lt;class ...&gt;</code>)</li>
+        </ul>
+      </li>
+    </ol>
+    <p class="text">Итого — «напечатай подпись, значение и красивое имя типа». Часто используется в отладке.</p>
+
+<pre><code><span class="c-fn">type</span>(<span class="c-num">42</span>).__name__       <span class="c-comment"># 'int'</span>
+<span class="c-fn">type</span>(<span class="c-str">"hi"</span>).__name__     <span class="c-comment"># 'str'</span>
+<span class="c-fn">type</span>([<span class="c-num">1</span>, <span class="c-num">2</span>]).__name__   <span class="c-comment"># 'list'</span>
+<span class="c-fn">type</span>({<span class="c-str">"a"</span>: <span class="c-num">1</span>}).__name__ <span class="c-comment"># 'dict'</span>
+<span class="c-fn">type</span>(<span class="c-key">None</span>).__name__     <span class="c-comment"># 'NoneType'</span>
+<span class="c-fn">type</span>(<span class="c-key">True</span>).__name__     <span class="c-comment"># 'bool'</span></code></pre>
+
+    <p class="text">В f-string короче и читаемее:</p>
+<pre><code><span class="c-fn">print</span>(<span class="c-fn">f</span><span class="c-str">"args = {args} ({type(args).__name__})"</span>)
+<span class="c-comment"># args = (1, 2) (tuple)</span></code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hammer" style="width:14px;height:14px"></i> Главное применение — декораторы</div>
+    <p class="text">Декоратор не знает, какие аргументы принимает оборачиваемая функция. Ловит «всё» через <code>*args, **kwargs</code> и прокидывает дальше:</p>
+<pre><code><span class="c-key">def</span> <span class="c-fn">logged</span>(func):
+    <span class="c-key">def</span> <span class="c-fn">wrapper</span>(*args, **kwargs):     <span class="c-comment"># СОБИРАЕТ что угодно</span>
+        <span class="c-fn">print</span>(<span class="c-str">"вызов:"</span>, func.__name__)
+        <span class="c-key">return</span> <span class="c-fn">func</span>(*args, **kwargs)     <span class="c-comment"># РАСКРЫВАЕТ и передаёт</span>
+    <span class="c-key">return</span> wrapper
+
+<span class="c-key">@logged</span>
+<span class="c-key">def</span> <span class="c-fn">add</span>(a, b): <span class="c-key">return</span> a + b
+
+<span class="c-fn">add</span>(<span class="c-num">1</span>, <span class="c-num">2</span>)
+<span class="c-comment"># вызов: add</span>
+<span class="c-comment"># 3</span></code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="alert-octagon" style="width:14px;height:14px"></i> Ловушки</div>
+    <div class="pitfall"><strong>1. Порядок в <code>def</code> строго фиксирован:</strong> <code>def f(обычные, *args, keyword_only=X, **kwargs)</code>. Обратный порядок — <code>SyntaxError</code>.</div>
+    <div class="pitfall"><strong>2. Имена <code>args</code>/<code>kwargs</code> — просто конвенция.</strong> Работает и <code>def f(*nums, **opts)</code>. Важны звёздочки, не имена.</div>
+    <div class="pitfall"><strong>3. <code>*</code> для словаря раскроет КЛЮЧИ:</strong>
+<pre style="margin-top:6px"><code>d = {<span class="c-str">"a"</span>: <span class="c-num">1</span>, <span class="c-str">"b"</span>: <span class="c-num">2</span>}
+<span class="c-fn">f</span>(*d)      <span class="c-comment"># = f("a", "b") — раскрылись ключи, не значения!</span>
+<span class="c-fn">f</span>(**d)     <span class="c-comment"># = f(a=1, b=2) — вот так правильно</span></code></pre>
+    </div>
+    <div class="pitfall"><strong>4. <code>args</code> — кортеж (неизменяемый).</strong> <code>args[0] = 99</code> → <code>TypeError</code>. Хочешь менять — <code>list(args)</code>.</div>
+    <div class="pitfall"><strong>5. Не путать <code>*</code> в <code>def</code> и <code>*</code> при вызове.</strong> Один и тот же символ, но противоположные операции. Смотри по позиции: <code>def f(*args)</code> — собирает; <code>f(*[1,2,3])</code> — раскрывает.</div>
 
     <div class="pitfall"><strong>⚠ Mutable default argument — классический баг.</strong>
 <pre style="margin-top:6px"><code><span class="c-key">def</span> <span class="c-fn">add</span>(item, items=[]):    <span class="c-comment"># [] создаётся ОДИН раз при определении!</span>
