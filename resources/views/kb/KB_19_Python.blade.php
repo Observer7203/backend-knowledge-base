@@ -1795,6 +1795,202 @@ user = <span class="c-type">User</span>.<span class="c-fn">from_dict</span>({<sp
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="split-square-vertical"></i> Dunder: атрибут vs метод — принципиальная разница</div>
+    <p class="text">В Python есть <em>два вида</em> dunder-имён (double underscore, «двойное подчёркивание с двух сторон»). Их часто путают:</p>
+
+    <table class="data-table">
+      <tr><th></th><th>Dunder-атрибут (данные)</th><th>Dunder-метод (функция)</th></tr>
+      <tr><td>Что это</td><td>Просто значение</td><td>Функция, которую можно вызвать</td></tr>
+      <tr><td>Обращение</td><td><em>Без</em> скобок: <code>obj.__name__</code></td><td>Со скобками: <code>obj.__str__()</code></td></tr>
+      <tr><td>Примеры</td><td><code>__name__</code>, <code>__doc__</code>, <code>__dict__</code>, <code>__class__</code>, <code>__module__</code>, <code>__file__</code></td><td><code>__init__</code>, <code>__str__</code>, <code>__len__</code>, <code>__eq__</code>, <code>__add__</code>, <code>__call__</code></td></tr>
+      <tr><td>Кто устанавливает</td><td>Python — сам, читаешь готовое</td><td>Ты — <em>определяешь</em> в своём классе, Python вызывает</td></tr>
+      <tr><td>Проверка</td><td><code>callable(x.__name__)</code> → <code>False</code></td><td><code>callable(x.__len__)</code> → <code>True</code></td></tr>
+    </table>
+
+    <div class="info-box primary">
+      <strong>Ключевая мысль:</strong> «Dunder» — это соглашение об именах в Python: <code>__что-то__</code> зарезервировано для языка. Некоторые из них — <em>атрибуты-данные</em> (Python их устанавливает автоматически, ты просто читаешь). Другие — <em>методы-хуки</em>: ты пишешь их в своём классе, а Python вызывает <em>сам</em>, когда пользователь делает обычные операции (<code>+</code>, <code>len()</code>, <code>print</code>, <code>for</code>, <code>with</code>).
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="tag"></i> Dunder-атрибуты — «данные, которые даёт Python»</div>
+    <p class="text">Не методы, а <strong>готовая информация</strong> об объекте. Читаешь без скобок.</p>
+    <table class="data-table">
+      <tr><th>Атрибут</th><th>Что содержит</th><th>Пример</th></tr>
+      <tr><td><code>__name__</code></td><td>Имя объекта как строка</td><td><code>greet.__name__</code> → <code>'greet'</code></td></tr>
+      <tr><td><code>__doc__</code></td><td>Docstring (первая строка в """) функции/класса/модуля</td><td><code>str.__doc__</code></td></tr>
+      <tr><td><code>__dict__</code></td><td>Словарь атрибутов объекта</td><td><code>user.__dict__</code> → <code>{'name': 'Alice'}</code></td></tr>
+      <tr><td><code>__class__</code></td><td>Класс объекта (= <code>type(obj)</code>)</td><td><code>user.__class__.__name__</code> → <code>'User'</code></td></tr>
+      <tr><td><code>__module__</code></td><td>Модуль, где определён</td><td><code>User.__module__</code> → <code>'app.users'</code></td></tr>
+      <tr><td><code>__file__</code></td><td>Путь к файлу модуля</td><td><code>my_module.__file__</code></td></tr>
+      <tr><td><code>__all__</code></td><td>Список публичных имён при <code>from x import *</code></td><td>Задаётся вручную в модуле</td></tr>
+      <tr><td><code>__slots__</code></td><td>Разрешённые атрибуты (экономит память)</td><td>Задаётся вручную в классе</td></tr>
+      <tr><td><code>__annotations__</code></td><td>Type hints как dict</td><td><code>func.__annotations__</code> → <code>{'x': int, 'return': str}</code></td></tr>
+    </table>
+
+    <p class="text"><strong>Особый случай — <code>__name__</code> у разных объектов:</strong></p>
+    <table class="data-table">
+      <tr><th>У чего</th><th>Что содержит</th></tr>
+      <tr><td>Модуль (файл <code>.py</code>)</td><td>Имя модуля (<code>'mymodule'</code>), либо <code>'__main__'</code> при прямом запуске</td></tr>
+      <tr><td>Функция</td><td>Имя функции: <code>greet.__name__</code> → <code>'greet'</code></td></tr>
+      <tr><td>Класс</td><td>Имя класса: <code>User.__name__</code> → <code>'User'</code></td></tr>
+      <tr><td>Тип (через <code>type(...)</code>)</td><td>Имя типа: <code>type(42).__name__</code> → <code>'int'</code></td></tr>
+    </table>
+
+    <p class="text">Отсюда идиома:</p>
+<pre><code><span class="c-comment"># mymodule.py</span>
+<span class="c-key">def</span> <span class="c-fn">main</span>(): ...
+
+<span class="c-key">if</span> __name__ == <span class="c-str">"__main__"</span>:
+    <span class="c-fn">main</span>()      <span class="c-comment"># сработает только при `python mymodule.py`</span>
+                    <span class="c-comment"># НЕ при `import mymodule`</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="wand"></i> Dunder-методы — «хуки, которые вызывает Python»</div>
+    <p class="text">Ты <em>определяешь</em> в своём классе, Python <em>сам вызывает</em> когда пользователь делает обычную вещь. В этом и есть «магия».</p>
+
+    <p class="text"><strong>1. Жизненный цикл</strong></p>
+    <table class="data-table">
+      <tr><th>Метод</th><th>Когда вызывается</th></tr>
+      <tr><td><code>__init__(self, ...)</code></td><td>При создании: <code>User("Alice")</code></td></tr>
+      <tr><td><code>__new__(cls, ...)</code></td><td>Ещё раньше — создаёт сам объект. Редко нужен (immutable-типы, метаклассы)</td></tr>
+      <tr><td><code>__del__(self)</code></td><td>При удалении объекта GC. Ненадёжно, лучше использовать <code>with</code></td></tr>
+    </table>
+
+    <p class="text"><strong>2. Строковое представление</strong></p>
+    <table class="data-table">
+      <tr><th>Метод</th><th>Для чего</th></tr>
+      <tr><td><code>__str__(self)</code></td><td><code>str(x)</code>, <code>print(x)</code>, f-строка — «для людей»</td></tr>
+      <tr><td><code>__repr__(self)</code></td><td><code>repr(x)</code>, REPL, debug — «для программиста», желательно чтобы можно было <code>eval(repr(x))</code></td></tr>
+      <tr><td><code>__format__(self, spec)</code></td><td><code>f"{x:spec}"</code>, <code>format(x, spec)</code></td></tr>
+    </table>
+
+    <p class="text"><strong>3. Сравнение</strong></p>
+    <table class="data-table">
+      <tr><th>Метод</th><th>Оператор</th></tr>
+      <tr><td><code>__eq__</code> / <code>__ne__</code></td><td><code>==</code> / <code>!=</code></td></tr>
+      <tr><td><code>__lt__</code> / <code>__le__</code></td><td><code>&lt;</code> / <code>&lt;=</code></td></tr>
+      <tr><td><code>__gt__</code> / <code>__ge__</code></td><td><code>&gt;</code> / <code>&gt;=</code></td></tr>
+      <tr><td><code>__hash__(self)</code></td><td><code>hash(x)</code> — <strong>обязателен если <code>__eq__</code></strong>, иначе объект unhashable</td></tr>
+    </table>
+    <p class="text">Хочешь все 6 операторов сравнения сразу — <code>@functools.total_ordering</code> сгенерирует их из <code>__eq__</code> + <code>__lt__</code>.</p>
+
+    <p class="text"><strong>4. Арифметика</strong></p>
+    <table class="data-table">
+      <tr><th>Метод</th><th>Оператор</th></tr>
+      <tr><td><code>__add__</code></td><td><code>+</code></td></tr>
+      <tr><td><code>__sub__</code></td><td><code>-</code></td></tr>
+      <tr><td><code>__mul__</code></td><td><code>*</code></td></tr>
+      <tr><td><code>__truediv__</code></td><td><code>/</code></td></tr>
+      <tr><td><code>__floordiv__</code></td><td><code>//</code></td></tr>
+      <tr><td><code>__mod__</code></td><td><code>%</code></td></tr>
+      <tr><td><code>__pow__</code></td><td><code>**</code></td></tr>
+      <tr><td><code>__matmul__</code></td><td><code>@</code> (матрицы, NumPy/PyTorch)</td></tr>
+      <tr><td><code>__neg__</code>, <code>__pos__</code>, <code>__abs__</code></td><td><code>-x</code>, <code>+x</code>, <code>abs(x)</code></td></tr>
+      <tr><td><code>__iadd__</code>, <code>__isub__</code>, ...</td><td><code>+=</code>, <code>-=</code>, ... (in-place)</td></tr>
+    </table>
+
+    <p class="text"><strong>5. Контейнеры (list/dict-подобное поведение)</strong></p>
+    <table class="data-table">
+      <tr><th>Метод</th><th>Оператор</th></tr>
+      <tr><td><code>__len__(self)</code></td><td><code>len(x)</code></td></tr>
+      <tr><td><code>__getitem__(self, key)</code></td><td><code>x[key]</code></td></tr>
+      <tr><td><code>__setitem__(self, key, val)</code></td><td><code>x[key] = val</code></td></tr>
+      <tr><td><code>__delitem__(self, key)</code></td><td><code>del x[key]</code></td></tr>
+      <tr><td><code>__contains__(self, item)</code></td><td><code>item in x</code></td></tr>
+      <tr><td><code>__iter__(self)</code></td><td><code>for i in x:</code></td></tr>
+      <tr><td><code>__next__(self)</code></td><td><code>next(x)</code> — для iterator'ов</td></tr>
+      <tr><td><code>__reversed__(self)</code></td><td><code>reversed(x)</code></td></tr>
+    </table>
+
+    <p class="text"><strong>6. Context managers (<code>with</code>)</strong></p>
+    <table class="data-table">
+      <tr><th>Метод</th><th>Когда</th></tr>
+      <tr><td><code>__enter__(self)</code></td><td>Вход в <code>with</code>. Возвращаемое значение = <code>as var</code></td></tr>
+      <tr><td><code>__exit__(self, exc_type, exc_val, tb)</code></td><td>Выход, даже при exception</td></tr>
+    </table>
+
+    <p class="text"><strong>7. Другие важные хуки</strong></p>
+    <table class="data-table">
+      <tr><th>Метод</th><th>Оператор</th></tr>
+      <tr><td><code>__call__(self, ...)</code></td><td><code>obj(...)</code> — объект вызывается как функция</td></tr>
+      <tr><td><code>__bool__(self)</code></td><td><code>bool(x)</code>, <code>if x:</code></td></tr>
+      <tr><td><code>__getattr__(self, name)</code></td><td>Атрибут не найден — fallback</td></tr>
+      <tr><td><code>__setattr__(self, name, val)</code></td><td>При любом присваивании атрибута (осторожно с рекурсией!)</td></tr>
+      <tr><td><code>__getattribute__(self, name)</code></td><td>При <em>любом</em> доступе (даже к существующему) — очень опасно</td></tr>
+      <tr><td><code>__slots__ = ("x", "y")</code></td><td>Ограничение разрешённых атрибутов, экономия памяти</td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="hammer"></i> Полный пример — свой класс со всеми хуками</div>
+<pre><code><span class="c-key">class</span> <span class="c-type">Basket</span>:
+    <span class="c-key">def</span> <span class="c-fn">__init__</span>(<span class="c-key">self</span>, items=<span class="c-key">None</span>):        <span class="c-comment"># создание</span>
+        <span class="c-key">self</span>._items = items <span class="c-key">or</span> []
+
+    <span class="c-key">def</span> <span class="c-fn">__repr__</span>(<span class="c-key">self</span>):                    <span class="c-comment"># debug</span>
+        <span class="c-key">return</span> <span class="c-fn">f</span><span class="c-str">"Basket({self._items!r})"</span>
+
+    <span class="c-key">def</span> <span class="c-fn">__str__</span>(<span class="c-key">self</span>):                     <span class="c-comment"># print</span>
+        <span class="c-key">return</span> <span class="c-fn">f</span><span class="c-str">"Корзина: {len(self._items)} товаров"</span>
+
+    <span class="c-key">def</span> <span class="c-fn">__len__</span>(<span class="c-key">self</span>):                     <span class="c-comment"># len()</span>
+        <span class="c-key">return</span> <span class="c-fn">len</span>(<span class="c-key">self</span>._items)
+
+    <span class="c-key">def</span> <span class="c-fn">__getitem__</span>(<span class="c-key">self</span>, i):                <span class="c-comment"># basket[i]</span>
+        <span class="c-key">return</span> <span class="c-key">self</span>._items[i]
+
+    <span class="c-key">def</span> <span class="c-fn">__contains__</span>(<span class="c-key">self</span>, item):            <span class="c-comment"># item in basket</span>
+        <span class="c-key">return</span> item <span class="c-key">in</span> <span class="c-key">self</span>._items
+
+    <span class="c-key">def</span> <span class="c-fn">__iter__</span>(<span class="c-key">self</span>):                    <span class="c-comment"># for x in basket</span>
+        <span class="c-key">return</span> <span class="c-fn">iter</span>(<span class="c-key">self</span>._items)
+
+    <span class="c-key">def</span> <span class="c-fn">__bool__</span>(<span class="c-key">self</span>):                    <span class="c-comment"># if basket:</span>
+        <span class="c-key">return</span> <span class="c-fn">len</span>(<span class="c-key">self</span>._items) &gt; <span class="c-num">0</span>
+
+    <span class="c-key">def</span> <span class="c-fn">__add__</span>(<span class="c-key">self</span>, other):                <span class="c-comment"># basket1 + basket2</span>
+        <span class="c-key">return</span> <span class="c-type">Basket</span>(<span class="c-key">self</span>._items + other._items)
+
+    <span class="c-key">def</span> <span class="c-fn">__eq__</span>(<span class="c-key">self</span>, other):                 <span class="c-comment"># basket1 == basket2</span>
+        <span class="c-key">return</span> <span class="c-key">self</span>._items == other._items
+
+<span class="c-comment"># Использование — Python сам дёргает нужные хуки</span>
+b = <span class="c-type">Basket</span>([<span class="c-str">"хлеб"</span>, <span class="c-str">"молоко"</span>])
+<span class="c-fn">print</span>(b)                <span class="c-comment"># __str__      → "Корзина: 2 товаров"</span>
+<span class="c-fn">len</span>(b)                  <span class="c-comment"># __len__      → 2</span>
+b[<span class="c-num">0</span>]                    <span class="c-comment"># __getitem__  → "хлеб"</span>
+<span class="c-str">"молоко"</span> <span class="c-key">in</span> b            <span class="c-comment"># __contains__ → True</span>
+<span class="c-fn">bool</span>(b)                 <span class="c-comment"># __bool__     → True</span>
+<span class="c-key">for</span> item <span class="c-key">in</span> b:            <span class="c-comment"># __iter__</span>
+    <span class="c-fn">print</span>(item)
+
+<span class="c-comment"># Что даёт Python сам как атрибуты — без определения:</span>
+b.__class__.__name__     <span class="c-comment"># 'Basket'</span>
+b.__dict__               <span class="c-comment"># {'_items': ['хлеб', 'молоко']}</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="test-tube"></i> Как отличить атрибут от метода на практике</div>
+<pre><code>x = <span class="c-str">"hello"</span>
+
+<span class="c-fn">callable</span>(x.__str__)         <span class="c-comment"># True — метод, можно вызвать</span>
+<span class="c-fn">callable</span>(x.__class__)       <span class="c-comment"># True — класс сам callable (создаёт объект)</span>
+<span class="c-fn">callable</span>(x.__doc__)         <span class="c-comment"># False — атрибут (строка)</span>
+
+<span class="c-comment"># Ещё способ — type</span>
+<span class="c-fn">type</span>(x.__str__)             <span class="c-comment"># &lt;class 'method-wrapper'&gt;</span>
+<span class="c-fn">type</span>(x.__doc__)             <span class="c-comment"># &lt;class 'str'&gt;</span></code></pre>
+
+    <div class="info-box success">
+      <strong>Мнемоника:</strong> <em>Ты определяешь методы (хуки), Python даёт тебе атрибуты (готовые данные)</em>.
+      <br>Хуки — «Python дёрнет когда пользователь напишет <code>+</code>/<code>len()</code>/<code>print()</code>».
+      <br>Атрибуты — «Python сохранил информацию, ты её читаешь».
+    </div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="sparkles"></i> <code>@dataclass</code> — DTO без boilerplate (must-have Python 3.7+)</div>
 <pre><code><span class="c-key">from</span> dataclasses <span class="c-key">import</span> dataclass, field
 
