@@ -1235,6 +1235,104 @@ pairs = [(a, b) <span class="c-key">for</span> a <span class="c-key">in</span> <
       <tr><td><code>array_unique($items)</code></td><td><code>list({x for x in items})</code></td></tr>
     </table>
   </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="clipboard-check"></i> Практика: операции над списком словарей (must-know cheatsheet)</div>
+    <p class="text">Самый частый паттерн в реальном коде — обработка данных из БД, API-ответов, JSON. Держи как справочник:</p>
+<pre><code>users = [{<span class="c-str">"name"</span>: <span class="c-str">"Bob"</span>, <span class="c-str">"age"</span>: <span class="c-num">25</span>}, {<span class="c-str">"name"</span>: <span class="c-str">"Alice"</span>, <span class="c-str">"age"</span>: <span class="c-num">30</span>}]
+
+<span class="c-comment"># ─── Сортировка по полю ──────────────────────────────────────</span>
+<span class="c-fn">sorted</span>(users, key=<span class="c-key">lambda</span> u: u[<span class="c-str">"age"</span>])
+<span class="c-fn">sorted</span>(users, key=<span class="c-key">lambda</span> u: u[<span class="c-str">"age"</span>], reverse=<span class="c-key">True</span>)
+
+<span class="c-comment"># По нескольким полям (сначала age, потом name)</span>
+<span class="c-fn">sorted</span>(users, key=<span class="c-key">lambda</span> u: (u[<span class="c-str">"age"</span>], u[<span class="c-str">"name"</span>]))
+
+<span class="c-comment"># Через itemgetter — быстрее lambda</span>
+<span class="c-key">from</span> operator <span class="c-key">import</span> itemgetter
+<span class="c-fn">sorted</span>(users, key=<span class="c-fn">itemgetter</span>(<span class="c-str">"age"</span>))
+
+<span class="c-comment"># ─── Максимум / минимум ──────────────────────────────────────</span>
+<span class="c-fn">max</span>(users, key=<span class="c-key">lambda</span> u: u[<span class="c-str">"age"</span>])          <span class="c-comment"># {"name": "Alice", "age": 30}</span>
+<span class="c-fn">min</span>(users, key=<span class="c-key">lambda</span> u: u[<span class="c-str">"age"</span>])
+
+<span class="c-comment"># ─── Фильтр (питонично) ──────────────────────────────────────</span>
+[u <span class="c-key">for</span> u <span class="c-key">in</span> users <span class="c-key">if</span> u[<span class="c-str">"age"</span>] &gt;= <span class="c-num">18</span>]
+
+<span class="c-comment"># ─── Извлечь одно поле (аналог array_column PHP) ─────────────</span>
+[u[<span class="c-str">"name"</span>] <span class="c-key">for</span> u <span class="c-key">in</span> users]              <span class="c-comment"># ["Bob", "Alice"]</span>
+
+<span class="c-comment"># ─── Сумма / среднее по полю ─────────────────────────────────</span>
+<span class="c-fn">sum</span>(u[<span class="c-str">"age"</span>] <span class="c-key">for</span> u <span class="c-key">in</span> users)               <span class="c-comment"># 55</span>
+<span class="c-fn">sum</span>(u[<span class="c-str">"age"</span>] <span class="c-key">for</span> u <span class="c-key">in</span> users) / <span class="c-fn">len</span>(users)   <span class="c-comment"># 27.5</span>
+
+<span class="c-comment"># ─── Логика по коллекции ─────────────────────────────────────</span>
+<span class="c-fn">any</span>(u[<span class="c-str">"age"</span>] &gt; <span class="c-num">28</span> <span class="c-key">for</span> u <span class="c-key">in</span> users)           <span class="c-comment"># True — есть хоть один</span>
+<span class="c-fn">all</span>(u[<span class="c-str">"age"</span>] &gt;= <span class="c-num">18</span> <span class="c-key">for</span> u <span class="c-key">in</span> users)          <span class="c-comment"># True — все</span>
+
+<span class="c-comment"># ─── Найти первого по условию (безопасно) ────────────────────</span>
+<span class="c-fn">next</span>((u <span class="c-key">for</span> u <span class="c-key">in</span> users <span class="c-key">if</span> u[<span class="c-str">"name"</span>] == <span class="c-str">"Bob"</span>), <span class="c-key">None</span>)
+<span class="c-comment"># default None — если не нашли (иначе StopIteration)</span>
+
+<span class="c-comment"># ─── Индекс по ключу (dict из списка) ────────────────────────</span>
+users_by_name = {u[<span class="c-str">"name"</span>]: u <span class="c-key">for</span> u <span class="c-key">in</span> users}
+users_by_name[<span class="c-str">"Alice"</span>]                          <span class="c-comment"># O(1) доступ</span>
+
+<span class="c-comment"># ─── Группировка по полю ─────────────────────────────────────</span>
+<span class="c-key">from</span> collections <span class="c-key">import</span> defaultdict
+by_age = <span class="c-fn">defaultdict</span>(<span class="c-fn">list</span>)
+<span class="c-key">for</span> u <span class="c-key">in</span> users:
+    by_age[u[<span class="c-str">"age"</span>]].<span class="c-fn">append</span>(u[<span class="c-str">"name"</span>])
+<span class="c-comment"># {25: ["Bob"], 30: ["Alice"]}</span>
+
+<span class="c-comment"># itertools.groupby — работает ТОЛЬКО с отсортированными по ключу</span>
+<span class="c-key">from</span> itertools <span class="c-key">import</span> groupby
+sorted_users = <span class="c-fn">sorted</span>(users, key=<span class="c-fn">itemgetter</span>(<span class="c-str">"age"</span>))
+<span class="c-key">for</span> age, group <span class="c-key">in</span> <span class="c-fn">groupby</span>(sorted_users, key=<span class="c-fn">itemgetter</span>(<span class="c-str">"age"</span>)):
+    <span class="c-fn">print</span>(age, <span class="c-fn">list</span>(group))
+
+<span class="c-comment"># ─── Добавить / изменить поле у каждого ──────────────────────</span>
+<span class="c-key">for</span> u <span class="c-key">in</span> users:
+    u[<span class="c-str">"is_adult"</span>] = u[<span class="c-str">"age"</span>] &gt;= <span class="c-num">18</span>          <span class="c-comment"># мутация in-place</span>
+
+<span class="c-comment"># Или через comprehension — новый список из новых dict'ов</span>
+enriched = [{**u, <span class="c-str">"is_adult"</span>: u[<span class="c-str">"age"</span>] &gt;= <span class="c-num">18</span>} <span class="c-key">for</span> u <span class="c-key">in</span> users]
+
+<span class="c-comment"># ─── Удалить дубликаты по полю (сохранить первое) ────────────</span>
+seen = <span class="c-fn">set</span>()
+unique = []
+<span class="c-key">for</span> u <span class="c-key">in</span> users:
+    <span class="c-key">if</span> u[<span class="c-str">"name"</span>] <span class="c-key">not in</span> seen:
+        seen.<span class="c-fn">add</span>(u[<span class="c-str">"name"</span>])
+        unique.<span class="c-fn">append</span>(u)
+
+<span class="c-comment"># ─── Разбить на два по условию (partition) ───────────────────</span>
+adults = [u <span class="c-key">for</span> u <span class="c-key">in</span> users <span class="c-key">if</span> u[<span class="c-str">"age"</span>] &gt;= <span class="c-num">18</span>]
+minors = [u <span class="c-key">for</span> u <span class="c-key">in</span> users <span class="c-key">if</span> u[<span class="c-str">"age"</span>] &lt; <span class="c-num">18</span>]
+
+<span class="c-comment"># ─── Топ-N по полю ───────────────────────────────────────────</span>
+<span class="c-key">import</span> heapq
+top_3 = heapq.<span class="c-fn">nlargest</span>(<span class="c-num">3</span>, users, key=<span class="c-fn">itemgetter</span>(<span class="c-str">"age"</span>))
+bottom_3 = heapq.<span class="c-fn">nsmallest</span>(<span class="c-num">3</span>, users, key=<span class="c-fn">itemgetter</span>(<span class="c-str">"age"</span>))
+<span class="c-comment"># быстрее sorted(...)[:3] для больших списков</span>
+
+<span class="c-comment"># ─── Есть ли dict с таким полем ──────────────────────────────</span>
+<span class="c-str">"Bob"</span> <span class="c-key">in</span> {u[<span class="c-str">"name"</span>] <span class="c-key">for</span> u <span class="c-key">in</span> users}       <span class="c-comment"># True</span>
+
+<span class="c-comment"># ─── Слить два списка dict'ов по ключу ───────────────────────</span>
+orders = [{<span class="c-str">"user"</span>: <span class="c-str">"Bob"</span>, <span class="c-str">"total"</span>: <span class="c-num">100</span>}, {<span class="c-str">"user"</span>: <span class="c-str">"Alice"</span>, <span class="c-str">"total"</span>: <span class="c-num">200</span>}]
+merged = [{**u, **<span class="c-fn">next</span>((o <span class="c-key">for</span> o <span class="c-key">in</span> orders <span class="c-key">if</span> o[<span class="c-str">"user"</span>] == u[<span class="c-str">"name"</span>]), {})}
+          <span class="c-key">for</span> u <span class="c-key">in</span> users]
+<span class="c-comment"># Для больших данных — переходи на pandas.merge</span></code></pre>
+
+    <div class="info-box success">
+      <strong>Правило:</strong> для мелких списков (до ~10k) — обычные comprehensions хватает. Для больших датасетов и множества операций — <a href="#" onclick="showSection('pandas', document.querySelector('[onclick*=pandas]')); return false;">pandas</a> (векторизация быстрее). Для реальной БД — SQL через <code>GROUP BY</code>/<code>ORDER BY</code>/<code>JOIN</code>.
+    </div>
+
+    <div class="pitfall"><strong>⚠ Опечатка в ключе — молчит.</strong> <code>u["nmae"]</code> кинет <code>KeyError</code> при доступе. Безопаснее <code>u.get("name")</code> — вернёт <code>None</code>. Ещё безопаснее — <code>@dataclass</code> или <code>Pydantic</code>: IDE и mypy подсветят опечатку.</div>
+
+    <div class="pitfall"><strong>⚠ Мутация во время итерации.</strong> <code>for u in users: users.remove(u)</code> — пропустит элементы. Собирай новый список или итерируй по копии <code>users[:]</code>.</div>
+  </div>
 </div>
 
 <!-- ═══════════════════════════ BUILTINS ═══════════════════════════ -->
