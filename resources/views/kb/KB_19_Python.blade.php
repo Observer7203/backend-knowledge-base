@@ -1319,17 +1319,136 @@ domains = {email.<span class="c-fn">split</span>(<span class="c-str">"@"</span>)
   </div>
 
   <div class="subsection">
-    <div class="subsection-title"><i data-lucide="layers"></i> Вложенные comprehensions</div>
-<pre><code><span class="c-comment"># Уплощение matrix — 2D → 1D</span>
-matrix = [[<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>], [<span class="c-num">4</span>, <span class="c-num">5</span>, <span class="c-num">6</span>], [<span class="c-num">7</span>, <span class="c-num">8</span>, <span class="c-num">9</span>]]
+    <div class="subsection-title"><i data-lucide="layers"></i> Как читать comprehension с двумя <code>for</code></div>
+
+    <div class="info-box primary">
+      <strong>Главное правило:</strong> читай comprehension <em>слева направо</em>, как обычные вложенные циклы. <code>for</code> идут в том же порядке, что и в обычном коде: <strong>первый <code>for</code> — внешний, второй — внутренний</strong>. Никакой магии — просто одна строка вместо трёх.
+    </div>
+
+    <p class="text"><strong>Универсальная формула перевода:</strong></p>
+<pre><code><span class="c-comment"># Comprehension</span>
+[expr <span class="c-key">for</span> A <span class="c-key">in</span> X <span class="c-key">for</span> B <span class="c-key">in</span> Y <span class="c-key">if</span> cond]
+
+<span class="c-comment"># Эквивалент через обычный код</span>
+result = []
+<span class="c-key">for</span> A <span class="c-key">in</span> X:              <span class="c-comment"># ← первый for (внешний)</span>
+    <span class="c-key">for</span> B <span class="c-key">in</span> Y:          <span class="c-comment"># ← второй for (внутренний)</span>
+        <span class="c-key">if</span> cond:
+            result.<span class="c-fn">append</span>(expr)</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="scan" style="width:14px;height:14px"></i> Разбор: уплощение матрицы</div>
+<pre><code>matrix = [[<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>], [<span class="c-num">4</span>, <span class="c-num">5</span>, <span class="c-num">6</span>], [<span class="c-num">7</span>, <span class="c-num">8</span>, <span class="c-num">9</span>]]
 flat = [x <span class="c-key">for</span> row <span class="c-key">in</span> matrix <span class="c-key">for</span> x <span class="c-key">in</span> row]
 <span class="c-comment"># [1, 2, 3, 4, 5, 6, 7, 8, 9]</span>
-<span class="c-comment"># Читай как: for row in matrix: for x in row: yield x</span>
 
-<span class="c-comment"># Комбинации</span>
-pairs = [(a, b) <span class="c-key">for</span> a <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">3</span>) <span class="c-key">for</span> b <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">3</span>) <span class="c-key">if</span> a != b]</code></pre>
+<span class="c-comment"># Разворот в обычный цикл:</span>
+flat = []
+<span class="c-key">for</span> row <span class="c-key">in</span> matrix:        <span class="c-comment"># row = [1,2,3], потом [4,5,6], потом [7,8,9]</span>
+    <span class="c-key">for</span> x <span class="c-key">in</span> row:         <span class="c-comment"># x = 1, 2, 3   потом 4, 5, 6   потом 7, 8, 9</span>
+        flat.<span class="c-fn">append</span>(x)</code></pre>
 
-    <div class="pitfall"><strong>⚠ Три уровня вложенности — уже нечитабельно.</strong> Разбивай на обычные циклы или вспомогательные функции.</div>
+    <p class="text"><strong>«Прочитай вслух»</strong> — <code>[x for row in matrix for x in row]</code> → «возьми <em>x</em> — для каждой <em>row</em> в <em>matrix</em> — для каждого <em>x</em> в <em>row</em>». Порядок <code>for</code> = порядок вложенности.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="hash" style="width:14px;height:14px"></i> Разбор: уникальные теги из постов</div>
+<pre><code>unique_tags = {tag <span class="c-key">for</span> post <span class="c-key">in</span> posts <span class="c-key">for</span> tag <span class="c-key">in</span> post.tags}
+
+<span class="c-comment"># Развёрнуто:</span>
+unique_tags = <span class="c-fn">set</span>()
+<span class="c-key">for</span> post <span class="c-key">in</span> posts:            <span class="c-comment"># каждый пост</span>
+    <span class="c-key">for</span> tag <span class="c-key">in</span> post.tags:     <span class="c-comment"># каждый его тег</span>
+        unique_tags.<span class="c-fn">add</span>(tag)   <span class="c-comment"># set сам убирает дубли</span></code></pre>
+
+    <p class="text">Второй <code>for</code> использует <code>post</code>, объявленный в первом → порядок нельзя менять. <code>post.tags</code> — коллекция внутри объекта.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="target" style="width:14px;height:14px"></i> Разбор: домены email-ов (один <code>for</code>)</div>
+<pre><code>domains = {email.<span class="c-fn">split</span>(<span class="c-str">"@"</span>)[<span class="c-num">1</span>] <span class="c-key">for</span> email <span class="c-key">in</span> emails}
+
+<span class="c-comment"># Развёрнуто:</span>
+domains = <span class="c-fn">set</span>()
+<span class="c-key">for</span> email <span class="c-key">in</span> emails:
+    domains.<span class="c-fn">add</span>(email.<span class="c-fn">split</span>(<span class="c-str">"@"</span>)[<span class="c-num">1</span>])</code></pre>
+
+    <p class="text">Один <code>for</code> — потому что вход <em>плоский</em> (список строк). В прошлых примерах был двумерный (список списков / список объектов с вложенными коллекциями) — оттуда два <code>for</code>.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="git-merge" style="width:14px;height:14px"></i> Комбинации — независимые циклы (декартово произведение)</div>
+<pre><code>pairs = [(a, b) <span class="c-key">for</span> a <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">3</span>) <span class="c-key">for</span> b <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">3</span>) <span class="c-key">if</span> a != b]
+
+<span class="c-comment"># Развёрнуто:</span>
+pairs = []
+<span class="c-key">for</span> a <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">3</span>):        <span class="c-comment"># a = 0, 1, 2</span>
+    <span class="c-key">for</span> b <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">3</span>):    <span class="c-comment"># b = 0, 1, 2 (для КАЖДОГО a)</span>
+        <span class="c-key">if</span> a != b:
+            pairs.<span class="c-fn">append</span>((a, b))
+
+<span class="c-comment"># Результат:
+# a=0: (0,1) (0,2)
+# a=1: (1,0) (1,2)
+# a=2: (2,0) (2,1)
+# → 6 пар</span></code></pre>
+
+    <p class="text"><strong>Разница с уплощением:</strong></p>
+    <table class="data-table">
+      <tr><th>Тип</th><th>Пример</th><th>Второй <code>for</code></th></tr>
+      <tr><td>Уплощение (зависимые)</td><td><code>[x for row in matrix for x in row]</code></td><td>зависит от первого (<code>row</code> оттуда)</td></tr>
+      <tr><td>Комбинации (независимые)</td><td><code>[(a,b) for a in range(3) for b in range(3)]</code></td><td>независим — свой итератор</td></tr>
+    </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="eye" style="width:14px;height:14px"></i> Визуально: где какой цикл</div>
+    <div class="diagram">[x       for row in matrix       for x in row]
+ ↑         ↑                       ↑
+что       ОТКУДА берём            ОТКУДА берём
+собираем  первый уровень          второй уровень (зависит от row)</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="check-check" style="width:14px;height:14px"></i> Как быстро разобрать любой comprehension</div>
+    <ol class="numbered">
+      <li>Найди <em>первый</em> <code>for</code> — это внешний цикл.</li>
+      <li>Найди <em>второй</em> <code>for</code> — внутренний (вложен в первый).</li>
+      <li>Всё, что стоит <em>в начале</em> (до первого <code>for</code>) — что собираем.</li>
+      <li><code>if</code> в конце — фильтр (можно несколько).</li>
+      <li><code>if</code> после <code>for</code> применяется к <em>последнему</em> циклу.</li>
+    </ol>
+<pre><code>[ <span class="c-var">ВЫРАЖЕНИЕ</span> <span class="c-key">for</span> A <span class="c-key">in</span> X <span class="c-key">for</span> B <span class="c-key">in</span> Y <span class="c-key">if</span> <span class="c-var">УСЛОВИЕ</span> ]
+#     ↑         ↑          ↑          ↑
+#  собираем  внешний   внутренний  фильтр</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="alert-octagon" style="width:14px;height:14px"></i> Частые ошибки</div>
+    <div class="pitfall"><strong>1. Путать порядок <code>for</code>:</strong>
+<pre style="margin-top:6px"><code>[x <span class="c-key">for</span> row <span class="c-key">in</span> matrix <span class="c-key">for</span> x <span class="c-key">in</span> row]     <span class="c-comment"># ✅</span>
+[x <span class="c-key">for</span> x <span class="c-key">in</span> row <span class="c-key">for</span> row <span class="c-key">in</span> matrix]     <span class="c-comment"># ❌ NameError: row не объявлен</span></code></pre>
+    Первый <code>for</code> должен <em>объявить</em> переменную, которую использует второй.</div>
+
+    <div class="pitfall"><strong>2. Путать <code>if</code> в начале и в конце:</strong>
+<pre style="margin-top:6px"><code>[x <span class="c-key">if</span> x &gt; <span class="c-num">0</span> <span class="c-key">else</span> <span class="c-num">0</span> <span class="c-key">for</span> x <span class="c-key">in</span> nums]     <span class="c-comment"># ← тернарник (преобразование каждого)</span>
+[x <span class="c-key">for</span> x <span class="c-key">in</span> nums <span class="c-key">if</span> x &gt; <span class="c-num">0</span>]            <span class="c-comment"># ← фильтр (отбор)</span></code></pre>
+    <code>if</code> <em>после</em> <code>for</code> — фильтр. <code>if...else</code> <em>перед</em> <code>for</code> — часть выражения.</div>
+
+    <div class="pitfall"><strong>3. Три уровня вложенности — уже нечитабельно.</strong> <code>[x for a in A for b in a for c in b for d in c]</code> — 🤯 разверни в циклы или вспомогательные функции.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="list-checks" style="width:14px;height:14px"></i> Практические примеры</div>
+<pre><code><span class="c-comment"># Все слова из списка предложений (плоский)</span>
+[word <span class="c-key">for</span> sentence <span class="c-key">in</span> text <span class="c-key">for</span> word <span class="c-key">in</span> sentence.<span class="c-fn">split</span>()]
+
+<span class="c-comment"># Все числа из вложенного списка</span>
+[n <span class="c-key">for</span> group <span class="c-key">in</span> groups <span class="c-key">for</span> n <span class="c-key">in</span> group]
+
+<span class="c-comment"># Все теги из постов (уникальные)</span>
+{tag <span class="c-key">for</span> post <span class="c-key">in</span> posts <span class="c-key">for</span> tag <span class="c-key">in</span> post.tags}
+
+<span class="c-comment"># Все комбинации цвет × размер</span>
+[(c, s) <span class="c-key">for</span> c <span class="c-key">in</span> colors <span class="c-key">for</span> s <span class="c-key">in</span> sizes]
+
+<span class="c-comment"># Пары без повторов (i &lt; j)</span>
+[(a, b) <span class="c-key">for</span> a <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">5</span>) <span class="c-key">for</span> b <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">5</span>) <span class="c-key">if</span> a &lt; b]
+
+<span class="c-comment"># Все ключи из списка словарей</span>
+[k <span class="c-key">for</span> d <span class="c-key">in</span> dicts <span class="c-key">for</span> k <span class="c-key">in</span> d.<span class="c-fn">keys</span>()]
+
+<span class="c-comment"># Транспонировать матрицу</span>
+[[row[i] <span class="c-key">for</span> row <span class="c-key">in</span> matrix] <span class="c-key">for</span> i <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-fn">len</span>(matrix[<span class="c-num">0</span>]))]</code></pre>
+
+    <div class="remember-box">
+      <strong>Итог:</strong> два <code>for</code> = вложенные циклы, записанные в одну строку. Порядок <code>for</code> — как в обычном коде (первый внешний, второй внутренний). Второй <code>for</code> может <em>зависеть</em> от первого (уплощение) или быть <em>независимым</em> (комбинации). Если больше двух уровней — пиши обычными циклами, не мучай читателя.
+    </div>
   </div>
 
   <div class="subsection">
