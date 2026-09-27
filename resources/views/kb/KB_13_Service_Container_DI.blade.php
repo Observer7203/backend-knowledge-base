@@ -565,6 +565,137 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="zap"></i> Шпаргалка — 4 главных метода контейнера</div>
+    <p class="text">Быстрая сводка перед детальным разбором:</p>
+    <table class="data-table">
+      <tr><th>Метод</th><th>Что делает</th><th>Одной фразой</th></tr>
+      <tr><td><code>bind($abstract, $concrete)</code></td><td>Регистрирует привязку (transient)</td><td>каждый вызов — <em>новый</em> экземпляр</td></tr>
+      <tr><td><code>singleton($abstract, $concrete)</code></td><td>Регистрирует привязку-singleton</td><td>первый вызов создаёт, дальше — <em>тот же</em> экземпляр</td></tr>
+      <tr><td><code>make($abstract)</code></td><td>Создаёт экземпляр (разрешает зависимости рекурсивно)</td><td>«дай мне готовый объект по этому имени»</td></tr>
+      <tr><td><code>call($callback)</code></td><td>Вызывает метод/функцию, автоматически внедряя зависимости в аргументы</td><td>«вызови и подставь всё что нужно»</td></tr>
+    </table>
+
+    <p class="text"><strong>bind vs singleton — принципиально:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><code>bind</code> — контейнер хранит только <em>алгоритм создания</em> (замыкание/класс). Каждый <code>make()</code> запускает алгоритм заново.</li>
+      <li><code>singleton</code> — контейнер хранит и алгоритм, и <em>готовый объект</em> после первого разрешения. Второй <code>make()</code> вернёт кэшированный.</li>
+    </ul>
+
+    <div class="info-box primary">
+      <strong>Правило выбора:</strong> сервис <em>stateless</em> и/или дорогой в создании (подключение к БД, HTTP-клиент с pool, парсинг конфига) → <code>singleton</code>. Сервис <em>с состоянием</em>, которое не должно разделяться (билдер запроса, DTO-фабрика) → <code>bind</code>.
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="hammer"></i> Минимальный E2E-пример: PaymentGateway за 5 шагов</div>
+    <p class="text">Классическая история — почему <code>bind</code> нужен и как всё связывается вместе. Пять файлов, каждый один-два экрана.</p>
+<pre><code><span class="c-comment">// 1. Интерфейс — контракт (app/Contracts/PaymentGateway.php)</span>
+<span class="c-key">interface</span> <span class="c-type">PaymentGateway</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">charge</span>(<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-key">float</span> <span class="c-var">$amount</span>): <span class="c-key">void</span>;
+}
+
+<span class="c-comment">// 2. Реализация (app/Services/StripePayment.php)</span>
+<span class="c-key">class</span> <span class="c-type">StripePayment</span> <span class="c-key">implements</span> <span class="c-type">PaymentGateway</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">charge</span>(<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-key">float</span> <span class="c-var">$amount</span>): <span class="c-key">void</span> {
+        <span class="c-comment">// вызов Stripe API</span>
+    }
+}
+
+<span class="c-comment">// 3. Привязка в AppServiceProvider::register()</span>
+<span class="c-key">public function</span> <span class="c-fn">register</span>(): <span class="c-key">void</span>
+{
+    <span class="c-var">$this</span>-&gt;<span class="c-var">app</span>-&gt;<span class="c-fn">bind</span>(<span class="c-type">PaymentGateway</span>::<span class="c-key">class</span>, <span class="c-type">StripePayment</span>::<span class="c-key">class</span>);
+}
+
+<span class="c-comment">// 4. Action зависит от ИНТЕРФЕЙСА, а не от конкретной реализации</span>
+<span class="c-key">class</span> <span class="c-type">PlaceOrder</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">private</span> <span class="c-type">PaymentGateway</span> <span class="c-var">$payment</span>) {}
+
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-key">array</span> <span class="c-var">$items</span>): <span class="c-type">Order</span> { ... }
+}
+
+<span class="c-comment">// 5. Контроллер — Laravel сам собирает PlaceOrder со всеми зависимостями</span>
+<span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">StoreOrderRequest</span> <span class="c-var">$request</span>, <span class="c-type">PlaceOrder</span> <span class="c-var">$action</span>)
+{
+    <span class="c-comment">// $action уже готов, внутри — StripePayment (или что задано в bind)</span>
+    <span class="c-var">$order</span> = <span class="c-var">$action</span>-&gt;<span class="c-fn">handle</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">user</span>(), <span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>()[<span class="c-str">'items'</span>]);
+}</code></pre>
+
+    <p class="text"><strong>Что получили:</strong></p>
+    <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li><strong>Смена шлюза = 1 строка.</strong> Завтра переходим на YooKassa — реализуем <code>YooKassaPayment implements PaymentGateway</code>, меняем <code>bind(..., YooKassaPayment::class)</code>. Action не трогаем.</li>
+      <li><strong>Тесты без Stripe API.</strong> В тесте <code>app()-&gt;bind(PaymentGateway::class, FakePayment::class)</code> — Action получит fake.</li>
+      <li><strong>Никаких <code>new</code>.</strong> Action не знает, кто создаёт зависимости. Контейнер собирает всё сам через <a href="#" onclick="showSection('resolution', document.querySelector('[onclick*=resolution]')); return false;">autowiring</a>.</li>
+    </ul>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="code-2"></i> Внутреннее устройство (упрощённо)</div>
+    <p class="text">Контейнер <code>Illuminate\Container\Container</code> хранит три ключевых массива:</p>
+    <table class="data-table">
+      <tr><th>Свойство</th><th>Что содержит</th></tr>
+      <tr><td><code>$bindings</code></td><td>Массив <code>[abstract =&gt; ['concrete' =&gt; ..., 'shared' =&gt; bool]]</code> — алгоритм создания + флаг singleton</td></tr>
+      <tr><td><code>$instances</code></td><td>Уже созданные singleton-объекты (кэш)</td></tr>
+      <tr><td><code>$resolved</code></td><td>Флаги — какие абстрактные имена уже разрешались хоть раз</td></tr>
+      <tr><td><code>$contextual</code></td><td>Контекстные binding'и: «для класса A — этот, для B — другой»</td></tr>
+      <tr><td><code>$aliases</code></td><td>Псевдонимы: <code>'logger' =&gt; Logger::class</code></td></tr>
+    </table>
+
+    <p class="text"><strong>Упрощённая реализация <code>bind()</code>:</strong></p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">bind</span>(<span class="c-var">$abstract</span>, <span class="c-var">$concrete</span> = <span class="c-key">null</span>, <span class="c-var">$shared</span> = <span class="c-key">false</span>)
+{
+    <span class="c-var">$this</span>-&gt;<span class="c-var">bindings</span>[<span class="c-var">$abstract</span>] = <span class="c-fn">compact</span>(<span class="c-str">'concrete'</span>, <span class="c-var">'shared'</span>);
+}
+
+<span class="c-comment">// singleton — это просто bind с $shared = true</span>
+<span class="c-key">public function</span> <span class="c-fn">singleton</span>(<span class="c-var">$abstract</span>, <span class="c-var">$concrete</span> = <span class="c-key">null</span>)
+{
+    <span class="c-var">$this</span>-&gt;<span class="c-fn">bind</span>(<span class="c-var">$abstract</span>, <span class="c-var">$concrete</span>, <span class="c-key">true</span>);
+}</code></pre>
+
+    <p class="text"><strong>Схема <code>make()</code>:</strong></p>
+    <ol style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
+      <li>Есть в <code>$instances</code> (уже разрешённый singleton)? → отдать его.</li>
+      <li>Есть в <code>$contextual</code> для текущего родителя? → взять оттуда.</li>
+      <li>Есть в <code>$bindings</code>? → выполнить <code>concrete</code> (замыкание или new-класс).</li>
+      <li>Ничего нет? → рефлексия: посмотреть конструктор класса, рекурсивно разрешить каждый параметр, вызвать <code>new</code>.</li>
+      <li>Если <code>shared === true</code> — сохранить результат в <code>$instances</code>.</li>
+    </ol>
+
+    <div class="info-box success">
+      <strong>Мнемоника:</strong> <code>bind</code> кладёт <em>рецепт</em> в <code>$bindings</code>. <code>singleton</code> — тот же <code>bind</code> + флаг «сохрани результат». <code>make</code> — «найди рецепт, свари». <code>call</code> — «свари всё что нужно для аргументов этой функции и вызови её».
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="list-ordered"></i> Когда именно нужен <code>bind()</code> (а не autowiring)</div>
+    <p class="text">Laravel умеет создавать любой конкретный класс без явной регистрации — через autowiring по type hints. <code>bind()</code> нужен когда:</p>
+    <div class="card">
+      <h3>1. Интерфейс → реализация</h3>
+      <p class="text">Код зависит от <code>PaymentGateway</code>, но контейнер не знает какую конкретно реализацию подставить. <code>bind(PaymentGateway::class, Stripe::class)</code> — говорим явно.</p>
+    </div>
+    <div class="card">
+      <h3>2. Конструктор с примитивами</h3>
+      <p class="text">Класс требует <code>string $apiKey</code> или <code>int $timeout</code> — контейнер не может вывести их автоматически. Регистрируем через замыкание: <code>bind(X::class, fn ($app) =&gt; new X(config('services.x.key')))</code>.</p>
+    </div>
+    <div class="card">
+      <h3>3. Сложная фабричная логика</h3>
+      <p class="text">Создание требует чтения конфига, HTTP-запроса, инициализации соединения. Оборачиваем в замыкание.</p>
+    </div>
+    <div class="card">
+      <h3>4. Псевдонимы / короткие имена</h3>
+      <p class="text"><code>bind('logger', Logger::class)</code> — теперь <code>app('logger')</code> работает как сокращение полного имени класса.</p>
+    </div>
+    <div class="card">
+      <h3>5. Разные реализации в разных окружениях</h3>
+      <p class="text">В <code>AppServiceProvider::register()</code>: <code>if ($this-&gt;app-&gt;environment('testing')) $this-&gt;app-&gt;bind(Mailer::class, FakeMailer::class)</code>.</p>
+    </div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="list"></i> Методы регистрации</div>
 
     <div class="card">
