@@ -1001,7 +1001,7 @@ ul.bullets strong{color:var(--text);}
     <div class="card"><h3>Explicit binding</h3><p class="text">В <code>RouteServiceProvider::boot</code>: <code>Route::bind('user', fn ($value) =&gt; User::where(...)-&gt;firstOrFail())</code> — кастомная логика разрешения. Полезно для мультитенантности, scope'ов.</p></div>
     <div class="card"><h3>Scoped bindings</h3><p class="text"><code>Route::get('/users/{user}/posts/{post:slug}', ...)-&gt;scopeBindings()</code> — <code>Post</code> ищется в <em>контексте</em> <code>User</code> (через relation). Гарантирует, что <code>/users/1/posts/foo</code> не вернёт пост, принадлежащий другому пользователю.</p></div>
     <div class="card"><h3>Middleware на маршруте/группе</h3><p class="text">Маршрут получает middleware из своей группы (web/api), плюс заявленные через <code>-&gt;middleware('auth')</code>. Порядок: глобальные → групповые → маршрутные. Параметры middleware: <code>auth:sanctum</code>, <code>throttle:60,1</code>.</p></div>
-    <div class="card"><h3>Route caching</h3><p class="text"><code>php artisan route:cache</code> компилирует все маршруты в единый PHP-файл — кратно ускоряет startup. Не работает с closure-маршрутами (только контроллеры/инвокабельные классы).</p></div>
+    <div class="card"><h3>Route caching</h3><p class="text"><code>php artisan route:cache</code> компилирует все маршруты в единый PHP-файл <code>bootstrap/cache/routes-v7.php</code> — кратно ускоряет startup. Сброс — <code>route:clear</code>. Разбор — в подразделе «Кеширование маршрутов» ниже.</p></div>
     <div class="card"><h3>Signed routes</h3><p class="text"><code>URL::signedRoute('verify', ['user' =&gt; $id])</code> — URL с подписью, защищающей от подмены параметров. Используется для подтверждения email, magic-link login и пр. Middleware <code>signed</code> проверяет.</p></div>
   </div>
 
@@ -1086,7 +1086,7 @@ ul.bullets strong{color:var(--text);}
     <span class="c-key">return</span> <span class="c-str">'Hello, world!'</span>;
 });</code></pre>
       <div class="pitfall">
-        <strong>⚠ Не кешируются</strong> командой <code>php artisan route:cache</code> — closure нельзя сериализовать. В production их лучше избегать или заменять на контроллеры/invokable-классы.
+        <strong>Кешируются</strong> в актуальных версиях — замыкание сериализуется через <code>laravel/serializable-closure</code>. Широко распространённое «closure ломает route:cache» — устаревшее знание. Держать логику в контроллерах стоит ради читаемости и тестируемости, а не из-за кеша.
       </div>
     </div>
 
@@ -1105,7 +1105,7 @@ ul.bullets strong{color:var(--text);}
 <span class="c-comment">// routes/web.php</span>
 <span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/profile/{id}'</span>, <span class="c-type">ShowProfile</span>::<span class="c-key">class</span>);
 <span class="c-comment">// Laravel сам создаст экземпляр и вызовет __invoke()
-// ✓ Кешируется при route:cache (не содержит closure)</span></code></pre>
+// ✓ Кешируется при route:cache без сериализации — в кеш ложится имя класса</span></code></pre>
     </div>
 
     <div class="card">
@@ -1211,6 +1211,65 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="zap"></i> Кеширование маршрутов: route:cache</div>
+    <p class="text"><code>php artisan route:cache</code> — Artisan-команда, которая компилирует все маршруты приложения в один PHP-файл <code>bootstrap/cache/routes-v7.php</code>. Если файл существует, Laravel на старте подключает его напрямую и <strong>полностью пропускает</strong> регистрацию маршрутов.</p>
+
+    <div class="card">
+      <h3>Что происходит без кеша и с ним</h3>
+      <table class="data-table">
+        <tr><th></th><th>Без кеша — на каждый запрос</th><th>С кешем</th></tr>
+        <tr><td><strong>Файлы маршрутов</strong></td><td>Парсятся и исполняются <code>routes/web.php</code>, <code>api.php</code> и все подключённые</td><td>Не читаются вообще</td></tr>
+        <tr><td><strong>Объекты Route</strong></td><td>Создаются заново для каждого маршрута</td><td>Восстанавливаются из готового массива</td></tr>
+        <tr><td><strong>Регулярные выражения</strong></td><td>Компилируются для каждого URI с параметрами</td><td>Уже скомпилированы и сохранены</td></tr>
+        <tr><td><strong>Стоимость</strong></td><td>Растёт линейно с числом маршрутов</td><td>Одно подключение файла</td></tr>
+      </table>
+      <div class="info-box primary"><strong>Важное уточнение.</strong> Кеш экономит на <em>регистрации</em> маршрутов, а не на их выполнении. Контроллеры при регистрации не вызываются — инстанцируются они только у того маршрута, который совпал с URL. Поэтому эффект заметен на приложениях с сотнями маршрутов и почти незаметен на десятке.</div>
+    </div>
+
+    <div class="card">
+      <h3>Команды</h3>
+<pre><code><span class="c-comment"># Собрать кеш маршрутов</span>
+php artisan route:cache
+
+<span class="c-comment"># Сбросить кеш</span>
+php artisan route:clear
+
+<span class="c-comment"># Собрать сразу всё: config + events + routes + views</span>
+php artisan optimize
+
+<span class="c-comment"># Сбросить всё разом</span>
+php artisan optimize:clear
+
+<span class="c-comment"># Список маршрутов — работает и при активном кеше</span>
+php artisan route:list</code></pre>
+      <p><code>optimize</code> — это не отдельная магия, а последовательный запуск <code>config:cache</code>, <code>event:cache</code>, <code>route:cache</code> и <code>view:cache</code>. Стандартный шаг продакшен-деплоя.</p>
+    </div>
+
+    <div class="card">
+      <h3>Closure-маршруты и кеш</h3>
+      <p>Правило «замыкания нельзя закешировать» разошлось по статьям и до сих пор встречается в подготовительных материалах. В актуальных версиях Laravel оно <strong>неверно</strong>: замыкание сериализуется через пакет <code>laravel/serializable-closure</code>.</p>
+<pre><code><span class="c-comment">// Illuminate\Routing\Route::prepareForSerialization()</span>
+<span class="c-key">if</span> (<span class="c-key">$this</span>-&gt;action[<span class="c-str">'uses'</span>] <span class="c-key">instanceof</span> <span class="c-type">Closure</span>) {
+    <span class="c-key">$this</span>-&gt;action[<span class="c-str">'uses'</span>] = <span class="c-fn">serialize</span>(
+        <span class="c-type">SerializableClosure</span>::<span class="c-fn">unsigned</span>(<span class="c-key">$this</span>-&gt;action[<span class="c-str">'uses'</span>])
+    );
+}</code></pre>
+      <p>Раньше на этом месте бросалось исключение <code>LogicException: Unable to prepare route [...] for serialization. Uses Closure.</code> — сейчас его в коде нет. Держать логику в контроллерах по-прежнему стоит, но ради читаемости и тестируемости, а не из-за кеша.</p>
+    </div>
+
+    <div class="card">
+      <h3>Подводные камни</h3>
+      <div class="pitfall"><strong>Кеш не инвалидируется сам.</strong> Это слепок маршрутов на момент сборки. Добавил маршрут, выкатил, забыл пересобрать — на проде 404, а локально всё работает. <code>route:cache</code> обязан быть шагом деплоя, а не ручной операцией «когда вспомню».</div>
+      <div class="pitfall"><strong>Локально кеш держать не надо.</strong> Собранный на машине разработчика кеш приводит к тому, что правки в <code>routes/web.php</code> просто не видны. Симптом — «я поменял маршрут, а ничего не изменилось». Лечится <code>route:clear</code>.</div>
+      <div class="pitfall"><strong>Дубли имён маршрутов ломают сборку.</strong> Единственное исключение, которое <em>действительно</em> осталось: <code>LogicException: ... Another route has already been assigned name [...]</code> в <code>AbstractRouteCollection</code>. Без кеша дубль имени тихо переопределяет предыдущий маршрут и не проявляется — то есть <code>route:cache</code> заодно работает валидатором.</div>
+      <div class="pitfall"><strong>Динамика на этапе регистрации замерзает.</strong> Если маршруты строятся из БД или конфига прямо в <code>routes/*.php</code>, в кеш попадёт то состояние, которое было в момент сборки. Изменения в БД на маршруты больше не влияют до следующего <code>route:cache</code>.</div>
+      <div class="pitfall"><strong>Связка с <code>config:cache</code>.</strong> <code>optimize</code> собирает и конфиг тоже, а при закешированном конфиге <code>env()</code> вне файлов <code>config/*.php</code> возвращает <code>null</code>. Вызов <code>env()</code> внутри замыкания маршрута после <code>optimize</code> молча сломается.</div>
+    </div>
+
+    <div class="info-box success"><strong>Итог.</strong> <code>route:cache</code> — обязательный шаг деплоя и бесплатное ускорение старта на больших приложениях. В разработке — не включать. Аргумент про closure устарел; актуальные причины писать контроллеры — читаемость, тестируемость и переиспользование, а не возможность собрать кеш.</div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="table"></i> Итоговая таблица — коротко о каждом термине</div>
     <table class="data-table">
       <thead><tr><th>Термин</th><th>Суть</th></tr></thead>
@@ -1218,7 +1277,7 @@ ul.bullets strong{color:var(--text);}
         <tr><td><strong>Implicit binding</strong></td><td>Автоматический поиск модели по ID из URL. Laravel сам делает <code>Model::find()</code> и кидает 404 если нет.</td></tr>
         <tr><td><strong>Explicit binding</strong></td><td>Твоя кастомная логика поиска модели, регистрируется через <code>Route::bind()</code> в провайдере или <code>bootstrap/app.php</code>.</td></tr>
         <tr><td><strong>Scoped binding</strong></td><td>Implicit binding + дополнительное условие через отношение — чтобы нельзя было достать чужую запись. Активируется <code>-&gt;scopeBindings()</code>.</td></tr>
-        <tr><td><strong>Closure route</strong></td><td>Роут с обработчиком в виде анонимной функции. Просто, но не кешируется <code>route:cache</code>.</td></tr>
+        <tr><td><strong>Closure route</strong></td><td>Роут с обработчиком в виде анонимной функции. Удобно для health-check и редиректов; в актуальных версиях кешируется наравне с контроллерами.</td></tr>
         <tr><td><strong>Invokable class</strong></td><td>Класс с методом <code>__invoke()</code> — альтернатива контроллеру с одним действием. Кешируется.</td></tr>
         <tr><td><strong>Signed route</strong></td><td>URL с криптоподписью, защищает параметры от подмены. Проверяется middleware <code>signed</code>.</td></tr>
       </tbody>
@@ -1227,7 +1286,7 @@ ul.bullets strong{color:var(--text);}
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="alert-octagon"></i> Особые случаи</div>
-    <div class="pitfall"><strong>1. Closure-маршруты ломают <code>route:cache</code>.</strong> На проде с кешем закрытий routing не закешируется. Используйте контроллеры или invokable классы.</div>
+    <div class="pitfall"><strong>1. Забытый <code>route:cache</code> после деплоя.</strong> Кеш — слепок маршрутов на момент сборки. Выкатили новый маршрут и не пересобрали кеш — на проде 404, а локально всё работает. <code>route:cache</code> обязан быть шагом деплоя, а не ручной операцией.</div>
     <div class="pitfall"><strong>2. Конфликт маршрутов.</strong> <code>/users/{user}</code> и <code>/users/me</code> — первый поймает <code>me</code> как параметр. Объявляйте конкретные маршруты <strong>раньше</strong> параметризованных.</div>
     <div class="pitfall"><strong>3. Implicit binding без <code>findOrFail</code>.</strong> Если параметр маршрута не существует, Laravel вернёт 404 автоматически. Но если в кастомной логике написать <code>where(...)-&gt;first()</code> — может вернуть null. Используйте <code>firstOrFail</code>.</div>
     <div class="pitfall"><strong>4. Подписанные ссылки без таймаута.</strong> <code>signedRoute</code> без <code>temporarySignedRoute</code> валиден вечно. Для magic-link нужен короткий expiry (15 минут).</div>
