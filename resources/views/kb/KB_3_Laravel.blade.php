@@ -1270,6 +1270,71 @@ php artisan route:list</code></pre>
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="file-signature"></i> Signed Routes — как устроена подпись</div>
+    <p class="text">Подписанный URL — обычная ссылка, к которой добавлен параметр <code>signature</code>: HMAC-хеш от самого URL, посчитанный на секрете приложения. Любая правка параметров меняет хеш, и middleware <code>signed</code> отдаёт <strong>403</strong>.</p>
+
+    <div class="card">
+      <h3>Что именно подписывается</h3>
+      <p>Всё сводится к одной строке в <code>UrlGenerator::hasCorrectSignature()</code>:</p>
+<pre><code><span class="c-fn">hash_hmac</span>(<span class="c-str">'sha256'</span>, <span class="c-var">$original</span>, <span class="c-var">$key</span>)
+<span class="c-comment">// $original = полный URL с query-строкой, но БЕЗ параметра signature
+// $key      = APP_KEY приложения
+// сравнение — через hash_equals(), защита от timing-атак</span></code></pre>
+      <p>При генерации параметры проходят через <code>ksort()</code> — порядок в подписанной ссылке всегда алфавитный, поэтому подпись воспроизводима. Срок жизни — это не отдельный механизм, а обычный query-параметр <code>expires</code> с unix-таймстампом, который тоже попадает под подпись.</p>
+<pre><code><span class="c-comment">// Illuminate\Routing\Exceptions\InvalidSignatureException</span>
+<span class="c-key">parent</span>::<span class="c-fn">__construct</span>(<span class="c-num">403</span>, <span class="c-str">'Invalid signature.'</span>);</code></pre>
+    </div>
+
+    <div class="info-box danger"><strong>Подпись не делает ссылку одноразовой.</strong> Это самое частое заблуждение. Подписанный URL можно открыть сколько угодно раз, пока не истёк <code>expires</code>. Если ссылка ушла в переписку, попала в логи прокси или в историю браузера — она продолжит работать. Для настоящей одноразовости нужен собственный признак использования: токен в БД, смена состояния модели или запись в кеш. Верификация email у Laravel работает не потому, что ссылка одноразовая, а потому что повторный вызов <code>markEmailAsVerified()</code> идемпотентен.</div>
+
+    <div class="card">
+      <h3>Абсолютная и относительная подпись</h3>
+      <p>По умолчанию подписывается <strong>абсолютный</strong> URL — вместе со схемой и доменом. Значит подпись развалится, если ссылка сгенерирована на одном хосте, а проверяется на другом: воркер с другим <code>APP_URL</code>, балансировщик, подменяющий схему на <code>http</code>, смена домена.</p>
+<pre><code><span class="c-comment">// Относительная подпись — домен и схема в хеш не входят</span>
+<span class="c-var">$url</span> = <span class="c-type">URL</span>::<span class="c-fn">signedRoute</span>(<span class="c-str">'verify'</span>, [<span class="c-str">'user'</span> =&gt; <span class="c-num">1</span>], <span class="c-key">null</span>, <span class="c-key">false</span>);
+
+<span class="c-comment">// И проверять её нужно соответствующим вариантом middleware</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/verify'</span>, <span class="c-type">VerifyController</span>::<span class="c-key">class</span>)
+    -&gt;<span class="c-fn">middleware</span>(<span class="c-str">'signed:relative'</span>);
+
+<span class="c-comment">// Вручную:</span>
+<span class="c-var">$request</span>-&gt;<span class="c-fn">hasValidRelativeSignature</span>();</code></pre>
+      <p>Несовпадение режимов — типичная причина «у меня локально работает, а на проде 403».</p>
+    </div>
+
+    <div class="card">
+      <h3>Лишние query-параметры ломают подпись</h3>
+      <p>Хеш считается от всей query-строки. Почтовые сервисы и трекеры любят дописывать своё: <code>utm_source</code>, параметры Outlook SafeLinks, метки рассылок. Любая такая добавка делает подпись невалидной.</p>
+<pre><code><span class="c-comment">// Игнорировать конкретные параметры при проверке</span>
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Routing</span>\<span class="c-type">Middleware</span>\<span class="c-type">ValidateSignature</span>;
+
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/verify'</span>, <span class="c-type">VerifyController</span>::<span class="c-key">class</span>)
+    -&gt;<span class="c-fn">middleware</span>(<span class="c-type">ValidateSignature</span>::<span class="c-fn">absolute</span>([<span class="c-str">'utm_source'</span>, <span class="c-str">'utm_campaign'</span>]));
+
+<span class="c-comment">// Относительный вариант с тем же игнором</span>
+<span class="c-type">ValidateSignature</span>::<span class="c-fn">relative</span>([<span class="c-str">'utm_source'</span>]);</code></pre>
+      <p>Игнорируемые параметры выбрасываются из строки до подсчёта хеша. Добавлять в этот список стоит только то, что не влияет на логику: подпись их больше не защищает.</p>
+    </div>
+
+    <div class="card">
+      <h3>Ротация APP_KEY</h3>
+      <p>Подпись завязана на <code>APP_KEY</code>. Смена ключа мгновенно обесценивает <strong>все</strong> выданные ссылки — незавершённые верификации email и висящие magic-link'и перестанут открываться. Поэтому проверка идёт по списку ключей:</p>
+<pre><code><span class="c-comment">// .env</span>
+APP_KEY=base64:новый...
+APP_PREVIOUS_KEYS=base64:старый...
+
+<span class="c-comment">// Генерация — всегда текущим ключом ($key[0])
+// Проверка — перебором по всем ключам, пока один не совпадёт</span></code></pre>
+    </div>
+
+    <div class="pitfall"><strong>Имена <code>signature</code> и <code>expires</code> зарезервированы.</strong> Попытка передать свой параметр с таким именем роняет генерацию: <code>InvalidArgumentException: "Signature" is a reserved parameter when generating signed routes.</code> Проверка стоит в <code>ensureSignedRouteParametersAreNotReserved()</code>.</div>
+
+    <div class="pitfall"><strong>Подпись подтверждает целостность, а не право доступа.</strong> Валидная подпись означает лишь «параметры те же, что мы выдали». Она не отвечает на вопрос, тот ли человек открыл ссылку. Если ссылка утекла — ей воспользуется любой. Для чувствительных действий подпись комбинируют с аутентификацией или коротким <code>expires</code>.</div>
+
+    <div class="pitfall"><strong>Ссылка без <code>expires</code> живёт вечно.</strong> <code>signatureHasNotExpired()</code> возвращает <code>true</code>, если параметра <code>expires</code> просто нет. То есть <code>signedRoute()</code> без срока — бессрочный пропуск. Для писем и magic-link всегда <code>temporarySignedRoute()</code>.</div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="table"></i> Итоговая таблица — коротко о каждом термине</div>
     <table class="data-table">
       <thead><tr><th>Термин</th><th>Суть</th></tr></thead>
