@@ -137,6 +137,7 @@ ul.bullets strong{color:var(--text);}
   <a class="nav-item" onclick="showSection('ddd',this)"><i data-lucide="boxes"></i> DDD тактика</a>
   <a class="nav-item" onclick="showSection('clean',this)"><i data-lucide="cuboid"></i> Clean / Hexagonal</a>
   <a class="nav-item" onclick="showSection('outbox',this)"><i data-lucide="mailbox"></i> Transactional Outbox</a>
+  <a class="nav-item" onclick="showSection('tenancy',this)"><i data-lucide="building-2"></i> Мультитенантность</a>
 
   <div class="nav-group-label">Применение</div>
   <a class="nav-item" onclick="showSection('practice',this)"><i data-lucide="hammer"></i> Рефакторинг bad→good</a>
@@ -918,6 +919,212 @@ ul.bullets strong{color:var(--text);}
     <div class="info-box success">
       Transactional Outbox — стандартный способ надёжной коммуникации между сервисами <em>без</em> распределённых транзакций. Гарантирует, что событие уйдёт тогда и только тогда, когда бизнес-данные закоммичены. Плата: at-least-once вместо exactly-once (лечится идемпотентностью consumer'ов), задержка ~1 сек, нужен relay-процесс и таблица <code>outbox</code>. На типовом Laravel — реализуется за один вечер, но экономит недели отладки «где мои события».
     </div>
+  </div>
+</div>
+
+<div id="sec-tenancy" class="section">
+  <div class="section-title">Мультитенантность (Multi-tenancy)</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="building-2"></i> Определение</div>
+    <p class="text"><strong>Мультитенантность</strong> — архитектура, при которой одно развёрнутое приложение обслуживает несколько независимых клиентов (<em>тенантов</em>), а данные каждого изолированы от остальных. Один код, одна инфраструктура, N клиентов, которые друг о друге не знают.</p>
+    <p class="text">Типичные примеры: SaaS-сервис, где каждая компания-клиент видит только свои данные; платформа интернет-магазинов, где в одной базе живут десятки брендов; биллинговая система, обслуживающая сотни организаций.</p>
+
+    <div class="info-box primary"><strong>Ключевая мысль:</strong> мультитенантность — это <em>граница безопасности</em>, а не способ разложить данные по папкам. Всё проектирование крутится вокруг одного вопроса: «может ли тенант A при любом стечении обстоятельств увидеть данные тенанта B?»</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="split"></i> Чем мультитенантность НЕ является</div>
+    <p class="text">Самая частая путаница: мультитенантность отождествляют с привязкой пользователей к организациям (компания → филиал → отдел). Это <strong>два разных слоя</strong>, которые решают разные задачи.</p>
+
+    <table class="data-table">
+      <tr><th></th><th>Мультитенантность</th><th>Оргструктура внутри клиента</th></tr>
+      <tr><td><strong>Задача</strong></td><td>Изоляция данных независимых клиентов</td><td>Моделирование структуры одного клиента</td></tr>
+      <tr><td><strong>Природа</strong></td><td>Инфраструктурный слой, граница безопасности</td><td>Предметная область + авторизация</td></tr>
+      <tr><td><strong>Где живёт</strong></td><td>Global scope, middleware, выбор соединения</td><td>Обычные таблицы, связи, Policy / Gate</td></tr>
+      <tr><td><strong>Как работает</strong></td><td>Неявно и всегда — разработчик о ней не думает</td><td>Явно — проверка пишется руками в каждом месте</td></tr>
+      <tr><td><strong>Цена ошибки</strong></td><td>Утечка данных чужой компании, нарушение GDPR</td><td>Сотрудник увидел лишний отчёт внутри своей же компании</td></tr>
+      <tr><td><strong>Главный вопрос</strong></td><td>«Чьи это данные?»</td><td>«Что этому сотруднику разрешено?»</td></tr>
+    </table>
+
+    <div class="info-box warning"><strong>Как отличить за 10 секунд.</strong> Задай два вопроса:<br>
+    1. «Может ли пользователь легально переключиться между этими сущностями?» Сотрудник переходит из отдела продаж в маркетинг — это <em>оргструктура</em>. ООО «Ромашка» никогда не станет ООО «Лютик» — это <em>тенанты</em>.<br>
+    2. «Должен ли я удалить все данные одной сущности одной операцией при расторжении договора?» Если да — это тенант.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="book-marked"></i> Терминология</div>
+    <table class="data-table">
+      <tr><th>Термин</th><th>Значение</th></tr>
+      <tr><td><strong>Tenant</strong></td><td>Арендатор: клиент, организация, аккаунт — единица изоляции</td></tr>
+      <tr><td><strong>Multi-tenancy</strong></td><td>Архитектура с разделением данных между тенантами в общем приложении</td></tr>
+      <tr><td><strong>Single-tenancy</strong></td><td>Отдельное развёртывание под каждого клиента: максимальная изоляция, максимальная стоимость эксплуатации</td></tr>
+      <tr><td><strong>Tenant isolation</strong></td><td>Степень изоляции: общая БД → отдельные схемы → отдельные БД</td></tr>
+      <tr><td><strong>Tenant context</strong></td><td>Текущий тенант в рамках запроса или job'а</td></tr>
+      <tr><td><strong>Tenant provisioning</strong></td><td>Создание нового тенанта: миграции, сиды, служебные записи</td></tr>
+      <tr><td><strong>Noisy neighbor</strong></td><td>Тенант, выжирающий общие ресурсы и роняющий производительность остальным</td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layers-3"></i> Три уровня изоляции</div>
+    <p class="text">Выбор уровня — центральное архитектурное решение. Это компромисс между стоимостью эксплуатации и жёсткостью границы.</p>
+
+    <table class="data-table">
+      <tr><th>Уровень</th><th>Как устроено</th><th>Плюсы</th><th>Минусы</th></tr>
+      <tr><td><strong>Колонка <code>tenant_id</code></strong><br><em>shared database</em></td><td>Все тенанты в одних таблицах, фильтрация по колонке</td><td>Дёшево, одна миграция на всех, простые агрегаты по всей платформе</td><td>Одна забытая фильтрация = утечка. Общие индексы растут. Шумный сосед бьёт по всем</td></tr>
+      <tr><td><strong>Схема БД</strong><br><em>schema-per-tenant</em></td><td>Своя schema в одной СУБД (PostgreSQL), переключение <code>search_path</code></td><td>Данные физически разделены, бэкап на тенанта</td><td>Миграции × N схем. Тысячи схем тормозят каталог СУБД</td></tr>
+      <tr><td><strong>Отдельная БД</strong><br><em>database-per-tenant</em></td><td>Своё соединение на тенанта</td><td>Жёсткая граница, можно развезти по серверам, изоляция нагрузки</td><td>Дорого. Миграции, бэкапы, мониторинг — кратно сложнее. Кросс-тенантная аналитика превращается в ETL</td></tr>
+    </table>
+
+    <div class="info-box success"><strong>Практическое правило.</strong> Начинай с <code>tenant_id</code> — этот вариант закрывает большинство B2B SaaS. Переходи на отдельные БД, когда этого требует регуляторика (HIPAA, банковский сектор, требование хранить данные клиента в его юрисдикции) или когда один крупный клиент по нагрузке сопоставим со всеми остальными.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="network"></i> Оба слоя вместе: схема данных</div>
+    <p class="text">На практике тенант и оргструктура сосуществуют: тенант — это клиент, а внутри него разворачивается иерархия подразделений.</p>
+
+    <div class="diagram">tenants                    ← клиент платформы (ООО «Ромашка»)
+   │
+   ├── users               ← сотрудники, tenant_id обязателен
+   │
+   └── organizations       ← структура клиента, tenant_id обязателен
+         │
+         ├── «Головной офис»      type = company
+         │     ├── «Филиал Алматы»   type = branch
+         │     │     └── «Отдел продаж»  type = department
+         │     └── «Филиал Астана»   type = branch
+         │
+         └── связь с users через organization_user (many-to-many)</div>
+
+<pre><code><span class="c-key">CREATE TABLE</span> <span class="c-type">tenants</span> (
+    <span class="c-var">id</span>          <span class="c-type">BIGSERIAL PRIMARY KEY</span>,
+    <span class="c-var">name</span>        <span class="c-type">VARCHAR(255)</span> <span class="c-key">NOT NULL</span>,
+    <span class="c-var">slug</span>        <span class="c-type">VARCHAR(64)</span>  <span class="c-key">NOT NULL UNIQUE</span>   <span class="c-comment">-- поддомен: romashka.app.com</span>
+);
+
+<span class="c-key">CREATE TABLE</span> <span class="c-type">organizations</span> (
+    <span class="c-var">id</span>          <span class="c-type">BIGSERIAL PRIMARY KEY</span>,
+    <span class="c-var">tenant_id</span>   <span class="c-type">BIGINT</span>       <span class="c-key">NOT NULL REFERENCES</span> tenants(id),
+    <span class="c-var">parent_id</span>   <span class="c-type">BIGINT</span>       <span class="c-key">NULL REFERENCES</span> organizations(id),
+    <span class="c-var">type</span>        <span class="c-type">VARCHAR(32)</span>  <span class="c-key">NOT NULL</span>,   <span class="c-comment">-- company | branch | department</span>
+    <span class="c-var">name</span>        <span class="c-type">VARCHAR(255)</span> <span class="c-key">NOT NULL</span>,
+    <span class="c-var">path</span>        <span class="c-type">VARCHAR(255)</span> <span class="c-key">NOT NULL</span>    <span class="c-comment">-- '1/5/12' — materialized path</span>
+);
+
+<span class="c-key">CREATE TABLE</span> <span class="c-type">organization_user</span> (
+    <span class="c-var">organization_id</span> <span class="c-type">BIGINT</span> <span class="c-key">NOT NULL REFERENCES</span> organizations(id),
+    <span class="c-var">user_id</span>         <span class="c-type">BIGINT</span> <span class="c-key">NOT NULL REFERENCES</span> users(id),
+    <span class="c-var">role</span>            <span class="c-type">VARCHAR(32)</span> <span class="c-key">NOT NULL</span>,
+    <span class="c-key">PRIMARY KEY</span> (organization_id, user_id)
+);
+
+<span class="c-comment">-- Уникальность ВСЕГДА в паре с tenant_id</span>
+<span class="c-key">CREATE UNIQUE INDEX</span> <span class="c-var">users_tenant_email_uniq</span> <span class="c-key">ON</span> users (tenant_id, email);</code></pre>
+
+    <div class="info-box primary"><strong>Почему <code>type</code> колонкой, а не тремя таблицами.</strong> Отдельные <code>companies</code>, <code>branches</code>, <code>departments</code> ломаются на четвёртом уровне: появится «дивизион», «проектная команда» или «рабочая группа» — придётся менять схему и все запросы. Иерархия одна, тип узла — её атрибут.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="code-2"></i> Слой 1: тенант — автоматическая изоляция</div>
+    <p class="text">Фильтр по тенанту не должен зависеть от памяти разработчика. Он вешается глобальным scope, который применяется ко всем запросам модели.</p>
+
+<pre><code><span class="c-comment">// app/Models/Concerns/BelongsToTenant.php</span>
+<span class="c-key">trait</span> <span class="c-type">BelongsToTenant</span>
+{
+    <span class="c-key">protected static function</span> <span class="c-fn">bootBelongsToTenant</span>(): <span class="c-type">void</span>
+    {
+        <span class="c-comment">// 1. Чтение: любой запрос автоматически сужается до текущего тенанта</span>
+        <span class="c-key">static</span>::<span class="c-fn">addGlobalScope</span>(<span class="c-str">'tenant'</span>, <span class="c-key">function</span> (<span class="c-type">Builder</span> <span class="c-var">$q</span>) {
+            <span class="c-key">if</span> (<span class="c-var">$id</span> = <span class="c-fn">app</span>(<span class="c-type">TenantContext</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">id</span>()) {
+                <span class="c-var">$q</span>-&gt;<span class="c-fn">where</span>(<span class="c-var">$q</span>-&gt;<span class="c-fn">getModel</span>()-&gt;<span class="c-fn">qualifyColumn</span>(<span class="c-str">'tenant_id'</span>), <span class="c-var">$id</span>);
+            }
+        });
+
+        <span class="c-comment">// 2. Запись: tenant_id проставляется сам, его нельзя забыть</span>
+        <span class="c-key">static</span>::<span class="c-fn">creating</span>(<span class="c-key">function</span> (<span class="c-type">Model</span> <span class="c-var">$model</span>) {
+            <span class="c-var">$model</span>-&gt;tenant_id ??= <span class="c-fn">app</span>(<span class="c-type">TenantContext</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">id</span>();
+        });
+    }
+}</code></pre>
+
+    <p class="text">Контекст тенанта определяется один раз в middleware — по поддомену, заголовку или самому пользователю — и живёт в контейнере на время запроса:</p>
+
+<pre><code><span class="c-key">class</span> <span class="c-type">ResolveTenant</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>, <span class="c-type">Closure</span> <span class="c-var">$next</span>)
+    {
+        <span class="c-var">$tenant</span> = <span class="c-type">Tenant</span>::<span class="c-fn">where</span>(<span class="c-str">'slug'</span>, <span class="c-fn">explode</span>(<span class="c-str">'.'</span>, <span class="c-var">$request</span>-&gt;<span class="c-fn">getHost</span>())[<span class="c-num">0</span>])
+            -&gt;<span class="c-fn">firstOrFail</span>();
+
+        <span class="c-comment">// Пользователь из другого тенанта не должен сюда попасть</span>
+        <span class="c-fn">abort_if</span>(<span class="c-fn">auth</span>()-&gt;<span class="c-fn">user</span>()?-&gt;tenant_id !== <span class="c-var">$tenant</span>-&gt;id, <span class="c-num">403</span>);
+
+        <span class="c-fn">app</span>(<span class="c-type">TenantContext</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">set</span>(<span class="c-var">$tenant</span>);
+
+        <span class="c-key">return</span> <span class="c-var">$next</span>(<span class="c-var">$request</span>);
+    }
+}</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-fork"></i> Слой 2: оргструктура — явная авторизация</div>
+    <p class="text">Здесь всё наоборот: правила пишутся руками и живут в Policy. Типичное требование — «руководитель видит свою орг.единицу и все вложенные». Materialized path (<code>path = '1/5/12'</code>) решает это одним <code>LIKE</code>, без рекурсивных запросов.</p>
+
+<pre><code><span class="c-key">class</span> <span class="c-type">ReportPolicy</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">view</span>(<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Report</span> <span class="c-var">$report</span>): <span class="c-type">bool</span>
+    {
+        <span class="c-comment">// tenant_id уже отфильтрован global scope'ом — здесь только оргструктура</span>
+        <span class="c-key">return</span> <span class="c-var">$user</span>-&gt;<span class="c-fn">organizations</span>()
+            -&gt;<span class="c-fn">where</span>(<span class="c-key">function</span> (<span class="c-var">$q</span>) <span class="c-key">use</span> (<span class="c-var">$report</span>) {
+                <span class="c-comment">// своя единица ИЛИ любой её предок</span>
+                <span class="c-var">$q</span>-&gt;<span class="c-fn">whereRaw</span>(<span class="c-str">'? LIKE organizations.path || \'%\''</span>, [<span class="c-var">$report</span>-&gt;organization-&gt;path]);
+            })
+            -&gt;<span class="c-fn">exists</span>();
+    }
+}</code></pre>
+
+    <div class="info-box primary"><strong>Разница видна прямо в коде.</strong> Тенант отсекается <em>до</em> того, как выполнится запрос, и без участия разработчика. Оргструктура проверяется <em>явно</em>, в конкретном месте, и её легко забыть — поэтому она и не годится на роль границы безопасности.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Подводные камни</div>
+
+    <div class="pitfall"><strong>1. Глобальные UNIQUE-индексы.</strong> <code>users.email UNIQUE</code> означает, что один и тот же человек не сможет быть зарегистрирован у двух клиентов. Любая уникальность в мультитенантной схеме — составная: <code>UNIQUE (tenant_id, email)</code>, <code>UNIQUE (tenant_id, order_number)</code>.</div>
+
+    <div class="pitfall"><strong>2. Очереди и планировщик.</strong> Job сериализуется и выполняется в другом процессе, где контекста тенанта нет. Global scope тихо перестанет фильтровать — и worker обработает данные всех тенантов сразу. <code>tenant_id</code> нужно класть в job явно и восстанавливать контекст в начале <code>handle()</code>. То же касается команд по расписанию и консольных команд.</div>
+
+    <div class="pitfall"><strong>3. Raw-запросы мимо Eloquent.</strong> <code>DB::table('orders')</code>, <code>DB::select(...)</code> и любой join через query builder не знают про global scope. Один такой запрос в выгрузке отчёта — и в CSV клиента попадают чужие строки.</div>
+
+    <div class="pitfall"><strong>4. Забытый <code>withoutGlobalScopes()</code>.</strong> Добавляется «на минутку» при отладке и остаётся в проде навсегда. Такие вызовы стоит запрещать линтером и явно разрешать только в административном коде.</div>
+
+    <div class="pitfall"><strong>5. Кэш без префикса тенанта.</strong> <code>Cache::remember('dashboard_stats', ...)</code> — один ключ на всю платформу. Первый зашедший клиент нагреет кэш, остальные увидят его цифры. Ключ обязан содержать <code>tenant_id</code>.</div>
+
+    <div class="pitfall"><strong>6. Файловое хранилище и полнотекстовый поиск.</strong> Загруженные файлы, индексы Elasticsearch/Meilisearch, сгенерированные PDF — всё это тоже данные тенанта, и на них global scope не распространяется. Изоляция нужна отдельно: свой каталог, свой индекс или обязательный фильтр в поисковом запросе.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="package"></i> Готовые пакеты в Laravel</div>
+    <table class="data-table">
+      <tr><th>Пакет</th><th>Что берёт на себя</th></tr>
+      <tr><td><strong>stancl/tenancy</strong></td><td>Наиболее полный. Поддерживает и multi-database, и single-database с автоматическим скоупом. Определение тенанта по домену/поддомену/пути, изоляция кэша, очередей, файлового хранилища, provisioning с миграциями</td></tr>
+      <tr><td><strong>spatie/laravel-multitenancy</strong></td><td>Лёгкий и намеренно минималистичный. Отвечает за <em>определение текущего тенанта и переключение окружения</em> под него (соединение с БД, префикс кэша, storage) через механизм tasks</td></tr>
+      <tr><td><strong>Своя реализация</strong></td><td>Трейт с global scope + middleware + <code>tenant_id</code> в таблицах. Для single-database это 100–150 строк кода и полный контроль</td></tr>
+    </table>
+
+    <div class="info-box warning"><strong>Частое заблуждение.</strong> Пакет Spatie нередко описывают как «разделение по колонке». Это неточно: фильтрацию по <code>tenant_id</code> он из коробки не даёт — глобальный scope пишется самостоятельно. Пакет решает задачу «определить тенанта и настроить под него окружение». Корректная формулировка: <em>способ изоляции (колонка / схема / БД) — архитектурное решение, а пакет лишь обслуживает уже выбранный вариант</em>.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="check-circle-2"></i> Итог</div>
+    <ul style="margin:8px 0 14px 22px;color:var(--text2);font-size:13px;line-height:1.85">
+      <li><strong>Мультитенантность</strong> — изоляция данных независимых клиентов внутри одного приложения. Это граница безопасности.</li>
+      <li><strong>Три уровня изоляции:</strong> колонка <code>tenant_id</code>, отдельная схема, отдельная БД. Выбор — компромисс между стоимостью эксплуатации и жёсткостью границы.</li>
+      <li><strong>Оргструктура</strong> (компания → филиал → отдел) — это не мультитенантность, а модель предметной области с иерархией и авторизацией.</li>
+      <li><strong>Изоляция тенанта должна быть неявной</strong> (global scope), авторизация внутри тенанта — явной (Policy). Перепутать слои местами означает построить безопасность на том, что кто-то не забудет дописать <code>where</code>.</li>
+      <li><strong>Утечки живут не в Eloquent</strong>, а по краям: очереди, raw-запросы, кэш, файлы, поисковые индексы.</li>
+    </ul>
   </div>
 </div>
 
