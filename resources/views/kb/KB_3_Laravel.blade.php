@@ -1007,18 +1007,27 @@ ul.bullets strong{color:var(--text);}
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика: scoped bindings vs ручная проверка</div>
-<pre><code><span class="c-comment">// ❌ Уязвимо: пользователь может прочитать чужой пост, подменив slug</span>
-<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}/posts/{post:slug}'</span>, <span class="c-key">function</span> (<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>) {
-    <span class="c-comment">// $post найдётся по любому slug, не обязательно у $user</span>
+<pre><code><span class="c-comment">// ❌ Уязвимо: без кастомного ключа и без scopeBindings() — скоупа НЕТ</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}/posts/{post}'</span>, <span class="c-key">function</span> (<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>) {
+    <span class="c-comment">// Post::find($id) глобально — чужой пост откроется</span>
     <span class="c-key">return</span> <span class="c-var">$post</span>;
 });
 
-<span class="c-comment">// ✓ Безопасно: scoped binding ищет post через $user-&gt;posts()</span>
-<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}/posts/{post:slug}'</span>, <span class="c-key">function</span> (<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>) {
+<span class="c-comment">// ✓ Вариант 1: явно включить скоуп</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}/posts/{post}'</span>, <span class="c-key">function</span> (<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>) {
     <span class="c-key">return</span> <span class="c-var">$post</span>;
 })-&gt;<span class="c-fn">scopeBindings</span>();
-<span class="c-comment">// Если post.slug существует, но не принадлежит $user — 404 автоматически</span>
+
+<span class="c-comment">// ✓ Вариант 2: кастомный ключ — скоуп включается САМ, без scopeBindings()</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}/posts/{post:slug}'</span>, <span class="c-key">function</span> (<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>) {
+    <span class="c-key">return</span> <span class="c-var">$post</span>;
+});
+<span class="c-comment">// Оба варианта: Post ищется через $user-&gt;posts(), чужой — 404</span>
 </code></pre>
+
+    <div class="info-box warning"><strong>Частое заблуждение.</strong> Широко тиражируется пример <code>/users/{user}/posts/{post:slug}</code> с подписью «без <code>scopeBindings()</code> уязвимо». Это неверно: при <strong>кастомном ключе</strong> у вложенного параметра Laravel скоупит запрос сам. В исходниках это одно условие — <code>Illuminate\Routing\ImplicitRouteBinding</code>:<br>
+    <code>$route-&gt;enforcesScopedBindings() <strong>||</strong> array_key_exists($parameterName, $route-&gt;bindingFields())</code><br>
+    То есть <code>scopeBindings()</code> нужен ровно тогда, когда кастомного ключа <em>нет</em>.</div>
   </div>
 
   <div class="subsection">
@@ -1117,6 +1126,88 @@ ul.bullets strong{color:var(--text);}
 })-&gt;<span class="c-fn">name</span>(<span class="c-str">'verify'</span>)-&gt;<span class="c-fn">middleware</span>(<span class="c-str">'signed'</span>);
 <span class="c-comment">// Если кто-то изменит user=1 на user=2 — подпись невалидна, middleware вернёт 403</span></code></pre>
     </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> Explicit vs Scoped Bindings — что именно ты подменяешь</div>
+    <p class="text">Оба механизма влияют на то, какая модель окажется в аргументе контроллера, но работают на разных уровнях. Explicit заменяет <em>сам способ поиска</em>, Scoped — лишь <em>область поиска</em>.</p>
+
+    <table class="data-table">
+      <tr><th></th><th>Explicit Binding</th><th>Scoped Bindings</th></tr>
+      <tr><td><strong>Суть</strong></td><td>«Как искать модель»</td><td>«Где искать модель»</td></tr>
+      <tr><td><strong>Что делает</strong></td><td>Полностью заменяет логику разрешения — <code>find()</code> не вызывается вообще</td><td>Оставляет обычный implicit binding, но сужает запрос до отношения с родителем</td></tr>
+      <tr><td><strong>Кто пишет запрос</strong></td><td>Ты, целиком, в колбэке</td><td>Laravel, по имени отношения</td></tr>
+      <tr><td><strong>Где регистрируется</strong></td><td>Глобально: <code>Route::bind()</code> в <code>AppServiceProvider::boot()</code></td><td>Точечно: <code>-&gt;scopeBindings()</code> на маршруте или группе</td></tr>
+      <tr><td><strong>Область действия</strong></td><td>Все маршруты с параметром этого имени</td><td>Только тот маршрут / группа, где включено</td></tr>
+      <tr><td><strong>Типичное применение</strong></td><td>Мультитенантность, мягкое удаление, нестандартный ключ, предзагрузка связей</td><td>Вложенные ресурсы: <code>/users/{user}/posts/{post}</code></td></tr>
+    </table>
+
+    <div class="card">
+      <h3>Explicit Binding — «как искать»</h3>
+      <p>Регистрируется один раз и применяется ко <strong>всем</strong> маршрутам, где встречается параметр с таким именем: и <code>/users/{user}</code>, и <code>/admin/users/{user}</code>, и <code>/api/users/{user}</code>.</p>
+<pre><code><span class="c-comment">// AppServiceProvider::boot()</span>
+<span class="c-type">Route</span>::<span class="c-fn">bind</span>(<span class="c-str">'user'</span>, <span class="c-key">function</span> (<span class="c-var">$value</span>) {
+    <span class="c-key">return</span> <span class="c-type">User</span>::<span class="c-fn">where</span>(<span class="c-str">'tenant_id'</span>, <span class="c-fn">tenant</span>()-&gt;id)
+               -&gt;<span class="c-fn">where</span>(<span class="c-str">'id'</span>, <span class="c-var">$value</span>)
+               -&gt;<span class="c-fn">firstOrFail</span>();
+});</code></pre>
+      <p><strong>Ключевое:</strong> запрос пишешь ты целиком. Laravel не делает <code>find()</code>, он просто вызывает твой колбэк и берёт результат.</p>
+    </div>
+
+    <div class="card">
+      <h3>Scoped Bindings — «искать в контексте родителя»</h3>
+      <p>Логика поиска остаётся стандартной, добавляется ограничение: дочерняя модель достаётся через отношение родительской.</p>
+<pre><code><span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}/posts/{post}'</span>, <span class="c-key">function</span> (<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>) {
+    <span class="c-key">return</span> <span class="c-var">$post</span>;
+})-&gt;<span class="c-fn">scopeBindings</span>();
+
+<span class="c-comment">// Laravel строит запрос через отношение, имя угадывает по имени параметра:</span>
+<span class="c-comment">// $user-&gt;posts()-&gt;where('id', $value)-&gt;firstOrFail()</span></code></pre>
+      <p><strong>Ключевое:</strong> ты не пишешь запрос, а сообщаешь Laravel: «ищи пост среди постов <em>этого</em> пользователя». Имя отношения выводится из имени параметра во множественном числе — <code>{post}</code> → <code>$user-&gt;posts()</code>.</p>
+    </div>
+
+    <div class="info-box primary"><strong>Когда <code>scopeBindings()</code> обязателен, а когда нет.</strong> Скоуп применяется, если выполнено <em>хотя бы одно</em> условие: вызван <code>scopeBindings()</code> <strong>или</strong> у вложенного параметра задан кастомный ключ (<code>{post:slug}</code>). Отсюда практическое правило:
+    <br>• <code>{post:slug}</code> — скоуп уже работает, вызывать ничего не нужно;
+    <br>• <code>{post}</code> — скоупа нет, нужен явный <code>-&gt;scopeBindings()</code>.</div>
+
+    <div class="card">
+      <h3>Управление скоупом на группе и его отключение</h3>
+<pre><code><span class="c-comment">// Включить для всей группы маршрутов</span>
+<span class="c-type">Route</span>::<span class="c-fn">scopeBindings</span>()-&gt;<span class="c-fn">group</span>(<span class="c-key">function</span> () {
+    <span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}/posts/{post}'</span>, [<span class="c-type">PostController</span>::<span class="c-key">class</span>, <span class="c-str">'show'</span>]);
+    <span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}/orders/{order}'</span>, [<span class="c-type">OrderController</span>::<span class="c-key">class</span>, <span class="c-str">'show'</span>]);
+});
+
+<span class="c-comment">// Принудительно отключить, даже при кастомном ключе</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}/posts/{post:slug}'</span>, <span class="c-key">fn</span> (<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>) =&gt; <span class="c-var">$post</span>)
+    -&gt;<span class="c-fn">withoutScopedBindings</span>();</code></pre>
+      <p>Включать скоуп на <strong>группе</strong> надёжнее, чем на каждом маршруте: забыть один вызов в списке из двадцати вложенных ресурсов — вопрос времени.</p>
+    </div>
+
+    <div class="card">
+      <h3>Третий способ: переопределение на модели</h3>
+      <p>Если логика поиска — свойство самой модели, а не маршрута, её можно задать прямо в модели. Это работает и там, где <code>Route::bind()</code> был бы слишком грубым (он перехватывает параметр во всём приложении).</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">Post</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-comment">// Обычный implicit binding</span>
+    <span class="c-key">public function</span> <span class="c-fn">resolveRouteBinding</span>(<span class="c-var">$value</span>, <span class="c-var">$field</span> = <span class="c-key">null</span>)
+    {
+        <span class="c-key">return</span> <span class="c-key">$this</span>-&gt;<span class="c-fn">where</span>(<span class="c-var">$field</span> ?? <span class="c-str">'id'</span>, <span class="c-var">$value</span>)
+                    -&gt;<span class="c-fn">where</span>(<span class="c-str">'status'</span>, <span class="c-str">'published'</span>)
+                    -&gt;<span class="c-fn">firstOrFail</span>();
+    }
+
+    <span class="c-comment">// Вызывается вместо предыдущего, когда действует scoped binding</span>
+    <span class="c-key">public function</span> <span class="c-fn">resolveChildRouteBinding</span>(<span class="c-var">$childType</span>, <span class="c-var">$value</span>, <span class="c-var">$field</span>)
+    {
+        <span class="c-key">return</span> <span class="c-key">parent</span>::<span class="c-fn">resolveChildRouteBinding</span>(<span class="c-var">$childType</span>, <span class="c-var">$value</span>, <span class="c-var">$field</span>);
+    }
+}</code></pre>
+    </div>
+
+    <div class="pitfall"><strong>Explicit отменяет scoped.</strong> Если для параметра зарегистрирован <code>Route::bind('post', ...)</code>, то твой колбэк получает только сырое значение из URL — родительская модель в него не передаётся, и никакого скоупа Laravel не добавит. Совмещать мультитенантность через <code>Route::bind()</code> с вложенными ресурсами нужно осознанно: проверку принадлежности родителю в этом случае пишешь сам, внутри колбэка.</div>
+
+    <div class="pitfall"><strong>Скоуп — не замена авторизации.</strong> Scoped binding отвечает на вопрос «принадлежит ли пост этому пользователю», но не на вопрос «имеет ли <em>текущий</em> пользователь право его смотреть». Маршрут <code>/users/{user}/posts/{post}</code> со скоупом по-прежнему отдаст чужой пост, если в URL подставить чужой <code>{user}</code>. Policy всё так же обязательна.</div>
   </div>
 
   <div class="subsection">
