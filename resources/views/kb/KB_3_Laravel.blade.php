@@ -566,6 +566,132 @@ $response->send()  →  браузер</div>
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="tags"></i> Атрибут vs параметр — два уровня одной сигнатуры</div>
+    <p class="text">Атрибут не заменяет параметр, а <strong>уточняет, как его разрешить</strong>. Это две разные вещи в одной строке объявления.</p>
+
+<pre><code><span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/user'</span>, <span class="c-key">function</span> (#[<span class="c-type">CurrentUser</span>] <span class="c-type">User</span> <span class="c-var">$user</span>) {
+    <span class="c-key">return</span> <span class="c-var">$user</span>;
+})-&gt;<span class="c-fn">middleware</span>(<span class="c-str">'auth'</span>);</code></pre>
+
+    <table class="data-table">
+      <tr><th>Часть</th><th>Что это</th><th>Роль</th></tr>
+      <tr><td><code>User $user</code></td><td>Параметр: переменная с типом</td><td><strong>Куда</strong> положить результат</td></tr>
+      <tr><td><code>#[CurrentUser]</code></td><td>Атрибут: метаданные параметра</td><td><strong>Как</strong> этот результат получить</td></tr>
+    </table>
+
+    <div class="info-box primary"><strong>Формула.</strong> Параметр — это то, <em>что</em> ты хочешь получить. Атрибут — это <em>откуда</em> это взять. Без атрибута контейнер применяет стратегию по умолчанию; с атрибутом ты задаёшь стратегию явно.</div>
+
+    <div class="card">
+      <h3>Что делает контейнер без атрибута</h3>
+      <p>Порядок разрешения параметра такой:</p>
+      <ul style="margin:8px 0 14px 22px;color:var(--text2);font-size:13px;line-height:1.85">
+        <li>Имя параметра совпадает с именем параметра маршрута (<code>{user}</code> → <code>$user</code>) и тип — Eloquent-модель → срабатывает <strong>implicit route model binding</strong>.</li>
+        <li>Тип — класс, совпадения с маршрутом нет → контейнер <strong>создаёт объект</strong>. Для <code>User $user</code> это будет <code>new User</code> — пустая модель, не связанная с текущим пользователем.</li>
+        <li>Тип — примитив → Laravel ищет значение среди параметров маршрута.</li>
+      </ul>
+      <p>Второй пункт и есть причина, по которой <code>#[CurrentUser]</code> вообще нужен: без него ты получишь не текущего пользователя, а пустую модель.</p>
+    </div>
+
+    <div class="card">
+      <h3><code>#[CurrentUser]</code> — текущий аутентифицированный</h3>
+<pre><code><span class="c-comment">// Illuminate\Container\Attributes\Authenticated — реальная реализация</span>
+<span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">public</span> ?<span class="c-key">string</span> <span class="c-var">$guard</span> = <span class="c-key">null</span>) {}
+
+<span class="c-key">public static function</span> <span class="c-fn">resolve</span>(<span class="c-key">self</span> <span class="c-var">$attribute</span>, <span class="c-type">Container</span> <span class="c-var">$container</span>)
+{
+    <span class="c-key">return</span> <span class="c-fn">call_user_func</span>(<span class="c-var">$container</span>-&gt;<span class="c-fn">make</span>(<span class="c-str">'auth'</span>)-&gt;<span class="c-fn">userResolver</span>(), <span class="c-var">$attribute</span>-&gt;guard);
+}</code></pre>
+      <p>Эквивалент <code>auth()-&gt;user()</code> внутри метода. Можно указать guard: <code>#[CurrentUser('api')]</code>.</p>
+      <div class="info-box primary"><code>#[CurrentUser]</code> — это <strong>алиас</strong>: <code>class CurrentUser extends Authenticated {}</code>. Оба атрибута делают одно и то же, выбор — вопрос читаемости.</div>
+    </div>
+
+    <div class="card">
+      <h3><code>#[RouteParameter('name')]</code> — значение из URL</h3>
+      <p>Нужен, когда <strong>имя переменной не совпадает</strong> с именем параметра маршрута.</p>
+<pre><code><span class="c-comment">// Имена совпадают → атрибут не нужен, работает implicit binding</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}'</span>, <span class="c-key">fn</span> (<span class="c-type">User</span> <span class="c-var">$user</span>) =&gt; <span class="c-var">$user</span>);
+
+<span class="c-comment">// Имена НЕ совпадают: в URL {user}, а переменная $profile</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}'</span>, <span class="c-key">fn</span> (#[<span class="c-type">RouteParameter</span>(<span class="c-str">'user'</span>)] <span class="c-type">User</span> <span class="c-var">$profile</span>) =&gt; <span class="c-var">$profile</span>);</code></pre>
+      <div class="pitfall"><strong>Аргумент обязателен.</strong> В конструкторе <code>public function __construct(public string $parameter)</code> — значения по умолчанию нет. Запись <code>#[RouteParameter]</code> без имени падает с <code>ArgumentCountError</code>. Всегда <code>#[RouteParameter('имя_из_url')]</code>.</div>
+      <div class="info-box warning"><strong>Что он реально делает.</strong> Не <code>User::find($id)</code>, как можно подумать. Его <code>resolve()</code> — это одна строка: <code>$container-&gt;make('request')-&gt;route($parameter)</code>. То есть он берёт <em>уже разрешённый</em> параметр маршрута. Если по нему сработал route model binding — вернётся модель; если нет — сырая строка из URL. Сам атрибут модель не ищет.</div>
+    </div>
+
+    <div class="card">
+      <h3>Полный список атрибутов в Laravel 13</h3>
+      <table class="data-table">
+        <tr><th>Атрибут</th><th>Откуда берёт значение</th></tr>
+        <tr><td><code>#[Authenticated]</code> / <code>#[CurrentUser]</code></td><td><code>auth()-&gt;userResolver()($guard)</code></td></tr>
+        <tr><td><code>#[RouteParameter('p')]</code></td><td><code>request()-&gt;route('p')</code></td></tr>
+        <tr><td><code>#[Config('key')]</code></td><td><code>config('key')</code></td></tr>
+        <tr><td><code>#[Context('key')]</code></td><td>Repository контекста, с поддержкой <code>hidden: true</code></td></tr>
+        <tr><td><code>#[Database]</code> / <code>#[DB]</code></td><td><code>db-&gt;connection($name)</code></td></tr>
+        <tr><td><code>#[Cache('store')]</code></td><td>Конкретное хранилище кеша</td></tr>
+        <tr><td><code>#[Storage('disk')]</code></td><td>Конкретный диск файловой системы</td></tr>
+        <tr><td><code>#[Log('channel')]</code></td><td>Конкретный канал логов</td></tr>
+        <tr><td><code>#[Auth('guard')]</code></td><td>Guard, а не пользователя</td></tr>
+        <tr><td><code>#[Give(Class::class)]</code></td><td>Конкретная реализация для этого параметра</td></tr>
+        <tr><td><code>#[Tag('tag')]</code></td><td>Все биндинги с тегом</td></tr>
+        <tr><td><code>#[Bind]</code>, <code>#[Singleton]</code>, <code>#[Scoped]</code></td><td>Ставятся на класс/интерфейс, а не на параметр</td></tr>
+      </table>
+      <p><code>#[DB]</code> — алиас <code>#[Database]</code>, ровно как <code>#[CurrentUser]</code> для <code>#[Authenticated]</code>.</p>
+    </div>
+
+    <div class="card">
+      <h3>Нужен атрибут для данных из middleware? Его придётся написать</h3>
+      <p>Встроенного атрибута для <code>$request-&gt;attributes</code> в Laravel <strong>нет</strong>. Если middleware положил туда объект, вариантов два: читать вручную или сделать свой контекстный атрибут.</p>
+<pre><code><span class="c-comment">// Middleware кладёт данные</span>
+<span class="c-var">$request</span>-&gt;attributes-&gt;<span class="c-fn">set</span>(<span class="c-str">'tenant'</span>, <span class="c-type">Tenant</span>::<span class="c-fn">find</span>(<span class="c-num">1</span>));
+
+<span class="c-comment">// Свой атрибут — контракт ContextualAttribute + статический resolve()</span>
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Contracts</span>\<span class="c-type">Container</span>\<span class="c-type">ContextualAttribute</span>;
+
+#[<span class="c-type">Attribute</span>(<span class="c-type">Attribute</span>::<span class="c-type">TARGET_PARAMETER</span>)]
+<span class="c-key">class</span> <span class="c-type">RequestAttribute</span> <span class="c-key">implements</span> <span class="c-type">ContextualAttribute</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">public</span> <span class="c-key">string</span> <span class="c-var">$key</span>, <span class="c-key">public</span> <span class="c-key">mixed</span> <span class="c-var">$default</span> = <span class="c-key">null</span>) {}
+
+    <span class="c-key">public static function</span> <span class="c-fn">resolve</span>(<span class="c-key">self</span> <span class="c-var">$attribute</span>, <span class="c-type">Container</span> <span class="c-var">$container</span>)
+    {
+        <span class="c-key">return</span> <span class="c-var">$container</span>-&gt;<span class="c-fn">make</span>(<span class="c-str">'request'</span>)-&gt;attributes-&gt;<span class="c-fn">get</span>(<span class="c-var">$attribute</span>-&gt;key, <span class="c-var">$attribute</span>-&gt;default);
+    }
+}
+
+<span class="c-comment">// Теперь можно так</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/dashboard'</span>, <span class="c-key">fn</span> (#[<span class="c-type">RequestAttribute</span>(<span class="c-str">'tenant'</span>)] <span class="c-type">Tenant</span> <span class="c-var">$tenant</span>) =&gt; <span class="c-var">$tenant</span>);</code></pre>
+      <div class="info-box primary"><strong>Деталь реализации.</strong> <code>ContextualAttribute</code> — <em>пустой маркерный интерфейс</em>, он не объявляет методов. Контейнер ищет статический <code>resolve()</code> по соглашению, а не по контракту. Забыл его описать — атрибут молча не сработает, компилятор об этом не скажет.</div>
+    </div>
+
+    <div class="card">
+      <h3>Когда атрибут нужен, а когда нет</h3>
+      <table class="data-table">
+        <tr><th>Ситуация</th><th>Без атрибута</th><th>С атрибутом</th></tr>
+        <tr><td>Имя переменной = имя <code>{param}</code></td><td>Работает само</td><td>Не нужен</td></tr>
+        <tr><td>Имена не совпадают</td><td>Не работает</td><td><code>#[RouteParameter('param')]</code></td></tr>
+        <tr><td>Нужен текущий пользователь</td><td>Вернёт пустую модель</td><td><code>#[CurrentUser]</code></td></tr>
+        <tr><td>Нужно значение из конфига</td><td><code>config('key')</code> в теле</td><td><code>#[Config('key')]</code></td></tr>
+        <tr><td>Нужно нестандартное соединение/диск/канал</td><td><code>when()-&gt;needs()-&gt;give()</code> в провайдере</td><td><code>#[DB]</code>, <code>#[Storage]</code>, <code>#[Log]</code></td></tr>
+        <tr><td>Данные из middleware</td><td><code>$request-&gt;attributes-&gt;get(...)</code></td><td>Только свой атрибут</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Всё вместе</h3>
+<pre><code><span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/organizations/{organization}/users/{user}'</span>, <span class="c-key">function</span> (
+    #[<span class="c-type">RouteParameter</span>(<span class="c-str">'organization'</span>)] <span class="c-type">Organization</span> <span class="c-var">$org</span>,
+    #[<span class="c-type">RouteParameter</span>(<span class="c-str">'user'</span>)]         <span class="c-type">User</span> <span class="c-var">$targetUser</span>,
+    #[<span class="c-type">CurrentUser</span>]                   <span class="c-type">User</span> <span class="c-var">$currentUser</span>,
+    #[<span class="c-type">Config</span>(<span class="c-str">'app.timezone'</span>)]       <span class="c-key">string</span> <span class="c-var">$timezone</span>,
+) {
+    <span class="c-comment">// $org, $targetUser — из URL
+    // $currentUser     — из auth
+    // $timezone        — из config</span>
+})-&gt;<span class="c-fn">middleware</span>(<span class="c-str">'auth'</span>);</code></pre>
+      <p>Контекстные атрибуты появились в ветке Laravel 11 и убирают из тела метода ручные <code>app()-&gt;make()</code>, <code>auth()-&gt;user()</code>, <code>config()</code> — источник данных виден прямо в сигнатуре.</p>
+    </div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="package"></i> 3. Service Providers</div>
     <p class="text">Провайдеры — точка, где собирается всё приложение. Документация формулирует жёстко: <em>«service providers are the most important aspect of the entire Laravel bootstrap process»</em>. Практически каждая возможность фреймворка поднимается каким-нибудь провайдером. Детальный разбор — в разделе <strong>Bootstrap: providers &amp; app.php</strong>.</p>
 
