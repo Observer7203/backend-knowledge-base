@@ -308,6 +308,8 @@ ul.bullets strong{color:var(--text);}
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-overview" class="section active">
   <div class="section-title">О разделе</div>
   <p class="text">Laravel — фреймворк, чьё освоение в глубину занимает годы. Поверхностное знание (роуты, контроллеры, миграции) хватает на CRUD'ы, но любая нетривиальная задача — расширяемый модуль, тонкая авторизация, надёжная асинхронность, Octane-окружение — требует понимания, как фреймворк устроен изнутри. Этот раздел даёт средне-старший уровень: что происходит при HTTP-запросе, как middleware вмешивается в pipeline, как очереди гарантируют доставку, чем gate отличается от policy, и какие ловушки ждут в long-running режиме.</p>
@@ -348,6 +350,8 @@ ul.bullets strong{color:var(--text);}
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-arch-concepts" class="section">
   <div class="section-title">Architecture Concepts — четыре опоры фреймворка</div>
 
@@ -659,7 +663,7 @@ $response->send()  →  браузер</div>
 
 <span class="c-comment">// Теперь можно так</span>
 <span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/dashboard'</span>, <span class="c-key">fn</span> (#[<span class="c-type">RequestAttribute</span>(<span class="c-str">'tenant'</span>)] <span class="c-type">Tenant</span> <span class="c-var">$tenant</span>) =&gt; <span class="c-var">$tenant</span>);</code></pre>
-      <div class="info-box primary"><strong>Деталь реализации.</strong> <code>ContextualAttribute</code> — <em>пустой маркерный интерфейс</em>, он не объявляет методов. Контейнер ищет статический <code>resolve()</code> по соглашению, а не по контракту. Забыл его описать — атрибут молча не сработает, компилятор об этом не скажет.</div>
+      <div class="info-box primary"><strong>Деталь реализации.</strong> <code>ContextualAttribute</code> — <em>пустой маркерный интерфейс</em>, он не объявляет методов. Контейнер ищет статический <code>resolve()</code> по соглашению, а не по контракту. Если ни <code>resolve()</code>, ни внешнего handler'а нет — контейнер падает с <code>BindingResolutionException: Contextual binding attribute [...] has no registered handler.</code> Подробно — в подразделе «Свой контекстный атрибут» ниже.</div>
     </div>
 
     <div class="card">
@@ -689,6 +693,158 @@ $response->send()  →  браузер</div>
 })-&gt;<span class="c-fn">middleware</span>(<span class="c-str">'auth'</span>);</code></pre>
       <p>Контекстные атрибуты появились в ветке Laravel 11 и убирают из тела метода ручные <code>app()-&gt;make()</code>, <code>auth()-&gt;user()</code>, <code>config()</code> — источник данных виден прямо в сигнатуре.</p>
     </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="puzzle"></i> Свой контекстный атрибут</div>
+    <p class="text">Встроенных атрибутов шестнадцать, но механизм открыт: любой свой атрибут может участвовать во внедрении зависимостей. Нужны три части.</p>
+
+    <div class="card">
+      <h3>Анатомия</h3>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Contracts</span>\<span class="c-type">Container</span>\<span class="c-type">Container</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Contracts</span>\<span class="c-type">Container</span>\<span class="c-type">ContextualAttribute</span>;
+
+#[<span class="c-type">Attribute</span>(<span class="c-type">Attribute</span>::<span class="c-type">TARGET_PARAMETER</span>)]   <span class="c-comment">// 1. где разрешено вешать</span>
+<span class="c-key">class</span> <span class="c-type">Config</span> <span class="c-key">implements</span> <span class="c-type">ContextualAttribute</span>   <span class="c-comment">// 2. маркер для контейнера</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+        <span class="c-key">public</span> <span class="c-key">string</span> <span class="c-var">$key</span>,
+        <span class="c-key">public</span> <span class="c-key">mixed</span> <span class="c-var">$default</span> = <span class="c-key">null</span>,
+    ) {}
+
+    <span class="c-comment">// 3. контейнер вызовет это сам</span>
+    <span class="c-key">public static function</span> <span class="c-fn">resolve</span>(<span class="c-key">self</span> <span class="c-var">$attribute</span>, <span class="c-type">Container</span> <span class="c-var">$container</span>): <span class="c-key">mixed</span>
+    {
+        <span class="c-key">return</span> <span class="c-var">$container</span>-&gt;<span class="c-fn">make</span>(<span class="c-str">'config'</span>)-&gt;<span class="c-fn">get</span>(<span class="c-var">$attribute</span>-&gt;key, <span class="c-var">$attribute</span>-&gt;default);
+    }
+}</code></pre>
+
+      <div class="info-box danger"><strong>Сигнатура <code>resolve()</code> — ровно два аргумента.</strong> Часто встречается вариант с третьим параметром <code>ReflectionParameter $parameter</code> — он <strong>не работает</strong>. Вот как контейнер вызывает handler в <code>Container::resolveFromAttribute()</code>:
+<br><br><code>return $handler($instance, $this);</code><br><br>
+Передаются только экземпляр атрибута и контейнер. Третий параметр без значения по умолчанию даст <code>ArgumentCountError</code>. Рефлексию параметра контейнер не прокидывает — имя переменной и её тип внутри <code>resolve()</code> недоступны.</div>
+    </div>
+
+    <div class="card">
+      <h3>Три уровня, которые легко спутать</h3>
+      <table class="data-table">
+        <tr><th>Что</th><th>Роль</th><th>Влияет на значение?</th></tr>
+        <tr><td><code>TARGET_PARAMETER</code></td><td>Флаг PHP: <strong>где</strong> разрешено вешать атрибут</td><td>Нет</td></tr>
+        <tr><td><code>public string $key</code></td><td>Свойство класса атрибута — куда попадёт переданный аргумент</td><td>Да, через него</td></tr>
+        <tr><td><code>'services.stripe.key'</code></td><td>Конкретное значение в месте применения</td><td>Да, это и есть ключ</td></tr>
+        <tr><td><code>resolve()</code></td><td>Логика: <strong>откуда</strong> брать</td><td>Да, определяет источник</td></tr>
+      </table>
+      <p><code>TARGET_PARAMETER</code> ничего не подставляет. Это только ограничение области применения — есть ещё <code>TARGET_CLASS</code>, <code>TARGET_METHOD</code>, <code>TARGET_PROPERTY</code>, <code>TARGET_ALL</code>. Поменяешь на <code>TARGET_CLASS</code> — атрибут станет нельзя вешать на параметр, PHP выдаст ошибку при разборе класса, но логика <code>resolve()</code> останется той же.</p>
+      <p>Свойства называй как угодно: <code>$key</code>, <code>$store</code>, <code>$default</code> — важно лишь, чтобы <code>resolve()</code> их использовал.</p>
+    </div>
+
+    <div class="card">
+      <h3>Как контейнер различает атрибуты на разных параметрах</h3>
+      <p>Через рефлексию: атрибут привязан к <strong>конкретному параметру</strong>, и для каждого создаётся свой экземпляр со своими значениями.</p>
+<pre><code><span class="c-comment">// Illuminate\Container\Util</span>
+<span class="c-key">public static function</span> <span class="c-fn">getContextualAttributeFromDependency</span>(<span class="c-var">$dependency</span>)
+{
+    <span class="c-key">return</span> <span class="c-var">$dependency</span>-&gt;<span class="c-fn">getAttributes</span>(
+        <span class="c-type">ContextualAttribute</span>::<span class="c-key">class</span>, <span class="c-type">ReflectionAttribute</span>::<span class="c-type">IS_INSTANCEOF</span>
+    )[<span class="c-num">0</span>] ?? <span class="c-key">null</span>;
+}</code></pre>
+      <p>Комбинировать разные атрибуты в одном конструкторе можно свободно — каждый резолвится своим классом:</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+    #[<span class="c-type">Config</span>(<span class="c-str">'reports.format'</span>)]  <span class="c-key">private</span> <span class="c-key">string</span> <span class="c-var">$format</span>,     <span class="c-comment">// config()</span>
+    #[<span class="c-type">CurrentUser</span>]                 <span class="c-key">private</span> <span class="c-type">User</span> <span class="c-var">$user</span>,         <span class="c-comment">// auth()</span>
+    #[<span class="c-type">RouteParameter</span>(<span class="c-str">'report'</span>)]   <span class="c-key">private</span> <span class="c-type">Report</span> <span class="c-var">$report</span>,     <span class="c-comment">// request()-&gt;route()</span>
+    #[<span class="c-type">FromCache</span>(<span class="c-str">'reports.latest'</span>)] <span class="c-key">private</span> <span class="c-key">array</span> <span class="c-var">$cached</span>,      <span class="c-comment">// свой атрибут</span>
+) {}</code></pre>
+
+      <div class="pitfall"><strong>Два одинаковых атрибута на одном параметре — фатальная ошибка PHP, а не «перезапись».</strong> Без флага <code>IS_REPEATABLE</code> повтор запрещён на уровне языка:
+<br><br><code>Error: Attribute "Config" must not be repeated</code><br><br>
+А если флаг добавить, контейнер всё равно возьмёт <strong>первый</strong> атрибут — в <code>Util</code> стоит <code>[0] ?? null</code>, не последний. Нужно несколько значений — делай несколько свойств в одном атрибуте, а не несколько атрибутов.</div>
+    </div>
+
+    <div class="card">
+      <h3>Атрибут с несколькими свойствами и именованными аргументами</h3>
+<pre><code>#[<span class="c-type">Attribute</span>(<span class="c-type">Attribute</span>::<span class="c-type">TARGET_PARAMETER</span>)]
+<span class="c-key">class</span> <span class="c-type">FromCache</span> <span class="c-key">implements</span> <span class="c-type">ContextualAttribute</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+        <span class="c-key">public</span> <span class="c-key">string</span> <span class="c-var">$key</span>,
+        <span class="c-key">public</span> ?<span class="c-key">string</span> <span class="c-var">$store</span> = <span class="c-key">null</span>,
+        <span class="c-key">public</span> <span class="c-key">mixed</span> <span class="c-var">$default</span> = <span class="c-key">null</span>,
+    ) {}
+
+    <span class="c-key">public static function</span> <span class="c-fn">resolve</span>(<span class="c-key">self</span> <span class="c-var">$attribute</span>, <span class="c-type">Container</span> <span class="c-var">$container</span>): <span class="c-key">mixed</span>
+    {
+        <span class="c-var">$cache</span> = <span class="c-var">$container</span>-&gt;<span class="c-fn">make</span>(<span class="c-str">'cache'</span>);
+
+        <span class="c-key">if</span> (<span class="c-var">$attribute</span>-&gt;store) {
+            <span class="c-var">$cache</span> = <span class="c-var">$cache</span>-&gt;<span class="c-fn">store</span>(<span class="c-var">$attribute</span>-&gt;store);
+        }
+
+        <span class="c-key">return</span> <span class="c-var">$cache</span>-&gt;<span class="c-fn">get</span>(<span class="c-var">$attribute</span>-&gt;key, <span class="c-var">$attribute</span>-&gt;default);
+    }
+}
+
+<span class="c-comment">// Именованные аргументы работают как в обычном конструкторе</span>
+<span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+    #[<span class="c-type">FromCache</span>(<span class="c-str">'stats.daily'</span>)]                                  <span class="c-key">private</span> <span class="c-key">array</span> <span class="c-var">$daily</span>,
+    #[<span class="c-type">FromCache</span>(<span class="c-str">'stats.weekly'</span>, store: <span class="c-str">'redis'</span>, default: [])] <span class="c-key">private</span> <span class="c-key">array</span> <span class="c-var">$weekly</span>,
+) {}</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Альтернатива <code>resolve()</code>: внешний handler</h3>
+      <p>Метод <code>resolve()</code> в самом атрибуте — не единственный путь. Handler можно зарегистрировать снаружи, в провайдере. Полезно, когда атрибут приходит из чужого пакета и править его нельзя.</p>
+<pre><code><span class="c-comment">// AppServiceProvider::boot()</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">whenHasAttribute</span>(<span class="c-type">CurrentTenant</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-var">$attribute</span>, <span class="c-var">$container</span>) {
+    <span class="c-key">return</span> <span class="c-var">$container</span>-&gt;<span class="c-fn">make</span>(<span class="c-type">TenantContext</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">current</span>();
+});</code></pre>
+      <p>Приоритет такой: сначала контейнер ищет зарегистрированный handler, и только если его нет — статический <code>resolve()</code> на атрибуте. Если нет ни того, ни другого:</p>
+<pre><code><span class="c-type">BindingResolutionException</span>: Contextual binding attribute [App\Attributes\X]
+has no registered handler.</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Хук <code>after()</code> — донастройка уже созданного объекта</h3>
+      <p>Помимо <code>resolve()</code> контейнер поддерживает необязательный метод <code>after()</code>: он вызывается после того, как объект разрешён, и позволяет его донастроить.</p>
+<pre><code><span class="c-comment">// Container::fireAfterResolvingAttributeCallbacks()</span>
+<span class="c-key">if</span> (<span class="c-fn">method_exists</span>(<span class="c-var">$instance</span>, <span class="c-str">'after'</span>)) {
+    <span class="c-var">$instance</span>-&gt;<span class="c-fn">after</span>(<span class="c-var">$instance</span>, <span class="c-var">$object</span>, <span class="c-key">$this</span>);
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Простой пример: текущий тенант</h3>
+<pre><code>#[<span class="c-type">Attribute</span>(<span class="c-type">Attribute</span>::<span class="c-type">TARGET_PARAMETER</span>)]
+<span class="c-key">class</span> <span class="c-type">CurrentTenant</span> <span class="c-key">implements</span> <span class="c-type">ContextualAttribute</span>
+{
+    <span class="c-key">public static function</span> <span class="c-fn">resolve</span>(<span class="c-key">self</span> <span class="c-var">$attribute</span>, <span class="c-type">Container</span> <span class="c-var">$container</span>): <span class="c-type">Tenant</span>
+    {
+        <span class="c-key">return</span> <span class="c-var">$container</span>-&gt;<span class="c-fn">make</span>(<span class="c-type">TenantContext</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">current</span>();
+    }
+}
+
+<span class="c-comment">// Конструктор атрибуту не нужен — ему нечего принимать</span>
+<span class="c-key">class</span> <span class="c-type">ReportController</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">index</span>(#[<span class="c-type">CurrentTenant</span>] <span class="c-type">Tenant</span> <span class="c-var">$tenant</span>)
+    {
+        <span class="c-key">return</span> <span class="c-fn">view</span>(<span class="c-str">'reports'</span>, <span class="c-fn">compact</span>(<span class="c-str">'tenant'</span>));
+    }
+}</code></pre>
+      <p>Связка с мультитенантностью разобрана в <strong>KB_5 → Мультитенантность</strong>: такой атрибут — аккуратная замена вызову <code>tenant()</code> в теле каждого метода.</p>
+    </div>
+
+    <div class="card">
+      <h3>Обычный атрибут против контекстного</h3>
+      <table class="data-table">
+        <tr><th></th><th>Обычный атрибут</th><th>Контекстный атрибут</th></tr>
+        <tr><td><strong>Кто читает</strong></td><td>Ты сам, вручную через рефлексию</td><td>Контейнер, автоматически</td></tr>
+        <tr><td><strong>Участвует в DI</strong></td><td>Нет</td><td>Да — результат подставляется в параметр</td></tr>
+        <tr><td><strong>Что нужно</strong></td><td>Только <code>#[Attribute]</code></td><td><code>#[Attribute]</code> + <code>ContextualAttribute</code> + <code>resolve()</code></td></tr>
+        <tr><td><strong>Примеры</strong></td><td><code>#[Deprecated]</code>, свои маркеры</td><td><code>#[Config]</code>, <code>#[CurrentUser]</code>, <code>#[RouteParameter]</code></td></tr>
+      </table>
+    </div>
+
+    <div class="info-box success"><strong>Итог.</strong> Контекстный атрибут переносит логику получения значения из тела метода в одно место — в класс атрибута. Источник данных становится виден прямо в сигнатуре, а <code>config()</code>, <code>auth()->user()</code> и <code>app()->make()</code> исчезают из бизнес-кода. Цена — лишний уровень косвенности: чтобы понять, откуда пришло значение, нужно открыть класс атрибута.</div>
   </div>
 
   <div class="subsection">
@@ -786,6 +942,8 @@ $response->send()  →  браузер</div>
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-lifecycle" class="section">
   <div class="section-title">Request Lifecycle</div>
   <div class="subsection">
@@ -1120,6 +1278,8 @@ $response->send()  →  браузер</div>
 <!-- ═════════════════════════════════════════════════════════════════════════
      BOOTSTRAP DEEP — отдельный раздел про providers, app.php, autowiring
      ═════════════════════════════════════════════════════════════════════════ -->
+@endverbatim
+@verbatim
 <div id="sec-bootstrap-deep" class="section">
   <div class="section-title">Bootstrap: providers.php &amp; app.php — глубоко</div>
 
@@ -1427,6 +1587,8 @@ $response->send()  →  браузер</div>
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-routing" class="section">
   <div class="section-title">Routing</div>
   <div class="subsection">
@@ -1801,6 +1963,8 @@ APP_PREVIOUS_KEYS=base64:старый...
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-controllers" class="section">
   <div class="section-title">Controllers</div>
 
@@ -2166,6 +2330,8 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-actions-services" class="section">
   <div class="section-title">Actions &amp; Services — архитектура бизнес-логики</div>
 
@@ -2743,6 +2909,8 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-middleware" class="section">
   <div class="section-title">Middleware</div>
   <div class="subsection" id="mw-purpose">
@@ -3351,6 +3519,8 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-http-objects" class="section">
   <div class="section-title">HTTP-объекты Laravel</div>
 
@@ -3542,6 +3712,8 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-validation" class="section">
   <div class="section-title">Validation и FormRequest</div>
   <div class="subsection" id="val-purpose">
@@ -4156,6 +4328,8 @@ App\Http\Requests\StorePostRequest      ← твой класс
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-api-resources" class="section">
   <div class="section-title">API Resources — форматирование JSON-ответов</div>
 
@@ -4566,6 +4740,8 @@ php artisan make:resource <span class="c-type">Api/V1/PostResource</span>       
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-eloquent" class="section">
   <div class="section-title">Eloquent — базовое</div>
   <div class="subsection" id="el-purpose">
@@ -5565,6 +5741,8 @@ php artisan make:resource <span class="c-type">Api/V1/PostResource</span>       
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-cache" class="section">
   <div class="section-title">Cache</div>
   <div class="subsection" id="cache-purpose">
@@ -6091,6 +6269,8 @@ CACHE_DRIVER=redis</code></pre>
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-queues" class="section">
   <div class="section-title">Queues</div>
   <div class="subsection" id="q-purpose">
@@ -6760,6 +6940,8 @@ php artisan migrate</code></pre>
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-events" class="section">
   <div class="section-title">Events &amp; Listeners</div>
   <div class="subsection" id="ev-purpose">
@@ -7841,6 +8023,8 @@ php artisan migrate</code></pre>
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-scheduler" class="section">
   <div class="section-title">Scheduler</div>
   <div class="subsection" id="sch-purpose">
@@ -8316,6 +8500,8 @@ php artisan migrate</code></pre>
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-auth" class="section">
   <div class="section-title">Auth, Gates и Policies</div>
   <div class="subsection" id="auth-purpose">
@@ -9331,6 +9517,8 @@ php artisan migrate
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-octane" class="section">
   <div class="section-title">Octane и long-running окружения</div>
   <div class="subsection">
@@ -9387,6 +9575,8 @@ php artisan migrate
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-practice" class="section">
   <div class="section-title">Практика: фича заказа от запроса до доставки</div>
   <div class="subsection">
@@ -9464,6 +9654,8 @@ php artisan migrate
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-pitfalls" class="section">
   <div class="section-title">Сводные подводные камни</div>
   <div class="subsection">
@@ -9483,6 +9675,8 @@ php artisan migrate
   </div>
 </div>
 
+@endverbatim
+@verbatim
 <div id="sec-interview" class="section">
   <div class="section-title">Вопросы на собеседование (middle / senior)</div>
 
