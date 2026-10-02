@@ -125,6 +125,7 @@ ul.bullets strong{color:var(--text);}
   <a class="nav-item active" onclick="showSection('overview',this)"><i data-lucide="info"></i> О разделе</a>
 
   <div class="nav-group-label">Ядро</div>
+  <a class="nav-item" onclick="showSection('arch-concepts',this)"><i data-lucide="columns-3"></i> Architecture Concepts</a>
   <a class="nav-item" onclick="showSection('lifecycle',this)"><i data-lucide="rotate-cw"></i> Request Lifecycle</a>
   <a class="nav-item" onclick="showSection('bootstrap-deep',this)"><i data-lucide="package"></i> Bootstrap: providers &amp; app.php</a>
   <a class="nav-item" onclick="showSection('routing',this)"><i data-lucide="route"></i> Routing</a>
@@ -344,6 +345,318 @@ ul.bullets strong{color:var(--text);}
       <tr><td>Наследование Controller/Model/FormRequest</td><td>KB_9</td></tr>
       <tr><td>Тестирование Laravel-приложений</td><td>KB_6 + KB_14</td></tr>
     </table>
+  </div>
+</div>
+
+<div id="sec-arch-concepts" class="section">
+  <div class="section-title">Architecture Concepts — четыре опоры фреймворка</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="columns-3"></i> О чём этот раздел</div>
+    <p class="text">В официальной документации Laravel есть раздел <em>Architecture Concepts</em> из четырёх страниц. Это не набор приёмов, а описание того, как фреймворк вообще устроен внутри. Всё остальное — роутинг, Eloquent, очереди — надстройки над этими четырьмя механизмами.</p>
+
+    <table class="data-table">
+      <tr><th>Концепция</th><th>Отвечает на вопрос</th><th>Главный механизм</th></tr>
+      <tr><td><strong>Request Lifecycle</strong></td><td>Что происходит с запросом от <code>index.php</code> до ответа</td><td>Kernel, bootstrappers, middleware-пайплайн</td></tr>
+      <tr><td><strong>Service Container</strong></td><td>Кто создаёт объекты и подставляет зависимости</td><td>Рефлексия, биндинги, автоматическое внедрение</td></tr>
+      <tr><td><strong>Service Providers</strong></td><td>Где регистрируются и настраиваются компоненты</td><td><code>register()</code> → <code>boot()</code></td></tr>
+      <tr><td><strong>Facades</strong></td><td>Как короткий статический синтаксис работает поверх контейнера</td><td><code>__callStatic()</code> + прокси к биндингу</td></tr>
+    </table>
+
+    <div class="info-box primary"><strong>Связь между ними в одном предложении.</strong> Создаётся <em>контейнер</em> → <em>провайдеры</em> складывают в него биндинги → запрос идёт по <em>жизненному циклу</em> → контейнер подставляет зависимости в контроллеры → <em>фасады</em> дают короткий доступ к тому же контейнеру.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="wand-2"></i> Главная мысль: объекты собирает контейнер, а не ты</div>
+    <p class="text">Это самое важное, что нужно понять про Laravel. Ты <strong>нигде не пишешь <code>new</code></strong> для контроллеров, сервисов, репозиториев и джобов. Их создаёт контейнер, попутно разрешая всю цепочку зависимостей.</p>
+
+<pre><code><span class="c-comment">// ❌ Как это выглядело бы без контейнера — ручная сборка графа объектов</span>
+<span class="c-var">$pdo</span>        = <span class="c-key">new</span> <span class="c-type">PDO</span>(<span class="c-var">$dsn</span>, <span class="c-var">$user</span>, <span class="c-var">$pass</span>);
+<span class="c-var">$connection</span> = <span class="c-key">new</span> <span class="c-type">Connection</span>(<span class="c-var">$pdo</span>);
+<span class="c-var">$repository</span> = <span class="c-key">new</span> <span class="c-type">UserRepository</span>(<span class="c-var">$connection</span>);
+<span class="c-var">$mailer</span>     = <span class="c-key">new</span> <span class="c-type">Mailer</span>(<span class="c-key">new</span> <span class="c-type">SmtpTransport</span>(<span class="c-var">$config</span>));
+<span class="c-var">$controller</span> = <span class="c-key">new</span> <span class="c-type">UserController</span>(<span class="c-var">$repository</span>, <span class="c-var">$mailer</span>);
+<span class="c-var">$response</span>   = <span class="c-var">$controller</span>-&gt;<span class="c-fn">store</span>(<span class="c-var">$request</span>);
+<span class="c-comment">// добавил зависимость в UserRepository — правь каждое место, где он создаётся</span>
+
+<span class="c-comment">// ✓ Как это в Laravel — объявляешь, что нужно, остальное не твоя забота</span>
+<span class="c-key">class</span> <span class="c-type">UserController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+        <span class="c-key">protected</span> <span class="c-type">UserRepository</span> <span class="c-var">$users</span>,
+        <span class="c-key">protected</span> <span class="c-type">Mailer</span> <span class="c-var">$mailer</span>,
+    ) {}
+}
+<span class="c-comment">// Роут Route::post('/users', [UserController::class, 'store']) —
+// и всё. Контейнер создаст контроллер, увидит типы в конструкторе,
+// рекурсивно построит UserRepository, Connection, PDO, Mailer…</span></code></pre>
+
+    <div class="card">
+      <h3>Откуда контейнер знает, что подставить</h3>
+      <p>Через <strong>рефлексию</strong>. Контейнер читает сигнатуру конструктора, берёт тип каждого параметра и пытается разрешить его как класс. Если у того тоже есть зависимости — рекурсивно повторяет. Никаких XML- и YAML-конфигов, как в старых фреймворках.</p>
+      <p>В документации это называется <strong>Zero Configuration Resolution</strong>:</p>
+      <div class="info-box success">Если класс не имеет зависимостей или зависит только от других конкретных классов (не интерфейсов), контейнеру <strong>не нужно объяснять</strong>, как его создавать. Это работает само.</div>
+    </div>
+
+    <div class="card">
+      <h3>Где автоматическое внедрение работает</h3>
+      <table class="data-table">
+        <tr><th>Место</th><th>Куда объявлять тип</th></tr>
+        <tr><td>Контроллеры</td><td>Конструктор <em>и</em> любой метод-экшен</td></tr>
+        <tr><td>Замыкания в роутах</td><td>Аргументы замыкания</td></tr>
+        <tr><td>Middleware</td><td>Конструктор</td></tr>
+        <tr><td>Event listeners</td><td>Конструктор</td></tr>
+        <tr><td>Queued jobs</td><td>Метод <code>handle()</code></td></tr>
+        <tr><td>Artisan-команды</td><td>Конструктор и <code>handle()</code></td></tr>
+        <tr><td>Любой callable</td><td>Через <code>App::call()</code></td></tr>
+      </table>
+<pre><code><span class="c-comment">// Внедрение в метод, а не только в конструктор</span>
+<span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">StoreUserRequest</span> <span class="c-var">$request</span>, <span class="c-type">UserRepository</span> <span class="c-var">$users</span>)
+{
+    <span class="c-comment">// И $request, и $users подставлены контейнером.
+    // Параметры роута при этом тоже работают — они идут после зависимостей.</span>
+}
+
+<span class="c-comment">// Ручной вызов метода с внедрением зависимостей</span>
+<span class="c-var">$stats</span> = <span class="c-type">App</span>::<span class="c-fn">call</span>([<span class="c-key">new</span> <span class="c-type">PodcastStats</span>, <span class="c-str">'generate'</span>]);
+<span class="c-var">$result</span> = <span class="c-type">App</span>::<span class="c-fn">call</span>(<span class="c-key">function</span> (<span class="c-type">AppleMusic</span> <span class="c-var">$apple</span>) { <span class="c-comment">/* ... */</span> });</code></pre>
+    </div>
+
+    <div class="info-box warning"><strong>Когда контейнеру всё-таки нужно объяснять.</strong> Документация называет ровно две ситуации. Первая — ты объявляешь в конструкторе <strong>интерфейс</strong>: контейнер не может угадать, какую из реализаций подставить. Вторая — ты пишешь <strong>пакет</strong> для других разработчиков и регистрируешь его сервисы. Во всех остальных случаях биндинг не нужен.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="rotate-cw"></i> 1. Request Lifecycle</div>
+    <p class="text">Путь запроса — всегда один и тот же. Детальный разбор каждого шага в разделе <strong>Request Lifecycle</strong>, здесь — карта целиком.</p>
+
+    <div class="diagram">public/index.php
+   │  автолоадер Composer
+   │  bootstrap/app.php → создаётся Application (он же контейнер)
+   ▼
+handleRequest()  →  HTTP Kernel (Illuminate\Foundation\Http\Kernel)
+   │
+   ├─ bootstrappers: окружение, конфиг, логи, обработка ошибок
+   ├─ регистрация service providers:
+   │       сначала register() у ВСЕХ, потом boot() у ВСЕХ
+   │
+   ▼
+глобальный middleware-стек
+   │
+   ▼
+Router: подбор маршрута  →  middleware маршрута/группы
+   │
+   ▼
+контроллер или замыкание          ← здесь контейнер внедряет зависимости
+   │
+   ▼
+Response идёт обратно через middleware
+   │
+   ▼
+$response->send()  →  браузер</div>
+
+    <div class="info-box primary">Ключевой момент из документации: <strong>сначала выполняется <code>register()</code> у всех провайдеров, и только потом <code>boot()</code> у всех</strong>. Именно поэтому в <code>boot()</code> можно рассчитывать, что все биндинги уже зарегистрированы, а в <code>register()</code> — нельзя обращаться к сервисам других провайдеров.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="box"></i> 2. Service Container — все способы биндинга</div>
+
+    <div class="card">
+      <h3>Базовые биндинги</h3>
+<pre><code><span class="c-comment">// Новый экземпляр при каждом разрешении</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bind</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">Application</span> <span class="c-var">$app</span>) {
+    <span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">Transistor</span>(<span class="c-var">$app</span>-&gt;<span class="c-fn">make</span>(<span class="c-type">PodcastParser</span>::<span class="c-key">class</span>));
+});
+
+<span class="c-comment">// Один экземпляр на всё приложение</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">singleton</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-comment">/* ... */</span>);
+
+<span class="c-comment">// Один экземпляр на запрос/джоб — сбрасывается в Octane и queue worker</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">scoped</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-comment">/* ... */</span>);
+
+<span class="c-comment">// Готовый объект</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">instance</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-var">$service</span>);
+
+<span class="c-comment">// Только если ещё не забиндено (для пакетов — даёт приложению переопределить)</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bindIf</span>(...);   <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">singletonIf</span>(...);   <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">scopedIf</span>(...);</code></pre>
+      <div class="info-box warning"><code>singleton</code> против <code>scoped</code> — различие проявляется только в long-running процессах. В обычном FPM каждый запрос это новый процесс, поэтому они ведут себя одинаково. Под Octane <code>singleton</code> переживёт запрос и может утащить за собой устаревший <code>Request</code> или данные другого пользователя.</div>
+    </div>
+
+    <div class="card">
+      <h3>Интерфейс → реализация</h3>
+      <p>Главный случай, когда биндинг обязателен.</p>
+<pre><code><span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bind</span>(<span class="c-type">EventPusher</span>::<span class="c-key">class</span>, <span class="c-type">RedisEventPusher</span>::<span class="c-key">class</span>);
+
+<span class="c-comment">// Теперь интерфейс можно объявлять в любом конструкторе</span>
+<span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">protected</span> <span class="c-type">EventPusher</span> <span class="c-var">$pusher</span>) {}</code></pre>
+      <p>Либо через атрибут прямо на интерфейсе — тогда регистрация в провайдере не нужна:</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Container</span>\<span class="c-type">Attributes</span>\<span class="c-type">Bind</span>;
+
+#[<span class="c-type">Bind</span>(<span class="c-type">RedisEventPusher</span>::<span class="c-key">class</span>)]
+#[<span class="c-type">Bind</span>(<span class="c-type">FakeEventPusher</span>::<span class="c-key">class</span>, environments: [<span class="c-str">'local'</span>, <span class="c-str">'testing'</span>])]
+<span class="c-key">interface</span> <span class="c-type">EventPusher</span> {}</code></pre>
+      <p>Атрибуты <code>#[Singleton]</code> и <code>#[Scoped]</code> ставятся так же — на класс или интерфейс, вместо вызова в провайдере.</p>
+    </div>
+
+    <div class="card">
+      <h3>Contextual binding — разным классам разные реализации</h3>
+<pre><code><span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">when</span>(<span class="c-type">PhotoController</span>::<span class="c-key">class</span>)
+    -&gt;<span class="c-fn">needs</span>(<span class="c-type">Filesystem</span>::<span class="c-key">class</span>)
+    -&gt;<span class="c-fn">give</span>(<span class="c-key">fn</span> () =&gt; <span class="c-type">Storage</span>::<span class="c-fn">disk</span>(<span class="c-str">'local'</span>));
+
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">when</span>([<span class="c-type">VideoController</span>::<span class="c-key">class</span>, <span class="c-type">UploadController</span>::<span class="c-key">class</span>])
+    -&gt;<span class="c-fn">needs</span>(<span class="c-type">Filesystem</span>::<span class="c-key">class</span>)
+    -&gt;<span class="c-fn">give</span>(<span class="c-key">fn</span> () =&gt; <span class="c-type">Storage</span>::<span class="c-fn">disk</span>(<span class="c-str">'s3'</span>));
+
+<span class="c-comment">// Примитивы и конфиг</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">when</span>(<span class="c-type">ReportAggregator</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">needs</span>(<span class="c-str">'$timezone'</span>)-&gt;<span class="c-fn">giveConfig</span>(<span class="c-str">'app.timezone'</span>);
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">when</span>(<span class="c-type">ReportAggregator</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">needs</span>(<span class="c-str">'$reports'</span>)-&gt;<span class="c-fn">giveTagged</span>(<span class="c-str">'reports'</span>);</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Contextual attributes — то же самое без провайдера</h3>
+      <p>Вместо <code>when()-&gt;needs()-&gt;give()</code> можно размечать параметры атрибутами прямо в конструкторе:</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+    #[<span class="c-type">Auth</span>(<span class="c-str">'web'</span>)]              <span class="c-key">protected</span> <span class="c-type">Guard</span> <span class="c-var">$auth</span>,
+    #[<span class="c-type">Cache</span>(<span class="c-str">'redis'</span>)]            <span class="c-key">protected</span> <span class="c-type">Repository</span> <span class="c-var">$cache</span>,
+    #[<span class="c-type">Config</span>(<span class="c-str">'app.timezone'</span>)]    <span class="c-key">protected</span> <span class="c-key">string</span> <span class="c-var">$timezone</span>,
+    #[<span class="c-type">DB</span>(<span class="c-str">'mysql'</span>)]               <span class="c-key">protected</span> <span class="c-type">Connection</span> <span class="c-var">$connection</span>,
+    #[<span class="c-type">Storage</span>(<span class="c-str">'local'</span>)]          <span class="c-key">protected</span> <span class="c-type">Filesystem</span> <span class="c-var">$files</span>,
+    #[<span class="c-type">Log</span>(<span class="c-str">'daily'</span>)]              <span class="c-key">protected</span> <span class="c-type">LoggerInterface</span> <span class="c-var">$log</span>,
+    #[<span class="c-type">Give</span>(<span class="c-type">DatabaseRepository</span>::<span class="c-key">class</span>)] <span class="c-key">protected</span> <span class="c-type">UserRepository</span> <span class="c-var">$users</span>,
+    #[<span class="c-type">RouteParameter</span>(<span class="c-str">'photo'</span>)]   <span class="c-key">protected</span> <span class="c-type">Photo</span> <span class="c-var">$photo</span>,
+    #[<span class="c-type">Tag</span>(<span class="c-str">'reports'</span>)]            <span class="c-key">protected</span> <span class="c-key">iterable</span> <span class="c-var">$reports</span>,
+) {}
+
+<span class="c-comment">// Текущий пользователь прямо в роуте</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/user'</span>, <span class="c-key">fn</span> (#[<span class="c-type">CurrentUser</span>] <span class="c-type">User</span> <span class="c-var">$user</span>) =&gt; <span class="c-var">$user</span>)-&gt;<span class="c-fn">middleware</span>(<span class="c-str">'auth'</span>);</code></pre>
+      <p>Полный набор атрибутов в <code>Illuminate\Container\Attributes</code>: <code>Auth</code>, <code>Authenticated</code>, <code>Bind</code>, <code>Cache</code>, <code>Config</code>, <code>Context</code>, <code>CurrentUser</code>, <code>DB</code>, <code>Database</code>, <code>Give</code>, <code>Log</code>, <code>RouteParameter</code>, <code>Scoped</code>, <code>Singleton</code>, <code>Storage</code>, <code>Tag</code>. Свой атрибут делается реализацией контракта <code>ContextualAttribute</code> с методом <code>resolve()</code>.</p>
+    </div>
+
+    <div class="card">
+      <h3>Tagging, extend, вариативные зависимости</h3>
+<pre><code><span class="c-comment">// Группа биндингов под одним тегом</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">tag</span>([<span class="c-type">CpuReport</span>::<span class="c-key">class</span>, <span class="c-type">MemoryReport</span>::<span class="c-key">class</span>], <span class="c-str">'reports'</span>);
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">tagged</span>(<span class="c-str">'reports'</span>);   <span class="c-comment">// вернёт все помеченные</span>
+
+<span class="c-comment">// Декорирование уже разрешённого сервиса</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">extend</span>(<span class="c-type">Service</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">Service</span> <span class="c-var">$service</span>, <span class="c-type">Application</span> <span class="c-var">$app</span>) {
+    <span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">DecoratedService</span>(<span class="c-var">$service</span>);
+});
+
+<span class="c-comment">// Variadic: Firewall(Logger $logger, Filter ...$filters)</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">when</span>(<span class="c-type">Firewall</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">needs</span>(<span class="c-type">Filter</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">give</span>([
+    <span class="c-type">NullFilter</span>::<span class="c-key">class</span>, <span class="c-type">ProfanityFilter</span>::<span class="c-key">class</span>,
+]);</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Разрешение вручную и события контейнера</h3>
+<pre><code><span class="c-var">$t</span> = <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">make</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>);
+<span class="c-var">$t</span> = <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">makeWith</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, [<span class="c-str">'id'</span> =&gt; <span class="c-num">1</span>]);  <span class="c-comment">// неразрешимые аргументы руками</span>
+<span class="c-var">$t</span> = <span class="c-type">App</span>::<span class="c-fn">make</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>);
+<span class="c-var">$t</span> = <span class="c-fn">app</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>);
+<span class="c-key">if</span> (<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bound</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>)) { <span class="c-comment">/* ... */</span> }
+
+<span class="c-comment">// Хук на каждое разрешение типа</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">resolving</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-var">$t</span>, <span class="c-var">$app</span>) { <span class="c-comment">/* ... */</span> });
+<span class="c-comment">// Хук на переопределение биндинга</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">rebinding</span>(<span class="c-type">PodcastPublisher</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-var">$app</span>, <span class="c-var">$new</span>) { <span class="c-comment">/* ... */</span> });</code></pre>
+      <p>Контейнер реализует <strong>PSR-11</strong>: контракт <code>Illuminate\Contracts\Container\Container</code> наследует <code>Psr\Container\ContainerInterface</code>, поэтому можно объявлять в типах стандартный интерфейс и получать <code>get()</code> / <code>has()</code>.</p>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="package"></i> 3. Service Providers</div>
+    <p class="text">Провайдеры — точка, где собирается всё приложение. Документация формулирует жёстко: <em>«service providers are the most important aspect of the entire Laravel bootstrap process»</em>. Практически каждая возможность фреймворка поднимается каким-нибудь провайдером. Детальный разбор — в разделе <strong>Bootstrap: providers &amp; app.php</strong>.</p>
+
+    <table class="data-table">
+      <tr><th></th><th><code>register()</code></th><th><code>boot()</code></th></tr>
+      <tr><td><strong>Когда</strong></td><td>Первый проход по всем провайдерам</td><td>Второй проход, после всех <code>register()</code></td></tr>
+      <tr><td><strong>Что можно</strong></td><td>Только складывать биндинги в контейнер</td><td>Всё: события, вьюхи, валидаторы, Blade-директивы, политики</td></tr>
+      <tr><td><strong>Что нельзя</strong></td><td>Обращаться к сервисам других провайдеров — их может ещё не быть</td><td>—</td></tr>
+    </table>
+    <p class="text">Список пользовательских и пакетных провайдеров приложения лежит в <code>bootstrap/providers.php</code>.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layers"></i> 4. Facades</div>
+    <p class="text">Фасад — это <strong>статический прокси к биндингу в контейнере</strong>. Выглядит как статический вызов, но статического метода там нет.</p>
+
+<pre><code><span class="c-comment">// Illuminate\Support\Facades\Cache — весь класс целиком</span>
+<span class="c-key">class</span> <span class="c-type">Cache</span> <span class="c-key">extends</span> <span class="c-type">Facade</span>
+{
+    <span class="c-key">protected static function</span> <span class="c-fn">getFacadeAccessor</span>(): <span class="c-key">string</span>
+    {
+        <span class="c-key">return</span> <span class="c-str">'cache'</span>;   <span class="c-comment">// ключ биндинга в контейнере</span>
+    }
+}
+
+<span class="c-comment">// Illuminate\Support\Facades\Facade — вся магия</span>
+<span class="c-key">public static function</span> <span class="c-fn">__callStatic</span>(<span class="c-var">$method</span>, <span class="c-var">$args</span>)
+{
+    <span class="c-var">$instance</span> = <span class="c-key">static</span>::<span class="c-fn">getFacadeRoot</span>();      <span class="c-comment">// app['cache']</span>
+
+    <span class="c-key">if</span> (! <span class="c-var">$instance</span>) {
+        <span class="c-key">throw new</span> <span class="c-type">RuntimeException</span>(<span class="c-str">'A facade root has not been set.'</span>);
+    }
+
+    <span class="c-key">return</span> <span class="c-var">$instance</span>-&gt;<span class="c-var">$method</span>(...<span class="c-var">$args</span>);  <span class="c-comment">// обычный вызов на объекте</span>
+}</code></pre>
+
+    <p class="text">То есть <code>Cache::get('key')</code> разворачивается в <code>app('cache')-&gt;get('key')</code>. Поэтому фасады <strong>тестируемы</strong>, в отличие от настоящих статических методов:</p>
+
+<pre><code><span class="c-type">Cache</span>::<span class="c-fn">shouldReceive</span>(<span class="c-str">'get'</span>)-&gt;<span class="c-fn">with</span>(<span class="c-str">'key'</span>)-&gt;<span class="c-fn">andReturn</span>(<span class="c-str">'value'</span>);</code></pre>
+
+    <div class="card">
+      <h3>Фасады, хелперы и DI — что выбирать</h3>
+      <table class="data-table">
+        <tr><th>Способ</th><th>Пример</th><th>Чем хорош / чем плох</th></tr>
+        <tr><td><strong>Фасад</strong></td><td><code>Cache::get('k')</code></td><td>Короткий синтаксис, мокается. Зависимость не видна в сигнатуре класса</td></tr>
+        <tr><td><strong>Хелпер</strong></td><td><code>cache('k')</code></td><td>Практической разницы с фасадом нет: тот же биндинг, тестируется так же</td></tr>
+        <tr><td><strong>DI</strong></td><td><code>__construct(Repository $cache)</code></td><td>Зависимости явные, подменяются без хелперов фреймворка. Конструктор растёт</td></tr>
+      </table>
+      <div class="info-box warning"><strong>Главная опасность фасадов — scope creep.</strong> Так формулирует её сама документация: фасады настолько удобны, что класс незаметно обрастает десятком обязанностей. При DI раздувшийся конструктор сам сигналит, что класс пора разбивать; с фасадами этого визуального сигнала нет. Правило простое: в <em>контроллерах и простых местах</em> фасады уместны; в <em>доменных сервисах</em>, которые надо изолированно тестировать, — конструкторное внедрение.</div>
+    </div>
+
+    <div class="card">
+      <h3>Real-time facades</h3>
+      <p>Любой свой класс можно вызывать как фасад, добавив префикс <code>Facades\</code> к его пространству имён. Внутри это обрабатывает <code>AliasLoader</code>, у которого <code>$facadeNamespace = 'Facades\\'</code>.</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Facades</span>\<span class="c-type">App</span>\<span class="c-type">Contracts</span>\<span class="c-type">Publisher</span>;
+
+<span class="c-key">class</span> <span class="c-type">Podcast</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">publish</span>(): <span class="c-type">void</span>
+    {
+        <span class="c-key">$this</span>-&gt;<span class="c-fn">update</span>([<span class="c-str">'publishing'</span> =&gt; <span class="c-fn">now</span>()]);
+
+        <span class="c-type">Publisher</span>::<span class="c-fn">publish</span>(<span class="c-key">$this</span>);   <span class="c-comment">// вместо передачи Publisher аргументом</span>
+    }
+}
+
+<span class="c-comment">// В тесте мокается точно так же</span>
+<span class="c-type">Publisher</span>::<span class="c-fn">shouldReceive</span>(<span class="c-str">'publish'</span>)-&gt;<span class="c-fn">once</span>()-&gt;<span class="c-fn">with</span>(<span class="c-var">$podcast</span>);</code></pre>
+      <p>Удобно в моделях и там, где прокидывать зависимость через все вызовы неудобно. Ценой — зависимость снова не видна в сигнатуре.</p>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Подводные камни</div>
+    <div class="pitfall"><strong>Интерфейс в конструкторе без биндинга.</strong> Контейнер не умеет угадывать реализацию и падает с <code>BindingResolutionException: Target [App\Contracts\X] is not instantiable</code>. Лечится биндингом в провайдере или атрибутом <code>#[Bind]</code> на интерфейсе.</div>
+    <div class="pitfall"><strong><code>singleton</code> под Octane.</strong> Синглтон, в который при создании попал <code>Request</code> или текущий пользователь, переживёт запрос и отдаст чужие данные следующему. Для такого состояния — <code>scoped</code>.</div>
+    <div class="pitfall"><strong>Обращение к сервисам в <code>register()</code>.</strong> Порядок провайдеров не гарантирован, нужный биндинг может быть ещё не зарегистрирован. Всё, что требует готовых сервисов, — только в <code>boot()</code>.</div>
+    <div class="pitfall"><strong>Фасад в конструкторе провайдера или в <code>register()</code>.</strong> Фасад тянет объект из контейнера в момент вызова; если биндинг ещё не на месте — <code>RuntimeException: A facade root has not been set.</code></div>
+    <div class="pitfall"><strong>Контейнер как Service Locator.</strong> <code>app(UserRepository::class)</code> в середине метода вместо объявления в конструкторе прячет зависимость: по сигнатуре класса не видно, что ему нужно, и тест нельзя собрать, не читая тело. Явное внедрение в конструктор — норма, <code>app()</code> — исключение.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="check-circle-2"></i> Итог</div>
+    <ul style="margin:8px 0 14px 22px;color:var(--text2);font-size:13px;line-height:1.85">
+      <li><strong>Контейнер — это ядро</strong>. Объект <code>Application</code> и есть контейнер; всё остальное живёт в нём.</li>
+      <li><strong>Ты не пишешь <code>new</code></strong> для контроллеров, сервисов и джобов — контейнер строит граф объектов по типам в конструкторе через рефлексию.</li>
+      <li><strong>Биндинг нужен в двух случаях</strong>: интерфейс в типе и разработка пакета. Конкретные классы разрешаются без конфигурации.</li>
+      <li><strong>Провайдеры — место сборки приложения</strong>: <code>register()</code> только биндинги, <code>boot()</code> всё остальное, и строго в этом порядке по всем провайдерам.</li>
+      <li><strong>Фасад — не статика</strong>, а <code>__callStatic()</code> поверх биндинга. Отсюда и тестируемость, и риск незаметного разрастания класса.</li>
+    </ul>
   </div>
 </div>
 
