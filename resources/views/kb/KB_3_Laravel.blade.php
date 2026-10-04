@@ -1528,8 +1528,6 @@ $response->send()  →  браузер</div>
 }</code></pre>
 
       <div class="info-box warning"><strong>Сигнатура <code>resolve()</code> — три аргумента.</strong> По документации: <code>resolve(self $attribute, Container $container, ReflectionParameter $parameter)</code>. Третий аргумент даёт рефлексию параметра — имя переменной, тип, остальные атрибуты. В старых сборках ветки 13.x контейнер вызывал handler двумя аргументами (<code>$handler($instance, $this)</code> в <code>Container::resolveFromAttribute()</code>), и тогда третий параметр нужно объявлять с значением по умолчанию, иначе <code>ArgumentCountError</code>. Если не уверен в своей сборке — поставь <code>?ReflectionParameter $parameter = null</code>, это работает в обоих случаях.</div>
-<br><br><code>return $handler($instance, $this);</code><br><br>
-Передаются только экземпляр атрибута и контейнер. Третий параметр без значения по умолчанию даст <code>ArgumentCountError</code>. Рефлексию параметра контейнер не прокидывает — имя переменной и её тип внутри <code>resolve()</code> недоступны.</div>
     </div>
 
     <div class="card">
