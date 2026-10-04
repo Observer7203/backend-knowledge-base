@@ -30,6 +30,12 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',-apple-system,sa
 .nav-subitem{display:block;padding:5px 8px;color:var(--text2);text-decoration:none;font-size:12px;cursor:pointer;border-radius:5px;transition:all 0.15s;}
 .nav-subitem:hover{background:var(--bg);color:var(--primary);}
 .nav-subitem.active{color:var(--primary);font-weight:600;background:var(--primary-light,#EFF2F5);}
+.nav-subgroup{display:none;}
+.nav-subgroup.open{display:block;}
+.nav-subitem code{font-family:'JetBrains Mono','Fira Code',Consolas,monospace;font-size:11px;background:var(--bg);padding:1px 4px;border-radius:4px;}
+.nav-caret{margin-left:auto;display:flex;align-items:center;transition:transform 0.18s;color:var(--text3);border-radius:4px;}
+.nav-caret:hover{background:var(--border);color:var(--primary);}
+.nav-item.expanded .nav-caret{transform:rotate(90deg);}
 .nav-item{display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:2px;color:var(--text2);text-decoration:none;border-radius:8px;cursor:pointer;transition:all 0.18s;font-size:13px;font-weight:500;border:1px solid transparent;}
 .nav-item svg{width:14px;height:14px;flex-shrink:0;}
 .nav-item:hover{background:var(--bg);color:var(--primary);border-color:var(--border);}
@@ -126,6 +132,18 @@ ul.bullets strong{color:var(--text);}
 
   <div class="nav-group-label">Ядро</div>
   <a class="nav-item" onclick="showSection('arch-concepts',this)"><i data-lucide="columns-3"></i> Architecture Concepts</a>
+  <div class="nav-subgroup">
+    <a class="nav-subitem" onclick="showSub('arch-concepts','arch-intro',this)">Introduction</a>
+    <a class="nav-subitem" onclick="showSub('arch-concepts','arch-di',this)">Контейнер вместо <code>new</code></a>
+    <a class="nav-subitem" onclick="showSub('arch-concepts','arch-lifecycle',this)">Request Lifecycle</a>
+    <a class="nav-subitem" onclick="showSub('arch-concepts','arch-container',this)">Service Container</a>
+    <a class="nav-subitem" onclick="showSub('arch-concepts','arch-attr-vs-param',this)">└ Атрибут vs параметр</a>
+    <a class="nav-subitem" onclick="showSub('arch-concepts','arch-custom-attr',this)">└ Свой контекстный атрибут</a>
+    <a class="nav-subitem" onclick="showSub('arch-concepts','arch-providers',this)">Service Providers</a>
+    <a class="nav-subitem" onclick="showSub('arch-concepts','arch-facades',this)">Facades</a>
+    <a class="nav-subitem" onclick="showSub('arch-concepts','arch-pitfalls',this)">Подводные камни</a>
+    <a class="nav-subitem" onclick="showSub('arch-concepts','arch-summary',this)">Итог</a>
+  </div>
   <a class="nav-item" onclick="showSection('lifecycle',this)"><i data-lucide="rotate-cw"></i> Request Lifecycle</a>
   <a class="nav-item" onclick="showSection('bootstrap-deep',this)"><i data-lucide="package"></i> Bootstrap: providers &amp; app.php</a>
   <a class="nav-item" onclick="showSection('routing',this)"><i data-lucide="route"></i> Routing</a>
@@ -355,7 +373,7 @@ ul.bullets strong{color:var(--text);}
 <div id="sec-arch-concepts" class="section">
   <div class="section-title">Architecture Concepts — четыре опоры фреймворка</div>
 
-  <div class="subsection">
+  <div class="subsection" id="arch-intro">
     <div class="subsection-title"><i data-lucide="columns-3"></i> О чём этот раздел</div>
     <p class="text">В официальной документации Laravel есть раздел <em>Architecture Concepts</em> из четырёх страниц. Это не набор приёмов, а описание того, как фреймворк вообще устроен внутри. Всё остальное — роутинг, Eloquent, очереди — надстройки над этими четырьмя механизмами.</p>
 
@@ -370,7 +388,7 @@ ul.bullets strong{color:var(--text);}
     <div class="info-box primary"><strong>Связь между ними в одном предложении.</strong> Создаётся <em>контейнер</em> → <em>провайдеры</em> складывают в него биндинги → запрос идёт по <em>жизненному циклу</em> → контейнер подставляет зависимости в контроллеры → <em>фасады</em> дают короткий доступ к тому же контейнеру.</div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="arch-di">
     <div class="subsection-title"><i data-lucide="wand-2"></i> Главная мысль: объекты собирает контейнер, а не ты</div>
     <p class="text">Это самое важное, что нужно понять про Laravel. Ты <strong>нигде не пишешь <code>new</code></strong> для контроллеров, сервисов, репозиториев и джобов. Их создаёт контейнер, попутно разрешая всю цепочку зависимостей.</p>
 
@@ -429,7 +447,7 @@ ul.bullets strong{color:var(--text);}
     <div class="info-box warning"><strong>Когда контейнеру всё-таки нужно объяснять.</strong> Документация называет ровно две ситуации. Первая — ты объявляешь в конструкторе <strong>интерфейс</strong>: контейнер не может угадать, какую из реализаций подставить. Вторая — ты пишешь <strong>пакет</strong> для других разработчиков и регистрируешь его сервисы. Во всех остальных случаях биндинг не нужен.</div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="arch-lifecycle">
     <div class="subsection-title"><i data-lucide="rotate-cw"></i> 1. Request Lifecycle</div>
     <p class="text">Путь запроса — всегда один и тот же. Детальный разбор каждого шага в разделе <strong>Request Lifecycle</strong>, здесь — карта целиком.</p>
 
@@ -461,7 +479,7 @@ $response->send()  →  браузер</div>
     <div class="info-box primary">Ключевой момент из документации: <strong>сначала выполняется <code>register()</code> у всех провайдеров, и только потом <code>boot()</code> у всех</strong>. Именно поэтому в <code>boot()</code> можно рассчитывать, что все биндинги уже зарегистрированы, а в <code>register()</code> — нельзя обращаться к сервисам других провайдеров.</div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="arch-container">
     <div class="subsection-title"><i data-lucide="box"></i> 2. Service Container — все способы биндинга</div>
     <p class="text">Разбор идёт по структуре официальной документации. Контейнер — это набор ассоциативных массивов; каждый способ биндинга пишет в один из них, и по тому, <em>куда</em> он пишет, сразу понятны время жизни и приоритет.</p>
 
@@ -811,7 +829,7 @@ $response->send()  →  браузер</div>
     </div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="arch-attr-vs-param">
     <div class="subsection-title"><i data-lucide="tags"></i> Атрибут vs параметр — два уровня одной сигнатуры</div>
     <p class="text">Атрибут не заменяет параметр, а <strong>уточняет, как его разрешить</strong>. Это две разные вещи в одной строке объявления.</p>
 
@@ -938,7 +956,7 @@ $response->send()  →  браузер</div>
     </div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="arch-custom-attr">
     <div class="subsection-title"><i data-lucide="puzzle"></i> Свой контекстный атрибут</div>
     <p class="text">Встроенных атрибутов шестнадцать, но механизм открыт: любой свой атрибут может участвовать во внедрении зависимостей. Нужны три части.</p>
 
@@ -1090,7 +1108,7 @@ has no registered handler.</code></pre>
     <div class="info-box success"><strong>Итог.</strong> Контекстный атрибут переносит логику получения значения из тела метода в одно место — в класс атрибута. Источник данных становится виден прямо в сигнатуре, а <code>config()</code>, <code>auth()->user()</code> и <code>app()->make()</code> исчезают из бизнес-кода. Цена — лишний уровень косвенности: чтобы понять, откуда пришло значение, нужно открыть класс атрибута.</div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="arch-providers">
     <div class="subsection-title"><i data-lucide="package"></i> 3. Service Providers</div>
     <p class="text">Провайдеры — точка, где собирается всё приложение. Документация формулирует жёстко: <em>«service providers are the most important aspect of the entire Laravel bootstrap process»</em>. Практически каждая возможность фреймворка поднимается каким-нибудь провайдером. Детальный разбор — в разделе <strong>Bootstrap: providers &amp; app.php</strong>.</p>
 
@@ -1103,7 +1121,7 @@ has no registered handler.</code></pre>
     <p class="text">Список пользовательских и пакетных провайдеров приложения лежит в <code>bootstrap/providers.php</code>.</p>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="arch-facades">
     <div class="subsection-title"><i data-lucide="layers"></i> 4. Facades</div>
     <p class="text">Фасад — это <strong>статический прокси к биндингу в контейнере</strong>. Выглядит как статический вызов, но статического метода там нет.</p>
 
@@ -1164,7 +1182,7 @@ has no registered handler.</code></pre>
     </div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="arch-pitfalls">
     <div class="subsection-title"><i data-lucide="alert-octagon"></i> Подводные камни</div>
     <div class="pitfall"><strong>Интерфейс в конструкторе без биндинга.</strong> Контейнер не умеет угадывать реализацию и падает с <code>BindingResolutionException: Target [App\Contracts\X] is not instantiable</code>. Лечится биндингом в провайдере или атрибутом <code>#[Bind]</code> на интерфейсе.</div>
     <div class="pitfall"><strong><code>singleton</code> под Octane.</strong> Синглтон, в который при создании попал <code>Request</code> или текущий пользователь, переживёт запрос и отдаст чужие данные следующему. Для такого состояния — <code>scoped</code>.</div>
@@ -1173,7 +1191,7 @@ has no registered handler.</code></pre>
     <div class="pitfall"><strong>Контейнер как Service Locator.</strong> <code>app(UserRepository::class)</code> в середине метода вместо объявления в конструкторе прячет зависимость: по сигнатуре класса не видно, что ему нужно, и тест нельзя собрать, не читая тело. Явное внедрение в конструктор — норма, <code>app()</code> — исключение.</div>
   </div>
 
-  <div class="subsection">
+  <div class="subsection" id="arch-summary">
     <div class="subsection-title"><i data-lucide="check-circle-2"></i> Итог</div>
     <ul style="margin:8px 0 14px 22px;color:var(--text2);font-size:13px;line-height:1.85">
       <li><strong>Контейнер — это ядро</strong>. Объект <code>Application</code> и есть контейнер; всё остальное живёт в нём.</li>
@@ -9969,36 +9987,83 @@ php artisan migrate
 <script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
 <script>
 lucide.createIcons();
+function closeAllSubgroups() {
+  document.querySelectorAll('.nav-subgroup').forEach(g => g.classList.remove('open'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('expanded'));
+}
+
+function openSubgroupFor(navEl) {
+  if (!navEl) return;
+  const grp = navEl.nextElementSibling;
+  if (grp && grp.classList.contains('nav-subgroup')) {
+    grp.classList.add('open');
+    navEl.classList.add('expanded');
+  }
+}
+
+function navItemFor(sectionId) {
+  return document.querySelector('.nav-item[onclick*="showSection(\'' + sectionId + '\'"]');
+}
+
 function showSection(id, el) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.querySelectorAll('.nav-subitem').forEach(n => n.classList.remove('active'));
   const sec = document.getElementById('sec-' + id);
   if (sec) sec.classList.add('active');
-  if (el) el.classList.add('active');
+  const nav = el || navItemFor(id);
+  if (nav) nav.classList.add('active');
+  closeAllSubgroups();
+  openSubgroupFor(nav);
   window.scrollTo(0, 0);
   lucide.createIcons();
 }
 
+function toggleSubgroup(navEl, ev) {
+  ev.stopPropagation();
+  ev.preventDefault();
+  const grp = navEl.nextElementSibling;
+  if (!grp || !grp.classList.contains('nav-subgroup')) return;
+  const willOpen = !grp.classList.contains('open');
+  grp.classList.toggle('open', willOpen);
+  navEl.classList.toggle('expanded', willOpen);
+}
+
 function showSub(sectionId, anchorId, el) {
-  // Активируем секцию (если ещё не активна) без сброса подсветки sub-item
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-subitem').forEach(n => n.classList.remove('active'));
   const sec = document.getElementById('sec-' + sectionId);
   if (sec) sec.classList.add('active');
-  // Подсветить родительский nav-item
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  const parentNav = document.querySelector(`.nav-item[onclick*="showSection('${sectionId}'"]`);
-  if (parentNav) parentNav.classList.add('active');
-  // Подсветить подпункт и скроллить
+  const parentNav = navItemFor(sectionId);
+  if (parentNav) {
+    parentNav.classList.add('active');
+    openSubgroupFor(parentNav);
+  }
   if (el) el.classList.add('active');
   const anchor = document.getElementById(anchorId);
   if (anchor) {
-    // Небольшая задержка чтобы секция успела показаться
     setTimeout(() => anchor.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   }
   lucide.createIcons();
 }
+
+// Каретка на каждом пункте, у которого есть подменю.
+// Обработчик висит на span — lucide подменяет только вложенный <i> на <svg>.
+document.querySelectorAll('.nav-item').forEach(n => {
+  const grp = n.nextElementSibling;
+  if (!grp || !grp.classList.contains('nav-subgroup')) return;
+  const caret = document.createElement('span');
+  caret.className = 'nav-caret';
+  caret.title = 'Свернуть / развернуть';
+  caret.innerHTML = '<i data-lucide="chevron-right"></i>';
+  caret.addEventListener('click', ev => toggleSubgroup(n, ev));
+  n.appendChild(caret);
+});
+
+// Подменю активного пункта раскрыто при загрузке, остальные свёрнуты
+openSubgroupFor(document.querySelector('.nav-item.active'));
+lucide.createIcons();
 </script>
 </body>
 </html>
