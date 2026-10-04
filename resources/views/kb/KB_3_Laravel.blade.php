@@ -481,6 +481,47 @@ $response->send()  →  браузер</div>
 
   <div class="subsection" id="arch-container">
     <div class="subsection-title"><i data-lucide="box"></i> 2. Service Container — все способы биндинга</div>
+    <div class="info-box primary"><strong>Определение из документации.</strong> Service container — инструмент для управления зависимостями классов и выполнения внедрения зависимостей. <em>«Dependency injection — заумная формулировка, которая по сути означает вот что: зависимости класса "внедряются" в него через конструктор или, в некоторых случаях, через сеттеры»</em>.</div>
+
+    <div class="card">
+      <h3>Что это значит на примере</h3>
+      <p>Контроллеру нужно получать подкасты из внешнего источника. Вместо того чтобы создавать клиент внутри себя, он <strong>объявляет</strong> потребность — и получает её готовой.</p>
+<pre><code><span class="c-key">namespace</span> <span class="c-type">App</span>\<span class="c-type">Http</span>\<span class="c-type">Controllers</span>;
+
+<span class="c-key">use</span> <span class="c-type">App</span>\<span class="c-type">Services</span>\<span class="c-type">AppleMusic</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">View</span>\<span class="c-type">View</span>;
+
+<span class="c-key">class</span> <span class="c-type">PodcastController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+        <span class="c-key">protected</span> <span class="c-type">AppleMusic</span> <span class="c-var">$apple</span>,
+    ) {}
+
+    <span class="c-key">public function</span> <span class="c-fn">show</span>(<span class="c-key">string</span> <span class="c-var">$id</span>): <span class="c-type">View</span>
+    {
+        <span class="c-key">return</span> <span class="c-fn">view</span>(<span class="c-str">'podcasts.show'</span>, [
+            <span class="c-str">'podcast'</span> =&gt; <span class="c-key">$this</span>-&gt;apple-&gt;<span class="c-fn">findPodcast</span>(<span class="c-var">$id</span>)
+        ]);
+    }
+}</code></pre>
+      <p>Главное следствие, на которое указывает документация: <strong>поскольку сервис внедряется, его легко подменить</strong> — мокнуть или подставить заглушку <code>AppleMusic</code> при тестировании. Если бы контроллер делал <code>new AppleMusic</code> внутри, тест бы полез в реальный Apple Music.</p>
+    </div>
+
+    <div class="card">
+      <h3>Куда именно «внедряются» зависимости</h3>
+      <table class="data-table">
+        <tr><th>Способ</th><th>Как выглядит</th><th>Делает ли контейнер сам</th></tr>
+        <tr><td><strong>Через конструктор</strong></td><td><code>__construct(AppleMusic $apple)</code></td><td>Да — основной путь</td></tr>
+        <tr><td><strong>Через параметры метода</strong></td><td><code>show(Request $r, UserRepo $u)</code></td><td>Да — в контроллерах, <code>handle()</code> джобов, <code>App::call()</code></td></tr>
+        <tr><td><strong>Через сеттер</strong></td><td><code>setApple(AppleMusic $apple)</code></td><td><strong>Нет</strong> — автоматически не вызывается</td></tr>
+      </table>
+      <div class="info-box warning"><strong>Уточнение про сеттеры.</strong> В определении сказано «через конструктор или, в некоторых случаях, через сеттеры» — это описание <em>паттерна</em> DI в целом, а не поведения контейнера Laravel. Контейнер при сборке читает только конструктор: в <code>Container</code> вызывается <code>$reflector-&gt;getConstructor()</code>, и разрешаются его параметры. Слова <code>setter</code> в коде контейнера нет вообще. Сеттер-инъекцию делают руками — либо вызовом сеттера в замыкании биндинга, либо через хук:
+<br><br>
+<code>$this-&gt;app-&gt;resolving(Podcast::class, fn ($p, $app) =&gt; $p-&gt;setApple($app-&gt;make(AppleMusic::class)));</code></div>
+    </div>
+
+    <div class="info-box success">Документация отдельно отмечает: <strong>глубокое понимание контейнера необходимо</strong> и для построения больших приложений, и для участия в разработке самого ядра Laravel. Это не внутренняя деталь, которую можно пропустить.</div>
+
     <p class="text">Разбор идёт по структуре официальной документации. Контейнер — это набор ассоциативных массивов; каждый способ биндинга пишет в один из них, и по тому, <em>куда</em> он пишет, сразу понятны время жизни и приоритет.</p>
 
     <table class="data-table">
