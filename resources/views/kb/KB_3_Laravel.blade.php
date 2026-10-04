@@ -1786,47 +1786,114 @@ has no registered handler.</code></pre>
 
   <div class="subsection" id="arch-facades">
     <div class="subsection-title"><i data-lucide="layers"></i> 4. Facades</div>
-    <p class="text">Фасад — это <strong>статический прокси к биндингу в контейнере</strong>. Выглядит как статический вызов, но статического метода там нет.</p>
+    <p class="text">Фасады дают <strong>«статический» интерфейс</strong> к классам, доступным в сервис-контейнере. Laravel поставляется с множеством фасадов, закрывающих почти все возможности фреймворка.</p>
 
-<pre><code><span class="c-comment">// Illuminate\Support\Facades\Cache — весь класс целиком</span>
-<span class="c-key">class</span> <span class="c-type">Cache</span> <span class="c-key">extends</span> <span class="c-type">Facade</span>
+    <div class="info-box primary"><strong>Определение из документации.</strong> Фасады служат <em>«статическими прокси»</em> к классам в контейнере: дают лаконичный выразительный синтаксис, сохраняя при этом больше тестируемости и гибкости, чем обычные статические методы.</div>
+
+    <p class="text">Все фасады лежат в пространстве имён <code>Illuminate\Support\Facades</code>:</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Support</span>\<span class="c-type">Facades</span>\<span class="c-type">Cache</span>;
+
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/cache'</span>, <span class="c-key">function</span> () {
+    <span class="c-key">return</span> <span class="c-type">Cache</span>::<span class="c-fn">get</span>(<span class="c-str">'key'</span>);
+});</code></pre>
+
+    <div class="card">
+      <h3>Хелперы — дополнение к фасадам</h3>
+      <p>В дополнение к фасадам есть глобальные хелперы: <code>view</code>, <code>response</code>, <code>url</code>, <code>config</code> и другие. Они доступны глобально, импортировать классы не нужно.</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Support</span>\<span class="c-type">Facades</span>\<span class="c-type">Response</span>;
+
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users'</span>, <span class="c-key">function</span> () {
+    <span class="c-key">return</span> <span class="c-type">Response</span>::<span class="c-fn">json</span>([ <span class="c-comment">/* ... */</span> ]);
+});
+
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users'</span>, <span class="c-key">function</span> () {
+    <span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">json</span>([ <span class="c-comment">/* ... */</span> ]);
+});</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Когда использовать фасады</h3>
+      <p>Плюсы: короткий запоминающийся синтаксис, не нужно держать в голове длинные имена классов и внедрять их вручную. За счёт динамических методов PHP они при этом легко тестируются.</p>
+      <div class="info-box warning"><strong>Главная опасность — «scope creep» класса.</strong> Формулировка документации: поскольку фасады настолько просты в использовании и не требуют внедрения, класс легко незаметно разрастается и начинает использовать десяток фасадов. При внедрении зависимостей этого не происходит — <em>большой конструктор визуально сигналит</em>, что класс стал слишком велик. С фасадами такого сигнала нет, поэтому следи за размером класса и дроби его, когда область ответственности расползается.</div>
+    </div>
+
+    <div class="card">
+      <h3>Фасады против внедрения зависимостей</h3>
+      <p>Главный плюс DI — возможность подменить реализацию. Обычный статический метод подменить нельзя. Но фасады используют динамические методы, проксируя вызовы к объекту из контейнера, — поэтому тестируются они так же, как внедрённый экземпляр.</p>
+<pre><code><span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/cache'</span>, <span class="c-key">function</span> () {
+    <span class="c-key">return</span> <span class="c-type">Cache</span>::<span class="c-fn">get</span>(<span class="c-str">'key'</span>);
+});
+
+<span class="c-comment">// Тест: проверяем, что Cache::get вызвался с нужным аргументом</span>
+<span class="c-key">public function</span> <span class="c-fn">test_basic_example</span>(): <span class="c-type">void</span>
 {
+    <span class="c-type">Cache</span>::<span class="c-fn">shouldReceive</span>(<span class="c-str">'get'</span>)
+        -&gt;<span class="c-fn">with</span>(<span class="c-str">'key'</span>)
+        -&gt;<span class="c-fn">andReturn</span>(<span class="c-str">'value'</span>);
+
+    <span class="c-key">$this</span>-&gt;<span class="c-fn">get</span>(<span class="c-str">'/cache'</span>)-&gt;<span class="c-fn">assertSee</span>(<span class="c-str">'value'</span>);
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Фасады против хелперов</h3>
+      <p>Многие хелперы делают ровно то же, что соответствующий фасад. Эти два вызова эквивалентны:</p>
+<pre><code><span class="c-key">return</span> <span class="c-type">Illuminate</span>\<span class="c-type">Support</span>\<span class="c-type">Facades</span>\<span class="c-type">View</span>::<span class="c-fn">make</span>(<span class="c-str">'profile'</span>);
+
+<span class="c-key">return</span> <span class="c-fn">view</span>(<span class="c-str">'profile'</span>);</code></pre>
+      <div class="info-box success"><strong>Практической разницы нет.</strong> Хелпер <code>cache('key')</code> вызывает метод <code>get</code> у того же класса, что стоит за фасадом <code>Cache</code>. Поэтому даже код на хелперах тестируется через <code>Cache::shouldReceive('get')</code> — точно так же, как код на фасадах.</div>
+    </div>
+
+    <div class="card">
+      <h3>Как фасады работают внутри</h3>
+      <p>Фасад — класс, дающий доступ к объекту из контейнера. Вся механика в базовом <code>Illuminate\Support\Facades\Facade</code>, который использует магический метод <code>__callStatic()</code>, чтобы переадресовать вызов объекту, разрешённому из контейнера.</p>
+      <p>Если заглянуть в <code>Illuminate\Support\Facades\Cache</code>, никакого статического метода <code>get</code> там нет — весь класс выглядит так:</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">Cache</span> <span class="c-key">extends</span> <span class="c-type">Facade</span>
+{
+    <span class="c-comment">/** Получить зарегистрированное имя компонента. */</span>
     <span class="c-key">protected static function</span> <span class="c-fn">getFacadeAccessor</span>(): <span class="c-key">string</span>
     {
-        <span class="c-key">return</span> <span class="c-str">'cache'</span>;   <span class="c-comment">// ключ биндинга в контейнере</span>
+        <span class="c-key">return</span> <span class="c-str">'cache'</span>;
     }
-}
-
-<span class="c-comment">// Illuminate\Support\Facades\Facade — вся магия</span>
+}</code></pre>
+      <p>Задача <code>getFacadeAccessor()</code> — вернуть <strong>имя биндинга в контейнере</strong>. Когда ты обращаешься к любому статическому методу фасада, Laravel разрешает биндинг <code>cache</code> из контейнера и выполняет запрошенный метод на полученном объекте.</p>
+<pre><code><span class="c-comment">// Illuminate\Support\Facades\Facade — ядро механизма</span>
 <span class="c-key">public static function</span> <span class="c-fn">__callStatic</span>(<span class="c-var">$method</span>, <span class="c-var">$args</span>)
 {
-    <span class="c-var">$instance</span> = <span class="c-key">static</span>::<span class="c-fn">getFacadeRoot</span>();      <span class="c-comment">// app['cache']</span>
+    <span class="c-var">$instance</span> = <span class="c-key">static</span>::<span class="c-fn">getFacadeRoot</span>();
 
     <span class="c-key">if</span> (! <span class="c-var">$instance</span>) {
         <span class="c-key">throw new</span> <span class="c-type">RuntimeException</span>(<span class="c-str">'A facade root has not been set.'</span>);
     }
 
-    <span class="c-key">return</span> <span class="c-var">$instance</span>-&gt;<span class="c-var">$method</span>(...<span class="c-var">$args</span>);  <span class="c-comment">// обычный вызов на объекте</span>
+    <span class="c-key">return</span> <span class="c-var">$instance</span>-&gt;<span class="c-var">$method</span>(...<span class="c-var">$args</span>);
 }</code></pre>
-
-    <p class="text">То есть <code>Cache::get('key')</code> разворачивается в <code>app('cache')-&gt;get('key')</code>. Поэтому фасады <strong>тестируемы</strong>, в отличие от настоящих статических методов:</p>
-
-<pre><code><span class="c-type">Cache</span>::<span class="c-fn">shouldReceive</span>(<span class="c-str">'get'</span>)-&gt;<span class="c-fn">with</span>(<span class="c-str">'key'</span>)-&gt;<span class="c-fn">andReturn</span>(<span class="c-str">'value'</span>);</code></pre>
+      <p>То есть <code>Cache::get('key')</code> разворачивается в <code>app('cache')-&gt;get('key')</code>. Фасад проксирует к контракту <code>Illuminate\Contracts\Cache\Factory</code>.</p>
+    </div>
 
     <div class="card">
-      <h3>Фасады, хелперы и DI — что выбирать</h3>
+      <h3>Фасад, хелпер или DI — что выбирать</h3>
       <table class="data-table">
         <tr><th>Способ</th><th>Пример</th><th>Чем хорош / чем плох</th></tr>
         <tr><td><strong>Фасад</strong></td><td><code>Cache::get('k')</code></td><td>Короткий синтаксис, мокается. Зависимость не видна в сигнатуре класса</td></tr>
         <tr><td><strong>Хелпер</strong></td><td><code>cache('k')</code></td><td>Практической разницы с фасадом нет: тот же биндинг, тестируется так же</td></tr>
-        <tr><td><strong>DI</strong></td><td><code>__construct(Repository $cache)</code></td><td>Зависимости явные, подменяются без хелперов фреймворка. Конструктор растёт</td></tr>
+        <tr><td><strong>DI</strong></td><td><code>__construct(Repository $cache)</code></td><td>Зависимости явные, подменяются без хелперов фреймворка. Конструктор растёт — и это полезный сигнал</td></tr>
       </table>
-      <div class="info-box warning"><strong>Главная опасность фасадов — scope creep.</strong> Так формулирует её сама документация: фасады настолько удобны, что класс незаметно обрастает десятком обязанностей. При DI раздувшийся конструктор сам сигналит, что класс пора разбивать; с фасадами этого визуального сигнала нет. Правило простое: в <em>контроллерах и простых местах</em> фасады уместны; в <em>доменных сервисах</em>, которые надо изолированно тестировать, — конструкторное внедрение.</div>
     </div>
 
     <div class="card">
-      <h3>Real-time facades</h3>
-      <p>Любой свой класс можно вызывать как фасад, добавив префикс <code>Facades\</code> к его пространству имён. Внутри это обрабатывает <code>AliasLoader</code>, у которого <code>$facadeNamespace = 'Facades\\'</code>.</p>
+      <h3>Real-Time Facades</h3>
+      <p>Любой свой класс можно использовать как фасад. Без них, чтобы опубликовать подкаст, пришлось бы прокидывать <code>Publisher</code> аргументом:</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">Podcast</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">publish</span>(<span class="c-type">Publisher</span> <span class="c-var">$publisher</span>): <span class="c-type">void</span>
+    {
+        <span class="c-key">$this</span>-&gt;<span class="c-fn">update</span>([<span class="c-str">'publishing'</span> =&gt; <span class="c-fn">now</span>()]);
+
+        <span class="c-var">$publisher</span>-&gt;<span class="c-fn">publish</span>(<span class="c-key">$this</span>);
+    }
+}</code></pre>
+      <p>Внедрение позволяет тестировать метод изолированно, но заставляет передавать <code>Publisher</code> при каждом вызове. Real-time facade сохраняет тестируемость и убирает аргумент. Чтобы его получить, добавь к пространству имён импортируемого класса префикс <code>Facades</code>:</p>
 <pre><code><span class="c-key">use</span> <span class="c-type">Facades</span>\<span class="c-type">App</span>\<span class="c-type">Contracts</span>\<span class="c-type">Publisher</span>;
 
 <span class="c-key">class</span> <span class="c-type">Podcast</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
@@ -1835,13 +1902,84 @@ has no registered handler.</code></pre>
     {
         <span class="c-key">$this</span>-&gt;<span class="c-fn">update</span>([<span class="c-str">'publishing'</span> =&gt; <span class="c-fn">now</span>()]);
 
-        <span class="c-type">Publisher</span>::<span class="c-fn">publish</span>(<span class="c-key">$this</span>);   <span class="c-comment">// вместо передачи Publisher аргументом</span>
+        <span class="c-type">Publisher</span>::<span class="c-fn">publish</span>(<span class="c-key">$this</span>);
     }
-}
+}</code></pre>
+      <p>Реализация разрешается из контейнера по той части имени, что идёт после префикса <code>Facades</code>. В тестах мокается штатными хелперами:</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Facades</span>\<span class="c-type">App</span>\<span class="c-type">Contracts</span>\<span class="c-type">Publisher</span>;
 
-<span class="c-comment">// В тесте мокается точно так же</span>
-<span class="c-type">Publisher</span>::<span class="c-fn">shouldReceive</span>(<span class="c-str">'publish'</span>)-&gt;<span class="c-fn">once</span>()-&gt;<span class="c-fn">with</span>(<span class="c-var">$podcast</span>);</code></pre>
-      <p>Удобно в моделях и там, где прокидывать зависимость через все вызовы неудобно. Ценой — зависимость снова не видна в сигнатуре.</p>
+<span class="c-key">public function</span> <span class="c-fn">test_podcast_can_be_published</span>(): <span class="c-type">void</span>
+{
+    <span class="c-var">$podcast</span> = <span class="c-type">Podcast</span>::<span class="c-fn">factory</span>()-&gt;<span class="c-fn">create</span>();
+
+    <span class="c-type">Publisher</span>::<span class="c-fn">shouldReceive</span>(<span class="c-str">'publish'</span>)-&gt;<span class="c-fn">once</span>()-&gt;<span class="c-fn">with</span>(<span class="c-var">$podcast</span>);
+
+    <span class="c-var">$podcast</span>-&gt;<span class="c-fn">publish</span>();
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Справочник фасадов</h3>
+      <p>Каждый фасад и класс, который за ним стоит. Третья колонка — ключ биндинга в контейнере, где он есть.</p>
+      <table class="data-table">
+        <tr><th>Фасад</th><th>Класс</th><th>Ключ биндинга</th></tr>
+        <tr><td>App</td><td><code>Illuminate\Foundation\Application</code></td><td><code>app</code></td></tr>
+        <tr><td>Artisan</td><td><code>Illuminate\Contracts\Console\Kernel</code></td><td><code>artisan</code></td></tr>
+        <tr><td>Auth (Instance)</td><td><code>Illuminate\Contracts\Auth\Guard</code></td><td><code>auth.driver</code></td></tr>
+        <tr><td>Auth</td><td><code>Illuminate\Auth\AuthManager</code></td><td><code>auth</code></td></tr>
+        <tr><td>Blade</td><td><code>Illuminate\View\Compilers\BladeCompiler</code></td><td><code>blade.compiler</code></td></tr>
+        <tr><td>Broadcast (Instance)</td><td><code>Illuminate\Contracts\Broadcasting\Broadcaster</code></td><td>—</td></tr>
+        <tr><td>Broadcast</td><td><code>Illuminate\Contracts\Broadcasting\Factory</code></td><td>—</td></tr>
+        <tr><td>Bus</td><td><code>Illuminate\Contracts\Bus\Dispatcher</code></td><td>—</td></tr>
+        <tr><td>Cache (Instance)</td><td><code>Illuminate\Cache\Repository</code></td><td><code>cache.store</code></td></tr>
+        <tr><td>Cache</td><td><code>Illuminate\Cache\CacheManager</code></td><td><code>cache</code></td></tr>
+        <tr><td>Config</td><td><code>Illuminate\Config\Repository</code></td><td><code>config</code></td></tr>
+        <tr><td>Context</td><td><code>Illuminate\Log\Context\Repository</code></td><td>—</td></tr>
+        <tr><td>Cookie</td><td><code>Illuminate\Cookie\CookieJar</code></td><td><code>cookie</code></td></tr>
+        <tr><td>Crypt</td><td><code>Illuminate\Encryption\Encrypter</code></td><td><code>encrypter</code></td></tr>
+        <tr><td>Date</td><td><code>Illuminate\Support\DateFactory</code></td><td><code>date</code></td></tr>
+        <tr><td>DB (Instance)</td><td><code>Illuminate\Database\Connection</code></td><td><code>db.connection</code></td></tr>
+        <tr><td>DB</td><td><code>Illuminate\Database\DatabaseManager</code></td><td><code>db</code></td></tr>
+        <tr><td>Event</td><td><code>Illuminate\Events\Dispatcher</code></td><td><code>events</code></td></tr>
+        <tr><td>Exceptions (Instance)</td><td><code>Illuminate\Contracts\Debug\ExceptionHandler</code></td><td>—</td></tr>
+        <tr><td>Exceptions</td><td><code>Illuminate\Foundation\Exceptions\Handler</code></td><td>—</td></tr>
+        <tr><td>File</td><td><code>Illuminate\Filesystem\Filesystem</code></td><td><code>files</code></td></tr>
+        <tr><td>Gate</td><td><code>Illuminate\Contracts\Auth\Access\Gate</code></td><td>—</td></tr>
+        <tr><td>Hash</td><td><code>Illuminate\Contracts\Hashing\Hasher</code></td><td><code>hash</code></td></tr>
+        <tr><td>Http</td><td><code>Illuminate\Http\Client\Factory</code></td><td>—</td></tr>
+        <tr><td>Lang</td><td><code>Illuminate\Translation\Translator</code></td><td><code>translator</code></td></tr>
+        <tr><td>Log</td><td><code>Illuminate\Log\LogManager</code></td><td><code>log</code></td></tr>
+        <tr><td>Mail</td><td><code>Illuminate\Mail\Mailer</code></td><td><code>mailer</code></td></tr>
+        <tr><td>Notification</td><td><code>Illuminate\Notifications\ChannelManager</code></td><td>—</td></tr>
+        <tr><td>Password (Instance)</td><td><code>Illuminate\Auth\Passwords\PasswordBroker</code></td><td><code>auth.password.broker</code></td></tr>
+        <tr><td>Password</td><td><code>Illuminate\Auth\Passwords\PasswordBrokerManager</code></td><td><code>auth.password</code></td></tr>
+        <tr><td>Pipeline (Instance)</td><td><code>Illuminate\Pipeline\Pipeline</code></td><td>—</td></tr>
+        <tr><td>Process</td><td><code>Illuminate\Process\Factory</code></td><td>—</td></tr>
+        <tr><td>Queue (Base Class)</td><td><code>Illuminate\Queue\Queue</code></td><td>—</td></tr>
+        <tr><td>Queue (Instance)</td><td><code>Illuminate\Contracts\Queue\Queue</code></td><td><code>queue.connection</code></td></tr>
+        <tr><td>Queue</td><td><code>Illuminate\Queue\QueueManager</code></td><td><code>queue</code></td></tr>
+        <tr><td>RateLimiter</td><td><code>Illuminate\Cache\RateLimiter</code></td><td>—</td></tr>
+        <tr><td>Redirect</td><td><code>Illuminate\Routing\Redirector</code></td><td><code>redirect</code></td></tr>
+        <tr><td>Redis (Instance)</td><td><code>Illuminate\Redis\Connections\Connection</code></td><td><code>redis.connection</code></td></tr>
+        <tr><td>Redis</td><td><code>Illuminate\Redis\RedisManager</code></td><td><code>redis</code></td></tr>
+        <tr><td>Request</td><td><code>Illuminate\Http\Request</code></td><td><code>request</code></td></tr>
+        <tr><td>Response (Instance)</td><td><code>Illuminate\Http\Response</code></td><td>—</td></tr>
+        <tr><td>Response</td><td><code>Illuminate\Contracts\Routing\ResponseFactory</code></td><td>—</td></tr>
+        <tr><td>Route</td><td><code>Illuminate\Routing\Router</code></td><td><code>router</code></td></tr>
+        <tr><td>Schedule</td><td><code>Illuminate\Console\Scheduling\Schedule</code></td><td>—</td></tr>
+        <tr><td>Schema</td><td><code>Illuminate\Database\Schema\Builder</code></td><td>—</td></tr>
+        <tr><td>Session (Instance)</td><td><code>Illuminate\Session\Store</code></td><td><code>session.store</code></td></tr>
+        <tr><td>Session</td><td><code>Illuminate\Session\SessionManager</code></td><td><code>session</code></td></tr>
+        <tr><td>Storage (Instance)</td><td><code>Illuminate\Contracts\Filesystem\Filesystem</code></td><td><code>filesystem.disk</code></td></tr>
+        <tr><td>Storage</td><td><code>Illuminate\Filesystem\FilesystemManager</code></td><td><code>filesystem</code></td></tr>
+        <tr><td>URL</td><td><code>Illuminate\Routing\UrlGenerator</code></td><td><code>url</code></td></tr>
+        <tr><td>Validator (Instance)</td><td><code>Illuminate\Validation\Validator</code></td><td>—</td></tr>
+        <tr><td>Validator</td><td><code>Illuminate\Validation\Factory</code></td><td><code>validator</code></td></tr>
+        <tr><td>View (Instance)</td><td><code>Illuminate\View\View</code></td><td>—</td></tr>
+        <tr><td>View</td><td><code>Illuminate\View\Factory</code></td><td><code>view</code></td></tr>
+        <tr><td>Vite</td><td><code>Illuminate\Foundation\Vite</code></td><td>—</td></tr>
+      </table>
+      <p>Строки вида «Auth (Instance)» означают, что фасад может указывать и на менеджер, и на конкретный экземпляр драйвера — в зависимости от того, какой метод вызван.</p>
     </div>
   </div>
 
