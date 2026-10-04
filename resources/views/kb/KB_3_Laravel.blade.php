@@ -828,19 +828,99 @@ $response->send()  →  браузер</div>
 });</code></pre>
     </div>
 
+        <div class="card">
+      <h3>Что означает «resolve»</h3>
+      <p><strong>Resolve (разрешить)</strong> — процесс, в котором контейнер создаёт объект и подставляет все его зависимости. «Разрешить» здесь значит «удовлетворить все требования класса»: найти и передать всё, что он просит в конструкторе.</p>
+      <p>Когда ты пишешь <code>app(Transistor::class)</code> — или когда контейнер сам создаёт контроллер — происходит ровно это:</p>
+      <ol style="margin:8px 0 14px 22px;color:var(--text2);font-size:13px;line-height:1.85">
+        <li>Контейнер смотрит на класс <code>Transistor</code>.</li>
+        <li>Читает его конструктор через рефлексию.</li>
+        <li>Для каждого параметра конструктора находит зависимость — <strong>рекурсивно</strong>, то есть у зависимостей тоже разрешаются их зависимости.</li>
+        <li>Создаёт объект: <code>new Transistor(...$dependencies)</code>.</li>
+        <li>Возвращает готовый экземпляр.</li>
+      </ol>
+      <p>Весь этот процесс и называется resolve. Результат — собранный объект.</p>
+    </div>
+
     <div class="card">
-      <h3>Container Events и Rebinding</h3>
-      <p><strong>Назначение:</strong> контейнер поднимает событие на каждое разрешение объекта — можно донастроить его до того, как он уйдёт потребителю.</p>
+      <h3>Полный порядок внутри <code>resolve()</code></h3>
+      <p>Понимать порядок важно: от него зависит, что можно сделать на каком этапе. Это фактическая последовательность из <code>Container::resolve()</code>:</p>
+      <div class="diagram">make(Transistor::class)
+   │
+   ▼
+1. fireBeforeResolvingCallbacks()          ← beforeResolving: объекта ещё НЕТ
+   │
+   ▼
+2. if (isset($instances[$abstract]))  ──→  return $instances[$abstract]
+   │                                       ⚠ ранний выход: НИ ОДНО
+   │                                          событие не сработает
+   ▼
+3. build($concrete)                        ← рефлексия + рекурсия по зависимостям
+   │
+   ▼
+4. foreach (getExtenders() as $extender)
+       $object = $extender($object, $this)  ← extend(): МОЖЕТ подменить объект
+   │
+   ▼
+5. if (isShared())  $instances[...] = $object
+   │
+   ▼
+6. fireResolvingCallbacks():
+       a) глобальные resolving (без типа)
+       b) resolving для конкретного типа
+       c) afterResolving                    ← всё ещё ДО возврата
+   │
+   ▼
+7. $resolved[$abstract] = true
+   │
+   ▼
+8. return $object</div>
+    </div>
+
+    <div class="card">
+      <h3><code>resolving()</code> — подписка на создание объекта</h3>
+      <p><strong>Назначение:</strong> донастроить объект после сборки, но до того, как он уйдёт потребителю. Колбэк получает сам объект и контейнер.</p>
 <pre><code><span class="c-comment">// Для конкретного типа</span>
 <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">resolving</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">Transistor</span> <span class="c-var">$transistor</span>, <span class="c-type">Application</span> <span class="c-var">$app</span>) {
-    <span class="c-comment">// вызовется при разрешении объектов типа Transistor</span>
+    <span class="c-var">$transistor</span>-&gt;<span class="c-fn">setDebugMode</span>(<span class="c-var">$app</span>-&gt;<span class="c-fn">isLocal</span>());
 });
 
-<span class="c-comment">// Для любого типа</span>
+<span class="c-comment">// Без первого аргумента — на ЛЮБОЙ объект, для отладки и аудита</span>
 <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">resolving</span>(<span class="c-key">function</span> (<span class="c-key">mixed</span> <span class="c-var">$object</span>, <span class="c-type">Application</span> <span class="c-var">$app</span>) {
-    <span class="c-comment">// вызовется при разрешении объекта любого типа</span>
+    <span class="c-type">Log</span>::<span class="c-fn">info</span>(<span class="c-str">'Resolved: '</span> . <span class="c-fn">get_class</span>(<span class="c-var">$object</span>));
+});
+
+<span class="c-comment">// beforeResolving — до сборки, объекта ещё нет, есть только тип и параметры</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">beforeResolving</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-var">$abstract</span>, <span class="c-var">$parameters</span>, <span class="c-var">$app</span>) {});
+
+<span class="c-comment">// afterResolving — сразу после resolving, тоже до возврата</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">afterResolving</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">Transistor</span> <span class="c-var">$transistor</span>) {
+    <span class="c-var">$transistor</span>-&gt;<span class="c-fn">boot</span>();
 });</code></pre>
-      <p><strong>Rebinding</strong> — отследить, что сервис <em>перебиндили</em>: зарегистрировали заново или переопределили после первого биндинга.</p>
+
+      <table class="data-table">
+        <tr><th>Сценарий</th><th>Что делает хук</th></tr>
+        <tr><td>Отладка</td><td>Логирует, какие классы создаются и в каком порядке</td></tr>
+        <tr><td>Донастройка</td><td>Выставляет свойства объекта после сборки</td></tr>
+        <tr><td>Метрики</td><td>Считает количество созданных объектов</td></tr>
+        <tr><td>Тестирование</td><td>Проверяет, что нужный объект вообще создавался</td></tr>
+        <tr><td>Подмена объекта</td><td><strong>Не умеет</strong> — для этого <code>extend()</code></td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Три вещи, в которых легко ошибиться</h3>
+
+      <div class="pitfall"><strong>1. В <code>resolving()</code> нельзя подменить объект.</strong> Возвращаемое значение колбэка <em>игнорируется</em> — в <code>fireCallbackArray()</code> стоит просто <code>$callback($object, $this);</code> без присваивания. Объект можно мутировать (вызвать сеттер, выставить свойство), но вернуть вместо него другой — нет. Подмена делается через <code>extend()</code>, который выполняется раньше и результат замыкания как раз использует: <code>$object = $extender($object, $this);</code></div>
+
+      <div class="pitfall"><strong>2. <code>afterResolving</code> срабатывает <em>до</em> возврата объекта, а не после.</strong> Оба хука живут внутри одного <code>fireResolvingCallbacks()</code>, и порядок там жёсткий: глобальные <code>resolving</code> → типизированные <code>resolving</code> → <code>afterResolving</code>. Разница между ними только в этой очерёдности, а не в том, что один «до возврата», а другой «после». К моменту <code>return $object</code> отработали уже оба.</div>
+
+      <div class="pitfall"><strong>3. Для синглтона события срабатывают только один раз.</strong> При повторном <code>make()</code> контейнер попадает в ранний выход <code>if (isset($this->instances[$abstract])) return $this->instances[$abstract];</code> — до любого вызова хуков. Поэтому счётчик созданных объектов на <code>resolving()</code> покажет для <code>singleton</code> единицу независимо от числа обращений, а донастройка применится только к первой сборке. Для транзиентных <code>bind()</code> хуки работают на каждое разрешение.</div>
+    </div>
+
+    <div class="card">
+      <h3>Rebinding — подписка на переопределение биндинга</h3>
+      <p><strong>Назначение:</strong> отследить, что сервис <em>перебиндили</em> — зарегистрировали заново или переопределили после первого биндинга. Это не то же самое, что <code>resolving</code>: тут событие про изменение <em>правила</em>, а не про создание объекта.</p>
 <pre><code><span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bind</span>(<span class="c-type">PodcastPublisher</span>::<span class="c-key">class</span>, <span class="c-type">SpotifyPublisher</span>::<span class="c-key">class</span>);
 
 <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">rebinding</span>(
@@ -852,6 +932,7 @@ $response->send()  →  браузер</div>
 
 <span class="c-comment">// Новый биндинг запустит замыкание выше</span>
 <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bind</span>(<span class="c-type">PodcastPublisher</span>::<span class="c-key">class</span>, <span class="c-type">TransistorPublisher</span>::<span class="c-key">class</span>);</code></pre>
+      <p>Сахар над этим — <code>refresh($abstract, $target, $method)</code>: подписывается на переопределение и сам вызывает сеттер у объекта, который держит устаревшую зависимость.</p>
     </div>
 
     <div class="card">
