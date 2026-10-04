@@ -1655,15 +1655,133 @@ has no registered handler.</code></pre>
 
   <div class="subsection" id="arch-providers">
     <div class="subsection-title"><i data-lucide="package"></i> 3. Service Providers</div>
-    <p class="text">Провайдеры — точка, где собирается всё приложение. Документация формулирует жёстко: <em>«service providers are the most important aspect of the entire Laravel bootstrap process»</em>. Практически каждая возможность фреймворка поднимается каким-нибудь провайдером. Детальный разбор — в разделе <strong>Bootstrap: providers &amp; app.php</strong>.</p>
+    <p class="text">Провайдеры — <strong>центральное место всего бутстрапа</strong> приложения. И твой код, и все сервисы ядра Laravel поднимаются через них.</p>
 
-    <table class="data-table">
-      <tr><th></th><th><code>register()</code></th><th><code>boot()</code></th></tr>
-      <tr><td><strong>Когда</strong></td><td>Первый проход по всем провайдерам</td><td>Второй проход, после всех <code>register()</code></td></tr>
-      <tr><td><strong>Что можно</strong></td><td>Только складывать биндинги в контейнер</td><td>Всё: события, вьюхи, валидаторы, Blade-директивы, политики</td></tr>
-      <tr><td><strong>Что нельзя</strong></td><td>Обращаться к сервисам других провайдеров — их может ещё не быть</td><td>—</td></tr>
-    </table>
-    <p class="text">Список пользовательских и пакетных провайдеров приложения лежит в <code>bootstrap/providers.php</code>.</p>
+    <div class="info-box primary"><strong>Что значит «bootstrapping».</strong> По документации — <em>регистрация</em>: биндингов в контейнер, слушателей событий, middleware и даже маршрутов. Провайдеры это центральное место, где конфигурируется приложение.</div>
+
+    <p class="text">Внутри Laravel использует десятки провайдеров, чтобы поднять mailer, очереди, кеш и остальное. Многие из них <strong>отложенные</strong> (deferred): они не грузятся на каждый запрос, а только когда предоставляемый ими сервис реально понадобился.</p>
+    <p class="text">Все пользовательские провайдеры регистрируются в <code>bootstrap/providers.php</code>.</p>
+
+    <div class="card">
+      <h3>Как написать провайдер</h3>
+      <p>Все провайдеры наследуют <code>Illuminate\Support\ServiceProvider</code> и обычно содержат два метода — <code>register</code> и <code>boot</code>.</p>
+<pre><code>php artisan make:provider RiakServiceProvider</code></pre>
+      <p>Artisan сгенерирует класс и <strong>сам пропишет его</strong> в <code>bootstrap/providers.php</code>.</p>
+    </div>
+
+    <div class="card">
+      <h3>Метод <code>register()</code></h3>
+      <div class="info-box danger"><strong>Жёсткое правило из документации.</strong> В <code>register()</code> можно <strong>только биндить вещи в контейнер</strong>. Никогда не регистрируй здесь слушателей событий, маршруты или любую другую функциональность — иначе рискуешь воспользоваться сервисом, чей провайдер ещё не загрузился.</div>
+      <p>Внутри любого метода провайдера доступно свойство <code>$app</code> — это контейнер.</p>
+<pre><code><span class="c-key">namespace</span> <span class="c-type">App</span>\<span class="c-type">Providers</span>;
+
+<span class="c-key">use</span> <span class="c-type">App</span>\<span class="c-type">Services</span>\<span class="c-type">Riak</span>\<span class="c-type">Connection</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Contracts</span>\<span class="c-type">Foundation</span>\<span class="c-type">Application</span>;
+<span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Support</span>\<span class="c-type">ServiceProvider</span>;
+
+<span class="c-key">class</span> <span class="c-type">RiakServiceProvider</span> <span class="c-key">extends</span> <span class="c-type">ServiceProvider</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">register</span>(): <span class="c-type">void</span>
+    {
+        <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">singleton</span>(<span class="c-type">Connection</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">Application</span> <span class="c-var">$app</span>) {
+            <span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">Connection</span>(<span class="c-fn">config</span>(<span class="c-str">'riak'</span>));
+        });
+    }
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Свойства <code>$bindings</code> и <code>$singletons</code></h3>
+      <p>Если провайдер регистрирует много простых биндингов, вместо ручных вызовов можно объявить два свойства. Фреймворк проверит их при загрузке провайдера и зарегистрирует сам.</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">AppServiceProvider</span> <span class="c-key">extends</span> <span class="c-type">ServiceProvider</span>
+{
+    <span class="c-comment">/** Все биндинги, которые нужно зарегистрировать. */</span>
+    <span class="c-key">public</span> <span class="c-var">$bindings</span> = [
+        <span class="c-type">ServerProvider</span>::<span class="c-key">class</span> =&gt; <span class="c-type">DigitalOceanServerProvider</span>::<span class="c-key">class</span>,
+    ];
+
+    <span class="c-comment">/** Все синглтоны, которые нужно зарегистрировать. */</span>
+    <span class="c-key">public</span> <span class="c-var">$singletons</span> = [
+        <span class="c-type">DowntimeNotifier</span>::<span class="c-key">class</span> =&gt; <span class="c-type">PingdomDowntimeNotifier</span>::<span class="c-key">class</span>,
+        <span class="c-type">ServerProvider</span>::<span class="c-key">class</span>    =&gt; <span class="c-type">ServerToolsProvider</span>::<span class="c-key">class</span>,
+    ];
+}</code></pre>
+      <p>Обрабатывается это в <code>Application</code>: при регистрации провайдера фреймворк проходит <code>foreach ($provider-&gt;bindings ...)</code> и <code>foreach ($provider-&gt;singletons ...)</code>. Только формат «интерфейс ⇒ класс»; замыкание так не задать.</p>
+    </div>
+
+    <div class="card">
+      <h3>Метод <code>boot()</code></h3>
+      <p>А что если нужно зарегистрировать view composer? Это делается в <code>boot()</code>. <strong>Метод вызывается после того, как зарегистрированы все остальные провайдеры</strong> — значит, доступны все сервисы, которые успел зарегистрировать фреймворк.</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">ComposerServiceProvider</span> <span class="c-key">extends</span> <span class="c-type">ServiceProvider</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">boot</span>(): <span class="c-type">void</span>
+    {
+        <span class="c-type">View</span>::<span class="c-fn">composer</span>(<span class="c-str">'view'</span>, <span class="c-key">function</span> () {
+            <span class="c-comment">// ...</span>
+        });
+    }
+}</code></pre>
+      <p><strong>Внедрение зависимостей в <code>boot()</code>.</strong> Его аргументы можно типизировать — контейнер подставит что нужно:</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Contracts</span>\<span class="c-type">Routing</span>\<span class="c-type">ResponseFactory</span>;
+
+<span class="c-key">public function</span> <span class="c-fn">boot</span>(<span class="c-type">ResponseFactory</span> <span class="c-var">$response</span>): <span class="c-type">void</span>
+{
+    <span class="c-var">$response</span>-&gt;<span class="c-fn">macro</span>(<span class="c-str">'serialized'</span>, <span class="c-key">function</span> (<span class="c-key">mixed</span> <span class="c-var">$value</span>) {
+        <span class="c-comment">// ...</span>
+    });
+}</code></pre>
+      <div class="info-box warning">В <code>register()</code> так делать нельзя — там зависимостей ещё может не быть. Внедрение в аргументы работает только у <code>boot()</code>.</div>
+    </div>
+
+    <div class="card">
+      <h3><code>register()</code> против <code>boot()</code></h3>
+      <table class="data-table">
+        <tr><th></th><th><code>register()</code></th><th><code>boot()</code></th></tr>
+        <tr><td><strong>Когда</strong></td><td>Первый проход по всем провайдерам</td><td>Второй проход, после всех <code>register()</code></td></tr>
+        <tr><td><strong>Что можно</strong></td><td>Только биндинги в контейнер</td><td>Всё: события, view composers, макросы, маршруты, политики, Blade-директивы</td></tr>
+        <tr><td><strong>Другие сервисы</strong></td><td>Недоступны — провайдер мог ещё не загрузиться</td><td>Доступны все</td></tr>
+        <tr><td><strong>Внедрение в аргументы</strong></td><td>Нет</td><td>Да</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Регистрация провайдеров</h3>
+      <p>Все провайдеры перечислены в <code>bootstrap/providers.php</code> — файл возвращает массив имён классов.</p>
+<pre><code><span class="c-comment">// bootstrap/providers.php</span>
+<span class="c-key">return</span> [
+    <span class="c-type">App</span>\<span class="c-type">Providers</span>\<span class="c-type">AppServiceProvider</span>::<span class="c-key">class</span>,
+];</code></pre>
+      <p>Команда <code>make:provider</code> добавляет новый провайдер в этот массив автоматически. Если класс создан руками — дописать нужно самому:</p>
+<pre><code><span class="c-key">return</span> [
+    <span class="c-type">App</span>\<span class="c-type">Providers</span>\<span class="c-type">AppServiceProvider</span>::<span class="c-key">class</span>,
+    <span class="c-type">App</span>\<span class="c-type">Providers</span>\<span class="c-type">ComposerServiceProvider</span>::<span class="c-key">class</span>,
+];</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Отложенные провайдеры (Deferred Providers)</h3>
+      <p>Если провайдер <strong>только</strong> регистрирует биндинги в контейнер, его загрузку можно отложить до момента, когда один из этих биндингов реально понадобится. Это ускоряет приложение: провайдер не читается с диска на каждый запрос.</p>
+      <p>Laravel компилирует и хранит список всех сервисов, которые предоставляются отложенными провайдерами, вместе с именем класса провайдера. Провайдер подгружается только при попытке разрешить один из этих сервисов.</p>
+      <p>Чтобы отложить загрузку — реализуй <code>Illuminate\Contracts\Support\DeferrableProvider</code> и опиши метод <code>provides()</code>, возвращающий зарегистрированные биндинги:</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Contracts</span>\<span class="c-type">Support</span>\<span class="c-type">DeferrableProvider</span>;
+
+<span class="c-key">class</span> <span class="c-type">RiakServiceProvider</span> <span class="c-key">extends</span> <span class="c-type">ServiceProvider</span> <span class="c-key">implements</span> <span class="c-type">DeferrableProvider</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">register</span>(): <span class="c-type">void</span>
+    {
+        <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">singleton</span>(<span class="c-type">Connection</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">Application</span> <span class="c-var">$app</span>) {
+            <span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">Connection</span>(<span class="c-var">$app</span>[<span class="c-str">'config'</span>][<span class="c-str">'riak'</span>]);
+        });
+    }
+
+    <span class="c-comment">/** @return array&lt;int, string&gt; */</span>
+    <span class="c-key">public function</span> <span class="c-fn">provides</span>(): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> [<span class="c-type">Connection</span>::<span class="c-key">class</span>];
+    }
+}</code></pre>
+      <div class="info-box warning"><strong>Условие применимости.</strong> Откладывать можно только провайдер, который <em>ничего не делает кроме биндингов</em>. Есть <code>boot()</code> с событиями, маршрутами или макросами — отложить нельзя: этот код должен отработать на каждом запросе, а отложенный провайдер может не загрузиться вовсе.</div>
+    </div>
   </div>
 
   <div class="subsection" id="arch-facades">
