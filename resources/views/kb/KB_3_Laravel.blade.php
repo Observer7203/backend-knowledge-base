@@ -463,109 +463,351 @@ $response->send()  →  браузер</div>
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="box"></i> 2. Service Container — все способы биндинга</div>
+    <p class="text">Разбор идёт по структуре официальной документации. Контейнер — это набор ассоциативных массивов; каждый способ биндинга пишет в один из них, и по тому, <em>куда</em> он пишет, сразу понятны время жизни и приоритет.</p>
+
+    <table class="data-table">
+      <tr><th>Способ</th><th>Что с чем связывает</th><th>Время жизни</th><th>Хранилище</th></tr>
+      <tr><td><code>bind()</code></td><td>абстракт → фабрика</td><td>Новый объект на каждый <code>make()</code></td><td><code>$bindings</code>, <code>shared=false</code></td></tr>
+      <tr><td><code>bindIf()</code></td><td>то же, но только если не забиндено</td><td>—</td><td><code>$bindings</code></td></tr>
+      <tr><td><code>singleton()</code></td><td>абстракт → фабрика</td><td>Один на процесс</td><td><code>$bindings</code>, <code>shared=true</code></td></tr>
+      <tr><td><code>singletonIf()</code></td><td>то же, если не забиндено</td><td>Один на процесс</td><td><code>$bindings</code></td></tr>
+      <tr><td><code>scoped()</code></td><td>абстракт → фабрика</td><td>Один на запрос/джоб</td><td><code>$bindings</code> + <code>$scopedInstances</code></td></tr>
+      <tr><td><code>scopedIf()</code></td><td>то же, если не забиндено</td><td>Один на запрос/джоб</td><td><code>$bindings</code></td></tr>
+      <tr><td><code>instance()</code></td><td>абстракт → готовый объект</td><td>Этот объект, всегда</td><td><code>$instances</code></td></tr>
+      <tr><td><code>bind(И, Р)</code></td><td>интерфейс → реализация</td><td>Как у <code>bind</code></td><td><code>$bindings</code></td></tr>
+      <tr><td><code>#[Bind]</code>, <code>#[BindWhen]</code></td><td>интерфейс → реализация, на самом интерфейсе</td><td>Зависит от <code>#[Singleton]</code>/<code>#[Scoped]</code></td><td>Читается из атрибута</td></tr>
+      <tr><td><code>when()-&gt;needs()-&gt;give()</code></td><td>(потребитель + потребность) → реализация</td><td>—</td><td><code>$contextual</code></td></tr>
+      <tr><td>Контекстные атрибуты</td><td>параметр → источник значения</td><td>—</td><td>Читается из атрибута</td></tr>
+      <tr><td><code>needs('$var')-&gt;give()</code></td><td>примитивный параметр → значение</td><td>—</td><td><code>$contextual</code></td></tr>
+      <tr><td><code>tag()</code> / <code>tagged()</code></td><td>тег → список абстрактов</td><td>—</td><td><code>$tags</code></td></tr>
+      <tr><td><code>extend()</code></td><td>абстракт → декоратор</td><td>На каждое разрешение</td><td><code>$extenders</code></td></tr>
+    </table>
+    <div class="info-box primary"><strong>Приоритет разрешения.</strong> Сначала <code>$instances</code>, затем контекстный биндинг для текущего потребителя, затем обычный <code>$bindings</code>, и только потом автоматическая сборка через рефлексию. Поэтому <code>instance()</code> перебивает всё.</div>
 
     <div class="card">
-      <h3>Базовые биндинги</h3>
-<pre><code><span class="c-comment">// Новый экземпляр при каждом разрешении</span>
+      <h3>Simple Bindings — <code>bind()</code></h3>
+      <p><strong>Назначение:</strong> объяснить контейнеру, как собрать объект, когда он не может догадаться сам. Новый объект на каждое разрешение.</p>
+      <p><strong>Связь:</strong> <code>абстракт → замыкание-фабрика</code>. Замыкание получает контейнер и может разрешать подзависимости.</p>
+<pre><code><span class="c-comment">// Почти все биндинги регистрируются в сервис-провайдерах,
+// где контейнер доступен через $this-&gt;app</span>
 <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bind</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">Application</span> <span class="c-var">$app</span>) {
     <span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">Transistor</span>(<span class="c-var">$app</span>-&gt;<span class="c-fn">make</span>(<span class="c-type">PodcastParser</span>::<span class="c-key">class</span>));
 });
 
-<span class="c-comment">// Один экземпляр на всё приложение</span>
-<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">singleton</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-comment">/* ... */</span>);
+<span class="c-comment">// Вне провайдера — через фасад App</span>
+<span class="c-type">App</span>::<span class="c-fn">bind</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">Application</span> <span class="c-var">$app</span>) { <span class="c-comment">/* ... */</span> });
 
-<span class="c-comment">// Один экземпляр на запрос/джоб — сбрасывается в Octane и queue worker</span>
-<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">scoped</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-comment">/* ... */</span>);
+<span class="c-comment">// Только если биндинга ещё нет — для пакетов, чтобы не перетирать приложение</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bindIf</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">Application</span> <span class="c-var">$app</span>) { <span class="c-comment">/* ... */</span> });
 
-<span class="c-comment">// Готовый объект</span>
-<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">instance</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-var">$service</span>);
-
-<span class="c-comment">// Только если ещё не забиндено (для пакетов — даёт приложению переопределить)</span>
-<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bindIf</span>(...);   <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">singletonIf</span>(...);   <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">scopedIf</span>(...);</code></pre>
-      <div class="info-box warning"><code>singleton</code> против <code>scoped</code> — различие проявляется только в long-running процессах. В обычном FPM каждый запрос это новый процесс, поэтому они ведут себя одинаково. Под Octane <code>singleton</code> переживёт запрос и может утащить за собой устаревший <code>Request</code> или данные другого пользователя.</div>
+<span class="c-comment">// Абстракт можно не указывать — он берётся из возвращаемого типа замыкания</span>
+<span class="c-type">App</span>::<span class="c-fn">bind</span>(<span class="c-key">function</span> (<span class="c-type">Application</span> <span class="c-var">$app</span>): <span class="c-type">Transistor</span> {
+    <span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">Transistor</span>(<span class="c-var">$app</span>-&gt;<span class="c-fn">make</span>(<span class="c-type">PodcastParser</span>::<span class="c-key">class</span>));
+});</code></pre>
+      <div class="info-box success">Прямая цитата из документации: <strong>классы, не зависящие от интерфейсов, биндить не нужно</strong> — контейнер соберёт их сам через рефлексию.</div>
     </div>
 
     <div class="card">
-      <h3>Интерфейс → реализация</h3>
-      <p>Главный случай, когда биндинг обязателен.</p>
+      <h3>Binding a Singleton — <code>singleton()</code></h3>
+      <p><strong>Назначение:</strong> объект должен разрешаться <em>один раз</em>; все последующие обращения получают тот же экземпляр. Для дорогих в создании и не хранящих пользовательское состояние сервисов: менеджеры соединений, клиенты API, реестры.</p>
+      <p><strong>Связь:</strong> <code>абстракт → фабрика</code> с <code>shared = true</code>; результат переезжает в <code>$instances</code>.</p>
+<pre><code><span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">singleton</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">Application</span> <span class="c-var">$app</span>) {
+    <span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">Transistor</span>(<span class="c-var">$app</span>-&gt;<span class="c-fn">make</span>(<span class="c-type">PodcastParser</span>::<span class="c-key">class</span>));
+});
+
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">singletonIf</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">Application</span> <span class="c-var">$app</span>) { <span class="c-comment">/* ... */</span> });
+
+<span class="c-fn">app</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>) === <span class="c-fn">app</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>);   <span class="c-comment">// true</span></code></pre>
+      <p><strong>Singleton Attribute</strong> — то же самое без провайдера, пометкой на классе или интерфейсе:</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Container</span>\<span class="c-type">Attributes</span>\<span class="c-type">Singleton</span>;
+
+#[<span class="c-type">Singleton</span>]
+<span class="c-key">class</span> <span class="c-type">Transistor</span> {}</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Binding Scoped Singletons — <code>scoped()</code></h3>
+      <p><strong>Назначение:</strong> один экземпляр <em>в пределах одного жизненного цикла</em> запроса или джоба. Документация прямо указывает: такие экземпляры сбрасываются, когда Octane-воркер берёт новый запрос или queue-воркер — новый джоб.</p>
+      <p><strong>Связь:</strong> как у <code>singleton</code>, плюс абстракт помечается в <code>$scopedInstances</code>; между циклами вызывается <code>forgetScopedInstances()</code>.</p>
+<pre><code><span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">scoped</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">Application</span> <span class="c-var">$app</span>) {
+    <span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">Transistor</span>(<span class="c-var">$app</span>-&gt;<span class="c-fn">make</span>(<span class="c-type">PodcastParser</span>::<span class="c-key">class</span>));
+});
+
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">scopedIf</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">Application</span> <span class="c-var">$app</span>) { <span class="c-comment">/* ... */</span> });</code></pre>
+      <p><strong>Scoped Attribute</strong>:</p>
+<pre><code>#[<span class="c-type">Scoped</span>]
+<span class="c-key">class</span> <span class="c-type">Transistor</span> {}</code></pre>
+      <div class="info-box warning"><strong><code>singleton</code> против <code>scoped</code>.</strong> В обычном PHP-FPM разницы нет: процесс умирает вместе с запросом. Разница проявляется под Octane и в queue-воркере, где процесс живёт дальше. Там <code>singleton</code>, захвативший <code>Request</code> или текущего пользователя, отдаст их следующему запросу — то есть чужому человеку. Состояние, привязанное к запросу или пользователю, — только <code>scoped</code>.</div>
+    </div>
+
+    <div class="card">
+      <h3>Binding Instances — <code>instance()</code></h3>
+      <p><strong>Назначение:</strong> зарегистрировать уже созданный объект. Документация: заданный экземпляр будет возвращаться при всех последующих обращениях. Основное применение — подмена сервиса в тестах.</p>
+      <p><strong>Связь:</strong> <code>абстракт → конкретный объект</code>, сразу в <code>$instances</code>. Фабрики нет.</p>
+<pre><code><span class="c-var">$service</span> = <span class="c-key">new</span> <span class="c-type">Transistor</span>(<span class="c-key">new</span> <span class="c-type">PodcastParser</span>);
+
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">instance</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-var">$service</span>);</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Binding Interfaces to Implementations</h3>
+      <p><strong>Назначение:</strong> главный случай, когда биндинг обязателен. Контейнер не может угадать, какую реализацию подставить вместо интерфейса.</p>
+      <p><strong>Связь:</strong> <code>интерфейс → класс реализации</code>. Второй аргумент — строка, не замыкание: контейнер соберёт реализацию сам.</p>
 <pre><code><span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bind</span>(<span class="c-type">EventPusher</span>::<span class="c-key">class</span>, <span class="c-type">RedisEventPusher</span>::<span class="c-key">class</span>);
 
-<span class="c-comment">// Теперь интерфейс можно объявлять в любом конструкторе</span>
-<span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">protected</span> <span class="c-type">EventPusher</span> <span class="c-var">$pusher</span>) {}</code></pre>
-      <p>Либо через атрибут прямо на интерфейсе — тогда регистрация в провайдере не нужна:</p>
+<span class="c-comment">// Теперь интерфейс объявляется в конструкторе любого класса,
+// который создаётся контейнером</span>
+<span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+    <span class="c-key">protected</span> <span class="c-type">EventPusher</span> <span class="c-var">$pusher</span>,
+) {}</code></pre>
+      <p><strong>Bind Attribute</strong> — то же решение прямо на интерфейсе, без регистрации в провайдере. Несколько <code>#[Bind]</code> задают разные реализации под разные окружения:</p>
 <pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Container</span>\<span class="c-type">Attributes</span>\<span class="c-type">Bind</span>;
 
 #[<span class="c-type">Bind</span>(<span class="c-type">RedisEventPusher</span>::<span class="c-key">class</span>)]
 #[<span class="c-type">Bind</span>(<span class="c-type">FakeEventPusher</span>::<span class="c-key">class</span>, environments: [<span class="c-str">'local'</span>, <span class="c-str">'testing'</span>])]
+<span class="c-key">interface</span> <span class="c-type">EventPusher</span> {}
+
+<span class="c-comment">// Время жизни задаётся тут же</span>
+#[<span class="c-type">Bind</span>(<span class="c-type">RedisEventPusher</span>::<span class="c-key">class</span>)]
+#[<span class="c-type">Singleton</span>]
 <span class="c-key">interface</span> <span class="c-type">EventPusher</span> {}</code></pre>
-      <p>Атрибуты <code>#[Singleton]</code> и <code>#[Scoped]</code> ставятся так же — на класс или интерфейс, вместо вызова в провайдере.</p>
+      <p><strong><code>#[BindWhen]</code></strong> — реализация по произвольному условию. Замыкание получает контейнер и возвращает <code>true</code>, когда биндинг нужно применить. <code>Bind</code> и <code>BindWhen</code> вычисляются в порядке объявления.</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Illuminate</span>\<span class="c-type">Container</span>\<span class="c-type">Attributes</span>\<span class="c-type">BindWhen</span>;
+
+#[<span class="c-type">BindWhen</span>(<span class="c-type">BetaEventPusher</span>::<span class="c-key">class</span>, <span class="c-key">static fn</span> () =&gt; <span class="c-type">Feature</span>::<span class="c-fn">active</span>(<span class="c-str">'beta-events'</span>))]
+<span class="c-key">interface</span> <span class="c-type">EventPusher</span> {}</code></pre>
+      <div class="info-box warning"><code>#[BindWhen]</code> требует <strong>PHP 8.5 или выше</strong>.</div>
     </div>
 
     <div class="card">
-      <h3>Contextual binding — разным классам разные реализации</h3>
+      <h3>Contextual Binding</h3>
+      <p><strong>Назначение:</strong> два класса зависят от одного интерфейса, но каждому нужна своя реализация.</p>
+      <p><strong>Связь:</strong> трёхместная — <code>(кто запрашивает) + (что ему нужно) → что подставить</code>.</p>
 <pre><code><span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">when</span>(<span class="c-type">PhotoController</span>::<span class="c-key">class</span>)
     -&gt;<span class="c-fn">needs</span>(<span class="c-type">Filesystem</span>::<span class="c-key">class</span>)
-    -&gt;<span class="c-fn">give</span>(<span class="c-key">fn</span> () =&gt; <span class="c-type">Storage</span>::<span class="c-fn">disk</span>(<span class="c-str">'local'</span>));
+    -&gt;<span class="c-fn">give</span>(<span class="c-key">function</span> () {
+        <span class="c-key">return</span> <span class="c-type">Storage</span>::<span class="c-fn">disk</span>(<span class="c-str">'local'</span>);
+    });
 
+<span class="c-comment">// Одно правило на несколько потребителей</span>
 <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">when</span>([<span class="c-type">VideoController</span>::<span class="c-key">class</span>, <span class="c-type">UploadController</span>::<span class="c-key">class</span>])
     -&gt;<span class="c-fn">needs</span>(<span class="c-type">Filesystem</span>::<span class="c-key">class</span>)
-    -&gt;<span class="c-fn">give</span>(<span class="c-key">fn</span> () =&gt; <span class="c-type">Storage</span>::<span class="c-fn">disk</span>(<span class="c-str">'s3'</span>));
-
-<span class="c-comment">// Примитивы и конфиг</span>
-<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">when</span>(<span class="c-type">ReportAggregator</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">needs</span>(<span class="c-str">'$timezone'</span>)-&gt;<span class="c-fn">giveConfig</span>(<span class="c-str">'app.timezone'</span>);
-<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">when</span>(<span class="c-type">ReportAggregator</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">needs</span>(<span class="c-str">'$reports'</span>)-&gt;<span class="c-fn">giveTagged</span>(<span class="c-str">'reports'</span>);</code></pre>
+    -&gt;<span class="c-fn">give</span>(<span class="c-key">function</span> () {
+        <span class="c-key">return</span> <span class="c-type">Storage</span>::<span class="c-fn">disk</span>(<span class="c-str">'s3'</span>);
+    });</code></pre>
     </div>
 
     <div class="card">
-      <h3>Contextual attributes — то же самое без провайдера</h3>
-      <p>Вместо <code>when()-&gt;needs()-&gt;give()</code> можно размечать параметры атрибутами прямо в конструкторе:</p>
+      <h3>Contextual Attributes</h3>
+      <p><strong>Назначение:</strong> контекстный биндинг чаще всего нужен для драйверов и значений конфига — атрибуты позволяют не описывать его в провайдере вообще.</p>
+      <p><strong>Связь:</strong> <code>конкретный параметр → источник значения</code>, объявляется прямо в сигнатуре.</p>
 <pre><code><span class="c-key">public function</span> <span class="c-fn">__construct</span>(
-    #[<span class="c-type">Auth</span>(<span class="c-str">'web'</span>)]              <span class="c-key">protected</span> <span class="c-type">Guard</span> <span class="c-var">$auth</span>,
-    #[<span class="c-type">Cache</span>(<span class="c-str">'redis'</span>)]            <span class="c-key">protected</span> <span class="c-type">Repository</span> <span class="c-var">$cache</span>,
-    #[<span class="c-type">Config</span>(<span class="c-str">'app.timezone'</span>)]    <span class="c-key">protected</span> <span class="c-key">string</span> <span class="c-var">$timezone</span>,
-    #[<span class="c-type">DB</span>(<span class="c-str">'mysql'</span>)]               <span class="c-key">protected</span> <span class="c-type">Connection</span> <span class="c-var">$connection</span>,
-    #[<span class="c-type">Storage</span>(<span class="c-str">'local'</span>)]          <span class="c-key">protected</span> <span class="c-type">Filesystem</span> <span class="c-var">$files</span>,
-    #[<span class="c-type">Log</span>(<span class="c-str">'daily'</span>)]              <span class="c-key">protected</span> <span class="c-type">LoggerInterface</span> <span class="c-var">$log</span>,
+    #[<span class="c-type">Auth</span>(<span class="c-str">'web'</span>)]                    <span class="c-key">protected</span> <span class="c-type">Guard</span> <span class="c-var">$auth</span>,
+    #[<span class="c-type">Cache</span>(<span class="c-str">'redis'</span>)]                  <span class="c-key">protected</span> <span class="c-type">Repository</span> <span class="c-var">$cache</span>,
+    #[<span class="c-type">Config</span>(<span class="c-str">'app.timezone'</span>)]          <span class="c-key">protected</span> <span class="c-key">string</span> <span class="c-var">$timezone</span>,
+    #[<span class="c-type">Context</span>(<span class="c-str">'uuid'</span>)]                  <span class="c-key">protected</span> <span class="c-key">string</span> <span class="c-var">$uuid</span>,
+    #[<span class="c-type">Context</span>(<span class="c-str">'ulid'</span>, hidden: <span class="c-key">true</span>)]   <span class="c-key">protected</span> <span class="c-key">string</span> <span class="c-var">$ulid</span>,
+    #[<span class="c-type">DB</span>(<span class="c-str">'mysql'</span>)]                     <span class="c-key">protected</span> <span class="c-type">Connection</span> <span class="c-var">$connection</span>,
     #[<span class="c-type">Give</span>(<span class="c-type">DatabaseRepository</span>::<span class="c-key">class</span>)] <span class="c-key">protected</span> <span class="c-type">UserRepository</span> <span class="c-var">$users</span>,
-    #[<span class="c-type">RouteParameter</span>(<span class="c-str">'photo'</span>)]   <span class="c-key">protected</span> <span class="c-type">Photo</span> <span class="c-var">$photo</span>,
-    #[<span class="c-type">Tag</span>(<span class="c-str">'reports'</span>)]            <span class="c-key">protected</span> <span class="c-key">iterable</span> <span class="c-var">$reports</span>,
+    #[<span class="c-type">Log</span>(<span class="c-str">'daily'</span>)]                    <span class="c-key">protected</span> <span class="c-type">LoggerInterface</span> <span class="c-var">$log</span>,
+    #[<span class="c-type">RequestAttribute</span>(<span class="c-str">'organization'</span>)] <span class="c-key">protected</span> <span class="c-type">Organization</span> <span class="c-var">$organization</span>,
+    #[<span class="c-type">RouteParameter</span>]                 <span class="c-key">protected</span> <span class="c-type">Photo</span> <span class="c-var">$photo</span>,
+    #[<span class="c-type">Storage</span>(<span class="c-str">'local'</span>)]                <span class="c-key">protected</span> <span class="c-type">Filesystem</span> <span class="c-var">$filesystem</span>,
+    #[<span class="c-type">Tag</span>(<span class="c-str">'reports'</span>)]                  <span class="c-key">protected</span> <span class="c-key">iterable</span> <span class="c-var">$reports</span>,
 ) {}
 
-<span class="c-comment">// Текущий пользователь прямо в роуте</span>
-<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/user'</span>, <span class="c-key">fn</span> (#[<span class="c-type">CurrentUser</span>] <span class="c-type">User</span> <span class="c-var">$user</span>) =&gt; <span class="c-var">$user</span>)-&gt;<span class="c-fn">middleware</span>(<span class="c-str">'auth'</span>);</code></pre>
-      <p>Полный набор атрибутов в <code>Illuminate\Container\Attributes</code>: <code>Auth</code>, <code>Authenticated</code>, <code>Bind</code>, <code>Cache</code>, <code>Config</code>, <code>Context</code>, <code>CurrentUser</code>, <code>DB</code>, <code>Database</code>, <code>Give</code>, <code>Log</code>, <code>RouteParameter</code>, <code>Scoped</code>, <code>Singleton</code>, <code>Storage</code>, <code>Tag</code>. Свой атрибут делается реализацией контракта <code>ContextualAttribute</code> с методом <code>resolve()</code>.</p>
+<span class="c-comment">// Текущий пользователь — отдельным атрибутом, работает и в роуте</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/user'</span>, <span class="c-key">fn</span> (#[<span class="c-type">CurrentUser</span>] <span class="c-type">User</span> <span class="c-var">$user</span>) =&gt; <span class="c-var">$user</span>)
+    -&gt;<span class="c-fn">middleware</span>(<span class="c-str">'auth'</span>);</code></pre>
+      <ul style="margin:8px 0 14px 22px;color:var(--text2);font-size:13px;line-height:1.85">
+        <li><code>#[RouteParameter]</code> разрешает параметр маршрута <strong>по имени переменной</strong>; имя указывается явно только при несовпадении — <code>#[RouteParameter('photo')]</code>.</li>
+        <li><code>#[RequestAttribute('organization')]</code> берёт значение из <strong>attribute bag</strong> запроса — того, куда middleware кладёт данные через <code>$request-&gt;attributes-&gt;set()</code>.</li>
+      </ul>
+      <p>Свои атрибуты — в подразделе «Свой контекстный атрибут» ниже.</p>
     </div>
 
     <div class="card">
-      <h3>Tagging, extend, вариативные зависимости</h3>
-<pre><code><span class="c-comment">// Группа биндингов под одним тегом</span>
+      <h3>Binding Primitives</h3>
+      <p><strong>Назначение:</strong> классу нужен не объект, а скалярное значение — число, строка, массив. Контейнер такое через рефлексию не разрешит.</p>
+      <p><strong>Связь:</strong> <code>(потребитель) + (имя переменной со знаком $) → значение</code>.</p>
+<pre><code><span class="c-comment">// Обычное значение</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">when</span>(<span class="c-type">UserController</span>::<span class="c-key">class</span>)
+    -&gt;<span class="c-fn">needs</span>(<span class="c-str">'$variableName'</span>)
+    -&gt;<span class="c-fn">give</span>(<span class="c-var">$value</span>);
+
+<span class="c-comment">// Массив всех биндингов с тегом</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">when</span>(<span class="c-type">ReportAggregator</span>::<span class="c-key">class</span>)
+    -&gt;<span class="c-fn">needs</span>(<span class="c-str">'$reports'</span>)
+    -&gt;<span class="c-fn">giveTagged</span>(<span class="c-str">'reports'</span>);
+
+<span class="c-comment">// Значение из файла конфигурации</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">when</span>(<span class="c-type">ReportAggregator</span>::<span class="c-key">class</span>)
+    -&gt;<span class="c-fn">needs</span>(<span class="c-str">'$timezone'</span>)
+    -&gt;<span class="c-fn">giveConfig</span>(<span class="c-str">'app.timezone'</span>);</code></pre>
+      <p>Обрати внимание на знак <code>$</code> внутри строки: он и отличает примитивный параметр от типа класса.</p>
+    </div>
+
+    <div class="card">
+      <h3>Binding Typed Variadics</h3>
+      <p><strong>Назначение:</strong> конструктор принимает переменное число типизированных объектов — <code>Filter ...$filters</code>.</p>
+      <p><strong>Связь:</strong> <code>(потребитель) + (тип элемента) → массив реализаций</code>.</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">Firewall</span>
+{
+    <span class="c-key">protected</span> <span class="c-var">$filters</span>;
+
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+        <span class="c-key">protected</span> <span class="c-type">Logger</span> <span class="c-var">$logger</span>,
+        <span class="c-type">Filter</span> ...<span class="c-var">$filters</span>,
+    ) {
+        <span class="c-key">$this</span>-&gt;filters = <span class="c-var">$filters</span>;
+    }
+}
+
+<span class="c-comment">// Замыканием — когда нужен контроль над сборкой каждого</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">when</span>(<span class="c-type">Firewall</span>::<span class="c-key">class</span>)
+    -&gt;<span class="c-fn">needs</span>(<span class="c-type">Filter</span>::<span class="c-key">class</span>)
+    -&gt;<span class="c-fn">give</span>(<span class="c-key">function</span> (<span class="c-type">Application</span> <span class="c-var">$app</span>) {
+        <span class="c-key">return</span> [
+            <span class="c-var">$app</span>-&gt;<span class="c-fn">make</span>(<span class="c-type">NullFilter</span>::<span class="c-key">class</span>),
+            <span class="c-var">$app</span>-&gt;<span class="c-fn">make</span>(<span class="c-type">ProfanityFilter</span>::<span class="c-key">class</span>),
+            <span class="c-var">$app</span>-&gt;<span class="c-fn">make</span>(<span class="c-type">TooLongFilter</span>::<span class="c-key">class</span>),
+        ];
+    });
+
+<span class="c-comment">// Короче — просто массив имён классов</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">when</span>(<span class="c-type">Firewall</span>::<span class="c-key">class</span>)
+    -&gt;<span class="c-fn">needs</span>(<span class="c-type">Filter</span>::<span class="c-key">class</span>)
+    -&gt;<span class="c-fn">give</span>([
+        <span class="c-type">NullFilter</span>::<span class="c-key">class</span>,
+        <span class="c-type">ProfanityFilter</span>::<span class="c-key">class</span>,
+        <span class="c-type">TooLongFilter</span>::<span class="c-key">class</span>,
+    ]);</code></pre>
+      <p><strong>Variadic Tag Dependencies</strong> — если вариативная зависимость типизирована (<code>Report ...$reports</code>), всю группу по тегу можно отдать одной строкой:</p>
+<pre><code><span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">when</span>(<span class="c-type">ReportAggregator</span>::<span class="c-key">class</span>)
+    -&gt;<span class="c-fn">needs</span>(<span class="c-type">Report</span>::<span class="c-key">class</span>)
+    -&gt;<span class="c-fn">giveTagged</span>(<span class="c-str">'reports'</span>);</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Tagging</h3>
+      <p><strong>Назначение:</strong> разрешить сразу всю «категорию» биндингов — например, все реализации интерфейса <code>Report</code> для анализатора отчётов.</p>
+      <p><strong>Связь:</strong> <code>тег → список абстрактов</code>. Сам тег ничего не создаёт, он только группирует уже зарегистрированные биндинги.</p>
+<pre><code><span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bind</span>(<span class="c-type">CpuReport</span>::<span class="c-key">class</span>, <span class="c-key">function</span> () { <span class="c-comment">/* ... */</span> });
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bind</span>(<span class="c-type">MemoryReport</span>::<span class="c-key">class</span>, <span class="c-key">function</span> () { <span class="c-comment">/* ... */</span> });
+
 <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">tag</span>([<span class="c-type">CpuReport</span>::<span class="c-key">class</span>, <span class="c-type">MemoryReport</span>::<span class="c-key">class</span>], <span class="c-str">'reports'</span>);
-<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">tagged</span>(<span class="c-str">'reports'</span>);   <span class="c-comment">// вернёт все помеченные</span>
 
-<span class="c-comment">// Декорирование уже разрешённого сервиса</span>
-<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">extend</span>(<span class="c-type">Service</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">Service</span> <span class="c-var">$service</span>, <span class="c-type">Application</span> <span class="c-var">$app</span>) {
-    <span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">DecoratedService</span>(<span class="c-var">$service</span>);
-});
-
-<span class="c-comment">// Variadic: Firewall(Logger $logger, Filter ...$filters)</span>
-<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">when</span>(<span class="c-type">Firewall</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">needs</span>(<span class="c-type">Filter</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">give</span>([
-    <span class="c-type">NullFilter</span>::<span class="c-key">class</span>, <span class="c-type">ProfanityFilter</span>::<span class="c-key">class</span>,
-]);</code></pre>
+<span class="c-comment">// Разрешить всю группу</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bind</span>(<span class="c-type">ReportAnalyzer</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">Application</span> <span class="c-var">$app</span>) {
+    <span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">ReportAnalyzer</span>(<span class="c-var">$app</span>-&gt;<span class="c-fn">tagged</span>(<span class="c-str">'reports'</span>));
+});</code></pre>
     </div>
 
     <div class="card">
-      <h3>Разрешение вручную и события контейнера</h3>
-<pre><code><span class="c-var">$t</span> = <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">make</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>);
-<span class="c-var">$t</span> = <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">makeWith</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, [<span class="c-str">'id'</span> =&gt; <span class="c-num">1</span>]);  <span class="c-comment">// неразрешимые аргументы руками</span>
-<span class="c-var">$t</span> = <span class="c-type">App</span>::<span class="c-fn">make</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>);
-<span class="c-var">$t</span> = <span class="c-fn">app</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>);
+      <h3>Extending Bindings — <code>extend()</code></h3>
+      <p><strong>Назначение:</strong> изменить <em>уже разрешённый</em> сервис — обернуть декоратором или донастроить, не переписывая исходный биндинг.</p>
+      <p><strong>Связь:</strong> <code>абстракт → замыкание-декоратор</code>. Замыкание получает собранный сервис и контейнер, возвращает замену.</p>
+<pre><code><span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">extend</span>(<span class="c-type">Service</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">Service</span> <span class="c-var">$service</span>, <span class="c-type">Application</span> <span class="c-var">$app</span>) {
+    <span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">DecoratedService</span>(<span class="c-var">$service</span>);
+});</code></pre>
+      <p>Применяется на каждое разрешение, поэтому расширителей может быть несколько — они накладываются друг на друга в порядке регистрации.</p>
+    </div>
+
+    <div class="card">
+      <h3>Resolving — <code>make()</code>, <code>makeWith()</code>, <code>bound()</code></h3>
+      <p><strong>Назначение:</strong> достать объект из контейнера вручную, когда автоматическое внедрение неприменимо.</p>
+<pre><code><span class="c-var">$transistor</span> = <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">make</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>);
+
+<span class="c-comment">// Если часть зависимостей контейнер разрешить не может — передать руками</span>
+<span class="c-var">$transistor</span> = <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">makeWith</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, [<span class="c-str">'id'</span> =&gt; <span class="c-num">1</span>]);
+
+<span class="c-comment">// Есть ли явный биндинг</span>
 <span class="c-key">if</span> (<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bound</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>)) { <span class="c-comment">/* ... */</span> }
 
-<span class="c-comment">// Хук на каждое разрешение типа</span>
-<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">resolving</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-var">$t</span>, <span class="c-var">$app</span>) { <span class="c-comment">/* ... */</span> });
-<span class="c-comment">// Хук на переопределение биндинга</span>
-<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">rebinding</span>(<span class="c-type">PodcastPublisher</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-var">$app</span>, <span class="c-var">$new</span>) { <span class="c-comment">/* ... */</span> });</code></pre>
-      <p>Контейнер реализует <strong>PSR-11</strong>: контракт <code>Illuminate\Contracts\Container\Container</code> наследует <code>Psr\Container\ContainerInterface</code>, поэтому можно объявлять в типах стандартный интерфейс и получать <code>get()</code> / <code>has()</code>.</p>
+<span class="c-comment">// Там, где нет $app</span>
+<span class="c-var">$transistor</span> = <span class="c-type">App</span>::<span class="c-fn">make</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>);
+<span class="c-var">$transistor</span> = <span class="c-fn">app</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>);
+
+<span class="c-comment">// Сам контейнер можно получить внедрением</span>
+<span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+    <span class="c-key">protected</span> <span class="c-type">Container</span> <span class="c-var">$container</span>,
+) {}</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Automatic Injection</h3>
+      <p><strong>Назначение:</strong> основной способ получения зависимостей. Документация: <em>«в практике именно так большинство объектов и должно разрешаться контейнером»</em>.</p>
+      <p>Тип объявляется в конструкторе класса, который создаёт контейнер — контроллеры, listeners, middleware и прочие. У джобов зависимости объявляются в <code>handle()</code>.</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">PodcastController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+        <span class="c-key">protected</span> <span class="c-type">AppleMusic</span> <span class="c-var">$apple</span>,
+    ) {}
+
+    <span class="c-key">public function</span> <span class="c-fn">show</span>(<span class="c-key">string</span> <span class="c-var">$id</span>): <span class="c-type">Podcast</span>
+    {
+        <span class="c-key">return</span> <span class="c-key">$this</span>-&gt;apple-&gt;<span class="c-fn">findPodcast</span>(<span class="c-var">$id</span>);
+    }
+}</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Method Invocation and Injection — <code>App::call()</code></h3>
+      <p><strong>Назначение:</strong> вызвать метод на объекте так, чтобы контейнер сам подставил зависимости этого метода. Принимает любой PHP callable, включая замыкание.</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">PodcastStats</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">generate</span>(<span class="c-type">AppleMusic</span> <span class="c-var">$apple</span>): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> [ <span class="c-comment">/* ... */</span> ];
+    }
+}
+
+<span class="c-var">$stats</span> = <span class="c-type">App</span>::<span class="c-fn">call</span>([<span class="c-key">new</span> <span class="c-type">PodcastStats</span>, <span class="c-str">'generate'</span>]);
+
+<span class="c-var">$result</span> = <span class="c-type">App</span>::<span class="c-fn">call</span>(<span class="c-key">function</span> (<span class="c-type">AppleMusic</span> <span class="c-var">$apple</span>) {
+    <span class="c-comment">// ...</span>
+});</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Container Events и Rebinding</h3>
+      <p><strong>Назначение:</strong> контейнер поднимает событие на каждое разрешение объекта — можно донастроить его до того, как он уйдёт потребителю.</p>
+<pre><code><span class="c-comment">// Для конкретного типа</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">resolving</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-type">Transistor</span> <span class="c-var">$transistor</span>, <span class="c-type">Application</span> <span class="c-var">$app</span>) {
+    <span class="c-comment">// вызовется при разрешении объектов типа Transistor</span>
+});
+
+<span class="c-comment">// Для любого типа</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">resolving</span>(<span class="c-key">function</span> (<span class="c-key">mixed</span> <span class="c-var">$object</span>, <span class="c-type">Application</span> <span class="c-var">$app</span>) {
+    <span class="c-comment">// вызовется при разрешении объекта любого типа</span>
+});</code></pre>
+      <p><strong>Rebinding</strong> — отследить, что сервис <em>перебиндили</em>: зарегистрировали заново или переопределили после первого биндинга.</p>
+<pre><code><span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bind</span>(<span class="c-type">PodcastPublisher</span>::<span class="c-key">class</span>, <span class="c-type">SpotifyPublisher</span>::<span class="c-key">class</span>);
+
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">rebinding</span>(
+    <span class="c-type">PodcastPublisher</span>::<span class="c-key">class</span>,
+    <span class="c-key">function</span> (<span class="c-type">Application</span> <span class="c-var">$app</span>, <span class="c-type">PodcastPublisher</span> <span class="c-var">$newInstance</span>) {
+        <span class="c-comment">//</span>
+    },
+);
+
+<span class="c-comment">// Новый биндинг запустит замыкание выше</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bind</span>(<span class="c-type">PodcastPublisher</span>::<span class="c-key">class</span>, <span class="c-type">TransistorPublisher</span>::<span class="c-key">class</span>);</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>PSR-11</h3>
+      <p>Контейнер Laravel реализует интерфейс PSR-11, поэтому в типе можно объявлять стандартный <code>ContainerInterface</code>.</p>
+<pre><code><span class="c-key">use</span> <span class="c-type">Psr</span>\<span class="c-type">Container</span>\<span class="c-type">ContainerInterface</span>;
+
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/'</span>, <span class="c-key">function</span> (<span class="c-type">ContainerInterface</span> <span class="c-var">$container</span>) {
+    <span class="c-var">$service</span> = <span class="c-var">$container</span>-&gt;<span class="c-fn">get</span>(<span class="c-type">Transistor</span>::<span class="c-key">class</span>);
+});</code></pre>
+      <table class="data-table">
+        <tr><th>Ситуация</th><th>Исключение</th></tr>
+        <tr><td>Идентификатор никогда не биндился</td><td><code>Psr\Container\NotFoundExceptionInterface</code></td></tr>
+        <tr><td>Биндился, но разрешить не удалось</td><td><code>Psr\Container\ContainerExceptionInterface</code></td></tr>
+      </table>
     </div>
   </div>
 
@@ -617,7 +859,7 @@ $response->send()  →  браузер</div>
 
 <span class="c-comment">// Имена НЕ совпадают: в URL {user}, а переменная $profile</span>
 <span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}'</span>, <span class="c-key">fn</span> (#[<span class="c-type">RouteParameter</span>(<span class="c-str">'user'</span>)] <span class="c-type">User</span> <span class="c-var">$profile</span>) =&gt; <span class="c-var">$profile</span>);</code></pre>
-      <div class="pitfall"><strong>Аргумент обязателен.</strong> В конструкторе <code>public function __construct(public string $parameter)</code> — значения по умолчанию нет. Запись <code>#[RouteParameter]</code> без имени падает с <code>ArgumentCountError</code>. Всегда <code>#[RouteParameter('имя_из_url')]</code>.</div>
+      <div class="info-box warning"><strong>Аргумент необязателен — но зависит от версии.</strong> В актуальной документации 13.x <code>#[RouteParameter]</code> без аргумента разрешает параметр маршрута <em>по имени переменной</em>, а имя указывается только при несовпадении: <code>#[RouteParameter('photo')]</code>. В более старых сборках ветки (например <code>13.6.0</code>) конструктор был <code>__construct(public string $parameter)</code> без значения по умолчанию, и запись без аргумента падала с <code>ArgumentCountError</code>. Проверяй <code>vendor/laravel/framework/src/Illuminate/Container/Attributes/RouteParameter.php</code> в своём проекте.</div>
       <div class="info-box warning"><strong>Что он реально делает.</strong> Не <code>User::find($id)</code>, как можно подумать. Его <code>resolve()</code> — это одна строка: <code>$container-&gt;make('request')-&gt;route($parameter)</code>. То есть он берёт <em>уже разрешённый</em> параметр маршрута. Если по нему сработал route model binding — вернётся модель; если нет — сырая строка из URL. Сам атрибут модель не ищет.</div>
     </div>
 
@@ -635,15 +877,16 @@ $response->send()  →  браузер</div>
         <tr><td><code>#[Log('channel')]</code></td><td>Конкретный канал логов</td></tr>
         <tr><td><code>#[Auth('guard')]</code></td><td>Guard, а не пользователя</td></tr>
         <tr><td><code>#[Give(Class::class)]</code></td><td>Конкретная реализация для этого параметра</td></tr>
+        <tr><td><code>#[RequestAttribute('key')]</code></td><td>attribute bag запроса — то, что положил middleware</td></tr>
         <tr><td><code>#[Tag('tag')]</code></td><td>Все биндинги с тегом</td></tr>
-        <tr><td><code>#[Bind]</code>, <code>#[Singleton]</code>, <code>#[Scoped]</code></td><td>Ставятся на класс/интерфейс, а не на параметр</td></tr>
+        <tr><td><code>#[Bind]</code>, <code>#[BindWhen]</code>, <code>#[Singleton]</code>, <code>#[Scoped]</code></td><td>Ставятся на класс/интерфейс, а не на параметр. <code>BindWhen</code> — по условию, требует PHP 8.5+</td></tr>
       </table>
       <p><code>#[DB]</code> — алиас <code>#[Database]</code>, ровно как <code>#[CurrentUser]</code> для <code>#[Authenticated]</code>.</p>
     </div>
 
     <div class="card">
       <h3>Нужен атрибут для данных из middleware? Его придётся написать</h3>
-      <p>Встроенного атрибута для <code>$request-&gt;attributes</code> в Laravel <strong>нет</strong>. Если middleware положил туда объект, вариантов два: читать вручную или сделать свой контекстный атрибут.</p>
+      <p>Для данных из <code>$request-&gt;attributes</code> в актуальной версии есть штатный <code>#[RequestAttribute('ключ')]</code> — он читает значение из attribute bag запроса. Если его в проекте нет (появился в ветке 13.x позже 13.6.0), тот же атрибут делается самостоятельно — и это заодно канонический пример своего контекстного атрибута:</p>
 <pre><code><span class="c-comment">// Middleware кладёт данные</span>
 <span class="c-var">$request</span>-&gt;attributes-&gt;<span class="c-fn">set</span>(<span class="c-str">'tenant'</span>, <span class="c-type">Tenant</span>::<span class="c-fn">find</span>(<span class="c-num">1</span>));
 
@@ -719,7 +962,7 @@ $response->send()  →  браузер</div>
     }
 }</code></pre>
 
-      <div class="info-box danger"><strong>Сигнатура <code>resolve()</code> — ровно два аргумента.</strong> Часто встречается вариант с третьим параметром <code>ReflectionParameter $parameter</code> — он <strong>не работает</strong>. Вот как контейнер вызывает handler в <code>Container::resolveFromAttribute()</code>:
+      <div class="info-box warning"><strong>Сигнатура <code>resolve()</code> — три аргумента.</strong> По документации: <code>resolve(self $attribute, Container $container, ReflectionParameter $parameter)</code>. Третий аргумент даёт рефлексию параметра — имя переменной, тип, остальные атрибуты. В старых сборках ветки 13.x контейнер вызывал handler двумя аргументами (<code>$handler($instance, $this)</code> в <code>Container::resolveFromAttribute()</code>), и тогда третий параметр нужно объявлять с значением по умолчанию, иначе <code>ArgumentCountError</code>. Если не уверен в своей сборке — поставь <code>?ReflectionParameter $parameter = null</code>, это работает в обоих случаях.</div>
 <br><br><code>return $handler($instance, $this);</code><br><br>
 Передаются только экземпляр атрибута и контейнер. Третий параметр без значения по умолчанию даст <code>ArgumentCountError</code>. Рефлексию параметра контейнер не прокидывает — имя переменной и её тип внутри <code>resolve()</code> недоступны.</div>
     </div>
