@@ -138,6 +138,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('arch-concepts','arch-lifecycle',this)">Request Lifecycle</a>
     <a class="nav-subitem" onclick="showSub('arch-concepts','arch-container',this)">Service Container</a>
     <a class="nav-subitem" onclick="showSub('arch-concepts','arch-where',this)">└ Где живёт в проекте</a>
+    <a class="nav-subitem" onclick="showSub('arch-concepts','arch-practice',this)">└ Практика: 3 примера</a>
     <a class="nav-subitem" onclick="showSub('arch-concepts','arch-attr-vs-param',this)">└ Атрибут vs параметр</a>
     <a class="nav-subitem" onclick="showSub('arch-concepts','arch-custom-attr',this)">└ Свой контекстный атрибут</a>
     <a class="nav-subitem" onclick="showSub('arch-concepts','arch-providers',this)">Service Providers</a>
@@ -1100,6 +1101,278 @@ $response->send()  →  браузер</div>
                    ▼
 РЕАЛИЗОВАН      Illuminate/Container/*  +  Foundation/Application.php</div>
       <p>Прямо руками контейнер трогают в основном в провайдерах. Везде остальное он работает сам — и именно поэтому его легко не замечать.</p>
+    </div>
+  </div>
+
+  <div class="subsection" id="arch-practice">
+    <div class="subsection-title"><i data-lucide="hammer"></i> Практика: контейнер и сервисы</div>
+
+    <div class="card">
+      <h3>Сначала — сервисы это не контейнеры</h3>
+      <p>Частая путаница: кажется, что «DI-контейнеры» — это папка <code>app/Services</code>. Нет. Контейнер <strong>один на всё приложение</strong>, сервисов — много.</p>
+      <table class="data-table">
+        <tr><th>Понятие</th><th>Что это</th></tr>
+        <tr><td><strong>DI-контейнер</strong></td><td>Один глобальный объект — экземпляр <code>Illuminate\Foundation\Application</code>. Создаётся один раз в <code>bootstrap/app.php</code> и живёт всю обработку запроса. Хранит биндинги, создаёт объекты, подставляет зависимости</td></tr>
+        <tr><td><strong>Сервис</strong></td><td>Обычный класс с бизнес-логикой: <code>OrderService</code>, <code>PaymentService</code>. Контейнером <em>не является</em> — он его содержимое</td></tr>
+        <tr><td><strong>Биндинг</strong></td><td>Запись в контейнере: «когда просят это — отдавай то»</td></tr>
+        <tr><td><strong>DI</strong></td><td>Механизм, которым контейнер подставляет сервисы в конструкторы</td></tr>
+      </table>
+      <p>Аналогия: контейнер — склад деталей и сборщик; сервисы — изделия, которые из деталей собираются; контроллеры, джобы и команды — заказчики. Склад один, изделий много, заказчиков ещё больше.</p>
+      <div class="diagram">┌─────────────────────────────────────────────────┐
+│        DI-контейнер = Application               │
+│  хранит биндинги, создаёт объекты,              │
+│  рекурсивно разрешает зависимости               │
+└─────────────────────────────────────────────────┘
+      ▲              ▲              ▲
+      │ регистрируются в контейнере │
+      │              │              │
+ ┌─────────┐   ┌──────────┐   ┌──────────┐
+ │ Order   │   │ Payment  │   │ Report   │   ← сервисы
+ │ Service │   │ Service  │   │Generator │
+ └─────────┘   └──────────┘   └──────────┘
+      ▲              ▲              ▲
+      │  внедряются через DI        │
+      │              │              │
+ ┌──────────────────────────────────────────┐
+ │ Контроллеры · Джобы · Команды            │   ← потребители
+ │ Middleware · Listeners                   │
+ └──────────────────────────────────────────┘</div>
+      <div class="info-box warning"><strong><code>app/Services</code> — соглашение, а не требование.</strong> Laravel эту папку не знает и автоматически не ищет. Сервисы кладут и в <code>app/Actions</code> (одноразовые действия), <code>app/Domain</code> (DDD), <code>app/Support</code> (вспомогательные). Работает это не потому, что папка так названа, а потому что класс зарегистрирован в контейнере или разрешается автоматически по типу.</div>
+    </div>
+
+    <div class="card">
+      <h3>Пример 1: рекурсивное разрешение цепочки</h3>
+      <p>Показывает главное свойство контейнера: он собирает <strong>весь граф</strong> объектов, а не один объект.</p>
+<pre><code><span class="c-comment">// Нижний уровень — без зависимостей</span>
+<span class="c-key">class</span> <span class="c-type">Logger</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">log</span>(<span class="c-key">string</span> <span class="c-var">$message</span>): <span class="c-type">void</span>
+    {
+        <span class="c-type">Log</span>::<span class="c-fn">info</span>(<span class="c-var">$message</span>);
+    }
+}
+
+<span class="c-comment">// Зависит от логгера</span>
+<span class="c-key">class</span> <span class="c-type">OrderRepository</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">private</span> <span class="c-type">Logger</span> <span class="c-var">$logger</span>) {}
+
+    <span class="c-key">public function</span> <span class="c-fn">save</span>(<span class="c-key">array</span> <span class="c-var">$data</span>): <span class="c-type">void</span>
+    {
+        <span class="c-key">$this</span>-&gt;logger-&gt;<span class="c-fn">log</span>(<span class="c-str">'Saving order: '</span> . <span class="c-fn">json_encode</span>(<span class="c-var">$data</span>));
+    }
+}
+
+<span class="c-comment">// Зависит от ПРИМИТИВА — автоматически не соберётся, нужен биндинг</span>
+<span class="c-key">class</span> <span class="c-type">StripeGateway</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">private</span> <span class="c-key">string</span> <span class="c-var">$apiKey</span>) {}
+
+    <span class="c-key">public function</span> <span class="c-fn">charge</span>(<span class="c-key">float</span> <span class="c-var">$amount</span>): <span class="c-key">bool</span> { <span class="c-key">return</span> <span class="c-key">true</span>; }
+}
+
+<span class="c-comment">// Верхний уровень</span>
+<span class="c-key">class</span> <span class="c-type">OrderService</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+        <span class="c-key">private</span> <span class="c-type">OrderRepository</span> <span class="c-var">$repository</span>,
+        <span class="c-key">private</span> <span class="c-type">StripeGateway</span> <span class="c-var">$gateway</span>,
+    ) {}
+
+    <span class="c-key">public function</span> <span class="c-fn">process</span>(<span class="c-key">array</span> <span class="c-var">$data</span>): <span class="c-type">void</span>
+    {
+        <span class="c-key">$this</span>-&gt;repository-&gt;<span class="c-fn">save</span>(<span class="c-var">$data</span>);
+        <span class="c-key">$this</span>-&gt;gateway-&gt;<span class="c-fn">charge</span>(<span class="c-var">$data</span>[<span class="c-str">'total'</span>]);
+    }
+}</code></pre>
+      <p>Единственное, что нужно зарегистрировать — класс с примитивом в конструкторе:</p>
+<pre><code><span class="c-comment">// AppServiceProvider::register()</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bind</span>(<span class="c-type">StripeGateway</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-var">$app</span>) {
+    <span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">StripeGateway</span>(<span class="c-fn">config</span>(<span class="c-str">'services.stripe.key'</span>));
+});</code></pre>
+      <p>Что происходит на <code>app(OrderService::class)</code>:</p>
+      <div class="diagram">OrderService
+├── OrderRepository
+│   └── Logger                    ← без зависимостей, создаётся первым
+└── StripeGateway
+    └── string $apiKey            ← из биндинга, значение из config</div>
+      <p>Контейнер спускается по графу вниз, а собирает снизу вверх: <code>Logger</code> → <code>OrderRepository</code> → замыкание для <code>StripeGateway</code> → <code>OrderService</code>. Ни одной строки <code>new</code> ты не пишешь — только одна регистрация там, где контейнер угадать не может.</p>
+      <p>Использование — просто тип в сигнатуре:</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">OrderController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>, <span class="c-type">OrderService</span> <span class="c-var">$service</span>)
+    {
+        <span class="c-var">$service</span>-&gt;<span class="c-fn">process</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>());
+
+        <span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">noContent</span>();
+    }
+}</code></pre>
+      <div class="info-box warning"><strong>Чего здесь ещё не хватает.</strong> <code>OrderService</code> зависит от <strong>конкретного</strong> <code>StripeGateway</code>, а не от интерфейса. Работать будет, но подменить платёжную систему или замокать её в тесте уже не получится — придётся править сам <code>OrderService</code>. Как это исправить — следующий пример.</div>
+    </div>
+
+    <div class="card">
+      <h3>Пример 2: внешний SDK за интерфейсом</h3>
+      <p>Внешние SDK (Stripe, AWS, Twilio) не рассчитаны на DI: свои конструкторы, статические методы, глобальные ключи. Решение — <strong>адаптер за своим интерфейсом</strong>.</p>
+<pre><code><span class="c-comment">// 1. Контракт — то, что знает твой код</span>
+<span class="c-key">namespace</span> <span class="c-type">App</span>\<span class="c-type">Contracts</span>;
+
+<span class="c-key">interface</span> <span class="c-type">PaymentGateway</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">charge</span>(<span class="c-key">float</span> <span class="c-var">$amount</span>, <span class="c-key">string</span> <span class="c-var">$currency</span> = <span class="c-str">'usd'</span>): <span class="c-key">array</span>;
+    <span class="c-key">public function</span> <span class="c-fn">refund</span>(<span class="c-key">string</span> <span class="c-var">$chargeId</span>, <span class="c-key">float</span> <span class="c-var">$amount</span>): <span class="c-key">array</span>;
+}
+
+<span class="c-comment">// 2. Адаптер — SDK заперт внутри, наружу не торчит</span>
+<span class="c-key">class</span> <span class="c-type">StripePaymentGateway</span> <span class="c-key">implements</span> <span class="c-type">PaymentGateway</span>
+{
+    <span class="c-key">private</span> <span class="c-type">StripeClient</span> <span class="c-var">$client</span>;
+
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">string</span> <span class="c-var">$apiKey</span>)
+    {
+        <span class="c-key">$this</span>-&gt;client = <span class="c-key">new</span> <span class="c-type">StripeClient</span>(<span class="c-var">$apiKey</span>);
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">charge</span>(<span class="c-key">float</span> <span class="c-var">$amount</span>, <span class="c-key">string</span> <span class="c-var">$currency</span> = <span class="c-str">'usd'</span>): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> <span class="c-key">$this</span>-&gt;client-&gt;charges-&gt;<span class="c-fn">create</span>([
+            <span class="c-str">'amount'</span>   =&gt; <span class="c-var">$amount</span> * <span class="c-num">100</span>,
+            <span class="c-str">'currency'</span> =&gt; <span class="c-var">$currency</span>,
+        ])-&gt;<span class="c-fn">toArray</span>();
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">refund</span>(<span class="c-key">string</span> <span class="c-var">$chargeId</span>, <span class="c-key">float</span> <span class="c-var">$amount</span>): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> <span class="c-key">$this</span>-&gt;client-&gt;refunds-&gt;<span class="c-fn">create</span>([
+            <span class="c-str">'charge'</span> =&gt; <span class="c-var">$chargeId</span>,
+            <span class="c-str">'amount'</span> =&gt; <span class="c-var">$amount</span> * <span class="c-num">100</span>,
+        ])-&gt;<span class="c-fn">toArray</span>();
+    }
+}
+
+<span class="c-comment">// 3. Фейк для тестов и локальной разработки — тот же контракт</span>
+<span class="c-key">class</span> <span class="c-type">FakePaymentGateway</span> <span class="c-key">implements</span> <span class="c-type">PaymentGateway</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">charge</span>(<span class="c-key">float</span> <span class="c-var">$amount</span>, <span class="c-key">string</span> <span class="c-var">$currency</span> = <span class="c-str">'usd'</span>): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> [<span class="c-str">'id'</span> =&gt; <span class="c-str">'fake_charge_'</span> . <span class="c-fn">uniqid</span>(), <span class="c-str">'status'</span> =&gt; <span class="c-str">'succeeded'</span>];
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">refund</span>(<span class="c-key">string</span> <span class="c-var">$chargeId</span>, <span class="c-key">float</span> <span class="c-var">$amount</span>): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> [<span class="c-str">'id'</span> =&gt; <span class="c-str">'fake_refund_'</span> . <span class="c-fn">uniqid</span>(), <span class="c-str">'status'</span> =&gt; <span class="c-str">'succeeded'</span>];
+    }
+}</code></pre>
+      <p>Биндинг решает, какая реализация поедет в прод, а какая — в тесты:</p>
+<pre><code><span class="c-comment">// AppServiceProvider::register()
+// singleton, а не bind: SDK-клиент дорог в создании и состояния запроса не держит</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">singleton</span>(<span class="c-type">PaymentGateway</span>::<span class="c-key">class</span>, <span class="c-key">function</span> (<span class="c-var">$app</span>) {
+    <span class="c-key">return</span> <span class="c-var">$app</span>-&gt;<span class="c-fn">environment</span>(<span class="c-str">'production'</span>)
+        ? <span class="c-key">new</span> <span class="c-type">StripePaymentGateway</span>(<span class="c-fn">config</span>(<span class="c-str">'services.stripe.key'</span>))
+        : <span class="c-key">new</span> <span class="c-type">FakePaymentGateway</span>();
+});</code></pre>
+      <p>Либо то же самое атрибутом на интерфейсе, вообще без провайдера:</p>
+<pre><code>#[<span class="c-type">Bind</span>(<span class="c-type">StripePaymentGateway</span>::<span class="c-key">class</span>)]
+#[<span class="c-type">Bind</span>(<span class="c-type">FakePaymentGateway</span>::<span class="c-key">class</span>, environments: [<span class="c-str">'local'</span>, <span class="c-str">'testing'</span>])]
+<span class="c-key">interface</span> <span class="c-type">PaymentGateway</span> {}</code></pre>
+      <p>Код-потребитель не знает, что под капотом:</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">CheckoutController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">private</span> <span class="c-type">PaymentGateway</span> <span class="c-var">$gateway</span>) {}
+
+    <span class="c-key">public function</span> <span class="c-fn">pay</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>)
+    {
+        <span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">json</span>(<span class="c-key">$this</span>-&gt;gateway-&gt;<span class="c-fn">charge</span>(<span class="c-var">$request</span>-&gt;total));
+    }
+}</code></pre>
+      <div class="info-box success"><strong>Что это даёт.</strong> В проде работает реальный Stripe, в тестах фейк и никаких запросов в интернет. Переход на PayPal — новый адаптер плюс одна строка биндинга; контроллер не меняется вообще. Это и есть смысл зависимости от интерфейса, а не от класса.</div>
+      <div class="info-box warning"><strong>Про <code>config()</code> внутри замыкания.</strong> Это безопасно и здесь уместно: замыкание выполняется в момент <em>разрешения</em>, а не регистрации. Конфиг к тому времени давно загружен — bootstrapper <code>LoadConfiguration</code> отрабатывает раньше <code>RegisterProviders</code>. Вытаскивать <code>config()</code> из замыкания в тело <code>register()</code> не нужно: получишь жадное чтение вместо ленивого.</div>
+    </div>
+
+    <div class="card">
+      <h3>Пример 3: свой сервис в контроллере, джобе и тесте</h3>
+      <p>Тот же приём без внешних SDK — простой биндинг интерфейса на класс.</p>
+<pre><code><span class="c-key">interface</span> <span class="c-type">PaymentService</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">charge</span>(<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Order</span> <span class="c-var">$order</span>): <span class="c-key">bool</span>;
+    <span class="c-key">public function</span> <span class="c-fn">refund</span>(<span class="c-type">Order</span> <span class="c-var">$order</span>): <span class="c-key">bool</span>;
+}
+
+<span class="c-key">class</span> <span class="c-type">DefaultPaymentService</span> <span class="c-key">implements</span> <span class="c-type">PaymentService</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">private</span> <span class="c-type">Logger</span> <span class="c-var">$logger</span>) {}
+
+    <span class="c-key">public function</span> <span class="c-fn">charge</span>(<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Order</span> <span class="c-var">$order</span>): <span class="c-key">bool</span>
+    {
+        <span class="c-key">return</span> <span class="c-type">DB</span>::<span class="c-fn">transaction</span>(<span class="c-key">function</span> () <span class="c-key">use</span> (<span class="c-var">$user</span>, <span class="c-var">$order</span>) {
+            <span class="c-key">$this</span>-&gt;logger-&gt;<span class="c-fn">log</span>(<span class="c-str">"Charging user {</span><span class="c-var">$user</span><span class="c-str">-&gt;id} for order {</span><span class="c-var">$order</span><span class="c-str">-&gt;id}"</span>);
+
+            <span class="c-var">$order</span>-&gt;<span class="c-fn">update</span>([<span class="c-str">'status'</span> =&gt; <span class="c-str">'paid'</span>]);
+
+            <span class="c-key">return</span> <span class="c-key">true</span>;
+        });
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">refund</span>(<span class="c-type">Order</span> <span class="c-var">$order</span>): <span class="c-key">bool</span>
+    {
+        <span class="c-key">$this</span>-&gt;logger-&gt;<span class="c-fn">log</span>(<span class="c-str">"Refunding order {</span><span class="c-var">$order</span><span class="c-str">-&gt;id}"</span>);
+        <span class="c-var">$order</span>-&gt;<span class="c-fn">update</span>([<span class="c-str">'status'</span> =&gt; <span class="c-str">'refunded'</span>]);
+
+        <span class="c-key">return</span> <span class="c-key">true</span>;
+    }
+}
+
+<span class="c-comment">// Биндинг — одна строка, замыкание не нужно: Logger собирается сам</span>
+<span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bind</span>(<span class="c-type">PaymentService</span>::<span class="c-key">class</span>, <span class="c-type">DefaultPaymentService</span>::<span class="c-key">class</span>);</code></pre>
+
+      <p><strong>В контроллере</strong> — конструктор:</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">OrderController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">private</span> <span class="c-type">PaymentService</span> <span class="c-var">$payment</span>) {}
+
+    <span class="c-key">public function</span> <span class="c-fn">pay</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>, <span class="c-type">Order</span> <span class="c-var">$order</span>)
+    {
+        <span class="c-key">$this</span>-&gt;payment-&gt;<span class="c-fn">charge</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">user</span>(), <span class="c-var">$order</span>);
+
+        <span class="c-key">return</span> <span class="c-fn">redirect</span>()-&gt;<span class="c-fn">route</span>(<span class="c-str">'orders.show'</span>, <span class="c-var">$order</span>);
+    }
+}</code></pre>
+
+      <p><strong>В джобе</strong> — данные в конструктор, сервисы в <code>handle()</code>:</p>
+<pre><code><span class="c-key">class</span> <span class="c-type">ProcessPayment</span> <span class="c-key">implements</span> <span class="c-type">ShouldQueue</span>
+{
+    <span class="c-key">use</span> <span class="c-type">Dispatchable</span>, <span class="c-type">InteractsWithQueue</span>, <span class="c-type">Queueable</span>, <span class="c-type">SerializesModels</span>;
+
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(
+        <span class="c-key">private</span> <span class="c-type">User</span> <span class="c-var">$user</span>,
+        <span class="c-key">private</span> <span class="c-type">Order</span> <span class="c-var">$order</span>,
+    ) {}
+
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">PaymentService</span> <span class="c-var">$payment</span>): <span class="c-type">void</span>
+    {
+        <span class="c-var">$payment</span>-&gt;<span class="c-fn">charge</span>(<span class="c-key">$this</span>-&gt;user, <span class="c-key">$this</span>-&gt;order);
+    }
+}</code></pre>
+      <div class="info-box danger"><strong>Почему в джобе именно так.</strong> Конструктор джоба <strong>сериализуется</strong> при отправке в очередь — объект превращается в строку и ложится в Redis или таблицу. Сервис сериализовать нельзя: внутри него соединения, клиенты, замыкания. Поэтому в конструктор идут только данные (модели через <code>SerializesModels</code> ужимаются до ключа и восстанавливаются при обработке), а зависимости объявляются в <code>handle()</code> — его аргументы контейнер разрешает уже в воркере.</div>
+
+      <p><strong>В тесте</strong> — подмена через <code>instance()</code>:</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">test_order_can_be_paid</span>(): <span class="c-type">void</span>
+{
+    <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">instance</span>(<span class="c-type">PaymentService</span>::<span class="c-key">class</span>, <span class="c-key">new</span> <span class="c-type">FakePaymentService</span>);
+
+    <span class="c-key">$this</span>-&gt;<span class="c-fn">post</span>(<span class="c-str">'/orders/1/pay'</span>)-&gt;<span class="c-fn">assertRedirect</span>();
+}</code></pre>
+      <p><code>instance()</code> кладёт объект прямо в <code>$instances</code>, а он проверяется первым — поэтому подмена перебивает любой существующий биндинг.</p>
+    </div>
+
+    <div class="card">
+      <h3>Что показывает каждый пример</h3>
+      <table class="data-table">
+        <tr><th>Пример</th><th>Чему учит</th></tr>
+        <tr><td>Цепочка зависимостей</td><td>Контейнер собирает весь граф рекурсивно. Регистрировать нужно только то, что он не может угадать — примитивы и интерфейсы</td></tr>
+        <tr><td>Внешний SDK</td><td>Адаптер прячет SDK, интерфейс отвязывает код от вендора, биндинг выбирает реализацию по окружению</td></tr>
+        <tr><td>Свой сервис</td><td>Один и тот же сервис получается в контроллере, в джобе и в тесте — разными путями, но из одного контейнера</td></tr>
+      </table>
+      <div class="info-box primary"><strong>Главная мысль.</strong> Контроллеры, джобы и команды не знают, как создаётся зависимость. Они просят интерфейс, а контейнер решает, что подставить: реальный Stripe, фейк для тестов или свой сервис. Отсюда и гибкость, и тестируемость, и независимость от инфраструктуры.</div>
     </div>
   </div>
 
