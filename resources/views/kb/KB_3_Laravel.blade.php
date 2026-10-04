@@ -137,6 +137,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('arch-concepts','arch-di',this)">Контейнер вместо <code>new</code></a>
     <a class="nav-subitem" onclick="showSub('arch-concepts','arch-lifecycle',this)">Request Lifecycle</a>
     <a class="nav-subitem" onclick="showSub('arch-concepts','arch-container',this)">Service Container</a>
+    <a class="nav-subitem" onclick="showSub('arch-concepts','arch-where',this)">└ Где живёт в проекте</a>
     <a class="nav-subitem" onclick="showSub('arch-concepts','arch-attr-vs-param',this)">└ Атрибут vs параметр</a>
     <a class="nav-subitem" onclick="showSub('arch-concepts','arch-custom-attr',this)">└ Свой контекстный атрибут</a>
     <a class="nav-subitem" onclick="showSub('arch-concepts','arch-providers',this)">Service Providers</a>
@@ -948,6 +949,157 @@ $response->send()  →  браузер</div>
         <tr><td>Идентификатор никогда не биндился</td><td><code>Psr\Container\NotFoundExceptionInterface</code></td></tr>
         <tr><td>Биндился, но разрешить не удалось</td><td><code>Psr\Container\ContainerExceptionInterface</code></td></tr>
       </table>
+    </div>
+  </div>
+
+  <div class="subsection" id="arch-where">
+    <div class="subsection-title"><i data-lucide="folder-tree"></i> Где контейнер живёт в проекте</div>
+    <p class="text">Контейнер — это ядро, он задействован везде. Но полезно различать четыре разных вещи: где он <strong>создаётся</strong>, где <strong>настраивается</strong>, где <strong>используется</strong> и где <strong>реализован</strong>. Напрямую руками его трогают в основном в провайдерах; всё остальное — косвенно, через DI.</p>
+
+    <div class="card">
+      <h3>1. Создание и загрузка</h3>
+      <table class="data-table">
+        <tr><th>Файл</th><th>Что делает</th></tr>
+        <tr><td><code>public/index.php</code></td><td>Точка входа всех HTTP-запросов. Подключает автолоадер Composer, получает приложение из <code>bootstrap/app.php</code>, передаёт запрос в HTTP-ядро</td></tr>
+        <tr><td><code>bootstrap/app.php</code></td><td>Создаёт экземпляр <code>Application</code> — <strong>это и есть контейнер</strong>. Здесь же настраиваются маршруты, middleware, обработка исключений</td></tr>
+        <tr><td><code>artisan</code></td><td>То же самое для консоли: поднимает то же приложение и передаёт команду в консольное ядро</td></tr>
+        <tr><td><code>bootstrap/providers.php</code></td><td>Список сервис-провайдеров приложения (Laravel 11+). Именно они наполняют контейнер</td></tr>
+      </table>
+      <p>Вот как это выглядит в этом проекте — <code>public/index.php</code> почти пустой, вся работа в двух строках:</p>
+<pre><code><span class="c-key">require</span> <span class="c-type">__DIR__</span>.<span class="c-str">'/../vendor/autoload.php'</span>;
+
+<span class="c-var">$app</span> = <span class="c-key">require_once</span> <span class="c-type">__DIR__</span>.<span class="c-str">'/../bootstrap/app.php'</span>;   <span class="c-comment">// ← контейнер</span>
+
+<span class="c-var">$app</span>-&gt;<span class="c-fn">handleRequest</span>(<span class="c-type">Request</span>::<span class="c-fn">capture</span>());</code></pre>
+      <p>И <code>artisan</code> — тот же контейнер, другой вход:</p>
+<pre><code><span class="c-var">$app</span> = <span class="c-key">require_once</span> <span class="c-type">__DIR__</span>.<span class="c-str">'/bootstrap/app.php'</span>;
+
+<span class="c-var">$status</span> = <span class="c-var">$app</span>-&gt;<span class="c-fn">handleCommand</span>(<span class="c-key">new</span> <span class="c-type">ArgvInput</span>);</code></pre>
+      <div class="info-box primary">Один и тот же <code>bootstrap/app.php</code> обслуживает и веб, и консоль. Разница только в методе: <code>handleRequest()</code> против <code>handleCommand()</code>.</div>
+    </div>
+
+    <div class="card">
+      <h3>2. Где регистрируются биндинги</h3>
+      <table class="data-table">
+        <tr><th>Файл</th><th>Что регистрирует</th></tr>
+        <tr><td><code>app/Providers/AppServiceProvider.php</code></td><td>Основные биндинги проекта: <code>bind</code>, <code>singleton</code>, <code>scoped</code></td></tr>
+        <tr><td><code>app/Providers/*ServiceProvider.php</code></td><td>Свои провайдеры под отдельные группы зависимостей — когда <code>AppServiceProvider</code> разрастается</td></tr>
+        <tr><td><code>bootstrap/app.php</code></td><td>Быстрые биндинги без провайдера через <code>withBindings()</code> и <code>withSingletons()</code> (Laravel 11+)</td></tr>
+        <tr><td><code>config/app.php</code></td><td>Список провайдеров — <strong>только в Laravel ≤ 10</strong>. В 11+ переехал в <code>bootstrap/providers.php</code></td></tr>
+        <tr><td>На самих классах</td><td><code>#[Bind]</code>, <code>#[BindWhen]</code>, <code>#[Singleton]</code>, <code>#[Scoped]</code> — регистрация в провайдере не нужна вовсе</td></tr>
+      </table>
+<pre><code><span class="c-comment">// app/Providers/AppServiceProvider.php</span>
+<span class="c-key">public function</span> <span class="c-fn">register</span>(): <span class="c-type">void</span>
+{
+    <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">bind</span>(<span class="c-type">PaymentGateway</span>::<span class="c-key">class</span>, <span class="c-type">StripeGateway</span>::<span class="c-key">class</span>);
+    <span class="c-key">$this</span>-&gt;app-&gt;<span class="c-fn">singleton</span>(<span class="c-type">ReportGenerator</span>::<span class="c-key">class</span>);
+}
+
+<span class="c-comment">// bootstrap/app.php — без создания провайдера</span>
+<span class="c-key">return</span> <span class="c-type">Application</span>::<span class="c-fn">configure</span>(basePath: <span class="c-fn">dirname</span>(<span class="c-type">__DIR__</span>))
+    -&gt;<span class="c-fn">withBindings</span>([<span class="c-type">PaymentGateway</span>::<span class="c-key">class</span> =&gt; <span class="c-type">StripeGateway</span>::<span class="c-key">class</span>])
+    -&gt;<span class="c-fn">withSingletons</span>([<span class="c-type">ReportGenerator</span>::<span class="c-key">class</span>])
+    -&gt;<span class="c-fn">create</span>();</code></pre>
+      <p>В этом проекте <code>bootstrap/providers.php</code> минимальный — один провайдер:</p>
+<pre><code><span class="c-key">return</span> [
+    <span class="c-type">AppServiceProvider</span>::<span class="c-key">class</span>,
+];</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>3. Где контейнер работает через DI</h3>
+      <p>Здесь ты его не вызываешь — он сам подставляет зависимости по типам в сигнатуре.</p>
+      <table class="data-table">
+        <tr><th>Файл</th><th>Как используется</th></tr>
+        <tr><td><code>app/Http/Controllers/*.php</code></td><td>Тип в конструкторе <em>или</em> в методе-экшене</td></tr>
+        <tr><td><code>app/Http/Middleware/*.php</code></td><td>Тип в конструкторе</td></tr>
+        <tr><td><code>app/Listeners/*.php</code></td><td>Тип в конструкторе</td></tr>
+        <tr><td><code>app/Jobs/*.php</code></td><td>Тип в <code>handle()</code> — конструктор джоба сериализуется, туда сервисы класть нельзя</td></tr>
+        <tr><td><code>app/Console/Commands/*.php</code></td><td>Тип в конструкторе и в <code>handle()</code></td></tr>
+        <tr><td><code>app/Providers/*.php</code></td><td>Явно: <code>$this-&gt;app-&gt;bind(...)</code>, <code>$this-&gt;app-&gt;make(...)</code></td></tr>
+        <tr><td><code>routes/web.php</code>, <code>routes/api.php</code></td><td>Типы в аргументах замыкания, либо <code>app(...)</code> внутри</td></tr>
+        <tr><td><code>tests/*.php</code></td><td><code>$this-&gt;app-&gt;instance(...)</code> для подмены моком, <code>app(...)</code> для получения сервиса</td></tr>
+      </table>
+<pre><code><span class="c-comment">// Контроллер</span>
+<span class="c-key">class</span> <span class="c-type">OrderController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">private</span> <span class="c-type">PaymentGateway</span> <span class="c-var">$gateway</span>) {}
+}
+
+<span class="c-comment">// Middleware</span>
+<span class="c-key">class</span> <span class="c-type">CheckRole</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">private</span> <span class="c-type">RoleService</span> <span class="c-var">$roles</span>) {}
+}
+
+<span class="c-comment">// Artisan-команда — зависимости в handle()</span>
+<span class="c-key">class</span> <span class="c-type">SendReports</span> <span class="c-key">extends</span> <span class="c-type">Command</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">ReportService</span> <span class="c-var">$service</span>)
+    {
+        <span class="c-var">$service</span>-&gt;<span class="c-fn">send</span>();
+    }
+}
+
+<span class="c-comment">// Замыкание роута — можно и типом, и вручную</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/test'</span>, <span class="c-key">function</span> (<span class="c-type">OrderService</span> <span class="c-var">$service</span>) {   <span class="c-comment">// предпочтительно</span>
+    <span class="c-key">return</span> <span class="c-var">$service</span>-&gt;<span class="c-fn">run</span>();
+});
+
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/test'</span>, <span class="c-key">function</span> () {
+    <span class="c-key">return</span> <span class="c-fn">app</span>(<span class="c-type">OrderService</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">run</span>();   <span class="c-comment">// тоже работает</span>
+});</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>4. Хелперы и фасады — ручной доступ</h3>
+      <table class="data-table">
+        <tr><th>Инструмент</th><th>Что делает</th></tr>
+        <tr><td><code>app()</code></td><td>Без аргументов возвращает <strong>сам контейнер</strong>; с аргументом — разрешает тип: <code>app(Foo::class)</code></td></tr>
+        <tr><td><code>resolve()</code></td><td>Полный аналог <code>app($name, $parameters)</code>, отличается только именем</td></tr>
+        <tr><td><code>App::make(...)</code></td><td>Фасад <code>Illuminate\Support\Facades\App</code></td></tr>
+        <tr><td><code>$this-&gt;app</code></td><td>Прямое свойство внутри сервис-провайдера</td></tr>
+        <tr><td><code>Container::getInstance()</code></td><td>Статический доступ к текущему контейнеру — для кода вне жизненного цикла приложения</td></tr>
+        <tr><td><code>$app['config']</code></td><td><code>ArrayAccess</code> — то же, что <code>make('config')</code></td></tr>
+      </table>
+      <div class="info-box warning">Все эти способы — <strong>Service Locator</strong>, а не DI. Зависимость не видна в сигнатуре класса, и собрать тест, не читая тело метода, невозможно. Нормальный путь — объявить тип в конструкторе; <code>app()</code> оставить для замыканий роутов, провайдеров и мест, где конструктора просто нет.</div>
+    </div>
+
+    <div class="card">
+      <h3>5. Где контейнер реализован</h3>
+      <p>Внутри <code>vendor</code>, но знать полезно — я сверялся с этими файлами по всему разделу.</p>
+      <table class="data-table">
+        <tr><th>Файл в <code>Illuminate/</code></th><th>Роль</th></tr>
+        <tr><td><code>Container/Container.php</code></td><td>Сам контейнер: <code>bind</code>, <code>make</code>, <code>resolve</code>, <code>build</code>, хуки</td></tr>
+        <tr><td><code>Foundation/Application.php</code></td><td>Наследует <code>Container</code> и добавляет всё специфичное для Laravel: пути, окружение, загрузку провайдеров</td></tr>
+        <tr><td><code>Container/BoundMethod.php</code></td><td>Логика вызова методов с внедрением — за этим стоит <code>App::call()</code></td></tr>
+        <tr><td><code>Container/ContextualBindingBuilder.php</code></td><td>Fluent-цепочка <code>when()-&gt;needs()-&gt;give()</code></td></tr>
+        <tr><td><code>Container/Attributes/*</code></td><td>Все контекстные атрибуты: <code>Bind</code>, <code>Config</code>, <code>CurrentUser</code> и остальные</td></tr>
+        <tr><td><code>Container/Util.php</code></td><td>Вспомогательное: поиск контекстного атрибута у параметра, разворачивание замыканий</td></tr>
+        <tr><td><code>Container/RewindableGenerator.php</code></td><td>То, что возвращает <code>tagged()</code> — ленивый перебираемый набор</td></tr>
+        <tr><td><code>Container/EntryNotFoundException.php</code></td><td>Исключение PSR-11, когда идентификатор не найден</td></tr>
+      </table>
+      <div class="info-box primary"><strong>Важная деталь.</strong> <code>Application</code> <em>наследует</em> <code>Container</code>. Поэтому <code>$this-&gt;app</code>, <code>app()</code> и <code>Container::getInstance()</code> — это один и тот же объект, и у него доступны и методы контейнера, и методы приложения.</div>
+    </div>
+
+    <div class="card">
+      <h3>Итог одной картинкой</h3>
+      <div class="diagram">СОЗДАЁТСЯ      bootstrap/app.php          (artisan — тот же файл)
+                   │
+                   ▼
+НАСТРАИВАЕТСЯ   bootstrap/providers.php  →  app/Providers/*
+                bootstrap/app.php: withBindings() / withSingletons()
+                атрибуты #[Bind] / #[Singleton] на классах
+                   │
+                   ▼
+ИСПОЛЬЗУЕТСЯ    неявно (DI):  Controllers, Middleware, Listeners,
+                              Jobs::handle(), Commands, замыкания роутов
+                явно:         $this->app->..., app(), resolve(),
+                              App::make(), Container::getInstance()
+                   │
+                   ▼
+РЕАЛИЗОВАН      Illuminate/Container/*  +  Foundation/Application.php</div>
+      <p>Прямо руками контейнер трогают в основном в провайдерах. Везде остальное он работает сам — и именно поэтому его легко не замечать.</p>
     </div>
   </div>
 
