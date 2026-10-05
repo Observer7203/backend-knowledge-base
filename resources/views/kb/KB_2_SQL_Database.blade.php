@@ -449,7 +449,7 @@ ul.bullets strong{color:var(--text);}
       <tr><th>Тип</th><th>Размер</th><th>Диапазон / особенности</th></tr>
       <tr><td><code>DATE</code></td><td>3 байта</td><td>1000-01-01 .. 9999-12-31</td></tr>
       <tr><td><code>TIME</code></td><td>3 байта</td><td>&minus;838:59:59 .. 838:59:59</td></tr>
-      <tr><td><code>DATETIME</code></td><td>8 байт</td><td>1000-01-01 .. 9999-12-31, без TZ</td></tr>
+      <tr><td><code>DATETIME</code></td><td>5 байт</td><td>1000-01-01 .. 9999-12-31, без TZ (8 байт до MySQL 5.6.4)</td></tr>
       <tr><td><code>TIMESTAMP</code></td><td>4 байта</td><td>1970-01-01 .. <strong>2038-01-19</strong>, хранит UTC</td></tr>
       <tr><td><code>YEAR</code></td><td>1 байт</td><td>1901..2155</td></tr>
     </table>
@@ -488,6 +488,60 @@ ul.bullets strong{color:var(--text);}
       <h3>ARRAY (PostgreSQL)</h3>
       <p class="text">Нативные массивы: <code>tags TEXT[]</code>, <code>scores INT[]</code>. Индексирование через GIN: <code>WHERE tags @&gt; ARRAY['php']</code>. Удобно, но ломает переносимость на MySQL.</p>
     </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="hard-drive"></i> Сколько места занимает значение</div>
+    <p class="text">Все типы делятся на две группы, и это деление важнее запоминания конкретных цифр: одни занимают место <strong>по факту данных</strong>, другие — <strong>всегда одинаково</strong>, независимо от содержимого.</p>
+
+    <div class="card">
+      <h3>Переменный размер — занимают по факту</h3>
+      <table class="data-table">
+        <tr><th>Тип</th><th>Максимум</th></tr>
+        <tr><td><code>VARCHAR(n)</code></td><td><code>n</code> символов + 1–2 байта на длину</td></tr>
+        <tr><td><code>TINYTEXT</code></td><td>255 байт</td></tr>
+        <tr><td><code>TEXT</code></td><td>64 КБ</td></tr>
+        <tr><td><code>MEDIUMTEXT</code></td><td>16 МБ</td></tr>
+        <tr><td><code>LONGTEXT</code></td><td>4 ГБ</td></tr>
+        <tr><td><code>VARBINARY</code>, <code>BLOB</code> и варианты</td><td>То же самое, но для бинарных данных</td></tr>
+        <tr><td><code>JSON</code></td><td>Хранится в бинарном виде, лимит как у <code>LONGTEXT</code></td></tr>
+        <tr><td><code>DECIMAL(p, s)</code></td><td>Примерно 4 байта на каждые 9 цифр</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Фиксированный размер — занимают одинаково при любом значении</h3>
+      <table class="data-table">
+        <tr><th>Тип</th><th>Размер</th></tr>
+        <tr><td><code>TINYINT</code> (он же <code>BOOL</code>)</td><td>1 байт</td></tr>
+        <tr><td><code>SMALLINT</code></td><td>2 байта</td></tr>
+        <tr><td><code>MEDIUMINT</code></td><td>3 байта</td></tr>
+        <tr><td><code>INT</code></td><td>4 байта</td></tr>
+        <tr><td><code>BIGINT</code></td><td>8 байт</td></tr>
+        <tr><td><code>FLOAT</code> / <code>DOUBLE</code></td><td>4 / 8 байт</td></tr>
+        <tr><td><code>DATE</code></td><td>3 байта</td></tr>
+        <tr><td><code>TIME</code></td><td>3 байта</td></tr>
+        <tr><td><code>TIMESTAMP</code></td><td>4 байта</td></tr>
+        <tr><td><code>DATETIME</code></td><td>5 байт</td></tr>
+        <tr><td><code>YEAR</code></td><td>1 байт</td></tr>
+        <tr><td><code>CHAR(n)</code></td><td>Всегда <code>n</code> символов — короткое значение добивается пробелами</td></tr>
+      </table>
+      <div class="info-box primary"><strong>Ключевое следствие.</strong> Число <code>1</code> в <code>BIGINT</code> занимает те же 8 байт, что и миллиард. Поэтому выбор разрядности — это решение про <em>диапазон</em>, а не про экономию на мелких значениях: на миллионе строк лишние 4 байта превращаются в 4 МБ, независимо от того, какие там цифры.</div>
+    </div>
+
+    <div class="card">
+      <h3>Два уточнения, которые часто упускают</h3>
+      <div class="pitfall"><strong>Размер <code>VARCHAR</code> считается в символах, а место — в байтах.</strong> В <code>utf8mb4</code> символ занимает до 4 байт, поэтому <code>VARCHAR(255)</code> может занять до 1020 байт данных. Это не теория: именно отсюда классическая ошибка <code>Specified key was too long</code> в старых MySQL, где лимит ключа был 767 байт — 255 × 4 в него не влезало. Лечилось <code>Schema::defaultStringLength(191)</code>, потому что 191 × 4 = 764.</div>
+      <div class="pitfall"><strong>Префикс длины — 1 или 2 байта, а не всегда 1.</strong> Правило: 1 байт, если максимальная длина поля укладывается в 255 <em>байт</em>, иначе 2 байта. В <code>utf8mb4</code> у <code>VARCHAR(255)</code> потолок 1020 байт, значит префикс двухбайтовый — и пустая строка займёт 2 байта, а не 1. Для <code>VARCHAR(50)</code> в той же кодировке (200 байт) префикс будет однобайтовым.</div>
+    </div>
+
+    <div class="card">
+      <h3>Лимит строки целиком</h3>
+      <p>Помимо размеров отдельных колонок в MySQL есть ограничение на <strong>всю строку — 65 535 байт</strong>, общее на таблицу независимо от движка. <code>TEXT</code> и <code>BLOB</code> в этот лимит почти не входят: в строке хранится только указатель (обычно 9–12 байт), а данные лежат отдельно.</p>
+      <p>Поэтому таблица из трёх десятков <code>VARCHAR(255)</code> в <code>utf8mb4</code> может упереться в лимит и не создаться, а таблица с десятком <code>TEXT</code> — нет.</p>
+    </div>
+
+    <div class="info-box warning"><strong>В SQLite всё это не действует.</strong> Там динамическая типизация: длина в скобках не проверяется вообще, и в <code>varchar(20)</code> спокойно запишется строка любой длины. Тип колонки для SQLite — лишь «рекомендация сродства» (type affinity). Из-за этого схема, отлаженная на SQLite, может начать падать после переезда на MySQL: там ограничения настоящие.</div>
   </div>
 
   <div class="subsection">
