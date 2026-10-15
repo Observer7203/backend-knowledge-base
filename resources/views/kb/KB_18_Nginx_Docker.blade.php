@@ -1081,8 +1081,147 @@ php -v</code></pre>
 
 <div id="sec-nginx-proxy" class="section">
   <div class="section-title">Reverse proxy — Node.js, Python, любой бэкенд</div>
-  <div class="stub">
-    <strong>В разработке.</strong> <code>proxy_pass</code>, <code>proxy_set_header</code>, <code>upstream</code>-блок, X-Forwarded-For / X-Real-IP, HTTP/1.1 + connection: keep-alive для Node, WebSocket-проксирование (<code>Upgrade</code>/<code>Connection</code>).
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="arrow-left-right"></i> Forward proxy против reverse proxy</div>
+    <p class="text">Оба называются «прокси» и оба пересылают трафик, но стоят по разные стороны и решают противоположные задачи.</p>
+
+    <div class="remember-box"><strong>Одной фразой.</strong> Forward proxy представляет <em>клиента</em>, reverse proxy представляет <em>сервер</em>. Forward — изнутри наружу, reverse — снаружи внутрь.</div>
+
+    <div class="diagram">FORWARD PROXY  (прямой, «обычный»)
+
+   Клиент ──→ Forward Proxy ──→ Интернет
+
+   · стоит на стороне клиента
+   · клиент настраивает его сам
+   · скрывает КЛИЕНТА от внешних серверов
+   · трафик идёт изнутри наружу
+
+
+REVERSE PROXY  (обратный)
+
+   Интернет ──→ Reverse Proxy ──→ Бэкенд
+                                  (Node.js, Python, Java, PHP-FPM)
+
+   · стоит на стороне сервера
+   · клиент обычно не знает о его существовании
+     и думает, что говорит напрямую с сайтом
+   · скрывает СЕРВЕР от интернета
+   · трафик идёт снаружи внутрь</div>
+
+    <table class="data-table">
+      <thead><tr><th></th><th>Forward proxy</th><th>Reverse proxy</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Чью сторону представляет</strong></td><td>Клиента</td><td>Сервер</td></tr>
+        <tr><td><strong>Где стоит</strong></td><td>Рядом с клиентом</td><td>Перед бэкендом</td></tr>
+        <tr><td><strong>Кто его настраивает</strong></td><td>Сам клиент</td><td>Владелец сервера</td></tr>
+        <tr><td><strong>Кто о нём знает</strong></td><td>Клиент знает, сервер — нет</td><td>Сервер знает, клиент — нет</td></tr>
+        <tr><td><strong>Кого скрывает</strong></td><td>Клиента</td><td>Сервер</td></tr>
+        <tr><td><strong>Направление</strong></td><td>Изнутри наружу</td><td>Снаружи внутрь</td></tr>
+        <tr><td><strong>Типичное применение</strong></td><td>Корпоративный фильтр, обход блокировок, кеш исходящих запросов, анонимность</td><td>Терминация TLS, балансировка, отдача статики, защита бэкенда, единая точка входа</td></tr>
+        <tr><td><strong>Примеры</strong></td><td>Squid, корпоративный HTTP-прокси, VPN-шлюз</td><td>Nginx, HAProxy, Traefik, Cloudflare</td></tr>
+      </tbody>
+    </table>
+
+    <div class="analogy"><strong>Аналогия.</strong> Forward proxy — личный курьер: ты даёшь ему поручение, он идёт в магазин вместо тебя, и магазин видит курьера, а не тебя. Reverse proxy — ресепшен в бизнес-центре: посетитель приходит «в компанию», говорит с ресепшеном, и понятия не имеет, в каком кабинете на каком этаже сидит нужный сотрудник.</div>
+
+    <div class="why-box"><strong>Почему Nginx — почти всегда reverse.</strong> Node.js, Python и Go умеют слушать порт сами, и сайт в принципе работает без Nginx. Но тогда прямо в интернет торчит приложение: оно само занимается TLS, медленными клиентами, отдачей статики и лимитами. Reverse proxy забирает всё это на себя и оставляет приложению только бизнес-логику.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="arrow-right-left"></i> proxy_pass — базовая схема</div>
+<pre><code><span class="c-key">server</span> {
+    <span class="c-dir">listen</span> <span class="c-num">80</span>;
+    <span class="c-dir">server_name</span> app.example.com;
+
+    <span class="c-key">location</span> / {
+        <span class="c-dir">proxy_pass</span> <span class="c-str">http://127.0.0.1:3000</span>;
+
+        <span class="c-comment"># Без этих заголовков бэкенд увидит вместо клиента сам Nginx</span>
+        <span class="c-dir">proxy_set_header</span> Host              <span class="c-var">$host</span>;
+        <span class="c-dir">proxy_set_header</span> X-Real-IP         <span class="c-var">$remote_addr</span>;
+        <span class="c-dir">proxy_set_header</span> X-Forwarded-For   <span class="c-var">$proxy_add_x_forwarded_for</span>;
+        <span class="c-dir">proxy_set_header</span> X-Forwarded-Proto <span class="c-var">$scheme</span>;
+    }
+}</code></pre>
+
+    <div class="pitfall"><strong>Слеш в конце <code>proxy_pass</code> меняет поведение.</strong> <code>proxy_pass http://app:3000;</code> передаёт URI как есть. <code>proxy_pass http://app:3000/;</code> — со слешем — <em>отрезает</em> совпавшую часть location. Для <code>location /api/</code> запрос <code>/api/users</code> уйдёт как <code>/users</code>. Перепутал — получишь 404 на ровном месте.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="user-check"></i> Заголовки: кто на самом деле клиент</div>
+    <p class="text">После проксирования бэкенд видит TCP-соединение от Nginx. Настоящий IP, хост и схему нужно передать явно.</p>
+    <table class="data-table">
+      <thead><tr><th>Заголовок</th><th>Что несёт</th></tr></thead>
+      <tbody>
+        <tr><td><code>Host</code></td><td>Исходный домен. Без него бэкенд сгенерирует ссылки на <code>127.0.0.1</code></td></tr>
+        <tr><td><code>X-Real-IP</code></td><td>IP клиента одним значением</td></tr>
+        <tr><td><code>X-Forwarded-For</code></td><td>Цепочка IP через запятую; <code>$proxy_add_x_forwarded_for</code> дописывает текущий к уже имеющимся</td></tr>
+        <tr><td><code>X-Forwarded-Proto</code></td><td><code>http</code> или <code>https</code>. Без него Laravel за TLS-терминацией будет строить ссылки по <code>http</code> и ломать редиректы</td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong>Доверять этим заголовкам можно только от своего прокси.</strong> Клиент может прислать <code>X-Forwarded-For</code> сам и подделать IP. В Laravel за это отвечает <code>TrustProxies</code>: пока прокси не перечислен как доверенный, фреймворк эти заголовки игнорирует — и это правильное поведение по умолчанию.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="network"></i> upstream — группа бэкендов</div>
+<pre><code><span class="c-key">upstream</span> backend {
+    <span class="c-dir">server</span> <span class="c-str">127.0.0.1:3000</span>;
+    <span class="c-dir">server</span> <span class="c-str">127.0.0.1:3001</span>;
+
+    <span class="c-comment"># Держать соединения открытыми — экономит TCP-рукопожатия</span>
+    <span class="c-dir">keepalive</span> <span class="c-num">32</span>;
+}
+
+<span class="c-key">server</span> {
+    <span class="c-key">location</span> / {
+        <span class="c-dir">proxy_pass</span> <span class="c-str">http://backend</span>;
+
+        <span class="c-comment"># keepalive к upstream работает только с HTTP/1.1 и пустым Connection</span>
+        <span class="c-dir">proxy_http_version</span> <span class="c-num">1.1</span>;
+        <span class="c-dir">proxy_set_header</span> Connection <span class="c-str">""</span>;
+    }
+}</code></pre>
+    <div class="why-box"><strong>Почему <code>proxy_http_version 1.1</code> обязателен.</strong> По умолчанию Nginx ходит к upstream по HTTP/1.0, где keep-alive не поддерживается — директива <code>keepalive 32</code> в этом случае не даёт ничего. А <code>Connection ""</code> нужен, чтобы не ушёл унаследованный <code>Connection: close</code>.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="radio"></i> WebSocket-проксирование</div>
+    <p class="text">WebSocket начинается как обычный HTTP-запрос с просьбой сменить протокол. Nginx должен эту просьбу пропустить, иначе соединение оборвётся на рукопожатии.</p>
+<pre><code><span class="c-key">location</span> /ws {
+    <span class="c-dir">proxy_pass</span> <span class="c-str">http://127.0.0.1:6001</span>;
+
+    <span class="c-dir">proxy_http_version</span> <span class="c-num">1.1</span>;
+    <span class="c-dir">proxy_set_header</span> Upgrade    <span class="c-var">$http_upgrade</span>;
+    <span class="c-dir">proxy_set_header</span> Connection <span class="c-str">"upgrade"</span>;
+    <span class="c-dir">proxy_set_header</span> Host       <span class="c-var">$host</span>;
+
+    <span class="c-comment"># Иначе Nginx разорвёт простаивающий сокет через 60 секунд</span>
+    <span class="c-dir">proxy_read_timeout</span> <span class="c-num">3600s</span>;
+}</code></pre>
+    <div class="pitfall"><strong>Молчащий WebSocket рвётся по таймауту.</strong> Дефолтный <code>proxy_read_timeout</code> — 60 секунд. Соединение без трафика Nginx закроет, и клиент увидит обрыв без видимой причины. Лечится увеличением таймаута или heartbeat-пингами со стороны приложения.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="timer"></i> Таймауты и типичные ошибки</div>
+    <table class="data-table">
+      <thead><tr><th>Директива</th><th>По умолчанию</th><th>За что отвечает</th></tr></thead>
+      <tbody>
+        <tr><td><code>proxy_connect_timeout</code></td><td>60s</td><td>Установка соединения с бэкендом. Больше 75s ставить бессмысленно</td></tr>
+        <tr><td><code>proxy_send_timeout</code></td><td>60s</td><td>Передача запроса бэкенду</td></tr>
+        <tr><td><code>proxy_read_timeout</code></td><td>60s</td><td>Ожидание ответа. Именно он даёт 504 на долгих операциях</td></tr>
+      </tbody>
+    </table>
+    <table class="data-table">
+      <thead><tr><th>Ошибка</th><th>Причина</th></tr></thead>
+      <tbody>
+        <tr><td><strong>502 Bad Gateway</strong></td><td>Бэкенд не отвечает: не запущен, слушает другой порт, упал</td></tr>
+        <tr><td><strong>504 Gateway Timeout</strong></td><td>Бэкенд жив, но не уложился в <code>proxy_read_timeout</code></td></tr>
+        <tr><td><strong>Ссылки ведут на 127.0.0.1</strong></td><td>Не передан <code>Host</code></td></tr>
+        <tr><td><strong>В логах один и тот же IP</strong></td><td>Не передан <code>X-Real-IP</code> / <code>X-Forwarded-For</code></td></tr>
+        <tr><td><strong>Бесконечный редирект на https</strong></td><td>Не передан <code>X-Forwarded-Proto</code>: приложение считает, что пришли по http</td></tr>
+      </tbody>
+    </table>
   </div>
 </div>
 
