@@ -1340,8 +1340,154 @@ REVERSE PROXY  (обратный)
 
 <div id="sec-nginx-ssl" class="section">
   <div class="section-title">SSL/TLS + Let's Encrypt</div>
-  <div class="stub">
-    <strong>В разработке.</strong> Установка certbot, автовыпуск и автопродление, <code>ssl_certificate</code>/<code>ssl_certificate_key</code>, ssl_protocols TLSv1.2 TLSv1.3, ssl_ciphers, HSTS, OCSP stapling, редирект HTTP→HTTPS.
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="lock"></i> Что такое TLS и при чём тут HTTPS</div>
+    <p class="text"><strong>TLS</strong> (Transport Layer Security) — криптографический протокол, который даёт три вещи:</p>
+    <table class="data-table">
+      <thead><tr><th>Свойство</th><th>Что гарантирует</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Шифрование</strong></td><td>Данные между клиентом и сервером нельзя прочитать по пути</td></tr>
+        <tr><td><strong>Целостность</strong></td><td>Данные нельзя незаметно подменить</td></tr>
+        <tr><td><strong>Аутентификация</strong></td><td>Клиент убеждается, что сервер действительно тот, за кого себя выдаёт — через TLS-сертификат</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>HTTPS — это просто HTTP поверх TLS.</strong> Тот же самый HTTP-запрос, только внутри зашифрованного TLS-канала. Никакого отдельного «протокола HTTPS» не существует.</div>
+    <div class="why-box"><strong>Почему «SSL» всё ещё везде пишут.</strong> SSL — предшественник TLS, последняя версия SSL 3.0 признана небезопасной ещё в 2015-м. Сейчас везде используется TLS, но слово «SSL» осталось в названиях директив (<code>ssl_certificate</code>), команд и в обиходе. Когда говорят «SSL-сертификат» — имеют в виду TLS.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="scissors"></i> TLS termination — прокси разрывает шифрование</div>
+    <p class="text">Самая частая схема в проде: HTTPS заканчивается на reverse proxy, а дальше внутрь идёт обычный HTTP.</p>
+
+    <div class="diagram">Клиент ──HTTPS/TLS──→ Reverse proxy ──HTTP──→ Бэкенд
+                        (Nginx)              (Node.js, Python,
+                        держит                Java, PHP-FPM)
+                        сертификаты</div>
+
+    <p class="text">По шагам:</p>
+    <ol style="margin:8px 0 14px 22px;color:var(--text2);font-size:13px;line-height:1.85">
+      <li><strong>Прокси держит сертификаты.</strong> Например для <code>example.com</code>. Сертификат содержит публичный ключ и подпись удостоверяющего центра (CA).</li>
+      <li><strong>Клиент подключается по HTTPS.</strong> Происходит TLS handshake: стороны договариваются о шифрах, клиент проверяет сертификат, обмениваются ключами.</li>
+      <li><strong>Прокси «разбирает» TLS</strong> — расшифровывает входящий трафик. Это и называется терминацией.</li>
+      <li><strong>Дальше идёт расшифрованный HTTP</strong> — обычно во внутреннюю сеть: <code>http://backend:3000</code> или к PHP-FPM.</li>
+      <li><strong>Бэкенд не думает про сертификаты.</strong> Ему не нужно настраивать HTTPS, обновлять сертификаты и следить за версиями TLS — он получает обычный HTTP-запрос.</li>
+    </ol>
+
+    <table class="data-table">
+      <thead><tr><th>Зачем так делают</th><th>Что это даёт</th></tr></thead>
+      <tbody>
+        <tr><td>Централизованные сертификаты</td><td>Один прокси вместо десяти бэкендов</td></tr>
+        <tr><td>Автопродление</td><td>Let's Encrypt через Nginx, Caddy, Traefik — в одном месте</td></tr>
+        <tr><td>Снижение нагрузки</td><td>Шифрование ложится на прокси, а не на приложение</td></tr>
+        <tr><td>Единая точка безопасности</td><td>Удобно вешать WAF, rate limit, логирование</td></tr>
+        <tr><td>Простота для бэкенда</td><td>Приложение слушает обычный HTTP</td></tr>
+      </tbody>
+    </table>
+
+    <div class="pitfall"><strong>После терминации трафик до бэкенда идёт незашифрованным.</strong> Это нормально, пока прокси и бэкенд в одной доверенной сети. Если сеть недоверенная — делают <strong>re-encryption</strong>: прокси расшифровывает TLS от клиента и снова шифрует до бэкенда по HTTPS. Либо поднимают <strong>mTLS</strong>, где стороны проверяют сертификаты друг друга.</div>
+
+    <table class="data-table">
+      <thead><tr><th>Термин</th><th>Значение</th></tr></thead>
+      <tbody>
+        <tr><td><strong>TLS termination</strong></td><td>Прокси завершает TLS, дальше идёт HTTP</td></tr>
+        <tr><td><strong>TLS offloading</strong></td><td>Тот же процесс с акцентом на снятие нагрузки с бэкенда</td></tr>
+        <tr><td><strong>SSL termination</strong></td><td>Устаревшее название того же самого — SSL давно мёртв, термин остался</td></tr>
+        <tr><td><strong>Re-encryption</strong></td><td>Расшифровал от клиента → зашифровал заново до бэкенда</td></tr>
+        <tr><td><strong>TLS passthrough</strong></td><td>Прокси вообще не расшифровывает, пробрасывает TLS целиком на бэкенд</td></tr>
+      </tbody>
+    </table>
+
+    <div class="pitfall"><strong>Бэкенд должен знать, что снаружи был HTTPS.</strong> После терминации приложение видит обычный HTTP и будет строить ссылки по <code>http://</code> — отсюда бесконечные редиректы и «mixed content». Лечится заголовком <code>X-Forwarded-Proto $scheme</code> из раздела про reverse proxy плюс <code>TrustProxies</code> на стороне Laravel.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="badge-check"></i> Let's Encrypt через certbot</div>
+<pre><code><span class="c-comment"># Установка (Debian/Ubuntu)</span>
+sudo apt install certbot python3-certbot-nginx -y
+
+<span class="c-comment"># Выпуск сертификата — certbot сам правит конфиг Nginx и перезагружает его</span>
+sudo certbot --nginx -d example.com -d www.example.com
+
+<span class="c-comment"># Только выпустить, конфиг не трогать</span>
+sudo certbot certonly --nginx -d example.com
+
+<span class="c-comment"># Проверить автопродление вхолостую</span>
+sudo certbot renew --dry-run
+
+<span class="c-comment"># Список выпущенных</span>
+sudo certbot certificates</code></pre>
+    <div class="why-box"><strong>Автопродление настраивается само.</strong> Пакет ставит systemd-таймер <code>certbot.timer</code> (или cron), который дважды в сутки проверяет срок. Сертификат Let's Encrypt живёт <strong>90 дней</strong>, обновляется примерно за 30 до конца. Проверить таймер: <code>systemctl list-timers | grep certbot</code>.</div>
+    <div class="pitfall"><strong>Для выпуска нужен работающий HTTP на 80 порту.</strong> HTTP-01 challenge кладёт файл в <code>/.well-known/acme-challenge/</code> и забирает его снаружи. Если 80-й закрыт файрволом или весь трафик редиректится на HTTPS без исключения для этого пути — выпуск упадёт.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="file-key"></i> Конфиг Nginx с TLS</div>
+<pre><code><span class="c-comment"># HTTP — только редирект на HTTPS</span>
+<span class="c-key">server</span> {
+    <span class="c-dir">listen</span> <span class="c-num">80</span>;
+    <span class="c-dir">server_name</span> example.com www.example.com;
+
+    <span class="c-comment"># Исключение для certbot, иначе продление сломается</span>
+    <span class="c-key">location</span> /.well-known/acme-challenge/ {
+        <span class="c-dir">root</span> /var/www/html;
+    }
+
+    <span class="c-key">location</span> / {
+        <span class="c-dir">return</span> <span class="c-num">301</span> <span class="c-str">https://</span><span class="c-var">$host</span><span class="c-var">$request_uri</span>;
+    }
+}
+
+<span class="c-key">server</span> {
+    <span class="c-dir">listen</span> <span class="c-num">443</span> ssl;
+    <span class="c-dir">http2</span> <span class="c-key">on</span>;
+    <span class="c-dir">server_name</span> example.com www.example.com;
+
+    <span class="c-comment"># Сертификат и приватный ключ</span>
+    <span class="c-dir">ssl_certificate</span>     /etc/letsencrypt/live/example.com/fullchain.pem;
+    <span class="c-dir">ssl_certificate_key</span> /etc/letsencrypt/live/example.com/privkey.pem;
+
+    <span class="c-comment"># Только современные версии — 1.0 и 1.1 устарели и небезопасны</span>
+    <span class="c-dir">ssl_protocols</span> TLSv1.2 TLSv1.3;
+    <span class="c-dir">ssl_prefer_server_ciphers</span> <span class="c-key">off</span>;
+    <span class="c-dir">ssl_ciphers</span> ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384;
+
+    <span class="c-comment"># Кеш сессий — меньше полных handshake'ов</span>
+    <span class="c-dir">ssl_session_cache</span> shared:SSL:10m;
+    <span class="c-dir">ssl_session_timeout</span> <span class="c-num">1d</span>;
+    <span class="c-dir">ssl_session_tickets</span> <span class="c-key">off</span>;
+
+    <span class="c-comment"># OCSP stapling — сервер сам прикладывает ответ о валидности</span>
+    <span class="c-dir">ssl_stapling</span> <span class="c-key">on</span>;
+    <span class="c-dir">ssl_stapling_verify</span> <span class="c-key">on</span>;
+    <span class="c-dir">ssl_trusted_certificate</span> /etc/letsencrypt/live/example.com/chain.pem;
+    <span class="c-dir">resolver</span> <span class="c-num">1.1.1.1</span> <span class="c-num">8.8.8.8</span> valid=300s;
+
+    <span class="c-comment"># HSTS — браузер запомнит, что сюда только по HTTPS</span>
+    <span class="c-dir">add_header</span> Strict-Transport-Security <span class="c-str">"max-age=31536000; includeSubDomains"</span> always;
+
+    <span class="c-dir">root</span> /var/www/example.com/public;
+    <span class="c-dir">index</span> index.php;
+}</code></pre>
+
+    <table class="data-table">
+      <thead><tr><th>Файл Let's Encrypt</th><th>Что это</th></tr></thead>
+      <tbody>
+        <tr><td><code>fullchain.pem</code></td><td>Сертификат сайта + промежуточные CA. Именно его указывают в <code>ssl_certificate</code></td></tr>
+        <tr><td><code>privkey.pem</code></td><td>Приватный ключ. Наружу не отдаётся никогда</td></tr>
+        <tr><td><code>chain.pem</code></td><td>Только промежуточные CA — нужен для OCSP stapling</td></tr>
+        <tr><td><code>cert.pem</code></td><td>Только сертификат сайта, без цепочки. Для Nginx не подходит</td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong>Частая ошибка: указать <code>cert.pem</code> вместо <code>fullchain.pem</code>.</strong> В браузере всё будет выглядеть нормально, а мобильные приложения и <code>curl</code> начнут ругаться на недоверенный сертификат — без промежуточных CA цепочка не выстраивается.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="shield-alert"></i> HSTS и подводные камни</div>
+    <div class="pitfall"><strong>HSTS необратим на время <code>max-age</code>.</strong> Выставил <code>max-age=31536000</code> — браузеры год будут ходить только по HTTPS, игнорируя твой конфиг. Сломался сертификат — сайт недоступен, и «просто откатить на HTTP» не выйдет. Начинай с малого: <code>max-age=300</code>, убедись что всё работает, и только потом поднимай до года.</div>
+    <div class="pitfall"><strong><code>includeSubDomains</code> накрывает все поддомены разом.</strong> Включая те, где HTTPS ещё нет — какой-нибудь внутренний <code>old.example.com</code> просто перестанет открываться.</div>
+    <div class="pitfall"><strong><code>add_header</code> не наследуется.</strong> Если в <code>location</code> есть свой <code>add_header</code>, все заголовки из <code>server</code> в этом location теряются — HSTS в том числе. Поэтому и пишут <code>always</code>, и дублируют заголовок там, где он нужен.</div>
+    <div class="remember-box"><strong>Проверка конфигурации:</strong> <code>nginx -t</code> для синтаксиса, <code>openssl s_client -connect example.com:443 -servername example.com</code> для цепочки и версии TLS, <code>curl -sI https://example.com | grep -i strict</code> для HSTS. Публичный аудит — SSL Labs.</div>
   </div>
 </div>
 
