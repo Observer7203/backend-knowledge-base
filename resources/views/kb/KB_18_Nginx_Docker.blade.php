@@ -618,6 +618,105 @@ types {
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="link"></i> Симлинки — как это работает</div>
+    <p class="text"><strong>Симлинк</strong> (symbolic link, символьная ссылка) — файл-указатель на другой файл или папку. По смыслу то же, что ярлык в Windows: сам он ничего не содержит, только говорит «иди туда, там настоящий файл».</p>
+
+    <div class="diagram">/opt/homebrew/bin/nginx  →  /opt/homebrew/Cellar/nginx/1.31.7/bin/nginx
+      ↑                              ↑
+   симлинк                     настоящий бинарник</div>
+
+    <p class="text">Когда ты набираешь <code>nginx</code>, система:</p>
+    <ol style="margin:8px 0 14px 22px;color:var(--text2);font-size:13px;line-height:1.85">
+      <li>находит <code>nginx</code> в <code>PATH</code> — это <code>/opt/homebrew/bin/nginx</code>;</li>
+      <li>видит, что это симлинк;</li>
+      <li>переходит по нему в <code>Cellar/nginx/1.31.7/bin/nginx</code>;</li>
+      <li>запускает настоящий бинарник.</li>
+    </ol>
+
+    <div class="card">
+      <h3>Создать и посмотреть</h3>
+<pre><code><span class="c-comment"># ln -s ЦЕЛЬ ИМЯ_ССЫЛКИ    (-s = symbolic)</span>
+ln -s /opt/homebrew/Cellar/nginx/1.31.7/bin/nginx /opt/homebrew/bin/nginx
+
+<span class="c-comment"># Посмотреть</span>
+ls -l /opt/homebrew/bin/nginx
+<span class="c-comment"># lrwxr-xr-x@ 1 observer admin 32 ... nginx -> ../Cellar/nginx/1.31.7/bin/nginx
+#  ↑ первая буква l = link, стрелка показывает цель</span>
+
+<span class="c-comment"># Куда указывает, одной командой</span>
+readlink /opt/homebrew/bin/nginx
+
+<span class="c-comment"># Перезаписать существующий симлинк (-f = force)</span>
+ln -sf /новый/путь/nginx /opt/homebrew/bin/nginx</code></pre>
+    </div>
+
+    <div class="card">
+      <h3>Зачем они нужны</h3>
+      <table class="data-table">
+        <thead><tr><th>Задача</th><th>Как помогает симлинк</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Переключение версий</strong></td><td>В Cellar лежат <code>1.31.7</code> и <code>1.32.0</code>, а <code>bin/nginx</code> — один симлинк. Обновился — Homebrew просто переставил его. Скрипты, вызывающие <code>nginx</code>, ничего не заметили</td></tr>
+          <tr><td><strong>Короткие пути</strong></td><td><code>nginx -s reload</code> вместо <code>/opt/homebrew/Cellar/nginx/1.31.7/bin/nginx -s reload</code> — потому что <code>bin/</code> в <code>PATH</code></td></tr>
+          <tr><td><strong>Атомарный деплой</strong></td><td><code>current → releases/2026-10-16</code>. Выкатил новый релиз рядом, переставил симлинк — переключение мгновенное, откат такой же</td></tr>
+          <tr><td><strong>Без дублирования</strong></td><td>Один файл, много имён — место не тратится</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Симлинк против hard link</h3>
+      <table class="data-table">
+        <thead><tr><th></th><th>Симлинк <code>ln -s</code></th><th>Hard link <code>ln</code></th></tr></thead>
+        <tbody>
+          <tr><td><strong>Что это</strong></td><td>Отдельный файл-указатель</td><td>Второе имя того же файла</td></tr>
+          <tr><td><strong>Указывает на</strong></td><td>Путь — то есть на строку</td><td>Сам inode — то есть на данные</td></tr>
+          <tr><td><strong>Удалили оригинал</strong></td><td>Ссылка ломается (dangling)</td><td>Данные живут, пока есть хоть одно имя</td></tr>
+          <tr><td><strong>На папку</strong></td><td>Да</td><td>Нет</td></tr>
+          <tr><td><strong>Между файловыми системами</strong></td><td>Да</td><td>Нет</td></tr>
+        </tbody>
+      </table>
+      <div class="why-box"><strong>Откуда разница.</strong> Hard link — это ещё одна запись в каталоге, указывающая на тот же inode. Файл физически удаляется, только когда счётчик имён доходит до нуля. Симлинк хранит <em>текст пути</em> и ничего не знает о самих данных — поэтому и работает между дисками, и ломается при переезде цели.</div>
+    </div>
+
+    <div class="card">
+      <h3>Сломанный симлинк</h3>
+      <p>Цель удалили или переместили — ссылка остаётся, но ведёт в никуда. Такую называют <strong>dangling</strong>, «висячей».</p>
+<pre><code>$ ls -l /opt/homebrew/bin/nginx
+lrwxr-xr-x ... nginx -> ../Cellar/nginx/1.31.7/bin/nginx   <span class="c-comment"># ссылка есть</span>
+
+$ nginx
+zsh: no such file or directory: nginx                        <span class="c-comment"># цели нет</span>
+
+<span class="c-comment"># Починить</span>
+brew link nginx          <span class="c-comment"># пересоздать ссылки формулы</span>
+brew reinstall nginx     <span class="c-comment"># если link не помог</span>
+
+<span class="c-comment"># Найти все битые ссылки в каталоге</span>
+find /opt/homebrew/bin -type l ! -exec test -e {} \; -print</code></pre>
+      <div class="remember-box">Симптом узнаваемый: <code>ls</code> файл показывает, а запуск или открытие говорит «нет такого файла». Значит указатель жив, а цель пропала.</div>
+    </div>
+
+    <div class="card">
+      <h3>Что в Homebrew симлинк, а что нет</h3>
+      <p>Распространённое заблуждение — будто симлинками сделано всё. Это не так, и разница принципиальная.</p>
+      <table class="data-table">
+        <thead><tr><th>Путь</th><th>Что это на самом деле</th></tr></thead>
+        <tbody>
+          <tr><td><code>/opt/homebrew/bin/nginx</code></td><td><strong>Симлинк</strong> → <code>../Cellar/nginx/1.31.7/bin/nginx</code></td></tr>
+          <tr><td><code>/opt/homebrew/etc/nginx/</code></td><td><strong>Обычный каталог</strong> с настоящими файлами</td></tr>
+          <tr><td><code>/opt/homebrew/etc/nginx/nginx.conf</code></td><td><strong>Обычный файл</strong></td></tr>
+          <tr><td><code>/opt/homebrew/var/log/nginx/</code></td><td><strong>Обычный каталог</strong></td></tr>
+          <tr><td><code>/opt/homebrew/var/www/</code></td><td><strong>Обычный каталог</strong></td></tr>
+        </tbody>
+      </table>
+      <div class="why-box"><strong>Почему конфиги и данные НЕ симлинкуют.</strong> Симлинки ведут в Cellar, а Cellar при обновлении формулы пересоздаётся под новую версию. Будь <code>etc/nginx</code> ссылкой туда — твой правленый <code>nginx.conf</code> улетал бы при каждом <code>brew upgrade</code>. Поэтому конфиги и <code>var/</code> копируются один раз и живут отдельно от версий. Ровно отсюда и берутся файлы <code>*.default</code>: обновляется эталон, а твой рабочий файл не трогают.</div>
+      <div class="remember-box"><strong>Правило:</strong> симлинками делают то, что принадлежит <em>версии пакета</em> — бинарники, библиотеки. Обычными файлами лежит то, что принадлежит <em>тебе</em> — конфиги, логи, данные.</div>
+    </div>
+
+    <div class="pitfall"><strong><code>brew switch</code> больше нет.</strong> Команда удалена из современного Homebrew — в старых статьях она ещё встречается. Переключение версий сейчас: <code>brew unlink nginx &amp;&amp; brew link nginx@1.31</code>, либо установка версионной формулы, если она есть. Посмотреть, что лежит в Cellar: <code>ls /opt/homebrew/Cellar/nginx/</code>.</div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="file-code-2"></i> Laravel на macOS: конфиг сайта + PHP-FPM</div>
     <p class="text">PHP-FPM из Homebrew по умолчанию слушает <strong>TCP-порт 9000</strong>, а не unix-сокет — в отличие от Debian, где обычно <code>/run/php/php8.3-fpm.sock</code>. Это первое, обо что спотыкаются при переносе конфига с сервера на мак.</p>
 <pre><code><span class="c-comment"># Ставим PHP (придёт вместе с php-fpm) и запускаем</span>
