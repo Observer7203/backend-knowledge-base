@@ -252,6 +252,20 @@ class KbPagesSeeder extends Seeder
                 'layout' => 'sidebar',
                 'sort_order' => 180,
             ],
+            [
+                'id' => 'kb20',
+                'slug' => 'KB_20_CLI_Bash_Git_Composer',
+                'file' => 'kb.KB_20_CLI_Bash_Git_Composer',
+                'title' => 'CLI: Bash · Git · Composer',
+                'description' => 'Три инструмента на каждый день. Bash: навигация, grep/find, процессы, права rwx, пайпы и перенаправление. Git: три состояния файла, отмена изменений, ветки, remote и теги. Composer: install vs update, composer.lock, constraints, автозагрузка. 16 разделов.',
+                'badge' => 'CLI',
+                'badge_class' => 'badge-neutral',
+                'icon' => 'terminal',
+                'icon_class' => 'ic-gray',
+                'group_name' => 'Modules',
+                'layout' => 'sidebar',
+                'sort_order' => 190,
+            ],
 
             // ─── Methodology ────────────────────────────────────────────────────
             [
