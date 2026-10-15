@@ -483,6 +483,141 @@ curl http://localhost:8080</code></pre>
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="book-open"></i> Что означает каждый путь и файл</div>
+
+    <div class="card">
+      <h3>Откуда взялось <code>/opt</code></h3>
+      <p>В Unix есть устоявшаяся раскладка каталогов, и Homebrew её повторяет — просто внутри своего корня.</p>
+      <table class="data-table">
+        <thead><tr><th>Каталог</th><th>Назначение</th><th>Расшифровка</th></tr></thead>
+        <tbody>
+          <tr><td><code>/etc</code></td><td>Конфигурационные файлы</td><td>От «et cetera», но прижилась трактовка <em>editable text configuration</em></td></tr>
+          <tr><td><code>/bin</code>, <code>/usr/bin</code></td><td>Исполняемые файлы</td><td><em>binaries</em></td></tr>
+          <tr><td><code>/var</code></td><td>Изменяемые данные: логи, PID, кеш</td><td><em>variable</em></td></tr>
+          <tr><td><code>/opt</code></td><td>Дополнительное, не системное ПО</td><td><em>optional</em></td></tr>
+          <tr><td><code>/home</code>, <code>/Users</code></td><td>Домашние папки</td><td>—</td></tr>
+        </tbody>
+      </table>
+<pre><code><span class="c-comment"># Homebrew зеркалит эту структуру у себя</span>
+/opt/homebrew/etc/nginx/   <span class="c-comment"># конфиги</span>
+/opt/homebrew/var/         <span class="c-comment"># логи, pid, docroot</span>
+/opt/homebrew/bin/nginx    <span class="c-comment"># бинарник</span>
+/opt/homebrew/Cellar/      <span class="c-comment"># сами версии пакетов</span></code></pre>
+      <div class="why-box"><strong>Зачем отдельный корень.</strong> Всё добро Homebrew лежит в одном месте и не размазывается по системе. Удалить начисто — <code>rm -rf /opt/homebrew</code>, и система не пострадает.</div>
+      <div class="pitfall"><strong>Уточнение про <code>/usr/local</code> и SIP.</strong> Часто пишут, что Homebrew ушёл из <code>/usr/local</code>, потому что тот «защищён SIP». Это неверно: System Integrity Protection закрывает <code>/usr</code>, <code>/bin</code>, <code>/sbin</code>, <code>/System</code>, но <strong><code>/usr/local</code> из-под неё явно выведен</strong> — именно чтобы туда ставили стороннее ПО. Настоящая причина другая: <code>/usr/local</code> остался префиксом <em>Intel</em>-версии Homebrew, и отдельный <code>/opt/homebrew</code> позволяет держать обе сборки рядом — нативную ARM и Intel под Rosetta. Плюс это свежий каталог, которым Homebrew владеет целиком, без перенастройки прав на общесистемную папку.</div>
+    </div>
+
+    <div class="card">
+      <h3>Файлы <code>*.default</code></h3>
+      <p>Эталонные копии от установщика. Их не трогают — это «заводская комплектация».</p>
+      <ul style="margin:8px 0 14px 22px;color:var(--text2);font-size:13px;line-height:1.85">
+        <li>Сломал конфиг — сравни с <code>.default</code> и увидишь, что именно менял: <code>diff nginx.conf nginx.conf.default</code></li>
+        <li>Восстановить дефолт: <code>cp nginx.conf.default nginx.conf</code></li>
+        <li>После обновления формулы видно, что поменялось в эталоне — твой файл brew при этом не трогает</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3><code>mime.types</code> — таблица «расширение → Content-Type»</h3>
+      <p><strong>MIME</strong> (Multipurpose Internet Mail Extensions) — стандарт, объясняющий, что за файл отдаётся. Придуман для почты, прижился в вебе. Сервер сообщает тип заголовком, а браузер по нему решает, что делать.</p>
+      <table class="data-table">
+        <thead><tr><th>Content-Type</th><th>Что делает браузер</th></tr></thead>
+        <tbody>
+          <tr><td><code>text/html</code></td><td>Отрисовывает как HTML</td></tr>
+          <tr><td><code>text/css</code></td><td>Применяет как стили</td></tr>
+          <tr><td><code>application/javascript</code></td><td>Исполняет как скрипт</td></tr>
+          <tr><td><code>image/png</code></td><td>Показывает картинку</td></tr>
+          <tr><td><code>application/json</code></td><td>Не рисует, отдаёт JS-коду</td></tr>
+          <tr><td><code>application/pdf</code></td><td>Открывает во вьювере</td></tr>
+        </tbody>
+      </table>
+<pre><code><span class="c-comment"># Содержимое mime.types — около 80 строк вида «тип расширения»</span>
+types {
+    text/html                  html htm shtml;
+    text/css                   css;
+    application/javascript     js;
+    image/png                  png;
+    image/jpeg                 jpeg jpg;
+    application/json           json;
+    ...
+}</code></pre>
+<pre><code><span class="c-comment"># Подключение в nginx.conf — строки 18–19 дефолтного конфига</span>
+<span class="c-dir">include</span>      mime.types;
+<span class="c-dir">default_type</span> application/octet-stream;</code></pre>
+      <p><code>default_type</code> — что отдавать, если расширение неизвестно. <code>application/octet-stream</code> означает «бинарный поток»: браузер скачает файл, а не попытается отрисовать.</p>
+      <div class="pitfall"><strong>Без <code>mime.types</code> сайт ломается молча.</strong> CSS уедет как <code>text/plain</code>, и браузер не применит стили. JS может не выполниться — особенно при включённом <code>X-Content-Type-Options: nosniff</code>, который запрещает браузеру угадывать тип. Картинки начнут скачиваться вместо показа, а JSON API сломается, если отдать его как <code>text/html</code>.</div>
+    </div>
+
+    <div class="card">
+      <h3><code>fastcgi_params</code>, <code>fastcgi.conf</code> и соседи</h3>
+      <p>Наборы переменных для протоколов общения с приложением:</p>
+      <table class="data-table">
+        <thead><tr><th>Файл</th><th>Протокол</th><th>Для чего</th></tr></thead>
+        <tbody>
+          <tr><td><code>fastcgi_params</code> / <code>fastcgi.conf</code></td><td>FastCGI</td><td>Связь с PHP-FPM</td></tr>
+          <tr><td><code>scgi_params</code></td><td>SCGI</td><td>Аналог, встречается редко</td></tr>
+          <tr><td><code>uwsgi_params</code></td><td>uWSGI</td><td>Python-приложения на uWSGI</td></tr>
+        </tbody>
+      </table>
+<pre><code><span class="c-comment"># Так Nginx передаёт контекст запроса в PHP — это и есть $_SERVER</span>
+<span class="c-dir">fastcgi_param</span>  QUERY_STRING     <span class="c-var">$query_string</span>;
+<span class="c-dir">fastcgi_param</span>  REQUEST_METHOD   <span class="c-var">$request_method</span>;
+<span class="c-dir">fastcgi_param</span>  CONTENT_TYPE     <span class="c-var">$content_type</span>;
+<span class="c-dir">fastcgi_param</span>  REQUEST_URI      <span class="c-var">$request_uri</span>;
+<span class="c-dir">fastcgi_param</span>  DOCUMENT_ROOT    <span class="c-var">$document_root</span>;
+<span class="c-dir">fastcgi_param</span>  REMOTE_ADDR      <span class="c-var">$remote_addr</span>;
+<span class="c-dir">fastcgi_param</span>  HTTPS            <span class="c-var">$https</span> if_not_empty;</code></pre>
+      <div class="remember-box"><strong>Разница между двумя файлами — ровно одна строка.</strong> <code>diff</code> на реальной установке показывает, что <code>fastcgi.conf</code> — это <code>fastcgi_params</code> плюс:
+<br><br><code>fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;</code><br><br>
+То есть в <code>fastcgi.conf</code> путь к PHP-скрипту уже прописан, а при <code>include fastcgi_params</code> его надо дописывать самому. Поэтому обычно подключают <code>fastcgi.conf</code>.</div>
+<pre><code><span class="c-key">location</span> ~ \.php$ {
+    <span class="c-dir">include</span> fastcgi.conf;          <span class="c-comment"># SCRIPT_FILENAME уже внутри</span>
+    <span class="c-dir">fastcgi_pass</span> <span class="c-str">127.0.0.1:9000</span>;
+}</code></pre>
+      <div class="pitfall"><strong>Пустая белая страница вместо PHP</strong> — классический симптом подключённого <code>fastcgi_params</code> без ручного <code>SCRIPT_FILENAME</code>. PHP-FPM не понимает, какой файл исполнять, и отдаёт пустоту.</div>
+    </div>
+
+    <div class="card">
+      <h3><code>koi-utf</code>, <code>koi-win</code>, <code>win-utf</code></h3>
+      <p>Таблицы перекодировки для директивы <code>charset_map</code>: KOI8-R ↔ UTF-8 ↔ Windows-1251. Позволяли отдавать сайт в UTF-8, когда файлы лежали в KOI8-R.</p>
+      <div class="remember-box">В наши дни практически не нужны — всё в UTF-8. Файлы лежат для совместимости, трогать их незачем.</div>
+    </div>
+
+    <div class="card">
+      <h3><code>servers/</code>, <code>var/</code>, <code>Cellar/</code> и автозапуск</h3>
+      <table class="data-table">
+        <thead><tr><th>Путь</th><th>Что это</th></tr></thead>
+        <tbody>
+          <tr><td><code>etc/nginx/servers/</code></td><td>Твои конфиги сайтов. Подключаются строкой <code>include servers/*;</code> в конце http-блока — главный <code>nginx.conf</code> править не нужно, каждый сайт в своём файле</td></tr>
+          <tr><td><code>servers/.keepme</code></td><td>Пустышка, чтобы папка существовала сразу после установки и не терялась как пустая</td></tr>
+          <tr><td><code>var/www/</code></td><td>Дефолтный docroot с welcome-страницей</td></tr>
+          <tr><td><code>var/log/nginx/access.log</code></td><td>Все запросы</td></tr>
+          <tr><td><code>var/log/nginx/error.log</code></td><td>Ошибки — первое место, куда смотреть при отладке</td></tr>
+          <tr><td><code>var/run/nginx.pid</code></td><td>PID мастер-процесса. По нему <code>nginx -s reload</code> и <code>nginx -s stop</code> понимают, кому слать сигнал</td></tr>
+          <tr><td><code>Cellar/nginx/1.31.7/</code></td><td>«Погреб» — сама установленная версия. Homebrew держит их несколько и переключается между ними</td></tr>
+          <tr><td><code>bin/nginx</code></td><td>Симлинк на актуальную версию из Cellar. Поэтому <code>nginx</code> работает из любой папки</td></tr>
+        </tbody>
+      </table>
+      <div class="why-box"><strong>Зачем Cellar плюс симлинки.</strong> Пакет ставится в свой каталог с номером версии, а в <code>bin/</code>, <code>etc/</code> и остальное кладутся ссылки на него. Переключение версии — это пересоздание ссылок (<code>brew link</code>), а не переустановка. Отсюда же <code>brew unlink</code> / <code>brew link</code> при конфликте двух версий PHP.</div>
+    </div>
+
+    <div class="card">
+      <h3><code>~/Library/LaunchAgents/homebrew.mxcl.nginx.plist</code></h3>
+      <p><strong>launchd</strong> — механизм автозапуска macOS, аналог systemd в Linux. <code>.plist</code> — XML-описание: что запускать, когда и как перезапускать при падении.</p>
+      <table class="data-table">
+        <thead><tr><th>Часть имени</th><th>Что означает</th></tr></thead>
+        <tbody>
+          <tr><td><code>~/Library/LaunchAgents/</code></td><td>Автозапуск для <strong>текущего пользователя</strong>. Общесистемный — в <code>/Library/LaunchDaemons/</code>, туда кладёт <code>sudo brew services</code></td></tr>
+          <tr><td><code>homebrew</code></td><td>Кто поставил</td></tr>
+          <tr><td><code>mxcl</code></td><td>Ник Max Howell, создателя Homebrew</td></tr>
+          <tr><td><code>nginx</code></td><td>Что запускается</td></tr>
+        </tbody>
+      </table>
+      <div class="remember-box">Руками этот файл не правят — им управляет <code>brew services start|stop|restart|list</code>. Отсюда и разница: <code>brew services start</code> ставит plist в пользовательский каталог, а <code>sudo brew services start</code> — в системный, и только так сервис может занять порт ниже 1024.</div>
+    </div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="file-code-2"></i> Laravel на macOS: конфиг сайта + PHP-FPM</div>
     <p class="text">PHP-FPM из Homebrew по умолчанию слушает <strong>TCP-порт 9000</strong>, а не unix-сокет — в отличие от Debian, где обычно <code>/run/php/php8.3-fpm.sock</code>. Это первое, обо что спотыкаются при переносе конфига с сервера на мак.</p>
 <pre><code><span class="c-comment"># Ставим PHP (придёт вместе с php-fpm) и запускаем</span>
