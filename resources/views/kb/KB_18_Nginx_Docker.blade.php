@@ -408,6 +408,119 @@ sudo systemctl reload nginx</code></pre>
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="apple"></i> Установка на macOS (Homebrew)</div>
+    <p class="text">На маке Nginx ставят через Homebrew — для локальной разработки, не для прода. Устройство там заметно другое, чем на Debian, и первые грабли начинаются сразу.</p>
+<pre><code><span class="c-comment"># 1. Установка</span>
+brew install nginx
+
+<span class="c-comment"># 2. Запуск как сервис (поднимется и после перезагрузки)</span>
+brew services start nginx
+
+<span class="c-comment"># 3. Статус всех brew-сервисов</span>
+brew services list
+
+<span class="c-comment"># 4. Перезапуск после правки конфига</span>
+brew services restart nginx
+
+<span class="c-comment"># 5. Проверка</span>
+nginx -v
+curl http://localhost:8080</code></pre>
+
+    <div class="why-box"><strong>Порт 8080, а не 80 — и это главное отличие.</strong> Homebrew запускает Nginx от <em>твоего пользователя</em>, а не от root. Порты ниже 1024 без root занять нельзя, поэтому в дефолтном конфиге стоит <code>listen 8080</code>. Если нужен именно 80 — запускай сервис через <code>sudo brew services start nginx</code> и правь <code>listen</code> в конфиге.</div>
+
+    <div class="pitfall"><strong>На macOS нет <code>systemctl</code>.</strong> Вместо него launchd: <code>brew services</code> кладёт plist в <code>~/Library/LaunchAgents/homebrew.mxcl.nginx.plist</code>. Команды <code>systemctl status nginx</code>, <code>journalctl -u nginx</code> тут просто не существуют — смотри <code>brew services list</code> и <code>/opt/homebrew/var/log/nginx/error.log</code>.</div>
+
+    <div class="pitfall"><strong>Префикс зависит от процессора.</strong> На Apple Silicon (M1–M4) Homebrew живёт в <code>/opt/homebrew</code>, на старых Intel-маках — в <code>/usr/local</code>. Все пути ниже даны для Apple Silicon. Свой путь всегда можно узнать командой <code>brew --prefix</code>.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="folder-tree"></i> Структура файлов на macOS (Homebrew)</div>
+    <div class="diagram">/opt/homebrew/etc/nginx/
+├── nginx.conf              # ГЛАВНЫЙ конфиг
+├── nginx.conf.default      # нетронутая копия от установщика
+├── mime.types              # таблица MIME-типов
+├── fastcgi_params          # переменные для FastCGI (PHP-FPM)
+├── fastcgi.conf            # то же + SCRIPT_FILENAME
+├── scgi_params, uwsgi_params
+├── koi-utf, koi-win, win-utf   # кодировочные карты, трогать не нужно
+├── *.default               # эталонные копии ВСЕХ конфигов
+└── servers/                # ← сюда кладут конфиги своих сайтов
+    └── .keepme             # пустышка, чтобы папка не пропала
+
+/opt/homebrew/var/
+├── www/                    # дефолтный docroot (welcome-страница)
+├── log/nginx/
+│   ├── access.log
+│   └── error.log
+└── run/
+    └── nginx.pid           # PID мастер-процесса
+
+/opt/homebrew/bin/nginx     # симлинк на бинарник
+/opt/homebrew/Cellar/nginx/1.31.7/   # сама установка нужной версии
+└── bin/nginx
+
+~/Library/LaunchAgents/homebrew.mxcl.nginx.plist   # автозапуск</div>
+
+    <div class="remember-box"><strong>Главное структурное отличие: папки <code>servers/</code> вместо пары <code>sites-available</code> + <code>sites-enabled</code>.</strong> Символьных ссылок и команды <code>nginx_ensite</code> тут нет — просто положи файл в <code>servers/</code>, и он подхватится. В конце <code>http</code>-блока главного конфига стоит <code>include servers/*;</code>.</div>
+
+    <div class="why-box"><strong>Зачем файлы <code>.default</code>.</strong> Homebrew хранит рядом с каждым конфигом его эталонную копию. Если доломал <code>nginx.conf</code> — всегда можно вернуться: <code>cp nginx.conf.default nginx.conf</code>. При обновлении формулы brew не перетирает твой конфиг, а обновляет только <code>.default</code>.</div>
+
+    <table class="data-table">
+      <thead><tr><th>Что</th><th>Debian / Ubuntu</th><th>macOS (Homebrew, Apple Silicon)</th></tr></thead>
+      <tbody>
+        <tr><td>Установка</td><td><code>apt install nginx</code></td><td><code>brew install nginx</code></td></tr>
+        <tr><td>Главный конфиг</td><td><code>/etc/nginx/nginx.conf</code></td><td><code>/opt/homebrew/etc/nginx/nginx.conf</code></td></tr>
+        <tr><td>Конфиги сайтов</td><td><code>sites-available/</code> + симлинк в <code>sites-enabled/</code></td><td><code>servers/</code> — без симлинков</td></tr>
+        <tr><td>Порт по умолчанию</td><td>80</td><td><strong>8080</strong></td></tr>
+        <tr><td>От кого работает</td><td><code>root</code> → воркеры от <code>www-data</code></td><td>От твоего пользователя</td></tr>
+        <tr><td>Управление</td><td><code>systemctl</code></td><td><code>brew services</code> (launchd)</td></tr>
+        <tr><td>Логи</td><td><code>/var/log/nginx/</code></td><td><code>/opt/homebrew/var/log/nginx/</code></td></tr>
+        <tr><td>Docroot</td><td><code>/var/www/</code></td><td><code>/opt/homebrew/var/www/</code></td></tr>
+        <tr><td>PID</td><td><code>/var/run/nginx.pid</code></td><td><code>/opt/homebrew/var/run/nginx.pid</code></td></tr>
+        <tr><td>Бинарник</td><td><code>/usr/sbin/nginx</code></td><td><code>/opt/homebrew/bin/nginx</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="file-code-2"></i> Laravel на macOS: конфиг сайта + PHP-FPM</div>
+    <p class="text">PHP-FPM из Homebrew по умолчанию слушает <strong>TCP-порт 9000</strong>, а не unix-сокет — в отличие от Debian, где обычно <code>/run/php/php8.3-fpm.sock</code>. Это первое, обо что спотыкаются при переносе конфига с сервера на мак.</p>
+<pre><code><span class="c-comment"># Ставим PHP (придёт вместе с php-fpm) и запускаем</span>
+brew install php@8.3
+brew services start php@8.3
+
+<span class="c-comment"># Проверить, на чём слушает</span>
+grep <span class="c-str">"^listen ="</span> /opt/homebrew/etc/php/8.3/php-fpm.d/www.conf
+<span class="c-comment"># listen = 127.0.0.1:9000</span></code></pre>
+    <p class="text">Конфиг сайта кладём в <code>servers/</code> — например <code>/opt/homebrew/etc/nginx/servers/myapp.conf</code>:</p>
+<pre><code><span class="c-key">server</span> {
+    <span class="c-dir">listen</span> <span class="c-num">8000</span>;
+    <span class="c-dir">server_name</span> localhost;
+
+    <span class="c-comment"># У Laravel root ВСЕГДА указывает на public/</span>
+    <span class="c-dir">root</span> /Users/username/projects/myapp/public;
+    <span class="c-dir">index</span> index.php;
+
+    <span class="c-key">location</span> / {
+        <span class="c-dir">try_files</span> <span class="c-var">$uri</span> <span class="c-var">$uri</span>/ /index.php?<span class="c-var">$query_string</span>;
+    }
+
+    <span class="c-key">location</span> ~ \.php$ {
+        <span class="c-dir">include</span> fastcgi_params;
+        <span class="c-dir">fastcgi_pass</span> <span class="c-str">127.0.0.1:9000</span>;   <span class="c-comment"># на Debian тут был бы unix-сокет</span>
+        <span class="c-dir">fastcgi_param</span> SCRIPT_FILENAME <span class="c-var">$document_root</span><span class="c-var">$fastcgi_script_name</span>;
+    }
+}</code></pre>
+<pre><code><span class="c-comment"># Проверить синтаксис и применить</span>
+nginx -t
+brew services restart nginx</code></pre>
+
+    <div class="pitfall"><strong>Права доступа к домашней папке.</strong> Nginx работает от твоего пользователя, так что до <code>~/projects</code> он дотянется. Но если проект лежит в <code>~/Documents</code>, <code>~/Desktop</code> или <code>~/Downloads</code>, macOS может заблокировать доступ своей защитой приватности — в логе будет <code>Permission denied</code> при живых правах файла. Держи локальные проекты вне этих трёх папок.</div>
+
+    <div class="remember-box"><strong>Отладка — всегда в таком порядке:</strong> <code>nginx -t</code> проверит синтаксис → <code>brew services list</code> покажет, поднят ли сервис → <code>tail -f /opt/homebrew/var/log/nginx/error.log</code> скажет, что именно не так. На macOS <code>journalctl</code> нет, лог — единственный источник правды.</div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="folder"></i> Куда класть свой Laravel-проект</div>
     <p class="text"><strong>Соглашение:</strong> <code>/var/www/example.com/</code> — корень проекта, <code>/var/www/example.com/public/</code> — то, что Nginx смотрит как <code>root</code> (там лежит <code>index.php</code>). Владелец — <code>www-data:www-data</code> (пользователь, под которым бегает Nginx и PHP-FPM на Ubuntu/Debian).</p>
 
