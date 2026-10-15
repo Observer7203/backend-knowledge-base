@@ -1493,15 +1493,342 @@ sudo certbot certificates</code></pre>
 
 <div id="sec-nginx-security" class="section">
   <div class="section-title">Безопасность + rate limiting</div>
-  <div class="stub">
-    <strong>В разработке.</strong> server_tokens off, security headers (X-Frame-Options, X-Content-Type-Options, CSP, Referrer-Policy), <code>limit_req_zone</code> + <code>limit_req</code>, <code>limit_conn</code>, IP allow/deny, geo-фильтрация.
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="gauge"></i> Что такое rate limit</div>
+    <p class="text"><strong>Rate limiting</strong> — ограничение количества запросов от одного клиента за промежуток времени. Проще: «не больше N запросов в секунду с одного IP, пользователя или API-ключа».</p>
+    <ul style="margin:8px 0 14px 22px;color:var(--text2);font-size:13px;line-height:1.85">
+      <li>не больше 5 запросов в секунду с одного IP;</li>
+      <li>не больше 100 запросов в минуту на один API-ключ;</li>
+      <li>не больше 10 попыток логина в минуту с одного IP.</li>
+    </ul>
+    <p class="text">При превышении сервер обычно возвращает <strong>429 Too Many Requests</strong> или <strong>503</strong>, либо задерживает запрос, либо ненадолго ставит его в очередь.</p>
+
+    <table class="data-table">
+      <thead><tr><th>Зачем нужен</th><th>От чего защищает</th></tr></thead>
+      <tbody>
+        <tr><td>Брутфорс</td><td>Перебор паролей на форме логина</td></tr>
+        <tr><td>DDoS и флуд</td><td>Лавина запросов с одного источника</td></tr>
+        <tr><td>Скрапинг</td><td>Массовый парсинг контента</td></tr>
+        <tr><td>Перегрузка бэкенда</td><td>Один клиент не кладёт приложение целиком</td></tr>
+        <tr><td>Справедливое распределение</td><td>Ресурсы делятся между всеми клиентами</td></tr>
+        <tr><td>Контроль нагрузки на API</td><td>Предсказуемый расход квот и мощностей</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="sliders-horizontal"></i> limit_req в Nginx</div>
+<pre><code><span class="c-comment"># Зона объявляется в http-блоке, один раз</span>
+<span class="c-dir">limit_req_zone</span> <span class="c-var">$binary_remote_addr</span> zone=api:<span class="c-num">10m</span> rate=<span class="c-num">5r/s</span>;
+
+<span class="c-key">server</span> {
+    <span class="c-key">location</span> /api/ {
+        <span class="c-dir">limit_req</span> zone=api burst=<span class="c-num">10</span> nodelay;
+        <span class="c-dir">limit_req_status</span> <span class="c-num">429</span>;        <span class="c-comment"># по умолчанию 503</span>
+        <span class="c-dir">proxy_pass</span> <span class="c-str">http://backend</span>;
+    }
+}</code></pre>
+    <table class="data-table">
+      <thead><tr><th>Параметр</th><th>Что означает</th></tr></thead>
+      <tbody>
+        <tr><td><code>$binary_remote_addr</code></td><td>Ключ, по которому считаем. Обычно IP клиента. Бинарная форма занимает меньше памяти, чем <code>$remote_addr</code></td></tr>
+        <tr><td><code>zone=api:10m</code></td><td>Имя зоны и объём памяти под счётчики — 10 МБ хватает примерно на 160 тысяч IP</td></tr>
+        <tr><td><code>rate=5r/s</code></td><td>Не больше 5 запросов в секунду. Можно <code>30r/m</code> для минутных лимитов</td></tr>
+        <tr><td><code>burst=10</code></td><td>Разрешает кратковременный всплеск — до 10 запросов сверх лимита</td></tr>
+        <tr><td><code>nodelay</code></td><td>Всплеск не задерживать, а пропускать сразу в пределах <code>burst</code></td></tr>
+        <tr><td><code>limit_req_status</code></td><td>Код ответа при превышении. 429 честнее, чем дефолтный 503</td></tr>
+      </tbody>
+    </table>
+
+    <div class="why-box"><strong>Что реально делают <code>burst</code> и <code>nodelay</code>.</strong> Без <code>burst</code> лимит жёсткий: шестой запрос в ту же секунду сразу отлетает. Реальные страницы грузят десяток ресурсов пачкой, и такой лимит будет рубить обычных пользователей. <code>burst=10</code> даёт очередь на 10 запросов сверх нормы. Без <code>nodelay</code> они исполняются <em>с задержкой</em>, растягиваясь под <code>rate</code> — пользователь ждёт. С <code>nodelay</code> проходят мгновенно, а место в очереди освобождается по графику. На практике почти всегда нужен <code>burst</code> + <code>nodelay</code>.</div>
+
+    <div class="pitfall"><strong>За балансировщиком или Cloudflare лимит считается неправильно.</strong> <code>$binary_remote_addr</code> будет содержать IP самого балансировщика, и <em>все клиенты посчитаются как один</em> — лимит сработает сразу для всех. Нужен <code>real_ip_module</code>:
+<br><br>
+<code>set_real_ip_from 10.0.0.0/8;</code><br>
+<code>real_ip_header X-Forwarded-For;</code><br>
+<code>real_ip_recursive on;</code><br><br>
+Перечислять в <code>set_real_ip_from</code> надо только свои доверенные прокси — иначе клиент подделает <code>X-Forwarded-For</code> и обойдёт лимит.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> limit_req против limit_conn</div>
+    <table class="data-table">
+      <thead><tr><th></th><th><code>limit_req</code></th><th><code>limit_conn</code></th></tr></thead>
+      <tbody>
+        <tr><td><strong>Ограничивает</strong></td><td>Скорость запросов</td><td>Число одновременных соединений</td></tr>
+        <tr><td><strong>Единица</strong></td><td>Запросов в секунду или минуту</td><td>Открытых соединений с одного ключа</td></tr>
+        <tr><td><strong>Против чего</strong></td><td>Брутфорс, флуд, скрапинг</td><td>Качание файлов в сто потоков, Slowloris</td></tr>
+      </tbody>
+    </table>
+<pre><code><span class="c-dir">limit_conn_zone</span> <span class="c-var">$binary_remote_addr</span> zone=addr:<span class="c-num">10m</span>;
+
+<span class="c-key">server</span> {
+    <span class="c-dir">limit_conn</span> addr <span class="c-num">10</span>;          <span class="c-comment"># максимум 10 соединений с одного IP</span>
+    <span class="c-dir">limit_conn_status</span> <span class="c-num">429</span>;
+}</code></pre>
+    <div class="remember-box">Эти две директивы не заменяют друг друга — их ставят вместе. <code>limit_req</code> держит частоту, <code>limit_conn</code> — параллелизм.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="bucket"></i> Алгоритмы rate limiting</div>
+    <table class="data-table">
+      <thead><tr><th>Алгоритм</th><th>Как работает</th><th>Где встречается</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Token bucket</strong></td><td>В ведро капают токены с постоянной скоростью, запрос забирает токен. Накопленные токены дают всплеск</td><td>API-шлюзы, Laravel <code>RateLimiter</code></td></tr>
+        <tr><td><strong>Leaky bucket</strong></td><td>Запросы наливаются в ведро, вытекают с постоянной скоростью. Переполнилось — отказ</td><td><strong>Nginx <code>limit_req</code></strong></td></tr>
+        <tr><td><strong>Fixed window</strong></td><td>Счётчик на фиксированное окно: 100 запросов в минуту, на границе обнуляется</td><td>Простые реализации на Redis</td></tr>
+        <tr><td><strong>Sliding window</strong></td><td>Скользящее окно — учитывает хвост предыдущего периода, считает плавнее</td><td>Cloudflare, зрелые API</td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong>Слабое место fixed window.</strong> На стыке двух окон клиент может отправить двойную норму: 100 запросов в последнюю секунду первой минуты и ещё 100 в первую секунду второй. Sliding window это сглаживает — потому его и выбирают там, где лимит обещан клиенту как SLA.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="eye-off"></i> Скрытие версии и IP-фильтрация</div>
+<pre><code><span class="c-comment"># В http-блоке: убрать версию Nginx из заголовка Server и страниц ошибок</span>
+<span class="c-dir">server_tokens</span> <span class="c-key">off</span>;
+
+<span class="c-comment"># Доступ по IP — порядок директив важен</span>
+<span class="c-key">location</span> /admin/ {
+    <span class="c-dir">allow</span> <span class="c-num">203.0.113.0/24</span>;
+    <span class="c-dir">allow</span> <span class="c-num">10.0.0.5</span>;
+    <span class="c-dir">deny</span>  all;                 <span class="c-comment"># всё остальное — 403</span>
+}
+
+<span class="c-comment"># Закрыть служебные файлы</span>
+<span class="c-key">location</span> ~ /\.(?!well-known) {
+    <span class="c-dir">deny</span> all;
+}</code></pre>
+    <div class="why-box"><strong>Что даёт <code>server_tokens off</code>.</strong> Заголовок меняется с <code>Server: nginx/1.24.0</code> на просто <code>Server: nginx</code>. Полностью убрать имя без стороннего модуля нельзя. Это не защита сама по себе — атакующий всё равно определит версию по поведению — но лишает автоматические сканеры простого способа подобрать эксплойт под конкретную версию.</div>
+    <div class="pitfall"><strong>Исключение для <code>.well-known</code> обязательно.</strong> Правило <code>location ~ /\.</code> закрывает всё, что начинается с точки — включая <code>/.well-known/acme-challenge/</code>. Продление сертификата Let's Encrypt после этого молча сломается, и узнаешь об этом через 90 дней.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="shield"></i> HTTP security headers</div>
+<pre><code><span class="c-dir">add_header</span> Strict-Transport-Security <span class="c-str">"max-age=31536000; includeSubDomains"</span> always;
+<span class="c-dir">add_header</span> X-Content-Type-Options    <span class="c-str">"nosniff"</span> always;
+<span class="c-dir">add_header</span> X-Frame-Options           <span class="c-str">"SAMEORIGIN"</span> always;
+<span class="c-dir">add_header</span> Referrer-Policy           <span class="c-str">"strict-origin-when-cross-origin"</span> always;
+<span class="c-dir">add_header</span> Content-Security-Policy    <span class="c-str">"default-src 'self'"</span> always;</code></pre>
+    <table class="data-table">
+      <thead><tr><th>Заголовок</th><th>От чего защищает</th></tr></thead>
+      <tbody>
+        <tr><td><code>Strict-Transport-Security</code></td><td>Downgrade на HTTP и перехват на первом запросе</td></tr>
+        <tr><td><code>X-Content-Type-Options: nosniff</code></td><td>Браузер не угадывает тип файла — загруженная «картинка» не исполнится как скрипт</td></tr>
+        <tr><td><code>X-Frame-Options</code></td><td>Clickjacking: сайт нельзя встроить в чужой iframe</td></tr>
+        <tr><td><code>Referrer-Policy</code></td><td>Утечка путей и query-параметров в <code>Referer</code> при переходе наружу</td></tr>
+        <tr><td><code>Content-Security-Policy</code></td><td>XSS: ограничивает, откуда грузятся скрипты, стили и прочее</td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong><code>add_header</code> не наследуется в <code>location</code>.</strong> Если внутри <code>location</code> есть хоть один свой <code>add_header</code>, все заголовки из <code>server</code> в этом location пропадают. Поэтому и пишут <code>always</code>, и дублируют набор там, где он нужен.</div>
+    <div class="pitfall"><strong>CSP ломает сайт при неаккуратном включении.</strong> <code>default-src 'self'</code> отрубит все внешние CDN, инлайновые скрипты и стили. Включать через <code>Content-Security-Policy-Report-Only</code>, посмотреть отчёты, и только потом переводить в боевой режим.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="hourglass"></i> Slowloris и медленные запросы</div>
+    <p class="text"><strong>Slowloris</strong> — атака медленными запросами. Атакующий открывает много соединений и шлёт заголовки по байту, не завершая запрос. Соединения висят, воркеры заняты, новые клиенты не обслуживаются. Трафика почти нет — обычные анти-DDoS срабатывают плохо.</p>
+<pre><code><span class="c-dir">client_header_timeout</span> <span class="c-num">10s</span>;   <span class="c-comment"># сколько ждём заголовки целиком</span>
+<span class="c-dir">client_body_timeout</span>   <span class="c-num">10s</span>;   <span class="c-comment"># сколько ждём тело запроса</span>
+<span class="c-dir">send_timeout</span>          <span class="c-num">10s</span>;   <span class="c-comment"># пауза между записями при ответе</span>
+<span class="c-dir">keepalive_timeout</span>     <span class="c-num">15s</span>;   <span class="c-comment"># дефолт 75s — слишком щедро</span>
+
+<span class="c-dir">client_max_body_size</span>  <span class="c-num">20m</span>;   <span class="c-comment"># заодно от залива огромных файлов</span>
+
+<span class="c-dir">limit_conn_zone</span> <span class="c-var">$binary_remote_addr</span> zone=slow:<span class="c-num">10m</span>;
+<span class="c-dir">limit_conn</span> slow <span class="c-num">20</span>;</code></pre>
+    <div class="remember-box"><strong>Почему Nginx и так неплохо держит Slowloris.</strong> Он асинхронный: одно соединение не занимает процесс, как у Apache с prefork. Тысячи висящих соединений для Nginx не смертельны. Но лимиты всё равно ставят — чтобы не упереться в <code>worker_connections</code> и не пропустить атаку дальше, к бэкенду.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layers-3"></i> Nginx не заменяет безопасность приложения</div>
+    <p class="text">Самое частое заблуждение: «настроили rate limit и headers — безопасность закрыта». Nginx и приложение защищают <strong>разные вещи</strong> и работают вместе, а не вместо друг друга.</p>
+
+    <div class="diagram">Интернет
+  │
+  ▼
+[Nginx]        ← ВНЕШНИЙ ПЕРИМЕТР
+  │              rate limit, IP-фильтр, TLS,
+  │              security headers, WAF, slowloris
+  ▼
+[Приложение]   ← ВНУТРЕННЯЯ ЛОГИКА
+  │              аутентификация, авторизация, валидация,
+  │              CSRF, SQL-инъекции, бизнес-правила
+  ▼
+[БД]</div>
+
+    <table class="data-table">
+      <thead><tr><th>Nginx — периметр</th><th>Приложение — логика</th></tr></thead>
+      <tbody>
+        <tr><td>Отсекает флуд, брутфорс, DDoS</td><td>Аутентификация: кто ты</td></tr>
+        <tr><td>Блокирует по IP и гео</td><td>Авторизация: что тебе можно</td></tr>
+        <tr><td>Терминирует TLS</td><td>Валидация входных данных</td></tr>
+        <tr><td>Добавляет security headers</td><td>Защита от SQL-инъекций, XSS, CSRF</td></tr>
+        <tr><td>Прячет версии и внутреннюю структуру</td><td>Бизнес-правила</td></tr>
+        <tr><td>Защищает от slowloris</td><td>Сессии, роли, права</td></tr>
+        <tr><td>Режет явно мусорные запросы (WAF, ModSecurity)</td><td></td></tr>
+      </tbody>
+    </table>
+
+    <div class="pitfall"><strong>Почему нельзя только Nginx.</strong> Он не знает, что пользователь №5 не должен читать документ пользователя №7 — для него это обычный валидный GET. Он не отличит легитимный запрос от хитро сформированного, если тот выглядит нормально. И он не проверит ни одного бизнес-правила.</div>
+
+    <div class="pitfall"><strong>Почему нельзя только приложение.</strong> Без лимита на периметре один клиент положит бэкенд раньше, чем приложение успеет что-то проверить. Slowloris выест воркеры. TLS на каждом бэкенде превращает управление сертификатами в головную боль. DDoS-флуд дойдёт до приложения и сожрёт ресурсы на разборе запросов, которые надо было отбросить ещё на входе.</div>
+
+    <div class="analogy"><strong>Аналогия.</strong> Nginx — охрана на входе в здание: проверяет пропуск, не пускает толпу, смотрит металлодетектором. Приложение — сотрудник внутри, который решает, есть ли у тебя доступ к конкретному кабинету и к конкретным документам. Охрана не заменяет сотрудника, сотрудник не заменяет охрану.</div>
+
+    <div class="remember-box"><strong>Это и называется defense in depth</strong> — эшелонированная оборона. Безопасность не одна стена, а набор слоёв, каждый из которых ловит то, что пропустил предыдущий. Nginx — только один из них.</div>
+  </div>
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="check-check"></i> Минимальный набор для прода</div>
+<pre><code><span class="c-key">http</span> {
+    <span class="c-dir">server_tokens</span> <span class="c-key">off</span>;
+
+    <span class="c-dir">client_header_timeout</span> <span class="c-num">10s</span>;
+    <span class="c-dir">client_body_timeout</span>   <span class="c-num">10s</span>;
+    <span class="c-dir">keepalive_timeout</span>     <span class="c-num">15s</span>;
+    <span class="c-dir">client_max_body_size</span>  <span class="c-num">20m</span>;
+
+    <span class="c-dir">limit_req_zone</span>  <span class="c-var">$binary_remote_addr</span> zone=general:<span class="c-num">10m</span> rate=<span class="c-num">30r/s</span>;
+    <span class="c-dir">limit_req_zone</span>  <span class="c-var">$binary_remote_addr</span> zone=login:<span class="c-num">10m</span>   rate=<span class="c-num">5r/m</span>;
+    <span class="c-dir">limit_conn_zone</span> <span class="c-var">$binary_remote_addr</span> zone=addr:<span class="c-num">10m</span>;
+
+    <span class="c-dir">limit_req_status</span>  <span class="c-num">429</span>;
+    <span class="c-dir">limit_conn_status</span> <span class="c-num">429</span>;
+
+    <span class="c-key">server</span> {
+        <span class="c-dir">limit_req</span>  zone=general burst=<span class="c-num">50</span> nodelay;
+        <span class="c-dir">limit_conn</span> addr <span class="c-num">20</span>;
+
+        <span class="c-comment"># Логин — отдельный жёсткий лимит против брутфорса</span>
+        <span class="c-key">location</span> = /login {
+            <span class="c-dir">limit_req</span> zone=login burst=<span class="c-num">3</span> nodelay;
+            <span class="c-dir">try_files</span> <span class="c-var">$uri</span> /index.php?<span class="c-var">$query_string</span>;
+        }
+    }
+}</code></pre>
+    <div class="remember-box"><strong>Проверять лимиты до прода.</strong> <code>ab -n 200 -c 20 https://example.com/api/</code> или <code>siege</code> — и смотри, сколько ответов пришло с кодом 429. Настроенный «на глаз» лимит одинаково часто оказывается и бесполезным, и рубящим живых пользователей.</div>
   </div>
 </div>
 
 <div id="sec-nginx-cache" class="section">
   <div class="section-title">Кеширование</div>
-  <div class="stub">
-    <strong>В разработке.</strong> <code>proxy_cache_path</code>, <code>proxy_cache</code>, <code>fastcgi_cache</code>, кеш-ключи, <code>proxy_cache_valid</code>, <code>proxy_cache_bypass</code>, микрокеширование в PHP-стеке, инвалидация.
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layers"></i> Кэш бывает на нескольких уровнях сразу</div>
+    <p class="text">Уровни кэша не заменяют друг друга, а дополняют. Запрос может быть обслужен на любом из них — чем раньше, тем дешевле.</p>
+
+    <div class="diagram">Клиент          →  Nginx           →  Бэкенд          →  Redis      →  БД
+(браузер)          (proxy_cache /     (PHP / Node /      Memcached     (кэш
+Cache-Control       fastcgi_cache)     Java)             APCu           запросов
+ETag                                                                    внутри СУБД)
+
+│                  │                  │                  │
+└ не идёт          └ не трогает       └ не идёт          └ не идёт
+  на сервер          бэкенд             в БД               на диск
+  вообще</div>
+
+    <table class="data-table">
+      <thead><tr><th>Уровень</th><th>Что кэширует</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Браузерный</strong> — <code>Cache-Control</code>, <code>ETag</code></td><td>Готовый ответ. Клиент вообще не идёт на сервер</td></tr>
+        <tr><td><strong>Nginx</strong> — <code>proxy_cache</code>, <code>fastcgi_cache</code></td><td>Готовый HTTP-ответ бэкенда на диске. Отдаётся без обращения к PHP или Node — самый быстрый уровень после браузера</td></tr>
+        <tr><td><strong>Приложение</strong> — Redis, Memcached, APCu</td><td>Уже не HTTP-ответ, а <em>данные</em>: результат запроса к БД, сериализованный объект</td></tr>
+        <tr><td><strong>СУБД</strong></td><td>Внутренний кэш запросов и страниц данных</td></tr>
+      </tbody>
+    </table>
+
+    <div class="remember-box"><strong>По умолчанию Nginx не кэширует ничего.</strong> Без явной настройки он просто проксирует запросы дальше. Кэширование включается только директивами <code>proxy_cache</code> или <code>fastcgi_cache</code> — само оно не появится.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="database"></i> proxy_cache — кэш ответов бэкенда</div>
+<pre><code><span class="c-comment"># В http-блоке: где хранить и сколько памяти под ключи</span>
+<span class="c-dir">proxy_cache_path</span> /var/cache/nginx levels=<span class="c-num">1:2</span> keys_zone=my_cache:<span class="c-num">10m</span>
+                 max_size=<span class="c-num">1g</span> inactive=<span class="c-num">60m</span> use_temp_path=<span class="c-key">off</span>;
+
+<span class="c-key">server</span> {
+    <span class="c-key">location</span> / {
+        <span class="c-dir">proxy_cache</span> my_cache;
+        <span class="c-dir">proxy_cache_valid</span> <span class="c-num">200</span> <span class="c-num">301</span> <span class="c-num">10m</span>;      <span class="c-comment"># успешные — 10 минут</span>
+        <span class="c-dir">proxy_cache_valid</span> <span class="c-num">404</span> <span class="c-num">1m</span>;               <span class="c-comment"># ошибки — минуту</span>
+
+        <span class="c-comment"># Не отдавать кэш авторизованным</span>
+        <span class="c-dir">proxy_cache_bypass</span> <span class="c-var">$cookie_session</span>;
+        <span class="c-dir">proxy_no_cache</span>     <span class="c-var">$cookie_session</span>;
+
+        <span class="c-comment"># Удобно видеть в ответе HIT / MISS / BYPASS</span>
+        <span class="c-dir">add_header</span> X-Cache-Status <span class="c-var">$upstream_cache_status</span>;
+
+        <span class="c-dir">proxy_pass</span> <span class="c-str">http://backend</span>;
+    }
+}</code></pre>
+    <table class="data-table">
+      <thead><tr><th>Параметр</th><th>Что делает</th></tr></thead>
+      <tbody>
+        <tr><td><code>levels=1:2</code></td><td>Двухуровневая раскладка по подпапкам — тысячи файлов в одной директории тормозят ФС</td></tr>
+        <tr><td><code>keys_zone=my_cache:10m</code></td><td>Имя зоны и память под ключи: 10 МБ ≈ 80 тысяч записей</td></tr>
+        <tr><td><code>max_size=1g</code></td><td>Потолок кэша на диске, дальше вытесняется по LRU</td></tr>
+        <tr><td><code>inactive=60m</code></td><td>Не запрашивали час — удаляется, даже если срок валидности не истёк</td></tr>
+        <tr><td><code>proxy_cache_bypass</code></td><td>Не <em>читать</em> из кэша при истинном значении</td></tr>
+        <tr><td><code>proxy_no_cache</code></td><td>Не <em>записывать</em> в кэш. Нужны обе — по отдельности толку мало</td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong><code>proxy_cache_bypass</code> без <code>proxy_no_cache</code> — утечка чужих данных.</strong> Первая директива запрещает только чтение. Ответ авторизованного пользователя всё равно запишется в кэш и уедет следующему анониму с тем же URL. Ставить всегда вместе.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="key"></i> Ключ кэша и fastcgi_cache</div>
+    <p class="text">Ключ по умолчанию — <code>$scheme$proxy_host$request_uri</code>. Всё, чего в ключе нет, кэш считает одинаковым.</p>
+<pre><code><span class="c-comment"># Для PHP-FPM напрямую, без промежуточного HTTP-бэкенда</span>
+<span class="c-dir">fastcgi_cache_path</span> /var/cache/nginx/fcgi levels=<span class="c-num">1:2</span> keys_zone=php:<span class="c-num">10m</span> inactive=<span class="c-num">60m</span>;
+<span class="c-dir">fastcgi_cache_key</span> <span class="c-str">"</span><span class="c-var">$scheme</span><span class="c-var">$request_method</span><span class="c-var">$host</span><span class="c-var">$request_uri</span><span class="c-str">"</span>;
+
+<span class="c-key">location</span> ~ \.php$ {
+    <span class="c-dir">fastcgi_cache</span> php;
+    <span class="c-dir">fastcgi_cache_valid</span> <span class="c-num">200</span> <span class="c-num">1m</span>;        <span class="c-comment"># микрокеширование</span>
+    <span class="c-dir">fastcgi_cache_bypass</span> <span class="c-var">$cookie_laravel_session</span>;
+    <span class="c-dir">fastcgi_no_cache</span>     <span class="c-var">$cookie_laravel_session</span>;
+    <span class="c-dir">include</span> fastcgi_params;
+    <span class="c-dir">fastcgi_pass</span> <span class="c-str">unix:/run/php/php8.3-fpm.sock</span>;
+}</code></pre>
+    <div class="why-box"><strong>Микрокеширование.</strong> Даже 1 секунда кэша на горячей странице срезает нагрузку на порядки: при 1000 запросов в секунду до PHP дойдёт один. Пользователь разницы не заметит — данные устарели максимум на секунду. Это самый дешёвый способ пережить всплеск трафика.</div>
+    <div class="pitfall"><strong>Забыть <code>$request_method</code> в ключе.</strong> Тогда ответ на <code>GET</code> и <code>POST</code> по одному URL попадёт в одну ячейку. По умолчанию Nginx кэширует только <code>GET</code> и <code>HEAD</code>, но стоит добавить <code>proxy_cache_methods</code> — и такой ключ выстрелит.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="split"></i> Что кэшировать в Nginx, а что в приложении</div>
+    <table class="data-table">
+      <thead><tr><th>Что кэшируем</th><th>Где лучше</th></tr></thead>
+      <tbody>
+        <tr><td>Статика, картинки, публичные страницы</td><td>Nginx <code>proxy_cache</code></td></tr>
+        <tr><td>Персонализированные страницы</td><td>В Nginx не кэшировать вообще — только в приложении</td></tr>
+        <tr><td>Результаты тяжёлых SQL-запросов</td><td>Redis или Memcached</td></tr>
+        <tr><td>API-ответы, одинаковые для всех</td><td>Nginx <code>proxy_cache</code></td></tr>
+        <tr><td>API-ответы, зависящие от пользователя</td><td>Redis с ключом по <code>user_id</code></td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Граница простая.</strong> Nginx кэширует <em>HTTP-ответ целиком</em> — значит он должен быть одинаков для всех, кто попадёт в этот ключ. Как только ответ зависит от пользователя, уровень Nginx заканчивается и начинается кэш данных в приложении.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="trash-2"></i> Инвалидация</div>
+    <p class="text">Бесплатного способа «сбросить один URL» в открытом Nginx нет — директива <code>proxy_cache_purge</code> есть только в коммерческом Nginx Plus. В open source три варианта:</p>
+    <table class="data-table">
+      <thead><tr><th>Способ</th><th>Как</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Короткий TTL</strong></td><td>Не инвалидировать вовсе: <code>proxy_cache_valid 200 30s</code>. Самый надёжный подход</td></tr>
+        <tr><td><strong>Удалить файл</strong></td><td>Путь считается как <code>md5</code> от ключа. Найти и удалить вручную или скриптом</td></tr>
+        <tr><td><strong>Модуль <code>ngx_cache_purge</code></strong></td><td>Сторонний модуль, даёт <code>PURGE</code>-запросы. Требует пересборки Nginx</td></tr>
+        <tr><td><strong>Снести всё</strong></td><td><code>rm -rf /var/cache/nginx/*</code> и <code>nginx -s reload</code>. Грубо, но работает</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Отладка.</strong> Заголовок <code>X-Cache-Status</code> показывает, что произошло: <code>MISS</code> — не было в кэше, <code>HIT</code> — отдано из кэша, <code>BYPASS</code> — запрещено читать, <code>EXPIRED</code> — протухло и обновлено, <code>STALE</code> — отдали устаревшее, пока бэкенд лежал.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="help-circle"></i> Nginx вместо Varnish?</div>
+    <p class="text">На небольших и средних проектах <code>proxy_cache</code> часто закрывает задачу полностью. Varnish мощнее и гибче — VCL, ESI, продвинутая инвалидация, — но Nginx проще по одной причине: он <strong>уже стоит</strong> как reverse proxy, и кэш включается парой директив вместо отдельного сервиса в стеке.</p>
+    <div class="remember-box">Правило: начинай с <code>proxy_cache</code>. Переходи на Varnish, когда упрёшься в то, чего Nginx не умеет — сложная логика кэширования на VCL или сборка страницы из кусков через ESI.</div>
   </div>
 </div>
 
