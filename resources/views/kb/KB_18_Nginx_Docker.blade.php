@@ -508,6 +508,32 @@ curl http://localhost:8080</code></pre>
     </div>
 
     <div class="card">
+      <h3>Что такое binary и почему папка называется <code>bin</code></h3>
+      <p><strong>Binary</strong> (мн. <em>binaries</em>, в обиходе «бинарник») — файл с данными в <strong>двоичном</strong> виде, а не в текстовом. В контексте <code>bin/</code> это <em>исполняемые файлы</em>: программы, уже скомпилированные в машинный код конкретной платформы.</p>
+      <table class="data-table">
+        <thead><tr><th>Тип файла</th><th><code>file</code> показывает</th><th>Чем является</th></tr></thead>
+        <tbody>
+          <tr><td>Бинарник</td><td><code>Mach-O 64-bit executable arm64</code></td><td>Машинный код под конкретный процессор. Открыть в редакторе — увидишь мусор</td></tr>
+          <tr><td>Скрипт</td><td><code>Bourne-Again shell script text executable</code></td><td>Обычный текст, который исполняет интерпретатор</td></tr>
+          <tr><td>Конфиг</td><td><code>ASCII text</code></td><td>Просто текст, никто его не запускает</td></tr>
+        </tbody>
+      </table>
+<pre><code><span class="c-comment"># Чем на самом деле является файл</span>
+file /opt/homebrew/Cellar/nginx/1.31.7/bin/nginx
+<span class="c-comment"># Mach-O 64-bit executable arm64   ← настоящий бинарник</span>
+
+file /opt/homebrew/bin/brew
+<span class="c-comment"># Bourne-Again shell script        ← а brew это скрипт, не бинарник</span>
+
+<span class="c-comment"># Первые байты выдают формат</span>
+xxd nginx | head -1
+<span class="c-comment"># cffa edfe ...   ← магия Mach-O (macOS)
+#                   7f45 4c46 = ELF (Linux), 4d5a = MZ (Windows .exe)</span></code></pre>
+      <div class="why-box"><strong>Почему «исполняемый» и «бинарный» — не синонимы.</strong> В <code>bin/</code> лежит и то, и другое: <code>nginx</code> — скомпилированный бинарник, а <code>brew</code> — обычный shell-скрипт с правом запуска. Исполняемость даёт бит <code>x</code> в правах, а бинарность — формат содержимого. Папку назвали <code>bin</code> исторически, когда там действительно лежали только скомпилированные программы.</div>
+      <div class="remember-box"><strong>Разные <code>bin</code> — разные хозяева.</strong> <code>/bin</code> и <code>/usr/bin</code> принадлежат системе (на маке их защищает SIP), <code>/usr/local/bin</code> и <code>/opt/homebrew/bin</code> — стороннему ПО. Какой из них сработает, решает порядок в <code>PATH</code>: проверить, что реально запустится, — <code>which nginx</code>, а все варианты сразу — <code>which -a nginx</code>.</div>
+    </div>
+
+    <div class="card">
       <h3>Файлы <code>*.default</code></h3>
       <p>Эталонные копии от установщика. Их не трогают — это «заводская комплектация».</p>
       <ul style="margin:8px 0 14px 22px;color:var(--text2);font-size:13px;line-height:1.85">
