@@ -103,6 +103,87 @@
     window.addEventListener('resize', function () { if (window.innerWidth > 900) close(); });
   }
 
+
+  /* ---------- правый бар «на этой странице» ---------- */
+  function buildToc() {
+    var el = document.getElementById('kb-toc');
+    if (!el) {
+      el = document.createElement('nav');
+      el.id = 'kb-toc';
+      document.body.appendChild(el);
+    }
+
+    var sec = document.querySelector('.section.active') || document.querySelector('.section');
+    var heads = sec ? [].slice.call(sec.querySelectorAll('.subsection-title')) : [];
+
+    if (heads.length < 2) { el.innerHTML = ''; return; }
+
+    var ul = document.createElement('ul');
+    heads.forEach(function (h, i) {
+      if (!h.id) h.id = 'kb-h-' + i;
+      var a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.textContent = (h.textContent || '').trim();
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        h.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      var li = document.createElement('li');
+      li.appendChild(a);
+      ul.appendChild(li);
+    });
+
+    el.innerHTML = '<div class="kb-toc-label">На этой странице</div>';
+    el.appendChild(ul);
+    spy(heads, [].slice.call(ul.querySelectorAll('a')));
+  }
+
+  var spyHandler = null;
+  function spy(heads, links) {
+    if (spyHandler) window.removeEventListener('scroll', spyHandler);
+    spyHandler = function () {
+      var best = 0;
+      for (var i = 0; i < heads.length; i++) {
+        if (heads[i].getBoundingClientRect().top <= 140) best = i;
+      }
+      links.forEach(function (a, i) { a.classList.toggle('active', i === best); });
+    };
+    window.addEventListener('scroll', spyHandler, { passive: true });
+    spyHandler();
+  }
+
+  /* перестраивать при смене раздела */
+  function watchSections() {
+    var prev = window.showSection;
+    if (typeof prev === 'function') {
+      window.showSection = function () {
+        var r = prev.apply(this, arguments);
+        setTimeout(buildToc, 30);
+        return r;
+      };
+    }
+  }
+
+  /* ---------- появление блоков при скролле ---------- */
+  function revealOnScroll() {
+    var targets = [].slice.call(document.querySelectorAll('.hub .card, .hub .stat, .hub .section-title, .hub .method, .hub .academic, .hub .inst'));
+    if (!targets.length) return;
+    if (!('IntersectionObserver' in window)) return;
+
+    targets.forEach(function (el, i) {
+      el.classList.add('kb-reveal');
+      el.style.transitionDelay = (i % 6) * 55 + 'ms';
+    });
+
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('kb-in'); io.unobserve(e.target); }
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: .06 });
+
+    targets.forEach(function (el) { io.observe(el); });
+  }
+
   /* ---------- сборка плашки ---------- */
   function mount() {
     if (document.getElementById('kb-topbar')) return;
@@ -140,6 +221,9 @@
     });
 
     wireDrawer(bar.querySelector('#kb-burger'));
+    buildToc();
+    watchSections();
+    revealOnScroll();
     wireSearch(bar.querySelector('#kb-search-input'));
     applyTheme(current());
   }

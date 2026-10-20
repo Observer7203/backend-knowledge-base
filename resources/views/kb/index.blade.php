@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Backend Knowledge Hub — Sanzhar</title>
+<title>Programming Knowledge Base</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -318,17 +318,27 @@
 <script src="/js/kb.js" defer></script>
 </head>
 <body>
-<div class="hub">
-
-  <!-- ── Header ── -->
-  <div class="header">
-    <div class="header-badge">
-      <i data-lucide="zap"></i>
-      Backend Knowledge Hub
-    </div>
-    <h1>PHP / Laravel / <span>Backend</span></h1>
-    <p>Полная база знаний построена на методологиях Laracasts, Harvard CS50, Bloom's Taxonomy и Spaced Repetition. Академические источники: MIT OCW, Stanford, OWASP, RFC.</p>
+<section class="kb-hero">
+  <div class="kb-lava" aria-hidden="true">
+    <span class="blob b1"></span><span class="blob b2"></span>
+    <span class="blob b3"></span><span class="blob b4"></span>
   </div>
+  <div class="kb-hero-inner">
+    <div class="header-badge kb-rise" style="--d:0ms">
+      <i data-lucide="zap"></i>
+      Knowledge Base
+    </div>
+    <h1 class="kb-rise" style="--d:90ms">Programming <span>Knowledge Base</span></h1>
+    <p class="kb-rise" style="--d:180ms">Полная база знаний построена на методологиях Laracasts, Harvard CS50, Bloom&rsquo;s Taxonomy и Spaced Repetition. Академические источники: MIT OCW, Stanford, OWASP, RFC.</p>
+    <div class="kb-hero-actions kb-rise" style="--d:270ms">
+      <a class="kb-btn kb-btn-primary" href="#modules">Открыть модули</a>
+      <a class="kb-btn" href="#method">Методология</a>
+    </div>
+  </div>
+  <a class="kb-scroll-hint" href="#modules" aria-label="Вниз"><span></span></a>
+</section>
+
+<div class="hub">
 
   <!-- ── Stats ── -->
   <div class="stats-row">
@@ -349,7 +359,7 @@
 
   {{-- ── Modules ── --}}
   @if($modulePages->isNotEmpty())
-    <div class="section-title">База Знаний — Модули</div>
+    <div class="section-title" id="modules">База Знаний — Модули</div>
     <div class="grid">
       @foreach($modulePages as $page)
         <a class="card" href="{{ url('/' . $page->slug) }}">
@@ -394,7 +404,7 @@
   @verbatim
 
   <!-- ── Methodology ── -->
-  <div class="section-title">Методология обучения</div>
+  <div class="section-title" id="method">Методология обучения</div>
   <p class="intro-text">Каждый модуль построен на доказательных методиках обучения программированию — тех же, что используют лучшие курсы мира:</p>
 
   <div class="method">
