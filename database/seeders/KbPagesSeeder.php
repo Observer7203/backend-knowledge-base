@@ -16,7 +16,7 @@ class KbPagesSeeder extends Seeder
                 'slug' => 'Backend_Learning_Program',
                 'file' => 'kb.Backend_Learning_Program',
                 'title' => 'Программа & Расписание',
-                'description' => 'Roadmap 9 фаз, 16-недельное расписание с интервальным повторением, 24 вопроса собеседования, топ курсы и ресурсы.',
+                'description' => 'Roadmap 9 фаз, 16-недельное расписание с интервальным повторением, 24 вопроса для самопроверки, топ курсы и ресурсы.',
                 'badge' => 'ROADMAP',
                 'badge_class' => 'badge-program',
                 'icon' => 'map',
