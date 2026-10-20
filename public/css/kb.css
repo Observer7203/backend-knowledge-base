@@ -9,7 +9,7 @@
 
 /* ---------- Светлая тема (по умолчанию) ---------- */
 :root {
-  --bg:             #ffffff;
+  --bg:             #f4f4f5;
   --surface:        #ffffff;
   --surface2:       #fafafa;
   --border:         #e8e8e8;
@@ -122,70 +122,87 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 99px; border: 3px solid var(--bg); }
 ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
 
-/* ---------- Каркас ---------- */
-.container { background: var(--bg); }
+/* ---------- Каркас: плавающие панели, как в доках NestJS ---------- */
+:root { --gap: 14px; --topbar-h: 62px; }
+
+.container {
+  background: var(--bg) !important;
+  display: block !important;
+  min-height: 100vh;
+  padding: var(--gap) !important;
+}
 
 .sidebar {
+  position: fixed !important;
+  top: calc(var(--gap) * 2 + var(--topbar-h)) !important;
+  left: var(--gap) !important;
+  bottom: var(--gap) !important;
+  height: auto !important;
   width: var(--sidebar-w) !important;
   background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
   border-right: 1px solid var(--border) !important;
-  padding: 24px 14px 48px !important;
-  box-shadow: none !important;
+  border-radius: var(--radius-lg) !important;
+  padding: 22px 14px 28px !important;
+  overflow-y: auto !important;
+  box-shadow: var(--shadow) !important;
 }
 
 .sidebar-back {
   display: flex; align-items: center; gap: 8px;
-  font-size: 13px; font-weight: 600;
+  font-size: 14px; font-weight: 600;
   color: var(--text2) !important;
-  padding: 8px 10px; margin-bottom: 18px;
+  padding: 9px 12px; margin-bottom: 14px;
   border-radius: var(--radius-sm);
   text-decoration: none; transition: .15s;
 }
 .sidebar-back:hover { color: var(--primary) !important; background: var(--surface2); }
 
 .sidebar-title {
-  font-size: 11px !important; font-weight: 800 !important;
-  letter-spacing: .09em; text-transform: uppercase;
-  color: var(--text3) !important;
-  padding: 0 10px 14px !important;
-  margin-bottom: 10px !important;
+  font-size: 13px !important; font-weight: 800 !important;
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--text) !important;
+  padding: 0 12px 14px !important;
+  margin-bottom: 8px !important;
   border-bottom: 1px solid var(--border) !important;
 }
 
 .nav-group-label {
-  font-size: 10px !important; font-weight: 800 !important;
-  letter-spacing: .1em; text-transform: uppercase;
-  color: var(--text3) !important;
-  padding: 18px 10px 6px !important;
+  font-size: 13px !important; font-weight: 800 !important;
+  letter-spacing: .07em; text-transform: uppercase;
+  color: var(--text) !important;
+  padding: 20px 12px 8px !important;
 }
 
 .nav-item {
-  display: flex !important; align-items: center; gap: 9px;
-  padding: 7px 10px !important; margin-bottom: 1px !important;
-  font-size: 13.5px !important; font-weight: 500 !important;
+  display: flex !important; align-items: center; gap: 10px;
+  padding: 9px 14px !important; margin-bottom: 2px !important;
+  font-size: 15.5px !important; font-weight: 500 !important;
   color: var(--text2) !important;
   border: none !important;
-  border-radius: var(--radius-sm) !important;
+  border-radius: 10px !important;
   cursor: pointer; text-decoration: none;
   transition: background .14s, color .14s;
+  line-height: 1.45 !important;
 }
 .nav-item:hover { background: var(--surface2) !important; color: var(--text) !important; }
 .nav-item.active {
   background: var(--primary-light) !important;
   color: var(--primary) !important;
-  font-weight: 700 !important;
+  font-weight: 600 !important;
 }
-.nav-item svg { width: 15px !important; height: 15px !important; opacity: .85; }
+.nav-item svg { width: 16px !important; height: 16px !important; opacity: .8; flex-shrink: 0; }
 
 .nav-subgroup {
-  margin: 2px 0 6px 20px !important;
+  margin: 2px 0 8px 22px !important;
   border-left: 1px solid var(--border) !important;
-  padding-left: 10px !important;
+  padding-left: 12px !important;
 }
 .nav-subitem {
-  display: block; padding: 5px 9px !important;
-  font-size: 12.5px !important; color: var(--text3) !important;
-  border-radius: var(--radius-sm); text-decoration: none; transition: .14s;
+  display: block; padding: 7px 12px !important;
+  font-size: 14px !important; color: var(--text3) !important;
+  border-radius: 9px; text-decoration: none; transition: .14s;
+  line-height: 1.45;
 }
 .nav-subitem:hover { color: var(--text) !important; background: var(--surface2) !important; }
 .nav-subitem.active { color: var(--primary) !important; background: transparent !important; font-weight: 700 !important; }
@@ -195,12 +212,17 @@ body {
 
 /* ---------- Контент ---------- */
 .main {
-  margin-left: var(--sidebar-w) !important;
-  width: calc(100vw - var(--sidebar-w)) !important;
-  padding: 48px 56px 120px !important;
-  background: var(--bg) !important;
+  margin-left: calc(var(--sidebar-w) + var(--gap)) !important;
+  margin-top: calc(var(--gap) + var(--topbar-h)) !important;
+  width: auto !important;
+  min-height: calc(100vh - var(--topbar-h) - var(--gap) * 3);
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-lg) !important;
+  box-shadow: var(--shadow) !important;
+  padding: 44px 52px 96px !important;
 }
-.main > * { max-width: var(--content-w); }
+.main > * { max-width: none; }
 
 .page-header {
   padding-bottom: 28px !important;
@@ -364,24 +386,92 @@ pre code {
 .badge-purple  { background: var(--purple-light) !important; color: var(--purple) !important; border-color: transparent !important; }
 .badge-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
 
-/* ---------- Переключатель темы ---------- */
-#kb-theme {
-  position: fixed; right: 20px; bottom: 20px; z-index: 999;
-  width: 42px; height: 42px;
-  display: flex; align-items: center; justify-content: center;
-  background: var(--surface); color: var(--text2);
-  border: 1px solid var(--border); border-radius: 50%;
-  box-shadow: var(--shadow); cursor: pointer;
-  transition: .18s; font-size: 17px; line-height: 1;
+/* ---------- Верхняя плашка: лого, поиск, тема ---------- */
+#kb-topbar {
+  position: fixed; z-index: 500;
+  top: var(--gap); left: var(--gap); right: var(--gap);
+  height: var(--topbar-h);
+  display: flex; align-items: center; gap: 18px;
+  padding: 0 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
 }
-#kb-theme:hover { color: var(--primary); border-color: var(--primary); transform: translateY(-2px); }
+
+.kb-brand {
+  display: flex; align-items: center; gap: 11px;
+  text-decoration: none; flex-shrink: 0;
+  min-width: calc(var(--sidebar-w) - 32px);
+}
+.kb-logo {
+  width: 34px; height: 34px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--primary); color: #fff;
+  font-weight: 800; font-size: 13px; letter-spacing: .02em;
+  border-radius: 10px;
+}
+.kb-brand-text {
+  font-size: 14.5px; font-weight: 700; color: var(--text);
+  letter-spacing: -.01em; white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+
+.kb-search {
+  position: relative; display: flex; align-items: center;
+  flex: 1; max-width: 560px;
+}
+.kb-search svg {
+  position: absolute; left: 13px; width: 16px; height: 16px;
+  color: var(--text3); pointer-events: none;
+}
+.kb-search input {
+  width: 100%; height: 38px;
+  padding: 0 44px 0 38px;
+  font-family: var(--font); font-size: 14px;
+  color: var(--text);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: none; transition: .15s;
+}
+.kb-search input::placeholder { color: var(--text3); }
+.kb-search input:focus {
+  border-color: var(--primary);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px var(--primary-light);
+}
+.kb-search input::-webkit-search-cancel-button { display: none; }
+.kb-search kbd {
+  position: absolute; right: 11px;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 600;
+  color: var(--text3);
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 5px; padding: 2px 7px; pointer-events: none;
+}
+
+#kb-theme {
+  margin-left: auto; flex-shrink: 0;
+  width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--surface2); color: var(--text2);
+  border: 1px solid var(--border); border-radius: 10px;
+  cursor: pointer; transition: .15s; font-size: 16px; line-height: 1;
+}
+#kb-theme:hover { color: var(--primary); border-color: var(--primary); }
 
 /* ---------- Адаптив ---------- */
 @media (max-width: 1100px) {
   .main { padding: 36px 28px 90px !important; }
   .page-header h1 { font-size: 32px !important; }
 }
+@media (max-width: 980px) {
+  .kb-brand-text { display: none; }
+  .kb-brand { min-width: auto; }
+}
 @media (max-width: 860px) {
+  #kb-topbar { gap: 10px; padding: 0 12px; }
+  .kb-search kbd { display: none; }
   .sidebar { position: static !important; width: 100% !important; height: auto !important; border-right: none !important; border-bottom: 1px solid var(--border) !important; }
   .main { margin-left: 0 !important; width: 100% !important; padding: 28px 18px 80px !important; }
   .container { display: block !important; }
