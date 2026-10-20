@@ -437,6 +437,89 @@ server.<span class="c-fn">listen</span>(<span class="c-num">3000</span>, () =&gt
 node -p <span class="c-str">"require('module').builtinModules.join('\n')"</span></code></pre>
     <div class="remember-box">Префикс <code>node:</code> не обязателен (<code>import 'fs'</code> тоже работает), но желателен: он явно говорит, что это встроенный модуль, а не пакет из <code>node_modules</code> с таким же именем.</div>
   </div>
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="folder-tree"></i> <code>node:path</code> — пути к файлам, а не маршруты</div>
+    <div class="info-box warning"><strong>Источник путаницы.</strong> По-русски «путь» означает и файловый путь, и URL-маршрут. Это разные вещи, и <code>path</code> знает только о первом: о файлах и папках на диске. К маршрутизации HTTP он отношения не имеет.</div>
+    <table class="data-table">
+      <thead><tr><th>Что это</th><th>Пример</th><th>Чем работать</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Файловый путь</strong></td><td><code>./data/users.json</code>, <code>C:\app\logs</code></td><td><code>node:path</code>, <code>node:fs</code></td></tr>
+        <tr><td><strong>URL-маршрут</strong></td><td><code>/users/123</code>, <code>/api/orders?status=new</code></td><td>Express, Fastify, NestJS, <code>req.url</code></td></tr>
+        <tr><td><strong>URL как объект</strong></td><td><code>https://site.com/a?b=1</code></td><td>Глобальный <code>URL</code>, <code>node:url</code></td></tr>
+      </tbody>
+    </table>
+<pre><code><span class="c-comment">// Маршрут — это URL-шаблон, path тут ни при чём</span>
+app.<span class="c-fn">get</span>(<span class="c-str">'/users/:id'</span>, (req, res) =&gt; {
+  res.<span class="c-fn">json</span>({ id: req.params.id });   <span class="c-comment">// '123' из /users/123</span>
+});
+
+<span class="c-comment">// Разбор URL — третья вещь, тоже не path</span>
+<span class="c-key">const</span> u = <span class="c-key">new</span> <span class="c-type">URL</span>(<span class="c-str">'https://site.com/users/123?tab=posts'</span>);
+u.pathname;                   <span class="c-comment">// '/users/123' — URL-путь, не файловый</span>
+u.searchParams.<span class="c-fn">get</span>(<span class="c-str">'tab'</span>);   <span class="c-comment">// 'posts'</span></code></pre>
+    <div class="remember-box">URL-пути <strong>всегда</strong> через <code>/</code>, независимо от операционной системы. Поэтому собирать их через <code>path.join</code> — ошибка: на Windows получишь <code>\</code> внутри адреса.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="route"></i> Зачем нужен <code>path</code></div>
+    <p class="text">Главная задача — <strong>кроссплатформенность</strong>. В Windows разделитель <code>\</code>, в Linux и macOS — <code>/</code>. Склеивание строк через <code>'/'</code> вручную ломается на Windows.</p>
+<pre><code><span class="c-key">import</span> path <span class="c-key">from</span> <span class="c-str">'node:path'</span>;
+
+path.<span class="c-fn">join</span>(<span class="c-str">'users'</span>, <span class="c-str">'data'</span>, <span class="c-str">'file.txt'</span>);
+<span class="c-comment">// POSIX:   'users/data/file.txt'
+// Windows: 'users\data\file.txt'</span>
+
+path.<span class="c-fn">resolve</span>(<span class="c-str">'file.txt'</span>);       <span class="c-comment">// абсолютный путь от текущей папки</span>
+path.<span class="c-fn">extname</span>(<span class="c-str">'index.html'</span>);      <span class="c-comment">// '.html'</span>
+path.<span class="c-fn">basename</span>(<span class="c-str">'/foo/baz.txt'</span>);   <span class="c-comment">// 'baz.txt'</span>
+path.<span class="c-fn">dirname</span>(<span class="c-str">'/foo/baz.txt'</span>);    <span class="c-comment">// '/foo'</span>
+path.sep;                        <span class="c-comment">// '/' или '\' в зависимости от ОС</span>
+
+path.<span class="c-fn">parse</span>(<span class="c-str">'/home/user/file.txt'</span>);
+<span class="c-comment">// { root: '/', dir: '/home/user', base: 'file.txt',
+//   ext: '.txt', name: 'file' }</span></code></pre>
+    <div class="why-box"><strong><code>join</code> против <code>resolve</code>.</strong> <code>join</code> просто склеивает куски и нормализует разделители. <code>resolve</code> строит <em>абсолютный</em> путь, идя справа налево до первого абсолютного сегмента, и достраивает остальное от текущей рабочей директории. Для «файл рядом со скриптом» нужен <code>resolve</code> или <code>import.meta.dirname</code>, потому что рабочая директория зависит от того, откуда запустили процесс.</div>
+    <div class="pitfall"><strong>Путь из пользовательского ввода — дыра обхода каталога.</strong> <code>path.join(uploadDir, req.query.name)</code> при <code>name=../../etc/passwd</code> выведет за пределы папки. Проверять надо после нормализации: собрать через <code>resolve</code> и убедиться, что результат начинается с разрешённой директории.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="library"></i> Что делает каждый встроенный модуль</div>
+    <table class="data-table">
+      <thead><tr><th>Модуль</th><th>Что даёт</th></tr></thead>
+      <tbody>
+        <tr><td><code>node:http</code> / <code>node:https</code></td><td>HTTP-сервер через <code>createServer</code> и клиент для запросов. На нём стоят Express, Fastify и почти весь веб в Node</td></tr>
+        <tr><td><code>node:fs</code> / <code>node:fs/promises</code></td><td>Чтение и запись файлов и папок. Версия <code>/promises</code> — тот же API, но под <code>async/await</code></td></tr>
+        <tr><td><code>node:path</code></td><td>Сборка и разбор файловых путей, кроссплатформенно</td></tr>
+        <tr><td><code>node:url</code> + глобальный <code>URL</code></td><td>Разбор и сборка URL, работа с query-параметрами</td></tr>
+        <tr><td><code>node:crypto</code></td><td>Хеши (<code>createHash</code>), HMAC, шифрование, <code>randomUUID</code>, случайные байты</td></tr>
+        <tr><td><code>node:events</code></td><td><code>EventEmitter</code>. На событиях построены серверы, потоки и сокеты: <code>on</code> / <code>emit</code></td></tr>
+        <tr><td><code>node:stream</code></td><td>Обработка данных по частям без загрузки в память. <code>pipeline()</code> связывает потоки и ловит ошибки</td></tr>
+        <tr><td><code>node:os</code></td><td>Информация о системе: <code>cpus()</code>, <code>platform()</code>, объём памяти</td></tr>
+        <tr><td><code>node:process</code></td><td>Текущий процесс: <code>env</code>, <code>argv</code>, <code>exit()</code>, обработка сигналов</td></tr>
+        <tr><td><code>node:child_process</code></td><td>Запуск внешних программ: <code>exec</code>, <code>spawn</code> — например <code>git</code> или <code>ffmpeg</code></td></tr>
+        <tr><td><code>node:worker_threads</code></td><td>Настоящие потоки ОС для CPU-задач, чтобы не блокировать event loop</td></tr>
+        <tr><td><code>node:test</code></td><td>Встроенный тест-раннер (<code>node --test</code>) — лёгкая замена Jest без зависимостей</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="tag"></i> Префикс <code>node:</code> — зачем он на самом деле</div>
+    <div class="pitfall"><strong>Частое объяснение неверно.</strong> Пишут, что префикс защищает от подмены встроенного модуля одноимённым пакетом из <code>node_modules</code>. Это не так: Node резолвит встроенные модули <strong>раньше</strong> <code>node_modules</code>. Пакет с именем <code>fs</code> встроенный <code>fs</code> не перекроет — проверяется за минуту:
+<br><br>
+<code>mkdir -p node_modules/fs &amp;&amp; echo 'module.exports={HACKED:1}' &gt; node_modules/fs/index.js</code><br>
+<code>node -e "console.log(require('fs').HACKED ?? 'встроенный')"</code>  →  <code>встроенный</code></div>
+    <table class="data-table">
+      <thead><tr><th>Настоящая причина</th><th>Пояснение</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Новые модули иначе не подключить</strong></td><td><code>require('test')</code> даёт <code>MODULE_NOT_FOUND</code>, работает только <code>require('node:test')</code>. Так же с <code>node:sqlite</code></td></tr>
+        <tr><td><strong>Явность</strong></td><td>Сразу видно, что это часть Node, а не зависимость из <code>package.json</code></td></tr>
+        <tr><td><strong>Скорость резолва</strong></td><td>Node не ищет по файловой системе — сразу берёт встроенный</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box">Для старых модулей <code>import 'fs'</code> и <code>import 'node:fs'</code> равнозначны. Привычка писать префикс везде полезна тем, что код единообразен и не ломается на новых модулях.</div>
+  </div>
+
 </div>
 @endverbatim
 @verbatim
