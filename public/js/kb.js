@@ -179,6 +179,41 @@
     }
   }
 
+  /* ---------- липкий баннер на главной ---------- */
+  function heroSticky() {
+    var stage = document.querySelector('.kb-hero-stage');
+    if (!stage) return;
+    var inner = stage.querySelector('.kb-hero-inner');
+    if (!inner) return;
+    if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    var lava = stage.querySelector('.kb-lava');
+    var hint = stage.querySelector('.kb-scroll-hint');
+    var ticking = false;
+
+    function update() {
+      ticking = false;
+      var total = stage.offsetHeight - window.innerHeight;
+      if (total <= 0) return;
+      var p = -stage.getBoundingClientRect().top / total;
+      p = p < 0 ? 0 : (p > 1 ? 1 : p);
+
+      /* содержимое уходит в первые две трети прокрутки баннера */
+      var f = p / 0.65; if (f > 1) f = 1;
+      inner.style.opacity = String(1 - f);
+      inner.style.transform = 'translateY(' + (-f * 56).toFixed(1) + 'px) scale(' + (1 - f * 0.05).toFixed(3) + ')';
+
+      if (hint) hint.style.opacity = String(1 - (p > 0.15 ? 1 : p / 0.15));
+      if (lava) lava.style.transform = 'scale(' + (1 + p * 0.22).toFixed(3) + ')';
+    }
+
+    window.addEventListener('scroll', function () {
+      if (!ticking) { ticking = true; requestAnimationFrame(update); }
+    }, { passive: true });
+    window.addEventListener('resize', update);
+    update();
+  }
+
   /* ---------- появление блоков при скролле ---------- */
   function revealOnScroll() {
     var targets = [].slice.call(document.querySelectorAll('.hub .card, .hub .stat, .hub .feature, .hub .section-title, .hub .method, .hub .academic, .hub .inst'));
@@ -244,6 +279,7 @@
     buildToc();
     watchSections();
     revealOnScroll();
+    heroSticky();
     wireSearch(bar.querySelector('#kb-search-input'));
     applyTheme(current());
     applyAccent(currentAccent());

@@ -139,7 +139,9 @@
 
 /* ---------- База ---------- */
 html { scroll-behavior: smooth; }
-html, body { overflow-x: hidden; max-width: 100%; }
+/* clip, а не hidden: hidden создаёт контейнер прокрутки и ломает
+   position: sticky у липкого баннера */
+html, body { overflow-x: clip; max-width: 100%; }
 *, *::before, *::after { box-sizing: border-box; }
 
 body {
@@ -652,9 +654,23 @@ pre code {
    Главная: полноэкранный герой с «лавой» и анимации блоков
    ============================================================ */
 
-.kb-hero {
+/* Содержимое наезжает на липкий баннер, поэтому нужен свой фон и слой */
+.hub {
   position: relative;
-  min-height: 92vh;
+  z-index: 2;
+  background: var(--bg);
+}
+
+.kb-hero-stage {
+  position: relative;
+  height: 210vh;            /* запас прокрутки, пока баннер стоит на месте */
+}
+
+.kb-hero {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  min-height: 100vh;
   display: flex; align-items: center; justify-content: center;
   padding: 90px 24px 60px;
   overflow: hidden;
@@ -836,7 +852,8 @@ pre code {
   .kb-rise, .kb-reveal { opacity: 1 !important; transform: none !important; animation: none !important; transition: none !important; }
 }
 @media (max-width: 860px) {
-  .kb-hero { min-height: 84vh; padding: 70px 18px 50px; }
+  .kb-hero-stage { height: 165vh; }
+  .kb-hero { height: 100vh; min-height: 100vh; padding: 70px 18px 50px; }
   .kb-lava { filter: blur(50px); }
   .kb-scroll-hint { display: none; }
 }

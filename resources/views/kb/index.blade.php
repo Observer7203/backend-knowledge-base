@@ -318,6 +318,7 @@
 <script src="/js/kb.js" defer></script>
 </head>
 <body>
+<div class="kb-hero-stage">
 <section class="kb-hero">
   <div class="kb-lava" aria-hidden="true">
     <span class="blob b1"></span><span class="blob b2"></span>
@@ -337,6 +338,7 @@
   </div>
   <a class="kb-scroll-hint" href="#modules" aria-label="Вниз"><span></span></a>
 </section>
+</div>
 
 <div class="hub">
 
