@@ -155,6 +155,8 @@ ol.numbered strong{color:var(--text);}
   <a class="nav-item" onclick="showSection('modules',this)"><i data-lucide="package"></i> CommonJS и ESM</a>
   <a class="nav-item" onclick="showSection('shutdown',this)"><i data-lucide="power"></i> Graceful shutdown</a>
 
+  <a class="nav-item" onclick="showSection('realtime',this)"><i data-lucide="radio"></i> Реальное время: WS, SSE, polling</a>
+
   <div class="nav-group-label">NestJS</div>
   <a class="nav-item" onclick="showSection('nest-arch',this)"><i data-lucide="boxes"></i> Строительные блоки</a>
   <a class="nav-item" onclick="showSection('nest-lifecycle',this)"><i data-lucide="list-ordered"></i> Жизненный цикл запроса</a>
@@ -622,6 +624,162 @@ app.<span class="c-fn">enableShutdownHooks</span>();
   </div>
 </div>
 
+@endverbatim
+@verbatim
+<div id="sec-realtime" class="section">
+  <div class="section-title">Реальное время: WebSocket, SSE, Long Polling</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> Три способа, чем отличаются</div>
+    <table class="data-table">
+      <thead><tr><th>Характеристика</th><th>WebSocket</th><th>SSE</th><th>Long Polling</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Направление</strong></td><td>Двунаправленное: клиент ⇄ сервер</td><td>Только сервер → клиент</td><td>Сервер → клиент, но запрос инициирует клиент</td></tr>
+        <tr><td><strong>Протокол</strong></td><td>Свой, поверх TCP: <code>ws://</code> / <code>wss://</code></td><td>Обычный HTTP, <code>text/event-stream</code></td><td>Обычный HTTP</td></tr>
+        <tr><td><strong>Применение</strong></td><td>Чаты, игры, совместное редактирование</td><td>Ленты, уведомления, дашборды, котировки</td><td>Фоллбэк, легаси, редкие обновления</td></tr>
+        <tr><td><strong>Сложность</strong></td><td>Средняя — нужно вести жизненный цикл</td><td>Низкая — переподключение встроено</td><td>Низкая, но накладно</td></tr>
+        <tr><td><strong>Накладные расходы</strong></td><td>Низкие</td><td>Низкие</td><td>Высокие — каждый запрос полный HTTP-цикл</td></tr>
+        <tr><td><strong>Переподключение</strong></td><td>Пишешь сам</td><td><strong>Браузер сам</strong></td><td>Сам по природе — цикл запросов</td></tr>
+        <tr><td><strong>Бинарные данные</strong></td><td>Да</td><td>Нет, только текст</td><td>Да</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Правило выбора в одну строку.</strong> Данные идут в одну сторону → SSE. Нужно слать и обратно → WebSocket. Редкие обновления или окружение режет всё остальное → Long Polling.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="arrow-left-right"></i> WebSocket — полноценный двусторонний канал</div>
+    <p class="text">Соединение начинается как обычный HTTP-запрос с просьбой сменить протокол, после чего тот же TCP-сокет работает уже по WebSocket.</p>
+<pre><code><span class="c-comment">// Запрос клиента</span>
+GET /ws HTTP/1.1
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
+
+<span class="c-comment">// Ответ сервера</span>
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade</code></pre>
+<pre><code><span class="c-key">import</span> { <span class="c-type">WebSocketServer</span> } <span class="c-key">from</span> <span class="c-str">'ws'</span>;
+
+<span class="c-key">const</span> wss = <span class="c-key">new</span> <span class="c-type">WebSocketServer</span>({ port: <span class="c-num">8080</span> });
+
+wss.<span class="c-fn">on</span>(<span class="c-str">'connection'</span>, (ws) =&gt; {
+  ws.<span class="c-fn">send</span>(<span class="c-str">'Добро пожаловать!'</span>);
+
+  ws.<span class="c-fn">on</span>(<span class="c-str">'message'</span>, (raw) =&gt; {
+    <span class="c-key">const</span> text = raw.<span class="c-fn">toString</span>();
+
+    <span class="c-comment">// Разослать всем живым клиентам</span>
+    <span class="c-key">for</span> (<span class="c-key">const</span> client <span class="c-key">of</span> wss.clients) {
+      <span class="c-key">if</span> (client.readyState === <span class="c-type">WebSocket</span>.<span class="c-type">OPEN</span>) {
+        client.<span class="c-fn">send</span>(text);
+      }
+    }
+  });
+});</code></pre>
+<pre><code><span class="c-comment">// Клиент</span>
+<span class="c-key">const</span> ws = <span class="c-key">new</span> <span class="c-type">WebSocket</span>(<span class="c-str">'wss://example.com/ws'</span>);
+ws.onopen    = () =&gt; ws.<span class="c-fn">send</span>(<span class="c-str">'привет'</span>);
+ws.onmessage = (e) =&gt; <span class="c-fn">console</span>.<span class="c-fn">log</span>(e.data);
+ws.onclose   = () =&gt; <span class="c-comment">/* переподключение пишешь сам */</span>;</code></pre>
+    <div class="pitfall"><strong>Переподключения из коробки нет.</strong> Обрыв связи, спящий ноутбук, смена Wi-Fi — соединение закрылось, и клиент молча перестал получать сообщения. Нужен свой reconnect с экспоненциальной задержкой плюс досылка пропущенного по <code>last_message_id</code>. Именно за это берут <code>socket.io</code>: там это уже реализовано.</div>
+    <div class="pitfall"><strong>Мёртвые соединения не определяются сами.</strong> TCP может считать сокет живым часами после того, как клиент исчез. Нужен heartbeat: сервер шлёт <code>ping</code>, клиент отвечает <code>pong</code>, не ответил за два интервала — закрываем.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="radio"></i> SSE — поток событий от сервера</div>
+    <p class="text">Сервер открывает один долгоживущий HTTP-ответ и пишет в него текстовые события. Клиент только слушает.</p>
+<pre><code><span class="c-key">import</span> express <span class="c-key">from</span> <span class="c-str">'express'</span>;
+<span class="c-key">const</span> app = <span class="c-fn">express</span>();
+
+app.<span class="c-fn">get</span>(<span class="c-str">'/events'</span>, (req, res) =&gt; {
+  res.<span class="c-fn">setHeader</span>(<span class="c-str">'Content-Type'</span>,  <span class="c-str">'text/event-stream'</span>);
+  res.<span class="c-fn">setHeader</span>(<span class="c-str">'Cache-Control'</span>, <span class="c-str">'no-cache'</span>);
+  res.<span class="c-fn">setHeader</span>(<span class="c-str">'Connection'</span>,    <span class="c-str">'keep-alive'</span>);
+  res.<span class="c-fn">flushHeaders</span>();
+
+  <span class="c-key">const</span> timer = <span class="c-fn">setInterval</span>(() =&gt; {
+    <span class="c-key">const</span> payload = { ts: <span class="c-type">Date</span>.<span class="c-fn">now</span>(), value: <span class="c-type">Math</span>.<span class="c-fn">random</span>() };
+
+    <span class="c-comment">// Формат строгий: поле, двоеточие, значение. Событие закрывают ДВА \n</span>
+    res.<span class="c-fn">write</span>(`id: ${payload.ts}\n`);
+    res.<span class="c-fn">write</span>(`data: ${<span class="c-type">JSON</span>.<span class="c-fn">stringify</span>(payload)}\n\n`);
+  }, <span class="c-num">2000</span>);
+
+  req.<span class="c-fn">on</span>(<span class="c-str">'close'</span>, () =&gt; { <span class="c-fn">clearInterval</span>(timer); res.<span class="c-fn">end</span>(); });
+});</code></pre>
+<pre><code><span class="c-comment">// Клиент — всё встроено в браузер</span>
+<span class="c-key">const</span> es = <span class="c-key">new</span> <span class="c-type">EventSource</span>(<span class="c-str">'/events'</span>);
+es.onmessage = (e) =&gt; <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-type">JSON</span>.<span class="c-fn">parse</span>(e.data));
+es.onerror   = () =&gt; <span class="c-comment">/* браузер переподключится сам */</span>;</code></pre>
+    <table class="data-table">
+      <thead><tr><th>Поле</th><th>Что делает</th></tr></thead>
+      <tbody>
+        <tr><td><code>data:</code></td><td>Полезная нагрузка. Несколько строк подряд склеиваются через <code>\n</code></td></tr>
+        <tr><td><code>id:</code></td><td>Идентификатор события. Браузер запоминает последний</td></tr>
+        <tr><td><code>event:</code></td><td>Имя события — слушается через <code>addEventListener('имя', ...)</code></td></tr>
+        <tr><td><code>retry:</code></td><td>Задержка переподключения в миллисекундах</td></tr>
+        <tr><td><code>:</code> в начале строки</td><td>Комментарий. Используют как heartbeat, чтобы прокси не закрыл соединение</td></tr>
+      </tbody>
+    </table>
+    <div class="why-box"><strong>Главное преимущество SSE — восстановление без потерь.</strong> Браузер переподключается сам и присылает заголовок <code>Last-Event-ID</code> с последним полученным <code>id</code>. Сервер по нему досылает пропущенное. С WebSocket эту логику пишут руками.</div>
+    <div class="pitfall"><strong>Лимит 6 соединений на домен в HTTP/1.1.</strong> Каждая вкладка держит открытое SSE-соединение. Семь вкладок — и седьмая зависнет, а вместе с ней и обычные запросы к тому же домену. По HTTP/2 лимита практически нет, поэтому SSE в проде почти всегда ставят за HTTP/2.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="hourglass"></i> Long Polling — ожидание на обычном HTTP</div>
+    <p class="text">Клиент шлёт обычный запрос, сервер не отвечает сразу, а держит его открытым, пока не появятся данные или не истечёт таймаут. Получив ответ, клиент немедленно шлёт следующий.</p>
+<pre><code><span class="c-key">const</span> waiting = <span class="c-key">new</span> <span class="c-type">Set</span>();
+
+app.<span class="c-fn">get</span>(<span class="c-str">'/poll'</span>, (req, res) =&gt; {
+  <span class="c-key">const</span> since = <span class="c-type">Number</span>(req.query.since ?? <span class="c-num">0</span>);
+  <span class="c-key">const</span> missed = <span class="c-fn">getEventsAfter</span>(since);
+
+  <span class="c-comment">// Если что-то уже накопилось — отдаём сразу, без ожидания</span>
+  <span class="c-key">if</span> (missed.length) <span class="c-key">return</span> res.<span class="c-fn">json</span>(missed);
+
+  waiting.<span class="c-fn">add</span>(res);
+
+  <span class="c-comment">// Таймаут обязателен: иначе прокси оборвёт соединение сам</span>
+  <span class="c-key">const</span> timer = <span class="c-fn">setTimeout</span>(() =&gt; {
+    waiting.<span class="c-fn">delete</span>(res);
+    res.<span class="c-fn">json</span>([]);          <span class="c-comment">// пустой ответ — клиент сразу спросит снова</span>
+  }, <span class="c-num">25_000</span>);
+
+  req.<span class="c-fn">on</span>(<span class="c-str">'close'</span>, () =&gt; { <span class="c-fn">clearTimeout</span>(timer); waiting.<span class="c-fn">delete</span>(res); });
+});
+
+<span class="c-key">function</span> <span class="c-fn">publish</span>(event) {
+  <span class="c-fn">store</span>(event);
+  <span class="c-key">for</span> (<span class="c-key">const</span> res <span class="c-key">of</span> waiting) res.<span class="c-fn">json</span>([event]);
+  waiting.<span class="c-fn">clear</span>();
+}</code></pre>
+    <div class="pitfall"><strong>Между ответом и следующим запросом есть окно.</strong> Событие, случившееся в этот момент, потеряется, если хранить «последнее значение» в переменной. Поэтому клиент передаёт курсор (<code>since</code> / <code>last_event_id</code>), а сервер отдаёт <em>всё, что после него</em> — а не только свежее.</div>
+    <div class="pitfall"><strong>Каждый висящий запрос занимает ресурс.</strong> В Node это дёшево — соединение не держит поток. В PHP-FPM тот же приём съедает воркер целиком, поэтому там long polling почти не применяют.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="network"></i> Что ломается в проде</div>
+    <div class="pitfall"><strong>Nginx рвёт соединение через 60 секунд.</strong> Дефолтный <code>proxy_read_timeout</code> закроет и WebSocket, и SSE, если в них нет трафика. Нужны <code>proxy_http_version 1.1</code>, проброс <code>Upgrade</code> / <code>Connection</code> для WebSocket и увеличенный таймаут. Разобрано в разделе <strong>Nginx → Reverse proxy</strong>.</div>
+    <div class="pitfall"><strong>Буферизация прокси ломает SSE.</strong> Nginx копит ответ в буфере и отдаёт пачкой — события приходят с задержкой или не приходят вовсе. Лечится <code>proxy_buffering off;</code> или заголовком <code>X-Accel-Buffering: no</code> из приложения.</div>
+    <div class="pitfall"><strong>Несколько инстансов не видят друг друга.</strong> Клиент А подключён к первому процессу, клиент Б ко второму — сообщение от А до Б не дойдёт. Нужен общий канал: Redis pub/sub (для <code>socket.io</code> есть готовый адаптер) плюс sticky sessions на балансировщике, чтобы переподключение попадало в тот же инстанс.</div>
+    <div class="pitfall"><strong>Медленный клиент копит данные в памяти сервера.</strong> Если читатель не успевает, сокет буферизует — и процесс растёт. Нужно следить за <code>ws.bufferedAmount</code> и отключать безнадёжно отстающих.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="check-circle-2"></i> Как выбрать</div>
+    <table class="data-table">
+      <thead><tr><th>Задача</th><th>Выбор</th></tr></thead>
+      <tbody>
+        <tr><td>Чат, игра, совместное редактирование</td><td>WebSocket</td></tr>
+        <tr><td>Лента уведомлений, прогресс задачи, котировки</td><td><strong>SSE</strong> — проще и переподключается сам</td></tr>
+        <tr><td>Обновление раз в минуту</td><td>Обычный опрос по таймеру, без всего этого</td></tr>
+        <tr><td>Окружение режет WebSocket (корпоративный прокси)</td><td>Long Polling как фоллбэк</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box">Частая ошибка — взять WebSocket там, где хватало SSE. Двусторонний канал приносит с собой переподключение, heartbeat, синхронизацию между инстансами и отслеживание состояния. Если клиенту нужно только <em>получать</em>, всё это лишняя работа.</div>
+  </div>
+</div>
 @endverbatim
 @verbatim
 <div id="sec-nest-arch" class="section">
