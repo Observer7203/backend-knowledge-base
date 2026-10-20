@@ -159,7 +159,7 @@ class KbPagesSeeder extends Seeder
                 'slug' => 'KB_12_Eloquent_Advanced',
                 'file' => 'kb.KB_12_Eloquent_Advanced',
                 'title' => 'Eloquent Advanced',
-                'description' => 'Глубокий разбор: все relations (включая polymorphic, hasManyThrough), кастомные касты, observers, race conditions, chunk vs cursor vs lazy. С практикой и interview-вопросами middle/senior уровня.',
+                'description' => 'Глубокий разбор: все relations (включая polymorphic, hasManyThrough), кастомные касты, observers, race conditions, chunk vs cursor vs lazy. С практикой и вопросами для самопроверки middle/senior уровня.',
                 'badge' => 'ELOQUENT',
                 'badge_class' => 'badge-laravel',
                 'icon' => 'database',

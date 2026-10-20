@@ -341,8 +341,7 @@
 <div class="hub">
 
   <!-- ── Stats ── -->
-  <!-- Пересчитать: скрипт считает nav-item / subsection-title / <pre><code> / data-table
-       по публичным модулям (без KB_7, KB_8, KB_15). -->
+  <!-- Числа пересчитываются по опубликованным модулям. -->
   <div class="stats-row">
     <div class="stat"><span class="n">19</span><span class="l">Модулей</span></div>
     <div class="stat"><span class="n">399</span><span class="l">Разделов</span></div>
