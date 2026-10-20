@@ -1137,6 +1137,87 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
   </div>
 
   <div class="subsection">
+    <h3 class="subsection-title">Точка и скобки: три записи, которые путают</h3>
+    <p class="text">Две из трёх записей — это <strong>скобочная нотация</strong>, и отличаются они только тем, что стоит внутри скобок: строка или переменная. Третья — <strong>точечная</strong>.</p>
+<pre><code>user.name;        <span class="c-comment">// точка — имя свойства записано буквально в коде</span>
+user[<span class="c-str">'name'</span>];     <span class="c-comment">// скобки + строка — то же самое, но через строковый литерал</span>
+user[key];        <span class="c-comment">// скобки + переменная — имя вычисляется во время выполнения</span></code></pre>
+    <div class="remember-box"><strong>Главное отличие.</strong> Точка подставляет имя свойства <em>буквально</em>. Скобки <em>вычисляют</em> выражение внутри и приводят результат к строке — это и становится именем свойства.</div>
+  </div>
+
+  <div class="subsection">
+    <h3 class="subsection-title">user[key] — ради этого скобки и существуют</h3>
+    <p class="text">Здесь <code>key</code> — переменная, её значение подставляется в момент выполнения. Точка так не умеет: <code>user.key</code> будет искать свойство с именем <code>"key"</code>, а не значение переменной.</p>
+<pre><code><span class="c-key">const</span> user = { name: <span class="c-str">'Alice'</span>, age: <span class="c-num">30</span> };
+<span class="c-key">const</span> key = <span class="c-str">'name'</span>;
+
+user.key;   <span class="c-comment">// undefined — ищет свойство "key", которого нет</span>
+user[key];  <span class="c-comment">// 'Alice' — подставляет значение key, то есть user['name']</span></code></pre>
+    <p class="text">Отсюда все случаи, где без скобок не обойтись:</p>
+<pre><code><span class="c-comment">// 1. Имя поля приходит снаружи</span>
+<span class="c-key">function</span> <span class="c-fn">getField</span>(obj, fieldName) {
+  <span class="c-key">return</span> obj[fieldName];
+}
+<span class="c-fn">getField</span>(user, <span class="c-str">'age'</span>);   <span class="c-comment">// 30</span>
+
+<span class="c-comment">// 2. Перебор ключей</span>
+<span class="c-type">Object</span>.<span class="c-fn">keys</span>(user).<span class="c-fn">forEach</span>(k =&gt; <span class="c-fn">console</span>.<span class="c-fn">log</span>(k, user[k]));
+
+<span class="c-comment">// 3. Колонка таблицы задана переменной</span>
+<span class="c-key">const</span> column = <span class="c-str">'price'</span>;
+<span class="c-key">const</span> row = { id: <span class="c-num">1</span>, price: <span class="c-num">100</span>, qty: <span class="c-num">2</span> };
+row[column];   <span class="c-comment">// 100</span>
+
+<span class="c-comment">// 4. Вычисляемый ключ при создании объекта</span>
+<span class="c-key">const</span> field = <span class="c-str">'email'</span>;
+<span class="c-key">const</span> data = { [field]: <span class="c-str">'a@b.com'</span> };   <span class="c-comment">// { email: 'a@b.com' }</span>
+
+<span class="c-comment">// 5. Обновление поля формы по атрибуту name — типовой приём в React</span>
+<span class="c-key">function</span> <span class="c-fn">handleChange</span>(e) {
+  <span class="c-key">const</span> { name, value } = e.target;
+  <span class="c-fn">setForm</span>(prev =&gt; ({ ...prev, [name]: value }));
+}</code></pre>
+    <div class="pitfall"><strong>Частая ошибка.</strong> Написать <code>obj.fieldName</code> там, где <code>fieldName</code> — переменная. Ошибки не будет, код просто молча вернёт <code>undefined</code>, и разбираться придётся уже по симптомам где-то дальше.</div>
+  </div>
+
+  <div class="subsection">
+    <h3 class="subsection-title">Когда скобки обязательны, а точка не работает</h3>
+    <p class="text">Точка требует, чтобы имя свойства было корректным идентификатором JavaScript: буквы, цифры, <code>_</code>, <code>$</code>, и не начинается с цифры. Всё остальное — только через скобки.</p>
+<pre><code><span class="c-key">const</span> obj = {
+  <span class="c-str">'first name'</span>: <span class="c-str">'Alice'</span>,   <span class="c-comment">// пробел</span>
+  <span class="c-str">'user-id'</span>: <span class="c-num">42</span>,            <span class="c-comment">// дефис</span>
+  <span class="c-str">'123key'</span>: <span class="c-str">'weird'</span>,        <span class="c-comment">// начинается с цифры</span>
+};
+
+obj.first name;      <span class="c-comment">// SyntaxError</span>
+obj[<span class="c-str">'first name'</span>];   <span class="c-comment">// 'Alice'</span>
+obj[<span class="c-str">'user-id'</span>];      <span class="c-comment">// 42</span>
+obj[<span class="c-str">'123key'</span>];       <span class="c-comment">// 'weird'</span></code></pre>
+    <p class="text">Такие ключи чаще всего приходят снаружи: заголовки HTTP (<code>'content-type'</code>), поля из чужого JSON, колонки выгрузки. В своём коде их лучше не создавать.</p>
+    <p class="text">Внутри скобок может стоять любое выражение — его результат приводится к строке:</p>
+<pre><code>user[<span class="c-str">'na'</span> + <span class="c-str">'me'</span>];        <span class="c-comment">// 'Alice' — выражение</span>
+user[`name`];               <span class="c-comment">// 'Alice' — шаблонная строка</span>
+user[<span class="c-num">0</span>];                  <span class="c-comment">// то же, что user['0'] — число станет строкой</span>
+user[<span class="c-key">null</span>];               <span class="c-comment">// user['null']</span>
+user[<span class="c-type">Symbol</span>.iterator];    <span class="c-comment">// символы — только через скобки</span></code></pre>
+    <div class="pitfall"><strong>Символы доступны исключительно через скобки.</strong> Для <code>Symbol</code> точечная запись не работает в принципе — у символа нет имени, пригодного для идентификатора.</div>
+  </div>
+
+  <div class="subsection">
+    <h3 class="subsection-title">Сводка</h3>
+    <table class="data-table">
+      <thead><tr><th>Запись</th><th>Нотация</th><th>Имя свойства</th><th>Когда применять</th></tr></thead>
+      <tbody>
+        <tr><td><code>user.name</code></td><td>точечная</td><td>литеральное <code>"name"</code></td><td>По умолчанию, когда ключ известен и корректен</td></tr>
+        <tr><td><code>user['name']</code></td><td>скобочная</td><td>литеральное <code>"name"</code></td><td>Ключ некорректен как идентификатор, либо нужно единообразие</td></tr>
+        <tr><td><code>user[key]</code></td><td>скобочная</td><td>значение переменной <code>key</code></td><td>Имя поля известно только во время выполнения</td></tr>
+        <tr><td><code>user[expr]</code></td><td>скобочная</td><td>результат выражения</td><td>Вычисляемый ключ: <code>user['a'+'b']</code>, <code>user[obj.id]</code>, <code>user[Symbol.x]</code></td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Правило.</strong> Точка по умолчанию — она короче и читается лучше. Скобки — когда ключ динамический или не проходит как идентификатор. Запись <code>user['name']</code> с фиксированной строкой встречается редко: при известном ключе почти всегда пишут <code>user.name</code>. А <code>user[key]</code> — единственный способ обратиться к полю, имя которого на момент написания кода неизвестно.</div>
+  </div>
+
+  <div class="subsection">
     <h3 class="subsection-title">Destructuring — извлечение полей</h3>
     <pre><code><span class="c-comment">// Из объекта</span>
 <span class="c-key">const</span> { <span class="c-var">name</span>, <span class="c-var">age</span> } = <span class="c-var">user</span>;
