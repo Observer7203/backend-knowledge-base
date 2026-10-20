@@ -380,7 +380,10 @@
     bar.id = 'kb-topbar';
     bar.innerHTML =
       '<a class="kb-brand" href="/">' +
-        '<span class="kb-logo">KB</span>' +
+        '<span class="kb-logo">' +
+          '<img src="/img/logo-mark-96.png" alt="" class="kb-logo-light" width="34" height="34">' +
+          '<img src="/img/logo-mark-dark-96.png" alt="" class="kb-logo-dark" width="34" height="34">' +
+        '</span>' +
         '<span class="kb-brand-text"></span>' +
       '</a>' +
       '<div class="kb-search">' +

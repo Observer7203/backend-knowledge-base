@@ -464,10 +464,13 @@ pre code {
 .kb-logo {
   width: 34px; height: 34px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
-  background: var(--primary); color: #fff;
-  font-weight: 800; font-size: 13px; letter-spacing: .02em;
-  border-radius: 10px;
 }
+.kb-logo img { width: 34px; height: 34px; object-fit: contain; display: block; }
+/* тёмный вариант значка — только в тёмной теме.
+   Селектор с тегом, иначе правило выше перебивает его по специфичности. */
+.kb-logo img.kb-logo-dark { display: none; }
+:root[data-theme="dark"] .kb-logo img.kb-logo-light { display: none; }
+:root[data-theme="dark"] .kb-logo img.kb-logo-dark { display: block; }
 .kb-brand-text {
   font-size: 14.5px; font-weight: 700; color: var(--text);
   letter-spacing: -.01em; white-space: nowrap;
