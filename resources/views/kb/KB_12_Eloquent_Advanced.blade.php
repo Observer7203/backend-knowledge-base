@@ -1852,7 +1852,7 @@ reactions: id, user_id, kind, reactable_type, reactable_id
       <p class="text">Каст <code>array</code> возвращает обычный PHP-массив. Изменение значения внутри этого массива не отражается на атрибуте: следующее обращение к атрибуту вернёт прежнюю копию. Это распространённый источник ошибок при работе с JSON-полями.</p>
 <pre><code><span class="c-comment">// При обычном array-касте:</span>
 <span class="c-var">$user</span>-><span class="c-var">metadata</span>[<span class="c-str">'last_login'</span>] = <span class="c-fn">now</span>();
-<span class="c-comment">// ⚠ Ошибка PHP: непрямое изменение свойства массива.</span>
+<span class="c-comment">// Ошибка PHP: непрямое изменение свойства массива.</span>
 
 <span class="c-comment">// Решение через AsArrayObject:</span>
 <span class="c-key">protected</span> <span class="c-var">$casts</span> = [<span class="c-str">'metadata'</span> =&gt; <span class="c-type">AsArrayObject</span>::<span class="c-key">class</span>];

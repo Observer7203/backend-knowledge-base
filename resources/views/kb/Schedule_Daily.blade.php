@@ -94,7 +94,7 @@
   .week-btn.active{background:var(--ac);color:#fff;border-color:var(--ac);}
   .week-btn.done{background:var(--gr2);color:var(--gr3);border-color:rgba(80,205,137,0.4);}
   .week-btn.milestone::after{
-    content:'★';position:absolute;top:-7px;right:-7px;
+    content:'';position:absolute;top:-7px;right:-7px;
     background:var(--yl);color:#fff;width:18px;height:18px;
     border-radius:50%;font-size:10px;line-height:18px;text-align:center;
   }
@@ -144,7 +144,7 @@
     transition:all 0.18s;font-size:0.7rem;
   }
   .task-check.done{background:var(--gr);border-color:var(--gr);}
-  .task-check.done::after{content:'✓';color:#fff;font-weight:700;}
+  .task-check.done::after{content:'';color:#fff;font-weight:700;}
   .task-info{flex:1;}
   .task-title{font-weight:600;font-size:0.88rem;color:var(--tx);}
   .task-title.struck{text-decoration:line-through;opacity:0.4;}
@@ -183,7 +183,7 @@
     <h1>Расписание <span>подготовки</span></h1>
     <p>13 недель · Пн-Пт без выходных · 1.5-2 часа/день · ~3 секции/день</p>
     <p style="font-size:0.8rem;color:var(--tx2);margin-top:6px;">Старт: 1 июня 2026 (понедельник). Каждая задача привязана к разделу в KB.</p>
-    <div class="target">🎯 Цель: уровень <strong>Middle PHP/Laravel</strong> к 8–9 неделе</div>
+    <div class="target">Цель: уровень <strong>Middle PHP/Laravel</strong> к 8–9 неделе</div>
   </div>
 
   <div class="progress-wrap">
@@ -254,12 +254,12 @@ const weeks = [
       { tasks: [
         { t: "Генераторы и Closures", d: "KB_1 разд.11-12 — yield, yield from, anonymous functions, arrow fn, binding.", file: "KB_1_PHP_Core.html", type: "read" },
         { t: "Практика: CSV генератор", d: "Generator читает CSV построчно. Сравни memory_get_usage с file_get_contents.", type: "code" },
-        { t: "🔄 Повтор: квизы нед.1 разд.1-5", d: "Без подглядывания: типы, == vs ===, $this, static::, final vs readonly.", type: "review" },
+        { t: "Повтор: квизы нед.1 разд.1-5", d: "Без подглядывания: типы, == vs ===, $this, static::, final vs readonly.", type: "review" },
       ]},
       { tasks: [
         { t: "Мини-проект: CLI утилита", d: "Парсит named args, enum для команд, generator для логов, custom exceptions.", type: "project" },
-        { t: "📋 Открой Шпаргалку PHP в KB_1", d: "KB_1 → раздел 'Шпаргалка PHP'. Прочитай все сводные таблицы (типы, массивы, ООП, magic, PHP 8). Распечатай или сохрани.", file: "KB_1_PHP_Core.html", type: "review" },
-        { t: "🛠 Практика руками — микро-задачи 1-5", d: "KB_1 → раздел 'Практика руками'. Сделай первые 5 микро-задач по 15 мин каждая (type juggling, strict_types, regex, sprintf, array_map).", file: "KB_1_PHP_Core.html", type: "code" },
+        { t: "Открой Шпаргалку PHP в KB_1", d: "KB_1 → раздел 'Шпаргалка PHP'. Прочитай все сводные таблицы (типы, массивы, ООП, magic, PHP 8). Распечатай или сохрани.", file: "KB_1_PHP_Core.html", type: "review" },
+        { t: "Практика руками — микро-задачи 1-5", d: "KB_1 → раздел 'Практика руками'. Сделай первые 5 микро-задач по 15 мин каждая (type juggling, strict_types, regex, sprintf, array_map).", file: "KB_1_PHP_Core.html", type: "code" },
       ]},
     ]
   },
@@ -290,14 +290,14 @@ const weeks = [
       { tasks: [
         { t: "EXPLAIN и оптимизация", d: "KB_2 разд.10 — чтение EXPLAIN, типы сканирования, hints.", file: "KB_2_SQL_Database.html", type: "read" },
         { t: "Практика: EXPLAIN своих запросов", d: "5 запросов вторника. EXPLAIN. Добавь индексы. Сравни.", type: "code" },
-        { t: "🔄 Повтор: PHP traits + magic", d: "KB_1 разд.6-7 — без подглядывания.", type: "review" },
+        { t: "Повтор: PHP traits + magic", d: "KB_1 разд.6-7 — без подглядывания.", type: "review" },
       ]},
     ]
   },
 
   // ───── НЕДЕЛЯ 4 ─────
   { title: "Неделя 4: SQL — часть 2 + Laravel старт", theme: "Транзакции, ACID, нормализация, PDO + начало Laravel", review: "Повтор: JOIN'ы, индексы (нед.3)",
-    milestone: "🎯 Конец Месяца 1: самопроверка по вопросникам уровня Junior+",
+    milestone: "Конец Месяца 1: самопроверка по вопросникам уровня Junior+",
     goal: "Закрыть SQL полностью + начать Laravel. ACID — обязательно.",
     days: [
       { tasks: [
@@ -322,8 +322,8 @@ const weeks = [
       ]},
       { tasks: [
         { t: "Контроллеры + Middleware basics", d: "KB_3 разд.3-4 — Resource controllers, invokable, middleware before/after.", file: "KB_3_Laravel.html", type: "read" },
-        { t: "🔄 Повтор: SQL квизы все", d: "JOIN'ы, ACID, нормализация, индексы — без подглядывания.", type: "review" },
-        { t: "❓ Вопросник KB_1 — Уровень 1 (Junior+)", d: "KB_1 → раздел 'Вопросник для самопроверки'. Пройди 10 вопросов Уровня 1. Отвечай ВСЛУХ. Запиши слабые места.", file: "KB_1_PHP_Core.html", type: "quiz" },
+        { t: "Повтор: SQL квизы все", d: "JOIN'ы, ACID, нормализация, индексы — без подглядывания.", type: "review" },
+        { t: "Вопросник KB_1 — Уровень 1 (Junior+)", d: "KB_1 → раздел 'Вопросник для самопроверки'. Пройди 10 вопросов Уровня 1. Отвечай ВСЛУХ. Запиши слабые места.", file: "KB_1_PHP_Core.html", type: "quiz" },
         { t: "Шпаргалка SQL", d: "JOIN'ы, ACID 4 буквы, нормализация 1-3NF, composite index, leftmost prefix.", type: "review" },
       ]},
     ]
@@ -389,7 +389,7 @@ const weeks = [
       { tasks: [
         { t: "Шпаргалка: всё в одной таблице", d: "KB_9 — посмотри финальную шпаргалку всех 22 классов.", file: "KB_9_Laravel_Inheritance.html", type: "review" },
         { t: "Проверь себя", d: "KB_9 quiz — какой класс что даёт. Без подглядывания.", type: "quiz" },
-        { t: "🔄 Повтор: N+1 + Queues (нед.5)", d: "Объясни вслух: что такое N+1, как решить, как работает worker.", type: "review" },
+        { t: "Повтор: N+1 + Queues (нед.5)", d: "Объясни вслух: что такое N+1, как решить, как работает worker.", type: "review" },
       ]},
     ]
   },
@@ -421,7 +421,7 @@ const weeks = [
       { tasks: [
         { t: "Collections deep", d: "KB_12 — все методы Collection (groupBy, mapWithKeys, partition, zip, flatMap).", file: "KB_12_Eloquent_Advanced.html", type: "read" },
         { t: "Lazy Collections + chunking", d: "KB_12 — обработка миллионов записей, chunkById vs chunk, lazy() vs cursor().", file: "KB_12_Eloquent_Advanced.html", type: "read" },
-        { t: "🔄 Повтор: Inheritance (нед.6)", d: "Назови 10 базовых классов Laravel и что они дают.", type: "review" },
+        { t: "Повтор: Inheritance (нед.6)", d: "Назови 10 базовых классов Laravel и что они дают.", type: "review" },
       ]},
     ]
   },
@@ -453,14 +453,14 @@ const weeks = [
       { tasks: [
         { t: "Service Providers глубоко", d: "KB_13 разд.10-12 — register vs boot, order, package providers.", file: "KB_13_Service_Container_DI.html", type: "read" },
         { t: "Deferred Providers + Package dev", d: "KB_13 разд.13-15 — defer для lazy load, разработка пакетов.", file: "KB_13_Service_Container_DI.html", type: "read" },
-        { t: "🔄 Повтор: Eloquent основы (нед.7)", d: "Relationships, scopes, polymorphic — по памяти.", type: "review" },
+        { t: "Повтор: Eloquent основы (нед.7)", d: "Relationships, scopes, polymorphic — по памяти.", type: "review" },
       ]},
     ]
   },
 
   // ───── НЕДЕЛЯ 9 ─────
   { title: "Неделя 9: Security — Token Rotation, OAuth, JWT, XSS, CSRF", theme: "Аутентификация и веб-атаки", review: "Повтор: Sanctum + DI (нед.5,8)",
-    milestone: "🎯 Конец Месяца 2: уровень Middle закрыт",
+    milestone: "Конец Месяца 2: уровень Middle закрыт",
     goal: "KB_4 — 16 секций. Token Rotation, OAuth, JWT, XSS, CSRF, SQLi, CORS. Spectre.",
     days: [
       { tasks: [
@@ -486,7 +486,7 @@ const weeks = [
       { tasks: [
         { t: "HTTPS/TLS + Headers + Secrets + RBAC/ABAC", d: "KB_4 разд.11-16 — TLS handshake, HSTS, CSP/X-Frame, env management, role/attribute access.", file: "KB_4_Security.html", type: "read" },
         { t: "Финал KB_4: все квизы + прогон вопросов", d: "Ответь на все Security вопросы из Backend_Learning_Program вслух.", file: "Backend_Learning_Program.html", type: "quiz" },
-        { t: "❓ Вопросник KB_1 — Уровень 2 (Middle)", d: "KB_1 → раздел 'Вопросник для самопроверки'. Пройди 20 вопросов Уровня 2 ВСЛУХ. Это ключевые вопросы уровня Middle.", file: "KB_1_PHP_Core.html", type: "quiz" },
+        { t: "Вопросник KB_1 — Уровень 2 (Middle)", d: "KB_1 → раздел 'Вопросник для самопроверки'. Пройди 20 вопросов Уровня 2 ВСЛУХ. Это ключевые вопросы уровня Middle.", file: "KB_1_PHP_Core.html", type: "quiz" },
         { t: "Шпаргалка Security", d: "Token Rotation flow, JWT structure, OAuth flows, CSRF/XSS/CORS — по 2 предложения.", type: "review" },
       ]},
     ]
@@ -519,7 +519,7 @@ const weeks = [
       { tasks: [
         { t: "DDD basics + Clean/Hexagonal Architecture", d: "KB_5 разд.10-13 — Entity/VO/Aggregate, Bounded Context, layers, dependency rule.", file: "KB_5_Architecture.html", type: "read" },
         { t: "Финал KB_5: квизы + прогон вопросов", d: "Все Architecture квизы + вопросы из Backend_Learning_Program.", file: "Backend_Learning_Program.html", type: "quiz" },
-        { t: "🔄 Повтор: Security + JWT + Token Rotation", d: "Объясни вслух flow Token Rotation step by step.", type: "review" },
+        { t: "Повтор: Security + JWT + Token Rotation", d: "Объясни вслух flow Token Rotation step by step.", type: "review" },
       ]},
     ]
   },
@@ -551,8 +551,8 @@ const weeks = [
       { tasks: [
         { t: "Mutation testing + Coverage + Snapshot", d: "KB_14 — Infection PHP, как читать coverage report, snapshot testing.", file: "KB_14_Testing_Deep.html", type: "read" },
         { t: "Pest arch testing + Testing pyramid", d: "KB_6 разд.6-7 — arch::expect для архитектурных правил, пропорции unit/feature/e2e.", file: "KB_6_Testing_DevOps.html", type: "read" },
-        { t: "🛠 Практика KB_1: готовые задания 1-3", d: "KB_1 → 'Практика руками' → готовые задания. Сделай trait Cacheable + TransactionGuard + Магический Builder. Тесты обязательно.", file: "KB_1_PHP_Core.html", type: "code" },
-        { t: "🔄 Повтор: SOLID + паттерны", d: "Repository vs Service, Strategy, Decorator — без подсмотра.", type: "review" },
+        { t: "Практика KB_1: готовые задания 1-3", d: "KB_1 → 'Практика руками' → готовые задания. Сделай trait Cacheable + TransactionGuard + Магический Builder. Тесты обязательно.", file: "KB_1_PHP_Core.html", type: "code" },
+        { t: "Повтор: SOLID + паттерны", d: "Repository vs Service, Strategy, Decorator — без подсмотра.", type: "review" },
       ]},
     ]
   },
@@ -583,31 +583,31 @@ const weeks = [
       { tasks: [
         { t: "Networking — TCP/IP, HTTP, DNS, DHCP (обзор)", d: "KB_11 — OSI, TCP handshake, HTTP методы и коды, DNS records, DHCP DORA.", file: "KB_11_Cloud_DevOps_Networking.html", type: "read" },
         { t: "TLS + REST principles + Cloud basics", d: "KB_11 — TLS handshake, REST constraints, AWS/GCP/Azure базовые сервисы.", file: "KB_11_Cloud_DevOps_Networking.html", type: "read" },
-        { t: "🔄 Повтор: Testing (нед.11)", d: "Unit vs Feature, Mock vs Stub, RefreshDatabase, TDD цикл.", type: "review" },
+        { t: "Повтор: Testing (нед.11)", d: "Unit vs Feature, Mock vs Stub, RefreshDatabase, TDD цикл.", type: "review" },
       ]},
     ]
   },
 
   // ───── НЕДЕЛЯ 13 ─────
   { title: "Неделя 13: финальный прогон + слабые места + pet-project", theme: "FULL REVIEW, финальный прогон, портфолио", review: "ВСЁ",
-    milestone: "🎯 Конец Месяца 3: уверенный Middle",
+    milestone: "Конец Месяца 3: уверенный Middle",
     goal: "Собрать всё вместе. Финальный прогон вопросников. Закрыть пробелы.",
     days: [
       { tasks: [
-        { t: "🔄 FULL REVIEW: PHP Core + SQL", d: "Все квизы KB_1 + KB_2. Шпаргалки нед.2 и нед.4 — обнови. LeetCode 1 задача easy.", file: "KB_1_PHP_Core.html", type: "review" },
+        { t: "FULL REVIEW: PHP Core + SQL", d: "Все квизы KB_1 + KB_2. Шпаргалки нед.2 и нед.4 — обнови. LeetCode 1 задача easy.", file: "KB_1_PHP_Core.html", type: "review" },
       ]},
       { tasks: [
-        { t: "🔄 FULL REVIEW: Laravel + Eloquent", d: "KB_3 + KB_9 + KB_12 квизы. Lifecycle, N+1, relationships, scopes. LeetCode 1 medium.", file: "KB_3_Laravel.html", type: "review" },
+        { t: "FULL REVIEW: Laravel + Eloquent", d: "KB_3 + KB_9 + KB_12 квизы. Lifecycle, N+1, relationships, scopes. LeetCode 1 medium.", file: "KB_3_Laravel.html", type: "review" },
       ]},
       { tasks: [
-        { t: "🔄 FULL REVIEW: DI + Security", d: "KB_13 + KB_4 квизы. Bindings, Token Rotation, OAuth, CSRF/XSS. LeetCode 1 medium.", file: "KB_13_Service_Container_DI.html", type: "review" },
+        { t: "FULL REVIEW: DI + Security", d: "KB_13 + KB_4 квизы. Bindings, Token Rotation, OAuth, CSRF/XSS. LeetCode 1 medium.", file: "KB_13_Service_Container_DI.html", type: "review" },
       ]},
       { tasks: [
-        { t: "🔄 FULL REVIEW: Architecture + Testing + DevOps", d: "KB_5 + KB_14 + KB_6 квизы. SOLID наизусть, паттерны, TDD цикл, Docker.", file: "KB_5_Architecture.html", type: "review" },
+        { t: "FULL REVIEW: Architecture + Testing + DevOps", d: "KB_5 + KB_14 + KB_6 квизы. SOLID наизусть, паттерны, TDD цикл, Docker.", file: "KB_5_Architecture.html", type: "review" },
       ]},
       { tasks: [
-        { t: "❓ Финальный прогон KB_1 Вопросник — все 45 вопросов", d: "KB_1 → 'Вопросник для самопроверки'. Уровни 1+2+3 подряд. Таймер 90 сек на вопрос. Запиши на диктофон. Слушай и оценивай.", file: "KB_1_PHP_Core.html", type: "quiz" },
-        { t: "🛠 Мини-проект на выбор", d: "KB_1 → 'Практика руками' → мини-проекты. Сделай 1 на выбор: Свой Collection / Validator / DI-контейнер / Mini-ORM. Это сильный аргумент в портфолио.", file: "KB_1_PHP_Core.html", type: "project" },
+        { t: "Финальный прогон KB_1 Вопросник — все 45 вопросов", d: "KB_1 → 'Вопросник для самопроверки'. Уровни 1+2+3 подряд. Таймер 90 сек на вопрос. Запиши на диктофон. Слушай и оценивай.", file: "KB_1_PHP_Core.html", type: "quiz" },
+        { t: "Мини-проект на выбор", d: "KB_1 → 'Практика руками' → мини-проекты. Сделай 1 на выбор: Свой Collection / Validator / DI-контейнер / Mini-ORM. Это сильный аргумент в портфолио.", file: "KB_1_PHP_Core.html", type: "project" },
         { t: "Полный прогон вопросника", d: "24 вопроса × 2 мин = 48 мин. Запиши на диктофон. Прослушай и оцени.", file: "Backend_Learning_Program.html", type: "quiz" },
         { t: "Финал: README портфолио + резюме", d: "am.eabr.org (SSO+MegaRega) + pet-project + KB как proof. Резюме с этим стеком.", type: "project" },
       ]},
@@ -639,7 +639,7 @@ function render() {
       <h2>${w.title}</h2>
       <div class="theme">${w.theme}</div>
       <div class="goal">${w.goal}</div>
-      ${w.review ? `<div class="review-tag">🔄 ${w.review}</div>` : ''}
+      ${w.review ? `<div class="review-tag">${w.review}</div>` : ''}
       ${w.milestone ? `<div class="milestone-tag">${w.milestone}</div>` : ''}
     </div>`;
 
@@ -662,8 +662,8 @@ function render() {
 
       day.tasks.forEach((task) => {
         const typeClass = {read:'type-read',quiz:'type-quiz',code:'type-code',review:'type-review',project:'type-project'}[task.type]||'type-read';
-        const typeLabel = {read:'📖 Чтение',quiz:'🧠 Квиз',code:'💻 Код',review:'🔄 Повтор',project:'🚀 Проект'}[task.type]||'';
-        const fileLink = task.file ? `<a class="task-file" href="${task.file}" target="_blank">📄 ${task.file}</a>` : '';
+        const typeLabel = {read:'Чтение',quiz:'Квиз',code:'Код',review:'Повтор',project:'Проект'}[task.type]||'';
+        const fileLink = task.file ? `<a class="task-file" href="${task.file}" target="_blank">${task.file}</a>` : '';
 
         html += `<div class="task">
           <div class="task-check" onclick="toggleTask(this)"></div>

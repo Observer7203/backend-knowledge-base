@@ -300,7 +300,7 @@ npm run dev</code></pre>
       </tbody>
     </table>
     <div class="pitfall">
-      <strong>⚠ <code>this</code> критично:</strong> в Options API везде обращение через <code>this.age</code>, <code>this.title</code>. Именно поэтому <strong>methods нельзя писать через arrow functions</strong> — arrow не имеет своего <code>this</code>, потеряется контекст компонента.
+      <strong><code>this</code> критично:</strong> в Options API везде обращение через <code>this.age</code>, <code>this.title</code>. Именно поэтому <strong>methods нельзя писать через arrow functions</strong> — arrow не имеет своего <code>this</code>, потеряется контекст компонента.
     </div>
   </div>
 </div>
@@ -404,10 +404,10 @@ npm run dev</code></pre>
 <span class="c-var">state</span>.<span class="c-var">count</span>++;
 <span class="c-var">state</span>.<span class="c-var">user</span>.<span class="c-var">name</span> = <span class="c-str">'Bob'</span>;
 
-<span class="c-comment">// ⚠ НЕЛЬЗЯ заменить весь объект — потеряется реактивность</span>
+<span class="c-comment">// НЕЛЬЗЯ заменить весь объект — потеряется реактивность</span>
 <span class="c-comment">// state = {} — теряется связь с Vue</span>
 
-<span class="c-comment">// ⚠ НЕЛЬЗЯ деструктурировать — теряется реактивность</span>
+<span class="c-comment">// НЕЛЬЗЯ деструктурировать — теряется реактивность</span>
 <span class="c-key">const</span> { <span class="c-var">count</span> } = <span class="c-var">state</span>;  <span class="c-comment">// count — обычная переменная, не реактивная!</span></code></pre>
   </div>
 
@@ -434,10 +434,10 @@ npm run dev</code></pre>
 
 <span class="c-key">const</span> <span class="c-var">state</span> = <span class="c-fn">reactive</span>({ <span class="c-var">count</span>: <span class="c-num">0</span>, <span class="c-var">name</span>: <span class="c-str">'Alice'</span> });
 
-<span class="c-comment">// ❌ Ломает реактивность</span>
+<span class="c-comment">// Ломает реактивность</span>
 <span class="c-key">const</span> { <span class="c-var">count</span>, <span class="c-var">name</span> } = <span class="c-var">state</span>;
 
-<span class="c-comment">// ✓ Сохраняет реактивность — каждое поле оборачивается в ref</span>
+<span class="c-comment">// Сохраняет реактивность — каждое поле оборачивается в ref</span>
 <span class="c-key">const</span> { <span class="c-var">count</span>, <span class="c-var">name</span> } = <span class="c-fn">toRefs</span>(<span class="c-var">state</span>);
 <span class="c-var">count</span>.<span class="c-var">value</span>++;   <span class="c-comment">// работает, обновляет state.count</span></code></pre>
   </div>
@@ -531,7 +531,7 @@ npm run dev</code></pre>
 &lt;<span class="c-key">p</span>&gt;{{ user.age &gt;= <span class="c-num">18</span> ? <span class="c-str">'adult'</span> : <span class="c-str">'minor'</span> }}&lt;/<span class="c-key">p</span>&gt;   <span class="c-comment">// тернарный</span>
 &lt;<span class="c-key">p</span>&gt;{{ names.<span class="c-fn">join</span>(<span class="c-str">', '</span>) }}&lt;/<span class="c-key">p</span>&gt;                       <span class="c-comment">// методы</span>
 
-<span class="c-comment">&lt;!-- ❌ НЕЛЬЗЯ statements (if, for, var) --&gt;</span>
+<span class="c-comment">&lt;!-- НЕЛЬЗЯ statements (if, for, var) --&gt;</span>
 &lt;<span class="c-key">p</span>&gt;{{ <span class="c-key">if</span> (<span class="c-var">x</span>) <span class="c-key">return</span> <span class="c-str">'yes'</span> }}&lt;/<span class="c-key">p</span>&gt;   <span class="c-comment">// ошибка</span></code></pre>
   </div>
 
@@ -646,7 +646,7 @@ npm run dev</code></pre>
 <span class="c-comment">&lt;!-- По числу --&gt;</span>
 &lt;<span class="c-key">span</span> <span class="c-var">v-for</span>=<span class="c-str">"n in 10"</span> <span class="c-var">:key</span>=<span class="c-str">"n"</span>&gt;{{ n }} &lt;/<span class="c-key">span</span>&gt;</code></pre>
     <div class="pitfall">
-      <strong>⚠ ВСЕГДА <code>:key</code>:</strong> Vue использует key для эффективного обновления. Без key будут баги при вставке / удалении элементов. <strong>Не используй index как key</strong> если список меняет порядок — используй уникальный id из данных.
+      <strong>ВСЕГДА <code>:key</code>:</strong> Vue использует key для эффективного обновления. Без key будут баги при вставке / удалении элементов. <strong>Не используй index как key</strong> если список меняет порядок — используй уникальный id из данных.
     </div>
   </div>
 
@@ -682,7 +682,7 @@ npm run dev</code></pre>
     <h3 class="subsection-title">v-html — вставить сырой HTML</h3>
     <pre><code>&lt;<span class="c-key">div</span> <span class="c-var">v-html</span>=<span class="c-str">"htmlContent"</span>&gt;&lt;/<span class="c-key">div</span>&gt;</code></pre>
     <div class="pitfall">
-      <strong>⚠ XSS-риск:</strong> <code>v-html</code> не экранирует. Никогда не подставляй туда user-input без санитизации.
+      <strong>XSS-риск:</strong> <code>v-html</code> не экранирует. Никогда не подставляй туда user-input без санитизации.
     </div>
   </div>
 </div>
@@ -829,7 +829,7 @@ npm run dev</code></pre>
     /&gt;
 &lt;/<span class="c-key">template</span>&gt;</code></pre>
     <div class="pitfall">
-      <strong>⚠ Props нельзя мутировать в ребёнке:</strong> Vue выдаст warning. Правильно — эмитить событие родителю, чтобы он поменял данные.
+      <strong>Props нельзя мутировать в ребёнке:</strong> Vue выдаст warning. Правильно — эмитить событие родителю, чтобы он поменял данные.
     </div>
   </div>
 
@@ -1009,9 +1009,9 @@ npm run dev</code></pre>
       <strong>Почему <code>{ useI18n }</code> в скобках, а не без:</strong> <code>vue-i18n</code> экспортирует функцию как <em>named</em> (<code>export function useI18n()</code>), а не через <code>export default</code>. По правилам ES-модулей: <strong>named → фигурные скобки</strong>. Если бы был default — писали бы <code>import useI18n from 'vue-i18n'</code> без скобок. Подробно про импорты — в KB_16 → «Модули (ES6)».
     </p>
 
-    <div class="pitfall"><strong>⚠ <code>useI18n()</code> вызывается ТОЛЬКО в setup-контексте</strong> (в <code>&lt;script setup&gt;</code> или внутри <code>setup()</code> Options API). Из обычной функции-хелпера или Vuex-модуля — не работает, вылезет <em>«Must be called at the top of a setup function»</em>. Для использования вне компонента — импортируй сам инстанс i18n: <code>import i18n from '@/i18n'; i18n.global.t('...')</code>.</div>
+    <div class="pitfall"><strong><code>useI18n()</code> вызывается ТОЛЬКО в setup-контексте</strong> (в <code>&lt;script setup&gt;</code> или внутри <code>setup()</code> Options API). Из обычной функции-хелпера или Vuex-модуля — не работает, вылезет <em>«Must be called at the top of a setup function»</em>. Для использования вне компонента — импортируй сам инстанс i18n: <code>import i18n from '@/i18n'; i18n.global.t('...')</code>.</div>
 
-    <div class="pitfall"><strong>⚠ Деструктуризация не ломает реактивность у <code>useI18n</code>.</strong> Возвращаемые <code>t</code>, <code>locale</code> — уже готовые ref/функция, не reactive-объект. Это отличие от <code>reactive({...})</code>, где обычная деструктуризация обрывает реактивность.</div>
+    <div class="pitfall"><strong>Деструктуризация не ломает реактивность у <code>useI18n</code>.</strong> Возвращаемые <code>t</code>, <code>locale</code> — уже готовые ref/функция, не reactive-объект. Это отличие от <code>reactive({...})</code>, где обычная деструктуризация обрывает реактивность.</div>
   </div>
 </div>
 
@@ -1144,7 +1144,7 @@ npm run dev</code></pre>
 
 <span class="c-key">const</span> <span class="c-var">userStore</span> = <span class="c-fn">useUserStore</span>();
 
-<span class="c-comment">// ⚠ storeToRefs — чтобы деструктуризация сохранила реактивность</span>
+<span class="c-comment">// storeToRefs — чтобы деструктуризация сохранила реактивность</span>
 <span class="c-key">const</span> { <span class="c-var">user</span>, <span class="c-var">isLoggedIn</span> } = <span class="c-fn">storeToRefs</span>(<span class="c-var">userStore</span>);
 
 <span class="c-comment">// Actions можно деструктурировать как обычно</span>
@@ -1158,7 +1158,7 @@ npm run dev</code></pre>
     &lt;/<span class="c-key">div</span>&gt;
 &lt;/<span class="c-key">template</span>&gt;</code></pre>
     <div class="pitfall">
-      <strong>⚠ storeToRefs обязателен</strong> при деструктуризации state/getters. Обычная деструктуризация ломает реактивность. Actions деструктуризировать можно нормально.
+      <strong>storeToRefs обязателен</strong> при деструктуризации state/getters. Обычная деструктуризация ломает реактивность. Actions деструктуризировать можно нормально.
     </div>
   </div>
 </div>
@@ -1219,7 +1219,7 @@ api.<span class="c-fn">get</span>(<span class="c-str">'/national-team/public/nat
 });</code></pre>
     </div>
 
-    <div class="pitfall"><strong>⚠ Несколько инстансов для разных API — норма.</strong> Публичный API без auth (<code>api_public</code>) + приватный с токеном (<code>api_auth</code>) + сторонний сервис — три разных инстанса. Не пихай всё в один <code>http</code>.</div>
+    <div class="pitfall"><strong>Несколько инстансов для разных API — норма.</strong> Публичный API без auth (<code>api_public</code>) + приватный с токеном (<code>api_auth</code>) + сторонний сервис — три разных инстанса. Не пихай всё в один <code>http</code>.</div>
   </div>
 
   <div class="subsection">
@@ -1237,7 +1237,7 @@ api.<span class="c-fn">get</span>(<span class="c-str">'/national-team/public/nat
       Vite при сборке <em>заменяет</em> <code>import.meta.env.VITE_API_URL</code> на строковый литерал <em>прямо в коде</em>, до рантайма. Так же работают публичные ключи (Stripe pk_..., карта Google Maps API key и т.д.).
     </p>
 
-    <div class="pitfall"><strong>⚠ Только префикс <code>VITE_</code>.</strong> Переменные без префикса в клиент не попадут — защита от утечек серверных секретов (<code>DB_PASSWORD</code>) в браузер.</div>
+    <div class="pitfall"><strong>Только префикс <code>VITE_</code>.</strong> Переменные без префикса в клиент не попадут — защита от утечек серверных секретов (<code>DB_PASSWORD</code>) в браузер.</div>
 
     <p style="color:var(--text2);line-height:1.75;margin:10px 0;font-size:13.5px">
       Подробнее про <code>import.meta</code> и все его поля (<code>.url</code>, <code>.hot</code>, <code>.glob</code>) — в KB_16 «Модули (ES6)».

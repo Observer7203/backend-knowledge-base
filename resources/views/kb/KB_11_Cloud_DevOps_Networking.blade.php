@@ -248,7 +248,7 @@ ul.bullets strong{color:var(--text);}
     <div class="subsection-title"><i data-lucide="layers-2"></i> Full Virtualization vs Paravirtualization</div>
     <table class="data-table">
       <tr><th>Признак</th><th>Full Virtualization</th><th>Paravirtualization</th></tr>
-      <tr><td><strong>Гостевая ОС знает, что она в VM?</strong></td><td>❌ Нет — думает, что на реальном железе</td><td>✅ Да — специально модифицирована</td></tr>
+      <tr><td><strong>Гостевая ОС знает, что она в VM?</strong></td><td>Нет — думает, что на реальном железе</td><td>Да — специально модифицирована</td></tr>
       <tr><td><strong>Как работает</strong></td><td>Гипервизор «переводит» инструкции на лету (binary translation)</td><td>ОС вызывает гипервизор напрямую (hypercalls)</td></tr>
       <tr><td><strong>Скорость</strong></td><td>Медленнее (доп. перевод)</td><td>Быстрее</td></tr>
       <tr><td><strong>Совместимость</strong></td><td>Любая ОС без изменений</td><td>Нужна модификация гостя</td></tr>
@@ -436,14 +436,14 @@ ul.bullets strong{color:var(--text);}
  (Bluetooth, Ethernet, ISP-сеть города, Интернет)</div>
 
   <div class="card">
-    <h3>📍 PAN — Personal Area Network</h3>
+    <h3>PAN — Personal Area Network</h3>
     <p class="text"><strong>Что:</strong> очень маленькая сеть вокруг одного человека (~10 м).</p>
     <p class="text"><strong>Примеры:</strong> Bluetooth-наушники, мышь, клавиатура, AirDrop между Mac/iPhone.</p>
     <p class="text"><strong>Зачем знать:</strong> понимаешь, чем Bluetooth отличается от Wi-Fi.</p>
   </div>
 
   <div class="card">
-    <h3>🏢 LAN — Local Area Network</h3>
+    <h3>LAN — Local Area Network</h3>
     <p class="text"><strong>Что:</strong> сеть в пределах здания (офис, дом, кампус). До ~16 млн устройств теоретически.</p>
     <p class="text"><strong>Технологии:</strong> Ethernet (по кабелю), Wi-Fi (по воздуху — это WLAN).</p>
     <p class="text"><strong>Адреса:</strong> приватные IP (<code>192.168.x.x</code>, <code>10.x.x.x</code>).</p>
@@ -451,21 +451,21 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="card">
-    <h3>🏙️ MAN — Metropolitan Area Network</h3>
+    <h3>MAN — Metropolitan Area Network</h3>
     <p class="text"><strong>Что:</strong> сеть масштаба города.</p>
     <p class="text"><strong>Примеры:</strong> городской провайдер (Beeline, Kazakhtelecom), кабельное ТВ, муниципальный оптоволоконный backbone.</p>
     <p class="text"><strong>Роль:</strong> мост между LAN (офисы города) и WAN (глобальной сетью).</p>
   </div>
 
   <div class="card">
-    <h3>🌍 WAN — Wide Area Network</h3>
+    <h3>WAN — Wide Area Network</h3>
     <p class="text"><strong>Что:</strong> сеть масштаба страны / континента / мира. <strong>Интернет</strong> — это самый большой WAN.</p>
     <p class="text"><strong>Технологии:</strong> магистральные оптические каналы, спутники, подводные кабели.</p>
     <p class="text"><strong>Кто строит:</strong> крупные провайдеры (Tier-1, Tier-2 ISPs), Google/Meta/Amazon (свои частные WAN).</p>
   </div>
 
   <div class="card">
-    <h3>📡 WLAN — Wireless LAN</h3>
+    <h3>WLAN — Wireless LAN</h3>
     <p class="text">То же что LAN, но по воздуху (Wi-Fi). Минусы по сравнению с проводным LAN:</p>
     <ul class="bullets">
       <li>медленнее при множестве клиентов;</li>
@@ -475,7 +475,7 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="card">
-    <h3>🔐 VPN — Virtual Private Network</h3>
+    <h3>VPN — Virtual Private Network</h3>
     <p class="text"><strong>Что:</strong> «виртуальный приватный кабель», проложенный <strong>поверх</strong> публичного Интернета. Трафик шифруется в туннеле.</p>
     <p class="text"><strong>Зачем 2 типа:</strong></p>
     <ul class="bullets">
@@ -500,13 +500,13 @@ ul.bullets strong{color:var(--text);}
   </ul>
 
   <div class="card">
-    <h3>🔗 Point-to-Point</h3>
+    <h3>Point-to-Point</h3>
     <p class="text">Два устройства, один кабель. Просто, надёжно, но <strong>не масштабируется</strong>.</p>
     <div class="diagram">[ PC-A ]──────────[ PC-B ]</div>
   </div>
 
   <div class="card">
-    <h3>🚌 Bus</h3>
+    <h3>Bus</h3>
     <p class="text">Один общий кабель, к нему подключены все. <strong>Устаревшее</strong> (Ethernet 10BASE2).</p>
     <div class="diagram">[PC1]──[PC2]──[PC3]──[PC4]
        Общий кабель (bus)</div>
@@ -514,7 +514,7 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="card">
-    <h3>⭐ Star (самая популярная сегодня)</h3>
+    <h3>Star (самая популярная сегодня)</h3>
     <p class="text">Все устройства подключены к центральному узлу (switch / hub / router).</p>
     <div class="diagram">           [PC2]
              │
@@ -526,7 +526,7 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="card">
-    <h3>⭕ Ring</h3>
+    <h3>Ring</h3>
     <p class="text">Каждое устройство связано с двумя соседями, образуя кольцо. Данные идут в одну сторону.</p>
     <div class="diagram">    [PC1]───────[PC2]
       │            │
@@ -535,7 +535,7 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="card">
-    <h3>🕸️ Mesh — на этом построен Интернет</h3>
+    <h3>Mesh — на этом построен Интернет</h3>
     <p class="text">Каждое устройство связано <strong>с многими другими</strong> (не обязательно со всеми).</p>
     <div class="diagram">     [A]═══[B]
       ║  ╳  ║
@@ -546,7 +546,7 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="card">
-    <h3>🌲 Hybrid</h3>
+    <h3>Hybrid</h3>
     <p class="text">Реальные корпоративные сети — комбинация Star + Mesh + Ring. Часто древовидная структура.</p>
   </div>
 </div>
@@ -602,7 +602,7 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="card">
-    <h3>🔌 NIC (Network Interface Card)</h3>
+    <h3>NIC (Network Interface Card)</h3>
     <p class="text">Это «сетевая карта» — деталь в твоём ноутбуке/сервере, которая физически подключает к сети. Имеет уникальный <strong>MAC-адрес</strong>.</p>
 
     <p class="text"><strong>Где живёт:</strong></p>
@@ -624,7 +624,7 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="card">
-    <h3>📡 Repeater</h3>
+    <h3>Repeater</h3>
     <p class="text"><strong>Что:</strong> регенерирует и усиливает сигнал, чтобы кабель мог быть длиннее.</p>
     <p class="text"><strong>OSI:</strong> L1 (Physical). Не понимает ничего о содержимом — просто усиливает.</p>
     <p class="text"><strong>Зачем:</strong> у Ethernet есть ограничение по длине кабеля (~100 м). Repeater позволяет «продлить» сеть дальше.</p>
@@ -633,14 +633,14 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="card">
-    <h3>📢 Hub (устарел)</h3>
+    <h3>Hub (устарел)</h3>
     <p class="text">Получил пакет — отправил <strong>всем</strong> подключённым. Тупой повторитель. Все слышат всех → коллизии, security.</p>
     <div class="analogy"><strong>Аналогия:</strong> hub = громкоговоритель в комнате. Кто-то сказал — все услышали, включая тех, кому не предназначалось.</div>
     <p class="text">Сейчас не используется — везде switches.</p>
   </div>
 
   <div class="card">
-    <h3>🌉 Bridge (предок switch'а)</h3>
+    <h3>Bridge (предок switch'а)</h3>
     <p class="text"><strong>Что:</strong> соединяет и фильтрует трафик между двумя сегментами сети. Использует <strong>MAC-таблицу</strong>, чтобы решить — пропускать кадр дальше или нет.</p>
     <p class="text"><strong>OSI:</strong> L2 (Data Link).</p>
     <p class="text"><strong>Типы:</strong></p>
@@ -659,7 +659,7 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="card">
-    <h3>🔄 Switch (основа любой LAN)</h3>
+    <h3>Switch (основа любой LAN)</h3>
     <p class="text">Получил пакет — посмотрел MAC получателя — отправил <strong>только нужному порту</strong>. Хранит <strong>MAC-таблицу</strong> (порт ↔ MAC).</p>
     <div class="analogy"><strong>Аналогия:</strong> switch = почтальон в общежитии. Получил конверт с именем Васи — отнёс именно Васе, остальным жильцам не показывает.</div>
     <p class="text"><strong>Работает на L2.</strong> IP его не интересует — только MAC.</p>
@@ -672,7 +672,7 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="card">
-    <h3>🌐 Router</h3>
+    <h3>Router</h3>
     <p class="text">Получил пакет — посмотрел <strong>IP получателя</strong> — посмотрел <strong>routing table</strong> — решил, в какой следующий узел («next hop») отправить.</p>
     <div class="analogy"><strong>Аналогия:</strong> router = почтовое отделение. Получило письмо «в Москву» — отправило в международный сортировочный центр, дальше тот разберётся.</div>
     <p class="text"><strong>Работает на L3.</strong> Связывает <strong>разные сети</strong> между собой (LAN ↔ Интернет).</p>
@@ -680,19 +680,19 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="card">
-    <h3>⚡ L3 Switch (Multilayer)</h3>
+    <h3>L3 Switch (Multilayer)</h3>
     <p class="text">Switch с функциями router'а. Работает на L2 + L3. Очень быстрый (специальные ASIC-чипы), но менее гибкий чем настоящий router.</p>
     <p class="text"><strong>Где:</strong> большие корпоративные LAN с несколькими VLAN — нужно быстро маршрутизировать между VLAN'ами без покупки дорогого роутера.</p>
   </div>
 
   <div class="card">
-    <h3>🚪 Gateway</h3>
+    <h3>Gateway</h3>
     <p class="text">Устройство (или софт), которое <strong>переводит</strong> между разными протоколами. Может работать на любых уровнях OSI.</p>
     <p class="text"><strong>Примеры:</strong> домашний роутер часто называют «default gateway» (он шлюз в Интернет); API Gateway в облаке; firewall как gateway между Интернетом и внутренней сетью.</p>
   </div>
 
   <div class="card">
-    <h3>📞 Modem</h3>
+    <h3>Modem</h3>
     <p class="text"><strong>Mod</strong>ulator + <strong>Dem</strong>odulator. Переводит цифровой сигнал → аналоговый (для телефонной линии, DSL, кабельного ТВ) и обратно.</p>
     <p class="text">Сегодня чаще встретишь интегрированный <strong>modem + router</strong> от провайдера в коробке.</p>
   </div>
@@ -1186,7 +1186,7 @@ ip neigh show       <span style="color:#5C6370;"># Linux (новая коман�
     │                                  │
     │── ACK (ack=501) ────────────────→│   "Ок, жду твой 501"
     │                                  │
-    ✅ Connection established
+    Connection established
     │                                  │
     │── DATA (seq=101) ───────────────→│
     │←──────────────── ACK (ack=...) ──│</div>
@@ -1249,7 +1249,7 @@ ip neigh show       <span style="color:#5C6370;"># Linux (новая коман�
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="check"></i> Плюсы и минусы TCP</div>
     <table class="data-table">
-      <tr><th>✅ Плюсы</th><th>❌ Минусы</th></tr>
+      <tr><th>Плюсы</th><th>Минусы</th></tr>
       <tr><td>Гарантия доставки</td><td>Тяжёлый — нужен handshake</td></tr>
       <tr><td>Гарантия порядка</td><td>Больше overhead (заголовок 20-60 байт)</td></tr>
       <tr><td>Обнаружение и исправление ошибок</td><td>Медленнее для real-time</td></tr>
@@ -1800,7 +1800,7 @@ VLAN 10  ─┘
       <tr><th>Метод</th><th>Как работает</th><th>Где применяется</th></tr>
       <tr><td><strong>Manual Allocation</strong></td><td>Администратор заранее задаёт соответствие MAC → IP в таблице сервера. DHCP только передаёт назначенный адрес устройству.</td><td>Когда нужен фиксированный IP по железу (принтер с фиксированным адресом)</td></tr>
       <tr><td><strong>Automatic Allocation</strong></td><td>DHCP-сервер назначает IP из пула <strong>постоянно</strong> (без срока аренды). Адрес остаётся за устройством навсегда.</td><td>Редко &mdash; жёсткое присваивание без удобства lease</td></tr>
-      <tr><td><strong>Dynamic Allocation</strong> ⭐</td><td>DHCP <em>арендует</em> IP из пула на ограниченное время (lease). По окончании lease адрес возвращается в пул, если клиент не продлил.</td><td>Самый частый случай &mdash; стандарт для домашних и корпоративных сетей</td></tr>
+      <tr><td><strong>Dynamic Allocation</strong></td><td>DHCP <em>арендует</em> IP из пула на ограниченное время (lease). По окончании lease адрес возвращается в пул, если клиент не продлил.</td><td>Самый частый случай &mdash; стандарт для домашних и корпоративных сетей</td></tr>
     </table>
   </div>
 

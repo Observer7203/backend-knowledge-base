@@ -1552,7 +1552,7 @@ docker-compose exec mysql mysql -u root -proot laravel
 # Stop services
 docker-compose down
 
-# Remove volumes (⚠️ deletes data)
+# Remove volumes (deletes data)
 docker-compose down -v
 
 # Rebuild images

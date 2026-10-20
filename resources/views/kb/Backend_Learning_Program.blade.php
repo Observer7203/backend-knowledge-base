@@ -799,20 +799,20 @@ const interviewData = [
 ];
 
 const resourcesData = [
-  { name: "Laracasts: PHP for Beginners", url: "https://laracasts.com/series/php-for-beginners-2023-edition", cat: "php", level: "Beginner", cost: "Частично бесплатно", desc: "Лучший старт в PHP. Jeffrey Way — лучший преподаватель Laravel.", rating: "★★★★★" },
-  { name: "PHP: The Right Way", url: "https://phptherightway.com/", cat: "php", level: "All levels", cost: "Бесплатно", desc: "Референс best practices PHP. Стандарты, безопасность, тестирование.", rating: "★★★★★", free: true },
-  { name: "PHP Beginner to Advanced (Udemy)", url: "https://www.udemy.com/course/php-beginner-to-advanced/", cat: "php", level: "Beginner → Advanced", cost: "~$15", desc: "850K+ студентов. OOP, namespaces, PSR-4, MVC, 12+ проектов.", rating: "★★★★½" },
-  { name: "PHP.net Official Docs", url: "https://www.php.net/docs.php", cat: "php", level: "All levels", cost: "Бесплатно", desc: "Официальная документация с отличными комментариями сообщества.", rating: "★★★★★", free: true },
-  { name: "Laracasts (платформа)", url: "https://laracasts.com", cat: "laravel", level: "All levels", cost: "$15-20/мес", desc: "200+ курсов. Главный ресурс в экосистеме Laravel.", rating: "★★★★★" },
-  { name: "30 Days to Learn Laravel", url: "https://laracasts.com/series/30-days-to-learn-laravel-11", cat: "laravel", level: "Beginner", cost: "Бесплатно", desc: "Бесплатный курс. От нуля до рабочего приложения за 30 дней.", rating: "★★★★★", free: true },
-  { name: "Laravel Official Getting Started", url: "https://laravel.com/learn/getting-started-with-laravel", cat: "laravel", level: "Beginner", cost: "Бесплатно", desc: "Официальный 2-часовой bootcamp. Первое full-stack приложение.", rating: "★★★★★", free: true },
-  { name: "Laravel Daily", url: "https://laraveldaily.com", cat: "laravel", level: "Intermediate → Advanced", cost: "Бесплатно / Paid", desc: "Ежедневные видео, продвинутые темы, SaaS, best practices. Povilas Korop.", rating: "★★★★★" },
-  { name: "Laravel Official Docs", url: "https://laravel.com/docs", cat: "laravel", level: "All levels", cost: "Бесплатно", desc: "Лучшая документация в PHP экосистеме.", rating: "★★★★★", free: true },
-  { name: "roadmap.sh/backend", url: "https://roadmap.sh/backend", cat: "backend", level: "All levels", cost: "Бесплатно", desc: "Интерактивная карта всех тем backend разработчика.", rating: "★★★★★", free: true },
-  { name: "roadmap.sh/php", url: "https://roadmap.sh/php", cat: "backend", level: "All levels", cost: "Бесплатно", desc: "PHP-специфичный roadmap. Все темы которые нужно знать.", rating: "★★★★★", free: true },
-  { name: "DesignPatternsPHP", url: "https://designpatternsphp.readthedocs.io/", cat: "backend", level: "Intermediate", cost: "Бесплатно", desc: "Все паттерны проектирования с примерами на PHP.", rating: "★★★★½", free: true },
-  { name: "OTUS: Backend-разработчик на PHP", url: "https://otus.ru/lessons/razrabotchik-php/", cat: "ru", level: "Intermediate", cost: "Платно", desc: "5 месяцев. Командный проект, микросервисы, углублённый PHP.", rating: "★★★★" },
-  { name: "Hexlet: PHP Laravel", url: "https://ru.hexlet.io/courses/php-laravel", cat: "ru", level: "Beginner → Intermediate", cost: "Бесплатно / Paid", desc: "Routing, controllers, CRUD. Хорошая теоретическая база на русском.", rating: "★★★★", free: true },
+  { name: "Laracasts: PHP for Beginners", url: "https://laracasts.com/series/php-for-beginners-2023-edition", cat: "php", level: "Beginner", cost: "Частично бесплатно", desc: "Лучший старт в PHP. Jeffrey Way — лучший преподаватель Laravel.", rating: "5/5" },
+  { name: "PHP: The Right Way", url: "https://phptherightway.com/", cat: "php", level: "All levels", cost: "Бесплатно", desc: "Референс best practices PHP. Стандарты, безопасность, тестирование.", rating: "5/5", free: true },
+  { name: "PHP Beginner to Advanced (Udemy)", url: "https://www.udemy.com/course/php-beginner-to-advanced/", cat: "php", level: "Beginner → Advanced", cost: "~$15", desc: "850K+ студентов. OOP, namespaces, PSR-4, MVC, 12+ проектов.", rating: "4/5½" },
+  { name: "PHP.net Official Docs", url: "https://www.php.net/docs.php", cat: "php", level: "All levels", cost: "Бесплатно", desc: "Официальная документация с отличными комментариями сообщества.", rating: "5/5", free: true },
+  { name: "Laracasts (платформа)", url: "https://laracasts.com", cat: "laravel", level: "All levels", cost: "$15-20/мес", desc: "200+ курсов. Главный ресурс в экосистеме Laravel.", rating: "5/5" },
+  { name: "30 Days to Learn Laravel", url: "https://laracasts.com/series/30-days-to-learn-laravel-11", cat: "laravel", level: "Beginner", cost: "Бесплатно", desc: "Бесплатный курс. От нуля до рабочего приложения за 30 дней.", rating: "5/5", free: true },
+  { name: "Laravel Official Getting Started", url: "https://laravel.com/learn/getting-started-with-laravel", cat: "laravel", level: "Beginner", cost: "Бесплатно", desc: "Официальный 2-часовой bootcamp. Первое full-stack приложение.", rating: "5/5", free: true },
+  { name: "Laravel Daily", url: "https://laraveldaily.com", cat: "laravel", level: "Intermediate → Advanced", cost: "Бесплатно / Paid", desc: "Ежедневные видео, продвинутые темы, SaaS, best practices. Povilas Korop.", rating: "5/5" },
+  { name: "Laravel Official Docs", url: "https://laravel.com/docs", cat: "laravel", level: "All levels", cost: "Бесплатно", desc: "Лучшая документация в PHP экосистеме.", rating: "5/5", free: true },
+  { name: "roadmap.sh/backend", url: "https://roadmap.sh/backend", cat: "backend", level: "All levels", cost: "Бесплатно", desc: "Интерактивная карта всех тем backend разработчика.", rating: "5/5", free: true },
+  { name: "roadmap.sh/php", url: "https://roadmap.sh/php", cat: "backend", level: "All levels", cost: "Бесплатно", desc: "PHP-специфичный roadmap. Все темы которые нужно знать.", rating: "5/5", free: true },
+  { name: "DesignPatternsPHP", url: "https://designpatternsphp.readthedocs.io/", cat: "backend", level: "Intermediate", cost: "Бесплатно", desc: "Все паттерны проектирования с примерами на PHP.", rating: "4/5½", free: true },
+  { name: "OTUS: Backend-разработчик на PHP", url: "https://otus.ru/lessons/razrabotchik-php/", cat: "ru", level: "Intermediate", cost: "Платно", desc: "5 месяцев. Командный проект, микросервисы, углублённый PHP.", rating: "4/5" },
+  { name: "Hexlet: PHP Laravel", url: "https://ru.hexlet.io/courses/php-laravel", cat: "ru", level: "Beginner → Intermediate", cost: "Бесплатно / Paid", desc: "Routing, controllers, CRUD. Хорошая теоретическая база на русском.", rating: "4/5", free: true },
 ];
 
 const obsidianData = [

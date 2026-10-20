@@ -189,7 +189,7 @@ pre code{background:transparent;color:inherit;padding:0;border-radius:0;font-siz
         <tr><td>object</td><td><code>{}</code>, <code>[]</code>, <code>new Date()</code></td><td><code>'object'</code> / <code>'function'</code> для fn</td></tr>
       </tbody>
     </table>
-    <div class="pitfall"><strong>⚠ typeof null === 'object'</strong> — известный баг JS с 1995 года. Не исправят из соображений совместимости.</div>
+    <div class="pitfall"><strong>typeof null === 'object'</strong> — известный баг JS с 1995 года. Не исправят из соображений совместимости.</div>
   </div>
 
   <div class="subsection">
@@ -200,7 +200,7 @@ pre code{background:transparent;color:inherit;padding:0;border-radius:0;font-siz
         <tr><td>Область видимости</td><td>Функция (function scope)</td><td>Блок <code>{}</code> (block scope)</td><td>Блок <code>{}</code></td></tr>
         <tr><td>Hoisting</td><td>Да, с <code>undefined</code></td><td>Да, но TDZ (temporal dead zone) → ReferenceError</td><td>Да, но TDZ</td></tr>
         <tr><td>Переобъявление <span style="opacity:.6">(redeclaration)</span></td><td>Можно</td><td>Нельзя в том же scope</td><td>Нельзя</td></tr>
-        <tr><td>Переприсваивание <span style="opacity:.6">(reassignment)</span></td><td>Можно</td><td>Можно</td><td>❌ Нельзя (но объекты можно мутировать!)</td></tr>
+        <tr><td>Переприсваивание <span style="opacity:.6">(reassignment)</span></td><td>Можно</td><td>Можно</td><td>Нельзя (но объекты можно мутировать!)</td></tr>
         <tr><td>Когда использовать</td><td>Никогда (legacy)</td><td>Если значение меняется</td><td>По умолчанию, всегда</td></tr>
       </tbody>
     </table>
@@ -209,10 +209,10 @@ pre code{background:transparent;color:inherit;padding:0;border-radius:0;font-siz
 <span class="c-key">let</span> <span class="c-var">counter</span> = <span class="c-num">0</span>;
 <span class="c-var">counter</span>++;                     <span class="c-comment">// ok — let разрешает</span>
 
-<span class="c-comment">// ⚠ const массив/объект — ссылка неизменяема, содержимое — можно менять!</span>
+<span class="c-comment">// const массив/объект — ссылка неизменяема, содержимое — можно менять!</span>
 <span class="c-key">const</span> <span class="c-var">arr</span> = [<span class="c-num">1</span>, <span class="c-num">2</span>];
 <span class="c-var">arr</span>.<span class="c-fn">push</span>(<span class="c-num">3</span>);                <span class="c-comment">// OK — мутация массива</span>
-<span class="c-var">arr</span> = [<span class="c-num">4</span>, <span class="c-num">5</span>];              <span class="c-comment">// ❌ TypeError: Assignment to constant</span></code></pre>
+<span class="c-var">arr</span> = [<span class="c-num">4</span>, <span class="c-num">5</span>];              <span class="c-comment">// TypeError: Assignment to constant</span></code></pre>
   </div>
 
   <div class="subsection">
@@ -231,47 +231,47 @@ pre code{background:transparent;color:inherit;padding:0;border-radius:0;font-siz
     <p class="text"><strong>Переприсваивание</strong> — это <code>x = новоеЗначение</code>. Работает у <code>var</code> и <code>let</code>, запрещено у <code>const</code>:</p>
 <pre><code><span class="c-comment">// ── ПЕРЕПРИСВАИВАНИЕ (x = ...) ──</span>
 <span class="c-key">let</span> counter = <span class="c-num">0</span>;
-counter = counter + <span class="c-num">1</span>;   <span class="c-comment">// ✅ let разрешает</span>
-counter++;               <span class="c-comment">// ✅ то же самое</span>
+counter = counter + <span class="c-num">1</span>;   <span class="c-comment">// let разрешает</span>
+counter++;               <span class="c-comment">// то же самое</span>
 
 <span class="c-key">var</span> old = <span class="c-num">1</span>;
-old = <span class="c-num">2</span>;                 <span class="c-comment">// ✅ var разрешает</span>
+old = <span class="c-num">2</span>;                 <span class="c-comment">// var разрешает</span>
 
 <span class="c-key">const</span> fixed = <span class="c-num">1</span>;
-fixed = <span class="c-num">2</span>;               <span class="c-comment">// ❌ TypeError: Assignment to constant variable</span></code></pre>
+fixed = <span class="c-num">2</span>;               <span class="c-comment">// TypeError: Assignment to constant variable</span></code></pre>
 
     <div class="remember-box"><strong>Главное про <code>const</code>.</strong> Он не делает значение неизменяемым — он запрещает переприсваивать <em>саму переменную</em>. Ссылка на объект фиксируется навсегда, а содержимое по этой ссылке менять можно.</div>
 <pre><code><span class="c-comment">// ── МУТАЦИЯ: содержимое под const менять можно ──</span>
 <span class="c-key">const</span> user = { name: <span class="c-str">'Alice'</span> };
-user.name = <span class="c-str">'Bob'</span>;       <span class="c-comment">// ✅ мутация объекта</span>
-user.age = <span class="c-num">30</span>;           <span class="c-comment">// ✅ добавление поля</span>
-user = { name: <span class="c-str">'Eve'</span> };  <span class="c-comment">// ❌ переприсваивание ссылки — нельзя</span>
+user.name = <span class="c-str">'Bob'</span>;       <span class="c-comment">// мутация объекта</span>
+user.age = <span class="c-num">30</span>;           <span class="c-comment">// добавление поля</span>
+user = { name: <span class="c-str">'Eve'</span> };  <span class="c-comment">// переприсваивание ссылки — нельзя</span>
 
 <span class="c-key">const</span> arr = [<span class="c-num">1</span>, <span class="c-num">2</span>];
-arr.push(<span class="c-num">3</span>);             <span class="c-comment">// ✅ мутация</span>
-arr[<span class="c-num">0</span>] = <span class="c-num">99</span>;             <span class="c-comment">// ✅ мутация</span>
-arr = [<span class="c-num">4</span>, <span class="c-num">5</span>];            <span class="c-comment">// ❌ переприсваивание</span></code></pre>
+arr.push(<span class="c-num">3</span>);             <span class="c-comment">// мутация</span>
+arr[<span class="c-num">0</span>] = <span class="c-num">99</span>;             <span class="c-comment">// мутация</span>
+arr = [<span class="c-num">4</span>, <span class="c-num">5</span>];            <span class="c-comment">// переприсваивание</span></code></pre>
     <p class="text">Если нужна настоящая неизменяемость — <code>Object.freeze</code> (действует поверхностно, только на верхний уровень), глубокое копирование с заморозкой или библиотека вроде Immer.</p>
 
     <p class="text"><strong>Переобъявление</strong> — это второе <code>let x = …</code> для той же переменной в том же scope. Здесь правила жёстче:</p>
 <pre><code><span class="c-comment">// ── ПЕРЕОБЪЯВЛЕНИЕ в ТОМ ЖЕ scope ──</span>
 <span class="c-key">var</span> a = <span class="c-num">1</span>;
-<span class="c-key">var</span> a = <span class="c-num">2</span>;    <span class="c-comment">// ✅ var разрешает — и молча затирает прежнее</span>
+<span class="c-key">var</span> a = <span class="c-num">2</span>;    <span class="c-comment">// var разрешает — и молча затирает прежнее</span>
 
 <span class="c-key">let</span> b = <span class="c-num">1</span>;
-<span class="c-key">let</span> b = <span class="c-num">2</span>;    <span class="c-comment">// ❌ SyntaxError: Identifier 'b' has already been declared</span>
+<span class="c-key">let</span> b = <span class="c-num">2</span>;    <span class="c-comment">// SyntaxError: Identifier 'b' has already been declared</span>
 
 <span class="c-key">const</span> c = <span class="c-num">1</span>;
-<span class="c-key">const</span> c = <span class="c-num">2</span>;  <span class="c-comment">// ❌ SyntaxError</span>
+<span class="c-key">const</span> c = <span class="c-num">2</span>;  <span class="c-comment">// SyntaxError</span>
 
 <span class="c-comment">// var и let конфликтуют между собой в одном scope</span>
 <span class="c-key">var</span> x = <span class="c-num">1</span>;
-<span class="c-key">let</span> x = <span class="c-num">2</span>;    <span class="c-comment">// ❌ SyntaxError</span>
+<span class="c-key">let</span> x = <span class="c-num">2</span>;    <span class="c-comment">// SyntaxError</span>
 
 <span class="c-comment">// но во вложенном блоке это уже ДРУГАЯ переменная — затенение</span>
 <span class="c-key">let</span> y = <span class="c-num">1</span>;
 {
-  <span class="c-key">let</span> y = <span class="c-num">2</span>;  <span class="c-comment">// ✅ внешняя y не тронута</span>
+  <span class="c-key">let</span> y = <span class="c-num">2</span>;  <span class="c-comment">// внешняя y не тронута</span>
 }</code></pre>
     <div class="pitfall"><strong>Зачем запрет.</strong> <code>let</code> и <code>const</code> не дают переобъявить переменную, чтобы вы случайно не затёрли уже существующую. <code>var</code> разрешает и делает это молча — отсюда значительная часть багов в старом коде.</div>
   </div>
@@ -286,7 +286,7 @@ arr = [<span class="c-num">4</span>, <span class="c-num">5</span>];            <
 <span class="c-fn">Boolean</span>(<span class="c-str">'false'</span>);     <span class="c-comment">// true — строка "false" непустая</span>
 <span class="c-fn">Boolean</span>([]);            <span class="c-comment">// true — пустой массив truthy (!)</span>
 <span class="c-fn">Boolean</span>({});            <span class="c-comment">// true — пустой объект truthy (!)</span></code></pre>
-    <div class="pitfall"><strong>⚠ Внимание PHP vs JS:</strong> в PHP <code>[]</code> falsy. В JS <code>[]</code> truthy. Часто путают.</div>
+    <div class="pitfall"><strong>Внимание PHP vs JS:</strong> в PHP <code>[]</code> falsy. В JS <code>[]</code> truthy. Часто путают.</div>
   </div>
 </div>
 
@@ -324,7 +324,7 @@ arr = [<span class="c-num">4</span>, <span class="c-num">5</span>];            <
 <span class="c-key">function</span> <span class="c-fn">f</span>() {
   <span class="c-key">var</span> x = <span class="c-num">1</span>;
   <span class="c-key">if</span> (<span class="c-key">true</span>) {
-    <span class="c-key">var</span> x = <span class="c-num">2</span>;   <span class="c-comment">// ⚠ это ТА ЖЕ переменная, не новая</span>
+    <span class="c-key">var</span> x = <span class="c-num">2</span>;   <span class="c-comment">// это ТА ЖЕ переменная, не новая</span>
   }
   <span class="c-fn">console</span>.<span class="c-fn">log</span>(x);  <span class="c-comment">// 2</span>
 }
@@ -406,10 +406,10 @@ function outer() {
 <pre><code><span class="c-fn">console</span>.<span class="c-fn">log</span>(v);   <span class="c-comment">// undefined — var поднят и инициализирован</span>
 <span class="c-key">var</span> v = <span class="c-num">1</span>;
 
-<span class="c-fn">console</span>.<span class="c-fn">log</span>(l);   <span class="c-comment">// ❌ ReferenceError: Cannot access 'l' before initialization</span>
+<span class="c-fn">console</span>.<span class="c-fn">log</span>(l);   <span class="c-comment">// ReferenceError: Cannot access 'l' before initialization</span>
 <span class="c-key">let</span> l = <span class="c-num">1</span>;
 
-<span class="c-fn">console</span>.<span class="c-fn">log</span>(c);   <span class="c-comment">// ❌ ReferenceError — то же для const</span>
+<span class="c-fn">console</span>.<span class="c-fn">log</span>(c);   <span class="c-comment">// ReferenceError — то же для const</span>
 <span class="c-key">const</span> c = <span class="c-num">1</span>;</code></pre>
     <p class="text">TDZ (temporal dead zone, временная мёртвая зона) — промежуток от начала блока до строки объявления. Это защита: ошибка ловится сразу, вместо того чтобы код тихо продолжил работу с <code>undefined</code>, как было с <code>var</code>.</p>
     <div class="remember-box"><strong>Короткая формула.</strong> Scope — это «где переменная видна». JavaScript использует лексический scope: видимость определяется местом объявления, а поиск идёт по цепочке снизу вверх. <code>var</code> живёт в функции, <code>let</code> и <code>const</code> — в блоке. Одинаковое имя во вложенном scope — затенение, а не переобъявление.</div>
@@ -495,7 +495,7 @@ function outer() {
       </tbody>
     </table>
     <div class="pitfall">
-      <strong>⚠ <code>+</code> со строкой = конкатенация:</strong> <code>1 + "2"</code> = <code>"12"</code> (не 3). А <code>1 - "2"</code> = <code>-1</code> — минус приводит к числу.
+      <strong><code>+</code> со строкой = конкатенация:</strong> <code>1 + "2"</code> = <code>"12"</code> (не 3). А <code>1 - "2"</code> = <code>-1</code> — минус приводит к числу.
     </div>
   </div>
 
@@ -692,7 +692,7 @@ function outer() {
 <span class="c-comment">//                    export function createI18n() { ... }</span>
 <span class="c-comment">// Оба — named-экспорты, поэтому:</span>
 
-<span class="c-key">import</span> { <span class="c-fn">useI18n</span> } <span class="c-key">from</span> <span class="c-str">'vue-i18n'</span>;              <span class="c-comment">// ✓ в скобках</span>
+<span class="c-key">import</span> { <span class="c-fn">useI18n</span> } <span class="c-key">from</span> <span class="c-str">'vue-i18n'</span>;              <span class="c-comment">// в скобках</span>
 <span class="c-key">import</span> { <span class="c-fn">useI18n</span>, <span class="c-fn">createI18n</span> } <span class="c-key">from</span> <span class="c-str">'vue-i18n'</span>;  <span class="c-comment">// несколько сразу</span>
 <span class="c-key">import</span> { <span class="c-fn">useI18n</span> <span class="c-key">as</span> <span class="c-fn">useLocale</span> } <span class="c-key">from</span> <span class="c-str">'vue-i18n'</span>; <span class="c-comment">// переименовали</span>
 
@@ -708,7 +708,7 @@ function outer() {
       <li>В консоли (для установленного пакета): <code>import * as M from 'lib'; console.log(M)</code> — все именованные экспорты как поля объекта.</li>
     </ul>
 
-    <div class="pitfall"><strong>⚠ Классическая ошибка:</strong> <code>import useI18n from 'vue-i18n'</code> (без скобок) → в переменной <code>useI18n</code> окажется <code>undefined</code> либо весь модуль-объект (зависит от bundler'а). Вылезет ошибка типа <em>«useI18n is not a function»</em>. Проверяй скобки первым делом.</div>
+    <div class="pitfall"><strong>Классическая ошибка:</strong> <code>import useI18n from 'vue-i18n'</code> (без скобок) → в переменной <code>useI18n</code> окажется <code>undefined</code> либо весь модуль-объект (зависит от bundler'а). Вылезет ошибка типа <em>«useI18n is not a function»</em>. Проверяй скобки первым делом.</div>
 
     <h3 class="subsection-title" style="margin-top:18px">Откуда вообще берётся имя <code>useI18n</code></h3>
     <p style="color:var(--text2);line-height:1.75;margin-bottom:10px;font-size:13.5px">
@@ -808,7 +808,7 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
       </tbody>
     </table>
 
-    <div class="pitfall"><strong>⚠ Смесь двух форматов.</strong> В Node-мире бывает: пакет опубликован в CommonJS, а ты в проекте пишешь ESM (или наоборот). Отсюда ошибки вида <code>Cannot use import statement outside a module</code> или <code>ERR_REQUIRE_ESM</code>. Лечится: в <code>package.json</code> поставить <code>"type": "module"</code> (весь проект ESM), или использовать динамический <code>import()</code> для загрузки ESM-пакета из CJS-кода.</div>
+    <div class="pitfall"><strong>Смесь двух форматов.</strong> В Node-мире бывает: пакет опубликован в CommonJS, а ты в проекте пишешь ESM (или наоборот). Отсюда ошибки вида <code>Cannot use import statement outside a module</code> или <code>ERR_REQUIRE_ESM</code>. Лечится: в <code>package.json</code> поставить <code>"type": "module"</code> (весь проект ESM), или использовать динамический <code>import()</code> для загрузки ESM-пакета из CJS-кода.</div>
 
     <div class="remember-box">
       <strong>Итог по модулям:</strong>
@@ -889,11 +889,11 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
       </tbody>
     </table>
 
-    <div class="pitfall"><strong>⚠ Только префикс <code>VITE_</code>.</strong> Переменные без префикса — <em>не попадут</em> в клиентский бандл (это защита: <code>DB_PASSWORD</code> не должен утечь в браузер). Хочешь чтобы клиент видел — префикс <code>VITE_</code>. Хочешь скрыть — оставляй без префикса, использовать только на сервере.</div>
+    <div class="pitfall"><strong>Только префикс <code>VITE_</code>.</strong> Переменные без префикса — <em>не попадут</em> в клиентский бандл (это защита: <code>DB_PASSWORD</code> не должен утечь в браузер). Хочешь чтобы клиент видел — префикс <code>VITE_</code>. Хочешь скрыть — оставляй без префикса, использовать только на сервере.</div>
 
-    <div class="pitfall"><strong>⚠ <code>import.meta.env</code> — фича Vite, не стандарт JS.</strong> В обычном Node.js без Vite её нет. Аналог в webpack — <code>process.env.REACT_APP_*</code> (Create React App), в Next.js — <code>process.env.NEXT_PUBLIC_*</code>. Идея та же: префикс = «можно в клиент».</div>
+    <div class="pitfall"><strong><code>import.meta.env</code> — фича Vite, не стандарт JS.</strong> В обычном Node.js без Vite её нет. Аналог в webpack — <code>process.env.REACT_APP_*</code> (Create React App), в Next.js — <code>process.env.NEXT_PUBLIC_*</code>. Идея та же: префикс = «можно в клиент».</div>
 
-    <div class="pitfall"><strong>⚠ Значения подставляются <em>при сборке</em>, не в рантайме.</strong> Изменил <code>.env</code> — надо пересобрать (<code>npm run build</code>) или перезапустить dev-сервер. Хочешь менять URL API без пересборки — читай его через отдельный runtime-конфиг (<code>/config.json</code>, загружаемый через fetch при старте).</div>
+    <div class="pitfall"><strong>Значения подставляются <em>при сборке</em>, не в рантайме.</strong> Изменил <code>.env</code> — надо пересобрать (<code>npm run build</code>) или перезапустить dev-сервер. Хочешь менять URL API без пересборки — читай его через отдельный runtime-конфиг (<code>/config.json</code>, загружаемый через fetch при старте).</div>
   </div>
 
   <div class="subsection">
@@ -933,7 +933,7 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
     <span class="c-key">case</span> <span class="c-str">'active'</span>:
     <span class="c-key">case</span> <span class="c-str">'pending'</span>:              <span class="c-comment">// fall-through — оба обрабатываются одинаково</span>
         <span class="c-fn">handleActive</span>();
-        <span class="c-key">break</span>;                    <span class="c-comment">// ⚠ обязателен break, иначе идёт дальше</span>
+        <span class="c-key">break</span>;                    <span class="c-comment">// обязателен break, иначе идёт дальше</span>
     <span class="c-key">case</span> <span class="c-str">'blocked'</span>:
         <span class="c-fn">handleBlocked</span>();
         <span class="c-key">break</span>;
@@ -968,7 +968,7 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
 <span class="c-key">for</span> (<span class="c-key">const</span> [<span class="c-var">key</span>, <span class="c-var">value</span>] <span class="c-key">of</span> <span class="c-fn">Object</span>.<span class="c-fn">entries</span>(<span class="c-var">user</span>)) {
     <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-var">key</span>, <span class="c-var">value</span>);
 }</code></pre>
-    <div class="pitfall"><strong>⚠ forEach нельзя прервать</strong> — <code>break</code>/<code>continue</code>/<code>return</code> НЕ работают как ожидаешь. Если нужен break — используй <code>for...of</code> или <code>some()</code>/<code>find()</code>.</div>
+    <div class="pitfall"><strong>forEach нельзя прервать</strong> — <code>break</code>/<code>continue</code>/<code>return</code> НЕ работают как ожидаешь. Если нужен break — используй <code>for...of</code> или <code>some()</code>/<code>find()</code>.</div>
   </div>
 </div>
 
@@ -1001,17 +1001,17 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
     <pre><code><span class="c-key">class</span> <span class="c-type">User</span> {
     <span class="c-fn">constructor</span>(<span class="c-var">name</span>) { <span class="c-key">this</span>.<span class="c-var">name</span> = <span class="c-var">name</span>; }
 
-    <span class="c-comment">// ❌ Обычная function теряет this в setTimeout</span>
+    <span class="c-comment">// Обычная function теряет this в setTimeout</span>
     <span class="c-fn">greetBad</span>() {
         <span class="c-fn">setTimeout</span>(<span class="c-key">function</span>() {
             <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-key">this</span>.<span class="c-var">name</span>);      <span class="c-comment">// undefined! this = window/undefined</span>
         }, <span class="c-num">100</span>);
     }
 
-    <span class="c-comment">// ✅ Arrow function захватывает this из класса</span>
+    <span class="c-comment">// Arrow function захватывает this из класса</span>
     <span class="c-fn">greetGood</span>() {
         <span class="c-fn">setTimeout</span>(() =&gt; {
-            <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-key">this</span>.<span class="c-var">name</span>);      <span class="c-comment">// 'Alice' ✓</span>
+            <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-key">this</span>.<span class="c-var">name</span>);      <span class="c-comment">// 'Alice'</span>
         }, <span class="c-num">100</span>);
     }
 }</code></pre>
@@ -1183,7 +1183,7 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
       </tbody>
     </table>
 
-    <div class="pitfall"><strong>⚠ Vue-специфика:</strong> реактивные значения (<code>ref</code> / <code>reactive</code>) при <em>обычной</em> деструктуризации <strong>теряют реактивность</strong>. Решения — <code>toRefs()</code> для reactive-объектов, <code>storeToRefs()</code> для Pinia. Подробно — в разделе Vue → Реактивность.</div>
+    <div class="pitfall"><strong>Vue-специфика:</strong> реактивные значения (<code>ref</code> / <code>reactive</code>) при <em>обычной</em> деструктуризации <strong>теряют реактивность</strong>. Решения — <code>toRefs()</code> для reactive-объектов, <code>storeToRefs()</code> для Pinia. Подробно — в разделе Vue → Реактивность.</div>
   </div>
 
   <div class="subsection">
@@ -1201,7 +1201,7 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
 
 <span class="c-comment">// Старый способ deep copy (потеряет функции, Date):</span>
 <span class="c-key">const</span> <span class="c-var">deep2</span> = <span class="c-fn">JSON</span>.<span class="c-fn">parse</span>(<span class="c-fn">JSON</span>.<span class="c-fn">stringify</span>(<span class="c-var">user</span>));</code></pre>
-    <div class="pitfall"><strong>⚠ spread делает shallow copy.</strong> Вложенные объекты остаются по ссылке — мутация вложенного затронет оригинал!</div>
+    <div class="pitfall"><strong>spread делает shallow copy.</strong> Вложенные объекты остаются по ссылке — мутация вложенного затронет оригинал!</div>
   </div>
 </div>
 
@@ -1232,7 +1232,7 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
     <h3 class="subsection-title">Изменение элемента</h3>
     <pre><code><span class="c-comment">// Текст vs HTML</span>
 <span class="c-var">el</span>.<span class="c-var">textContent</span> = <span class="c-str">'Привет'</span>;             <span class="c-comment">// безопасно (экранирует HTML)</span>
-<span class="c-var">el</span>.<span class="c-var">innerHTML</span> = <span class="c-str">'&lt;strong&gt;Привет&lt;/strong&gt;'</span>;  <span class="c-comment">// ⚠ XSS если данные от юзера!</span>
+<span class="c-var">el</span>.<span class="c-var">innerHTML</span> = <span class="c-str">'&lt;strong&gt;Привет&lt;/strong&gt;'</span>;  <span class="c-comment">// XSS если данные от юзера!</span>
 
 <span class="c-comment">// Атрибуты</span>
 <span class="c-var">el</span>.<span class="c-fn">setAttribute</span>(<span class="c-str">'data-id'</span>, <span class="c-str">'42'</span>);
@@ -1254,7 +1254,7 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
 <span class="c-var">input</span>.<span class="c-var">value</span>;                            <span class="c-comment">// значение input</span>
 <span class="c-var">checkbox</span>.<span class="c-var">checked</span>;                       <span class="c-comment">// bool для checkbox</span>
 <span class="c-var">select</span>.<span class="c-var">value</span>;                           <span class="c-comment">// выбранная option</span></code></pre>
-    <div class="pitfall"><strong>⚠ innerHTML + user input = XSS.</strong> Всегда используй <code>textContent</code> для user-generated текста.</div>
+    <div class="pitfall"><strong>innerHTML + user input = XSS.</strong> Всегда используй <code>textContent</code> для user-generated текста.</div>
   </div>
 
   <div class="subsection">
@@ -1351,12 +1351,12 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
   <div class="subsection">
     <h3 class="subsection-title">Event bubbling + delegation</h3>
     <p class="text">Bubbling — событие идёт от target вверх по DOM. Delegation — вешаем listener на родителя, а не на каждый child.</p>
-    <pre><code><span class="c-comment">// ❌ Плохо: listener на каждую кнопку (100 listeners для 100 кнопок)</span>
+    <pre><code><span class="c-comment">// Плохо: listener на каждую кнопку (100 listeners для 100 кнопок)</span>
 <span class="c-fn">document</span>.<span class="c-fn">querySelectorAll</span>(<span class="c-str">'.delete-btn'</span>).<span class="c-fn">forEach</span>(<span class="c-var">btn</span> =&gt; {
     <span class="c-var">btn</span>.<span class="c-fn">addEventListener</span>(<span class="c-str">'click'</span>, <span class="c-fn">handleDelete</span>);
 });
 
-<span class="c-comment">// ✅ Хорошо: 1 listener на родителя (delegation)</span>
+<span class="c-comment">// Хорошо: 1 listener на родителя (delegation)</span>
 <span class="c-fn">document</span>.<span class="c-fn">querySelector</span>(<span class="c-str">'#user-list'</span>).<span class="c-fn">addEventListener</span>(<span class="c-str">'click'</span>, (<span class="c-var">e</span>) =&gt; {
     <span class="c-key">if</span> (<span class="c-var">e</span>.<span class="c-var">target</span>.<span class="c-fn">matches</span>(<span class="c-str">'.delete-btn'</span>)) {
         <span class="c-fn">handleDelete</span>(<span class="c-var">e</span>);
@@ -1472,7 +1472,7 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
 }
 <span class="c-key">const</span> <span class="c-var">data</span> = <span class="c-key">await</span> <span class="c-var">res</span>.<span class="c-fn">json</span>();</code></pre>
     <div class="pitfall">
-      <strong>⚠ fetch НЕ бросает error на 4xx/5xx!</strong> Только на network fail. Всегда проверяй <code>res.ok</code> вручную.
+      <strong>fetch НЕ бросает error на 4xx/5xx!</strong> Только на network fail. Всегда проверяй <code>res.ok</code> вручную.
     </div>
   </div>
 
@@ -1586,16 +1586,16 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
 <span class="c-comment">// stringify тоже может бросить — циклическая ссылка или BigInt</span>
 <span class="c-key">const</span> <span class="c-var">obj</span> = {};
 <span class="c-var">obj</span>.<span class="c-var">self</span> = <span class="c-var">obj</span>;                     <span class="c-comment">// объект ссылается на себя</span>
-<span class="c-fn">JSON</span>.<span class="c-fn">stringify</span>(<span class="c-var">obj</span>);              <span class="c-comment">// ❌ TypeError: Converting circular structure to JSON</span>
+<span class="c-fn">JSON</span>.<span class="c-fn">stringify</span>(<span class="c-var">obj</span>);              <span class="c-comment">// TypeError: Converting circular structure to JSON</span>
 
-<span class="c-fn">JSON</span>.<span class="c-fn">stringify</span>({ <span class="c-var">n</span>: <span class="c-num">10n</span> });     <span class="c-comment">// ❌ TypeError: Do not know how to serialize a BigInt</span></code></pre>
+<span class="c-fn">JSON</span>.<span class="c-fn">stringify</span>({ <span class="c-var">n</span>: <span class="c-num">10n</span> });     <span class="c-comment">// TypeError: Do not know how to serialize a BigInt</span></code></pre>
   </div>
 
   <div class="subsection">
     <h3 class="subsection-title">Практические приёмы</h3>
     <pre><code><span class="c-comment">// 1. Клонировать объект (deep clone)</span>
 <span class="c-key">const</span> <span class="c-var">clone</span> = <span class="c-fn">JSON</span>.<span class="c-fn">parse</span>(<span class="c-fn">JSON</span>.<span class="c-fn">stringify</span>(<span class="c-var">obj</span>));
-<span class="c-comment">// ⚠ Теряет функции, Date превращается в строку, Symbol теряется
+<span class="c-comment">// Теряет функции, Date превращается в строку, Symbol теряется
 // Для полного клона — structuredClone(obj) (современно)</span>
 
 <span class="c-comment">// 2. Сохранить в localStorage</span>
@@ -1615,7 +1615,7 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
 
 <span class="c-comment">// 5. Сравнить два объекта поверхностно</span>
 <span class="c-fn">JSON</span>.<span class="c-fn">stringify</span>(<span class="c-var">a</span>) === <span class="c-fn">JSON</span>.<span class="c-fn">stringify</span>(<span class="c-var">b</span>);
-<span class="c-comment">// ⚠ Порядок ключей важен, работает не всегда идеально</span></code></pre>
+<span class="c-comment">// Порядок ключей важен, работает не всегда идеально</span></code></pre>
   </div>
 
   <div class="subsection">
@@ -1652,9 +1652,9 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
     <table class="data-table">
       <thead><tr><th>Аспект</th><th>Статус</th></tr></thead>
       <tbody>
-        <tr><td>Новые проекты</td><td>❌ Не используют — vanilla JS + fetch API покрывают всё</td></tr>
-        <tr><td>Legacy проекты</td><td>✅ Активно поддерживаются, замена стоит миллионы</td></tr>
-        <tr><td>WordPress и другие CMS</td><td>✅ Встроены — при работе с плагинами jQuery неизбежен</td></tr>
+        <tr><td>Новые проекты</td><td>Не используют — vanilla JS + fetch API покрывают всё</td></tr>
+        <tr><td>Legacy проекты</td><td>Активно поддерживаются, замена стоит миллионы</td></tr>
+        <tr><td>WordPress и другие CMS</td><td>Встроены — при работе с плагинами jQuery неизбежен</td></tr>
       </tbody>
     </table>
     <div class="remember-box">
@@ -1728,7 +1728,7 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
 <span class="c-fn">$</span>(<span class="c-str">'.msg'</span>).<span class="c-fn">text</span>(<span class="c-str">'Привет'</span>);              <span class="c-comment">// установить (безопасно, экранирует HTML)</span>
 
 <span class="c-fn">$</span>(<span class="c-str">'.msg'</span>).<span class="c-fn">html</span>();                       <span class="c-comment">// прочитать HTML</span>
-<span class="c-fn">$</span>(<span class="c-str">'.msg'</span>).<span class="c-fn">html</span>(<span class="c-str">'&lt;b&gt;Bold&lt;/b&gt;'</span>);          <span class="c-comment">// ⚠ XSS если данные от юзера</span>
+<span class="c-fn">$</span>(<span class="c-str">'.msg'</span>).<span class="c-fn">html</span>(<span class="c-str">'&lt;b&gt;Bold&lt;/b&gt;'</span>);          <span class="c-comment">// XSS если данные от юзера</span>
 
 <span class="c-fn">$</span>(<span class="c-str">'input'</span>).<span class="c-fn">val</span>();                      <span class="c-comment">// значение input</span>
 <span class="c-fn">$</span>(<span class="c-str">'input'</span>).<span class="c-fn">val</span>(<span class="c-str">'new value'</span>);           <span class="c-comment">// установить</span></code></pre>
@@ -1742,7 +1742,7 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
 
 <span class="c-comment">// data-* атрибуты</span>
 <span class="c-fn">$</span>(<span class="c-str">'.item'</span>).<span class="c-fn">data</span>(<span class="c-str">'id'</span>);                   <span class="c-comment">// читает data-id</span>
-<span class="c-fn">$</span>(<span class="c-str">'.item'</span>).<span class="c-fn">data</span>(<span class="c-str">'id'</span>, <span class="c-num">42</span>);               <span class="c-comment">// ⚠ ставит в кеш jQuery, не в DOM! attr() лучше для DOM</span></code></pre>
+<span class="c-fn">$</span>(<span class="c-str">'.item'</span>).<span class="c-fn">data</span>(<span class="c-str">'id'</span>, <span class="c-num">42</span>);               <span class="c-comment">// ставит в кеш jQuery, не в DOM! attr() лучше для DOM</span></code></pre>
   </div>
 
   <div class="subsection">
@@ -2093,7 +2093,7 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
       </tbody>
     </table>
     <div class="pitfall">
-      <strong>⚠</strong> <code>$_POST</code> заполняется только для <code>Content-Type: application/x-www-form-urlencoded</code> или <code>multipart/form-data</code>. Если фронт шлёт JSON (<code>application/json</code>) — <code>$_POST</code> будет ПУСТ, нужно читать через <code>php://input</code>.
+      <strong></strong> <code>$_POST</code> заполняется только для <code>Content-Type: application/x-www-form-urlencoded</code> или <code>multipart/form-data</code>. Если фронт шлёт JSON (<code>application/json</code>) — <code>$_POST</code> будет ПУСТ, нужно читать через <code>php://input</code>.
     </div>
   </div>
 </div>
@@ -2244,7 +2244,7 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
 
     <span class="c-key">const</span> <span class="c-var">res</span> = <span class="c-key">await</span> <span class="c-fn">fetch</span>(<span class="c-str">'/upload.php'</span>, {
         <span class="c-var">method</span>: <span class="c-str">'POST'</span>,
-        <span class="c-var">body</span>: <span class="c-var">fd</span>,     <span class="c-comment">// ⚠ Content-Type НЕ указываем — браузер сам поставит multipart/form-data с boundary</span>
+        <span class="c-var">body</span>: <span class="c-var">fd</span>,     <span class="c-comment">// Content-Type НЕ указываем — браузер сам поставит multipart/form-data с boundary</span>
     });
     <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-key">await</span> <span class="c-var">res</span>.<span class="c-fn">json</span>());
 });
@@ -2260,8 +2260,8 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
     <span class="c-var">url</span>: <span class="c-str">'/upload.php'</span>,
     <span class="c-var">method</span>: <span class="c-str">'POST'</span>,
     <span class="c-var">data</span>: <span class="c-var">fd</span>,
-    <span class="c-var">processData</span>: <span class="c-key">false</span>,    <span class="c-comment">// ⚠ иначе jQuery попробует преобразовать FormData в query string</span>
-    <span class="c-var">contentType</span>: <span class="c-key">false</span>,    <span class="c-comment">// ⚠ иначе jQuery поставит свой, а нужен multipart с boundary</span>
+    <span class="c-var">processData</span>: <span class="c-key">false</span>,    <span class="c-comment">// иначе jQuery попробует преобразовать FormData в query string</span>
+    <span class="c-var">contentType</span>: <span class="c-key">false</span>,    <span class="c-comment">// иначе jQuery поставит свой, а нужен multipart с boundary</span>
     <span class="c-var">success</span>: <span class="c-key">function</span>(<span class="c-var">res</span>) { <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-var">res</span>); },
 });</code></pre>
   </div>
@@ -2344,7 +2344,7 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
 &lt;/<span class="c-key">script</span>&gt;</code></pre>
 
     <div class="pitfall">
-      <strong>⚠ XSS-риск:</strong> если <code>$user</code> содержит строку типа <code>&lt;/script&gt;&lt;script&gt;alert(1)&lt;/script&gt;</code> — она разорвёт твой скрипт. <br>
+      <strong>XSS-риск:</strong> если <code>$user</code> содержит строку типа <code>&lt;/script&gt;&lt;script&gt;alert(1)&lt;/script&gt;</code> — она разорвёт твой скрипт. <br>
       Флаги <code>JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT</code> экранируют опасные символы.
     </div>
   </div>
@@ -2582,7 +2582,7 @@ grep -rn <span class="c-str">'^export'</span> node_modules/vue-i18n/dist/*.mjs |
 });</code></pre>
 
     <div class="pitfall">
-      <strong>⚠ После длительного простоя</strong> — token может протухнуть (session expired). Правильно ловить 419 и делать <code>window.location.reload()</code> для получения нового.
+      <strong>После длительного простоя</strong> — token может протухнуть (session expired). Правильно ловить 419 и делать <code>window.location.reload()</code> для получения нового.
     </div>
   </div>
 </div>

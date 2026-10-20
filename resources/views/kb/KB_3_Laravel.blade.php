@@ -397,7 +397,7 @@ ul.bullets strong{color:var(--text);}
     <div class="subsection-title"><i data-lucide="wand-2"></i> Главная мысль: объекты собирает контейнер, а не ты</div>
     <p class="text">Это самое важное, что нужно понять про Laravel. Ты <strong>нигде не пишешь <code>new</code></strong> для контроллеров, сервисов, репозиториев и джобов. Их создаёт контейнер, попутно разрешая всю цепочку зависимостей.</p>
 
-<pre><code><span class="c-comment">// ❌ Как это выглядело бы без контейнера — ручная сборка графа объектов</span>
+<pre><code><span class="c-comment">// Как это выглядело бы без контейнера — ручная сборка графа объектов</span>
 <span class="c-var">$pdo</span>        = <span class="c-key">new</span> <span class="c-type">PDO</span>(<span class="c-var">$dsn</span>, <span class="c-var">$user</span>, <span class="c-var">$pass</span>);
 <span class="c-var">$connection</span> = <span class="c-key">new</span> <span class="c-type">Connection</span>(<span class="c-var">$pdo</span>);
 <span class="c-var">$repository</span> = <span class="c-key">new</span> <span class="c-type">UserRepository</span>(<span class="c-var">$connection</span>);
@@ -406,7 +406,7 @@ ul.bullets strong{color:var(--text);}
 <span class="c-var">$response</span>   = <span class="c-var">$controller</span>-&gt;<span class="c-fn">store</span>(<span class="c-var">$request</span>);
 <span class="c-comment">// добавил зависимость в UserRepository — правь каждое место, где он создаётся</span>
 
-<span class="c-comment">// ✓ Как это в Laravel — объявляешь, что нужно, остальное не твоя забота</span>
+<span class="c-comment">// Как это в Laravel — объявляешь, что нужно, остальное не твоя забота</span>
 <span class="c-key">class</span> <span class="c-type">UserController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
 {
     <span class="c-key">public function</span> <span class="c-fn">__construct</span>(
@@ -857,7 +857,7 @@ $response->send()  →  браузер</div>
    │
    ▼
 2. if (isset($instances[$abstract]))  ──→  return $instances[$abstract]
-   │                                       ⚠ ранний выход: НИ ОДНО
+   │                                       ранний выход: НИ ОДНО
    │                                          событие не сработает
    ▼
 3. build($concrete)                        ← рефлексия + рекурсия по зависимостям
@@ -2065,7 +2065,7 @@ has no registered handler.</code></pre>
     <div class="card">
       <h3>DI (Dependency Injection)</h3>
       <p class="text"><strong>Внедрение зависимостей</strong> — зависимости не создаются <em>внутри</em> класса, а передаются <em>извне</em>. Класс перестаёт «знать», как строить свои сервисы — он их только принимает и использует.</p>
-      <pre><code><span class="c-comment">// ❌ Без DI — класс сам создаёт зависимость</span>
+      <pre><code><span class="c-comment">// Без DI — класс сам создаёт зависимость</span>
 <span class="c-key">class</span> <span class="c-type">UserService</span> {
     <span class="c-key">public function</span> <span class="c-fn">save</span>() {
         <span class="c-var">$db</span> = <span class="c-key">new</span> <span class="c-type">PDO</span>(<span class="c-str">'mysql:...'</span>);   <span class="c-comment">// жёстко привязан к PDO</span>
@@ -2073,7 +2073,7 @@ has no registered handler.</code></pre>
     }
 }
 
-<span class="c-comment">// ✓ С DI — зависимость передаётся снаружи</span>
+<span class="c-comment">// С DI — зависимость передаётся снаружи</span>
 <span class="c-key">class</span> <span class="c-type">UserService</span> {
     <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">private</span> <span class="c-type">PDO</span> <span class="c-var">$db</span>) {}
     <span class="c-key">public function</span> <span class="c-fn">save</span>() {
@@ -2647,7 +2647,7 @@ has no registered handler.</code></pre>
     </div>
 
     <div class="pitfall">
-      <strong>⚠ Типичная ошибка:</strong> вызвать <code>Route::get(...)</code> или <code>DB::table(...)</code> в <code>register()</code>. Роутер и БД ещё не зарегистрированы → <code>BindingResolutionException</code> или тихая поломка. Всё что использует другие сервисы — только в <code>boot()</code>.
+      <strong>Типичная ошибка:</strong> вызвать <code>Route::get(...)</code> или <code>DB::table(...)</code> в <code>register()</code>. Роутер и БД ещё не зарегистрированы → <code>BindingResolutionException</code> или тихая поломка. Всё что использует другие сервисы — только в <code>boot()</code>.
     </div>
   </div>
 </div>
@@ -2673,18 +2673,18 @@ has no registered handler.</code></pre>
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика: scoped bindings vs ручная проверка</div>
-<pre><code><span class="c-comment">// ❌ Уязвимо: без кастомного ключа и без scopeBindings() — скоупа НЕТ</span>
+<pre><code><span class="c-comment">// Уязвимо: без кастомного ключа и без scopeBindings() — скоупа НЕТ</span>
 <span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}/posts/{post}'</span>, <span class="c-key">function</span> (<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>) {
     <span class="c-comment">// Post::find($id) глобально — чужой пост откроется</span>
     <span class="c-key">return</span> <span class="c-var">$post</span>;
 });
 
-<span class="c-comment">// ✓ Вариант 1: явно включить скоуп</span>
+<span class="c-comment">// Вариант 1: явно включить скоуп</span>
 <span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}/posts/{post}'</span>, <span class="c-key">function</span> (<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>) {
     <span class="c-key">return</span> <span class="c-var">$post</span>;
 })-&gt;<span class="c-fn">scopeBindings</span>();
 
-<span class="c-comment">// ✓ Вариант 2: кастомный ключ — скоуп включается САМ, без scopeBindings()</span>
+<span class="c-comment">// Вариант 2: кастомный ключ — скоуп включается САМ, без scopeBindings()</span>
 <span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/users/{user}/posts/{post:slug}'</span>, <span class="c-key">function</span> (<span class="c-type">User</span> <span class="c-var">$user</span>, <span class="c-type">Post</span> <span class="c-var">$post</span>) {
     <span class="c-key">return</span> <span class="c-var">$post</span>;
 });
@@ -2771,7 +2771,7 @@ has no registered handler.</code></pre>
 <span class="c-comment">// routes/web.php</span>
 <span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/profile/{id}'</span>, <span class="c-type">ShowProfile</span>::<span class="c-key">class</span>);
 <span class="c-comment">// Laravel сам создаст экземпляр и вызовет __invoke()
-// ✓ Кешируется при route:cache без сериализации — в кеш ложится имя класса</span></code></pre>
+// Кешируется при route:cache без сериализации — в кеш ложится имя класса</span></code></pre>
     </div>
 
     <div class="card">
@@ -3070,7 +3070,7 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
     <div class="subsection-title"><i data-lucide="feather"></i> Тонкий vs толстый контроллер</div>
     <p class="text">Ключевой архитектурный принцип: <strong>контроллер должен быть тонким</strong>. Его задача — <em>принять запрос, делегировать работу, вернуть ответ</em>. Всю бизнес-логику вынести в отдельные классы (Actions / Services).</p>
 
-    <p class="text"><strong>❌ Толстый контроллер</strong> — плохо: логика размазана, тяжело тестировать, невозможно переиспользовать:</p>
+    <p class="text"><strong>Толстый контроллер</strong> — плохо: логика размазана, тяжело тестировать, невозможно переиспользовать:</p>
 <pre><code><span class="c-key">class</span> <span class="c-type">OrderController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
 {
     <span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>)
@@ -3099,7 +3099,7 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
     }
 }</code></pre>
 
-    <p class="text"><strong>✅ Тонкий контроллер</strong> — хорошо: только оркестрация, вся логика в Action:</p>
+    <p class="text"><strong>Тонкий контроллер</strong> — хорошо: только оркестрация, вся логика в Action:</p>
 <pre><code><span class="c-key">class</span> <span class="c-type">OrderController</span> <span class="c-key">extends</span> <span class="c-type">Controller</span>
 {
     <span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">StoreOrderRequest</span> <span class="c-var">$request</span>, <span class="c-type">PlaceOrder</span> <span class="c-var">$action</span>)
@@ -3112,7 +3112,7 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
 
     <p class="text"><strong>Что контроллер делает</strong>, а что нет:</p>
     <table class="data-table">
-      <thead><tr><th>✅ Контроллер должен</th><th>❌ Контроллер НЕ должен</th></tr></thead>
+      <thead><tr><th>Контроллер должен</th><th>Контроллер НЕ должен</th></tr></thead>
       <tbody>
         <tr><td>Принимать запрос через FormRequest</td><td>Валидировать бизнес-правила («сумма &gt; 100»)</td></tr>
         <tr><td>Вызвать Action / Service</td><td>Работать с БД напрямую (кроме простых <code>Model::find</code>)</td></tr>
@@ -3600,7 +3600,7 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
 }</code></pre>
 
     <div class="pitfall">
-      <strong>⚠ В Laravel Repository часто избыточен.</strong> Eloquent сам по себе — Active Record, и уже даёт удобное API. Оборачивать <code>User::find()</code> в <code>UserRepository::find()</code> — часто <em>писать один класс поверх другого</em> без выгоды.
+      <strong>В Laravel Repository часто избыточен.</strong> Eloquent сам по себе — Active Record, и уже даёт удобное API. Оборачивать <code>User::find()</code> в <code>UserRepository::find()</code> — часто <em>писать один класс поверх другого</em> без выгоды.
       <p style="margin-top:8px"><strong>Когда Repository оправдан:</strong></p>
       <ul style="margin:6px 0 0 20px;line-height:1.7">
         <li>Планируется реальная замена БД (не гипотетическая): Postgres → MongoDB, БД → внешний API.</li>
@@ -4054,14 +4054,14 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
     <table class="data-table">
       <thead><tr><th>SAPI</th><th>Как работает <code>terminate</code></th><th>Пользователь ждёт?</th></tr></thead>
       <tbody>
-        <tr><td>PHP-FPM (nginx/apache prod)</td><td>Асинхронно через <code>fastcgi_finish_request()</code> — response уходит клиенту, PHP-процесс продолжает работать</td><td>❌ Нет</td></tr>
-        <tr><td>Apache mod_php</td><td>Обычно синхронно — <code>fastcgi_finish_request()</code> недоступен</td><td>✅ Да</td></tr>
-        <tr><td><code>php artisan serve</code> (built-in)</td><td>Синхронно — нет асинхронности</td><td>✅ Да</td></tr>
+        <tr><td>PHP-FPM (nginx/apache prod)</td><td>Асинхронно через <code>fastcgi_finish_request()</code> — response уходит клиенту, PHP-процесс продолжает работать</td><td>Нет</td></tr>
+        <tr><td>Apache mod_php</td><td>Обычно синхронно — <code>fastcgi_finish_request()</code> недоступен</td><td>Да</td></tr>
+        <tr><td><code>php artisan serve</code> (built-in)</td><td>Синхронно — нет асинхронности</td><td>Да</td></tr>
         <tr><td>Laravel Octane (Swoole/RoadRunner)</td><td>Свои события <code>RequestTerminated</code>, поведение зависит от драйвера</td><td>Обычно нет</td></tr>
       </tbody>
     </table>
     <div class="pitfall">
-      <strong>⚠</strong> На <code>artisan serve</code> и в тестах <code>terminate</code> удлиняет ответ — не полагайтесь на «незаметность» тяжёлой работы. В production под FPM всё нормально.
+      <strong></strong> На <code>artisan serve</code> и в тестах <code>terminate</code> удлиняет ответ — не полагайтесь на «незаметность» тяжёлой работы. В production под FPM всё нормально.
     </div>
   </div>
 
@@ -5021,15 +5021,15 @@ App\Http\Requests\StorePostRequest      ← твой класс
 
 <span class="c-comment">// Атакующий шлёт: {"title": "X", "content": "Y", "is_admin": true, "user_id": 999}</span>
 
-<span class="c-var">$request</span>-&gt;<span class="c-fn">all</span>();          <span class="c-comment">// ❌ вернёт ВСЁ, включая is_admin и user_id</span>
-<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>();    <span class="c-comment">// ✅ вернёт только title + content</span>
+<span class="c-var">$request</span>-&gt;<span class="c-fn">all</span>();          <span class="c-comment">// вернёт ВСЁ, включая is_admin и user_id</span>
+<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>();    <span class="c-comment">// вернёт только title + content</span>
 
 <span class="c-comment">// Поэтому в контроллере:</span>
 <span class="c-type">Post</span>::<span class="c-fn">create</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>());   <span class="c-comment">// безопасно</span>
 <span class="c-type">Post</span>::<span class="c-fn">create</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">all</span>());         <span class="c-comment">// потенциальная дыра</span>
 </code></pre>
 
-    <div class="pitfall"><strong>⚠ <code>validated()</code> доступен только ПОСЛЕ прохождения валидации.</strong> Если валидация не прошла — <em>контроллер даже не будет вызван</em>. Laravel сам поймает <code>ValidationException</code>, вернёт 422 (для API) или redirect back с ошибками (для веб). Поэтому в теле контроллера ты <em>гарантированно</em> работаешь с валидными данными.</div>
+    <div class="pitfall"><strong><code>validated()</code> доступен только ПОСЛЕ прохождения валидации.</strong> Если валидация не прошла — <em>контроллер даже не будет вызван</em>. Laravel сам поймает <code>ValidationException</code>, вернёт 422 (для API) или redirect back с ошибками (для веб). Поэтому в теле контроллера ты <em>гарантированно</em> работаешь с валидными данными.</div>
 
     <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="split" style="width:14px;height:14px"></i> Почему <code>user()</code>/<code>validated()</code> используются в контроллере, а не в Action</div>
     <p class="text">В <a href="#" onclick="showSub('actions-services','as-refactor',this.parentElement.parentElement); return false;">рефакторинге</a> ты видел паттерн:</p>
@@ -5404,12 +5404,12 @@ App\Http\Requests\StorePostRequest      ← твой класс
 
     <p class="text"><strong>Проблема без ресурсов.</strong> Возврат <code>User::find($id)</code> напрямую отдаёт все атрибуты как есть — включая <code>password</code>, <code>remember_token</code>, timestamps, служебные поля. Форматирование дат, преобразование enum-ов, вложенные связи — всё это придётся делать вручную в контроллере или в модели через <code>toArray()</code>. Быстро превращается в кашу.</p>
 
-<pre><code><span class="c-comment">// ❌ Без ресурса — контроллер отдаёт всё</span>
+<pre><code><span class="c-comment">// Без ресурса — контроллер отдаёт всё</span>
 <span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">json</span>(<span class="c-type">User</span>::<span class="c-fn">with</span>(<span class="c-str">'posts'</span>)-&gt;<span class="c-fn">find</span>(<span class="c-var">$id</span>));
 <span class="c-comment">// В JSON попадут: password, remember_token, email_verified_at,
 // created_at/updated_at, все поля постов включая user_id...</span>
 
-<span class="c-comment">// ✅ Через ресурс — контроль над форматом</span>
+<span class="c-comment">// Через ресурс — контроль над форматом</span>
 <span class="c-key">return</span> <span class="c-key">new</span> <span class="c-type">UserResource</span>(<span class="c-type">User</span>::<span class="c-fn">with</span>(<span class="c-str">'posts'</span>)-&gt;<span class="c-fn">find</span>(<span class="c-var">$id</span>));</code></pre>
 
     <p class="text"><strong>Что дают API Resources:</strong></p>
@@ -5497,7 +5497,7 @@ php artisan make:resource <span class="c-type">Api/V1/PostResource</span>       
       <p class="text">Ручной класс с методом <code>present()</code> или readonly-DTO из php 8.1. Не встроенное в Laravel — но иногда используют для типизации и IDE-подсказок.</p>
     </div>
 
-    <div class="pitfall"><strong>⚠ Не путать Resource и <code>--resource</code>-контроллер.</strong> <code>php artisan make:controller PostController --resource</code> создаёт <em>контроллер с 7 CRUD-методами</em> (см. <a href="#" onclick="showSub('controllers','ctrl-resource',this.parentElement.parentElement); return false;">ctrl-resource</a>). <code>php artisan make:resource UserResource</code> создаёт <em>трансформер JSON</em>. Слово «resource» — два разных инструмента.</div>
+    <div class="pitfall"><strong>Не путать Resource и <code>--resource</code>-контроллер.</strong> <code>php artisan make:controller PostController --resource</code> создаёт <em>контроллер с 7 CRUD-методами</em> (см. <a href="#" onclick="showSub('controllers','ctrl-resource',this.parentElement.parentElement); return false;">ctrl-resource</a>). <code>php artisan make:resource UserResource</code> создаёт <em>трансформер JSON</em>. Слово «resource» — два разных инструмента.</div>
 
     <div class="remember-box">
       <strong>Итог:</strong> в современных Laravel-проектах для внешних API почти всегда используют Resource — особенно с версионированием и интеграцией с фронтендом. Для внутренних админок и CRUD-эндпоинтов часто обходятся <code>return $model;</code> + <code>$hidden</code> в модели. Не насаждай Resource ради Resource — добавляй когда появляется реальная потребность в трансформации.
@@ -5622,7 +5622,7 @@ php artisan make:resource <span class="c-type">Api/V1/PostResource</span>       
 }</code></pre>
     <p class="text">Если условие <code>false</code> — поле <em>не попадает в JSON вообще</em> (нет ключа).</p>
 
-    <p class="text"><strong>🔥 <code>whenLoaded()</code></strong> — включить связь только если она загружена (защита от N+1):</p>
+    <p class="text"><strong><code>whenLoaded()</code></strong> — включить связь только если она загружена (защита от N+1):</p>
 <pre><code><span class="c-key">public function</span> <span class="c-fn">toArray</span>(<span class="c-var">$request</span>): <span class="c-key">array</span>
 {
     <span class="c-key">return</span> [
@@ -5976,7 +5976,7 @@ php artisan make:resource <span class="c-type">Api/V1/PostResource</span>       
       </ul>
     </div>
 
-    <div class="pitfall"><strong>⚠ Не смешивать через <code>$hidden</code> "не сохранять в БД".</strong> <code>$hidden</code> НЕ влияет на запись — только на вывод. Поле <code>password</code> в БД сохранится (и должно!), <code>$hidden</code> просто не даёт ему попасть в JSON-ответ. Для «не сохранять» — не добавляй поле в <code>$fillable</code> либо не передавай в <code>create()</code>.</div>
+    <div class="pitfall"><strong>Не смешивать через <code>$hidden</code> "не сохранять в БД".</strong> <code>$hidden</code> НЕ влияет на запись — только на вывод. Поле <code>password</code> в БД сохранится (и должно!), <code>$hidden</code> просто не даёт ему попасть в JSON-ответ. Для «не сохранять» — не добавляй поле в <code>$fillable</code> либо не передавай в <code>create()</code>.</div>
 
     <div class="remember-box">
       <strong>Мнемоника:</strong> <code>fill</code>able = что можно <em>налить</em> (into) БД. <code>hidden</code> = что <em>прячем</em> (from) при выводе. Разные направления, разные задачи.
@@ -6030,7 +6030,7 @@ php artisan make:resource <span class="c-type">Api/V1/PostResource</span>       
       </tbody>
     </table>
 
-    <div class="pitfall"><strong>⚠ Реальная уязвимость.</strong> Если API возвращает модели без фильтрации — это <em>не потенциальная</em> проблема, а <em>текущая</em>. Любой авторизованный пользователь через <code>GET /api/user</code> уже видит <code>remember_token</code> в HTML/DevTools/Network — а с ним и любой посмотревший на его экран.</div>
+    <div class="pitfall"><strong>Реальная уязвимость.</strong> Если API возвращает модели без фильтрации — это <em>не потенциальная</em> проблема, а <em>текущая</em>. Любой авторизованный пользователь через <code>GET /api/user</code> уже видит <code>remember_token</code> в HTML/DevTools/Network — а с ним и любой посмотревший на его экран.</div>
 
     <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="help-circle" style="width:14px;height:14px"></i> Почему Laravel не скрывает всё это <em>автоматически</em></div>
     <p class="text">Три причины архитектурного решения:</p>
@@ -7309,11 +7309,11 @@ CACHE_DRIVER=redis</code></pre>
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика: cache stampede</div>
     <p class="text">Cache stampede — ситуация, когда ключ устарел и сразу 100 запросов пытаются его пересоздать одновременно, перегружая БД. Решение — атомарный lock.</p>
 
-<pre><code><span class="c-comment">// ❌ Под нагрузкой — N запросов одновременно регенерируют один ключ</span>
+<pre><code><span class="c-comment">// Под нагрузкой — N запросов одновременно регенерируют один ключ</span>
 <span class="c-key">return</span> <span class="c-type">Cache</span>::<span class="c-fn">remember</span>(<span class="c-str">'dashboard:stats'</span>, <span class="c-num">300</span>, <span class="c-key">fn</span> () =&gt;
     <span class="c-type">Stats</span>::<span class="c-fn">expensive</span>());
 
-<span class="c-comment">// ✓ Только один запрос регенерирует, остальные ждут</span>
+<span class="c-comment">// Только один запрос регенерирует, остальные ждут</span>
 <span class="c-key">return</span> <span class="c-type">Cache</span>::<span class="c-fn">remember</span>(<span class="c-str">'dashboard:stats'</span>, <span class="c-num">300</span>, <span class="c-key">function</span> () {
     <span class="c-key">return</span> <span class="c-type">Cache</span>::<span class="c-fn">lock</span>(<span class="c-str">'lock:dashboard:stats'</span>, <span class="c-num">10</span>)-&gt;<span class="c-fn">block</span>(<span class="c-num">5</span>, <span class="c-key">fn</span> () =&gt;
         <span class="c-type">Stats</span>::<span class="c-fn">expensive</span>());
@@ -8104,17 +8104,17 @@ php artisan migrate</code></pre>
     <table class="data-table">
       <thead><tr><th>Ситуация</th><th>Нужен ли Event?</th></tr></thead>
       <tbody>
-        <tr><td>Просто создать заказ и показать в списке (CRUD)</td><td>❌ Нет</td></tr>
-        <tr><td>Дополнительно записать в лог / отправить уведомление / синхронизировать</td><td>✅ Да</td></tr>
-        <tr><td>Тяжёлые операции, которые могут тормозить ответ (почта, внешние API)</td><td>✅ Да, с <code>ShouldQueue</code></td></tr>
-        <tr><td>Действие — <em>часть транзакции</em>, влияет на целостность</td><td>❌ Нет, вынести в <code>Action</code>/<code>Service</code></td>
+        <tr><td>Просто создать заказ и показать в списке (CRUD)</td><td>Нет</td></tr>
+        <tr><td>Дополнительно записать в лог / отправить уведомление / синхронизировать</td><td>Да</td></tr>
+        <tr><td>Тяжёлые операции, которые могут тормозить ответ (почта, внешние API)</td><td>Да, с <code>ShouldQueue</code></td></tr>
+        <tr><td>Действие — <em>часть транзакции</em>, влияет на целостность</td><td>Нет, вынести в <code>Action</code>/<code>Service</code></td>
         </tr>
       </tbody>
     </table>
 
-    <div class="pitfall"><strong>⚠ Антипаттерн «событие ради события».</strong> Раздувать <code>UserViewedProfile</code>, <code>OrderListRendered</code>, <code>PageOpened</code> «чтобы потом что-нибудь на них подписать» — путь к неотлаживаемому коду. Плодить события следует, когда <em>уже есть</em> конкретный слушатель, которому это событие нужно.</div>
+    <div class="pitfall"><strong>Антипаттерн «событие ради события».</strong> Раздувать <code>UserViewedProfile</code>, <code>OrderListRendered</code>, <code>PageOpened</code> «чтобы потом что-нибудь на них подписать» — путь к неотлаживаемому коду. Плодить события следует, когда <em>уже есть</em> конкретный слушатель, которому это событие нужно.</div>
 
-    <div class="pitfall"><strong>⚠ Не путай Event с обычным вызовом.</strong> Если у события ровно <em>один</em> listener и никакой асинхронности — это не событие, а замаскированный прямой вызов. Убери прослойку, вызови метод напрямую. Event имеет смысл когда: (а) listeners несколько, либо (б) нужна асинхронность через <code>ShouldQueue</code>, либо (в) явно хочешь развязать слои.</div>
+    <div class="pitfall"><strong>Не путай Event с обычным вызовом.</strong> Если у события ровно <em>один</em> listener и никакой асинхронности — это не событие, а замаскированный прямой вызов. Убери прослойку, вызови метод напрямую. Event имеет смысл когда: (а) listeners несколько, либо (б) нужна асинхронность через <code>ShouldQueue</code>, либо (в) явно хочешь развязать слои.</div>
 
     <div class="remember-box">
       <strong>Итог:</strong> тонкий контроллер — создание заказа в <code>Action</code>, побочные эффекты — в <code>Event</code> + <code>Listener</code>. «Отображение в панели» — просто чтение через Eloquent, никаких событий не надо. Событие уместно только когда есть <em>реальный</em> побочный эффект.
@@ -8890,8 +8890,8 @@ php artisan migrate</code></pre>
         </tr>
         <tr>
           <td><strong>Отправитель знает получателя</strong></td>
-          <td>❌ Нет. Просто эмитит «случилось X»</td>
-          <td>✅ Да. Явно: «сделай Y»</td>
+          <td>Нет. Просто эмитит «случилось X»</td>
+          <td>Да. Явно: «сделай Y»</td>
         </tr>
         <tr>
           <td><strong>Смысл</strong></td>
@@ -8941,7 +8941,7 @@ php artisan migrate</code></pre>
 <span class="c-comment">// Явно: «отправь письмо-подтверждение».</span></code></pre>
 
     <p class="text"><strong>Плохой Job (замаскированный Event):</strong></p>
-<pre><code><span class="c-comment">// ❌ Такой job слишком много берёт на себя</span>
+<pre><code><span class="c-comment">// Такой job слишком много берёт на себя</span>
 <span class="c-key">class</span> <span class="c-type">ProcessOrderPayment</span> <span class="c-key">implements</span> <span class="c-type">ShouldQueue</span>
 {
     <span class="c-key">public function</span> <span class="c-fn">handle</span>()
@@ -8956,7 +8956,7 @@ php artisan migrate</code></pre>
 // Добавить новое действие = править этот класс. Тестировать сложнее.</span></code></pre>
 
     <p class="text"><strong>Хороший подход — Event + отдельные Listeners:</strong></p>
-<pre><code><span class="c-comment">// ✅ Каждое действие — независимый listener</span>
+<pre><code><span class="c-comment">// Каждое действие — независимый listener</span>
 <span class="c-type">OrderPaid</span>::<span class="c-fn">dispatch</span>(<span class="c-var">$order</span>);
 <span class="c-comment">// Каждый listener retry-ится независимо.
 // Один упал — остальные отработали.
@@ -10602,19 +10602,19 @@ php artisan migrate
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика: безопасный сервис под Octane</div>
-<pre><code><span class="c-comment">// ❌ Singleton с request-state — утечка</span>
+<pre><code><span class="c-comment">// Singleton с request-state — утечка</span>
 <span class="c-var">$app</span>-&gt;<span class="c-fn">singleton</span>(<span class="c-type">RequestContext</span>::<span class="c-key">class</span>);
 
-<span class="c-comment">// ✓ Scoped — сбрасывается между запросами</span>
+<span class="c-comment">// Scoped — сбрасывается между запросами</span>
 <span class="c-var">$app</span>-&gt;<span class="c-fn">scoped</span>(<span class="c-type">RequestContext</span>::<span class="c-key">class</span>);
 
-<span class="c-comment">// ❌ Static с per-request данными — утечка</span>
+<span class="c-comment">// Static с per-request данными — утечка</span>
 <span class="c-key">final class</span> <span class="c-type">UserCache</span>
 {
     <span class="c-key">private static array</span> <span class="c-var">$loaded</span> = []; <span class="c-comment">// растёт между запросами</span>
 }
 
-<span class="c-comment">// ✓ Зависимость от scoped-кеша или нормального Cache</span>
+<span class="c-comment">// Зависимость от scoped-кеша или нормального Cache</span>
 <span class="c-key">final class</span> <span class="c-type">UserCache</span>
 {
     <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">private</span> <span class="c-type">CacheRepository</span> <span class="c-var">$cache</span>) {}

@@ -204,7 +204,7 @@
     color: var(--text);
   }
   .remember-box::before {
-    content: '✎ Запомни:';
+    content: 'Запомни:';
     font-weight: 700;
     color: #B45309;
     display: block;
@@ -497,9 +497,9 @@
             <a class="nav-item" onclick="showSection('php8')">PHP 8+ фичи</a>
             <a class="nav-item" onclick="showSection('generators')">Генераторы</a>
             <a class="nav-item" onclick="showSection('closures')">Closures</a>
-            <a class="nav-item" onclick="showSection('cheatsheet')" style="margin-top:18px;border-top:1px solid #E5E7EB;padding-top:14px">📋 Шпаргалка PHP</a>
-            <a class="nav-item" onclick="showSection('interview')">❓ Вопросник для самопроверки</a>
-            <a class="nav-item" onclick="showSection('practice')">🛠 Практика руками</a>
+            <a class="nav-item" onclick="showSection('cheatsheet')" style="margin-top:18px;border-top:1px solid #E5E7EB;padding-top:14px">Шпаргалка PHP</a>
+            <a class="nav-item" onclick="showSection('interview')">Вопросник для самопроверки</a>
+            <a class="nav-item" onclick="showSection('practice')">Практика руками</a>
         </div>
 
         <!-- Main Content -->
@@ -598,7 +598,7 @@
 <span class="function">var_dump</span>(<span class="string">"100"</span> == <span class="string">"1e2"</span>); <span class="comment">// true   (обе строки числовые: 100 == 100)</span></code></pre>
 
                     <div class="content-block" style="background:#FEF2F2;border-left:3px solid #DC2626;padding:14px 18px;margin:10px 0;border-radius:4px">
-                        <strong>⚠ Что изменилось в PHP 8.0 (RFC: "Saner string to number comparisons"):</strong>
+                        <strong>Что изменилось в PHP 8.0 (RFC: "Saner string to number comparisons"):</strong>
                         <ul style="margin:8px 0 0 20px;line-height:1.7">
                             <li><strong>До 8.0:</strong> сравнение строки с числом → <strong>строка приводится к числу</strong>. Нечисловая строка → <code>0</code>. Поэтому <code>"abc" == 0</code> было <code>true</code> — источник классических багов в безопасности.</li>
                             <li><strong>С 8.0+:</strong> если строка <strong>нечисловая</strong> — <strong>число приводится к строке</strong>, сравниваются две строки. Если строка <strong>числовая</strong> (<code>"10"</code>, <code>"1e2"</code>) — по-прежнему сравниваются как числа.</li>
@@ -687,7 +687,7 @@
                             <tr><td>Доступ к данным</td><td><code>$person["name"]</code></td><td><code>$person-&gt;name</code></td></tr>
                             <tr><td>Создание</td><td><code>['name' =&gt; 'Иван', 'age' =&gt; 30]</code></td><td><code>(object)['name'=&gt;'Иван']</code> или <code>new stdClass()</code></td></tr>
                             <tr><td>Добавить поле</td><td><code>$arr['email'] = 'a@b.ru'</code></td><td><code>$obj-&gt;email = 'a@b.ru'</code></td></tr>
-                            <tr><td>Методы / поведение</td><td>❌ Нет (только функции работают с массивом снаружи)</td><td>✅ Можно добавить через свой класс</td></tr>
+                            <tr><td>Методы / поведение</td><td>Нет (только функции работают с массивом снаружи)</td><td>Можно добавить через свой класс</td></tr>
                             <tr><td>Передача в функцию</td><td>Копирование (CoW под капотом)</td><td>По ссылке (одна сущность в памяти)</td></tr>
                             <tr><td>Проверка поля</td><td><code>isset($arr['name'])</code> / <code>array_key_exists</code></td><td><code>isset($obj-&gt;name)</code> / <code>property_exists</code></td></tr>
                             <tr><td><code>var_dump</code></td><td><code>array(2) { ["name"]=&gt; ... }</code></td><td><code>object(stdClass)#1 (2) { ["name"]=&gt; ... }</code></td></tr>
@@ -818,12 +818,12 @@
 <span class="function">var_dump</span>(<span class="keyword">null</span> == <span class="string">""</span>);     <span class="comment">// true</span></code></pre>
 
                     <div class="example-label">Безопасные альтернативы автопреобразованию</div>
-                    <pre><code><span class="comment">// ❌ Опасно — полагаемся на juggling</span>
+                    <pre><code><span class="comment">// Опасно — полагаемся на juggling</span>
 <span class="keyword">function</span> <span class="function">calculate</span>(<span class="variable">$amount</span>, <span class="variable">$quantity</span>) {
     <span class="keyword">return</span> <span class="variable">$amount</span> * <span class="variable">$quantity</span>;  <span class="comment">// "abc" * "2" = 0</span>
 }
 
-<span class="comment">// ✓ Безопасно — явная проверка типов</span>
+<span class="comment">// Безопасно — явная проверка типов</span>
 <span class="keyword">function</span> <span class="function">calculate</span>(<span class="variable">$amount</span>, <span class="variable">$quantity</span>): <span class="keyword">float</span> {
     <span class="keyword">if</span> (!<span class="function">is_numeric</span>(<span class="variable">$amount</span>) || !<span class="function">is_numeric</span>(<span class="variable">$quantity</span>)) {
         <span class="keyword">throw</span> <span class="keyword">new</span> <span class="keyword">InvalidArgumentException</span>(<span class="string">'Numeric expected'</span>);
@@ -831,7 +831,7 @@
     <span class="keyword">return</span> (<span class="keyword">float</span>)<span class="variable">$amount</span> * (<span class="keyword">int</span>)<span class="variable">$quantity</span>;
 }
 
-<span class="comment">// ✓ Безопасные парсеры строк → числа</span>
+<span class="comment">// Безопасные парсеры строк → числа</span>
 <span class="variable">$int</span>   = <span class="function">intval</span>(<span class="variable">$str</span>, <span class="number">10</span>);   <span class="comment">// явное основание 10 — защита от "077" → 7 (octal)</span>
 <span class="variable">$float</span> = <span class="function">floatval</span>(<span class="variable">$str</span>);
 <span class="variable">$value</span> = <span class="function">filter_var</span>(<span class="variable">$str</span>, <span class="keyword">FILTER_VALIDATE_INT</span>);   <span class="comment">// вернёт false если не int</span>
@@ -1090,7 +1090,7 @@
 }
 <span class="comment">// Если первое условие true (amount не число) — второе даже не проверяется.</span></code></pre>
 
-                    <div class="example-label">⚠ Ловушка приоритета: <code>||</code> vs <code>or</code></div>
+                    <div class="example-label">Ловушка приоритета: <code>||</code> vs <code>or</code></div>
                     <pre><code><span class="comment">// Эти две строки выглядят одинаково — но РАБОТАЮТ ПО-РАЗНОМУ:</span>
 
 <span class="variable">$result</span> = <span class="keyword">false</span> || <span class="keyword">true</span>;
@@ -1168,7 +1168,7 @@
 <span class="variable">$name</span> = <span class="variable">$input</span> ?: <span class="string">'Anonymous'</span>;
 <span class="comment">// Если $input истинно — вернёт $input, иначе 'Anonymous'.
 
-// ⚠ Работает по TRUTHY: '0', '', 0, null, [] — все вернут 'Anonymous'.
+// Работает по TRUTHY: '0', '', 0, null, [] — все вернут 'Anonymous'.
 // Если нужно проверять именно null — используй ??.</span></code></pre>
 
                     <div class="example-label">3. Null coalescing <code>??</code> (PHP 7+)</div>
@@ -1206,7 +1206,7 @@
 // Если $user-&gt;profile null → результат null.
 // Иначе — значение avatar.
 
-// ⚠ Работает только на ЧТЕНИЕ. Нельзя писать через ?->:
+// Работает только на ЧТЕНИЕ. Нельзя писать через ?->:
 // $user?->profile = $p;   // SYNTAX ERROR</span></code></pre>
 
                     <div class="example-label">Сводная таблица — что выбрать</div>
@@ -1252,9 +1252,9 @@
 // (число с плавающей точкой)".
 
 // Если функция вернёт другой тип, PHP попытается привести:
-//   return 42       → 42.0  ✓ (int → float)
-//   return "3.14"   → 3.14  ✓ (numeric string → float)
-//   return "abc"    → TypeError ❌
+//   return 42       → 42.0  (int → float)
+//   return "3.14"   → 3.14  (numeric string → float)
+//   return "abc"    → TypeError
 
 // Со strict_types=1 автоматического приведения нет —
 // возврат int вместо float тоже выбросит TypeError.</span></code></pre>
@@ -1475,20 +1475,20 @@ EOT;
 // \n и \t останутся как текст.</span></code></pre>
 
                     <div class="example-label">Правила синтаксиса</div>
-                    <pre><code><span class="comment">// ✓ Идентификатор: любой (EOT, HTML, SQL, JSON), любые буквы/цифры/подчёркивания,
+                    <pre><code><span class="comment">// Идентификатор: любой (EOT, HTML, SQL, JSON), любые буквы/цифры/подчёркивания,
 //   не должен начинаться с цифры. Принято — UPPERCASE.
 
-// ✓ Heredoc: без кавычек вокруг идентификатора</span>
+// Heredoc: без кавычек вокруг идентификатора</span>
 <span class="variable">$x</span> = &lt;&lt;&lt;HTML
 &lt;<span class="keyword">div</span>&gt;<span class="variable">$content</span>&lt;/<span class="keyword">div</span>&gt;
 HTML;
 
-<span class="comment">// ✓ Nowdoc: с одинарными кавычками</span>
+<span class="comment">// Nowdoc: с одинарными кавычками</span>
 <span class="variable">$x</span> = &lt;&lt;&lt;<span class="string">'HTML'</span>
 &lt;<span class="keyword">div</span>&gt;<span class="variable">$content</span>&lt;/<span class="keyword">div</span>&gt;
 HTML;
 
-<span class="comment">// ❌ Распространённая ошибка — пробелы и переменная после &lt;&lt;&lt;</span>
+<span class="comment">// Распространённая ошибка — пробелы и переменная после &lt;&lt;&lt;</span>
 <span class="variable">$x</span> = &lt;&lt; <span class="variable">$name</span>     <span class="comment">// SYNTAX ERROR — нужен идентификатор без пробела</span>
 text
 EOT;
@@ -1557,12 +1557,12 @@ text
 <span class="comment">// 2. После закрывающего идентификатора — только ; или ничего</span>
 <span class="variable">$x</span> = &lt;&lt;&lt;EOT
 text
-EOT . <span class="string">"more"</span>;  <span class="comment">// ❌ SYNTAX ERROR в PHP &lt; 7.3</span>
+EOT . <span class="string">"more"</span>;  <span class="comment">// SYNTAX ERROR в PHP &lt; 7.3</span>
 
 <span class="variable">$x</span> = &lt;&lt;&lt;EOT
 text
 EOT;
-<span class="variable">$x</span> .= <span class="string">"more"</span>;       <span class="comment">// ✓ — конкатенация после</span>
+<span class="variable">$x</span> .= <span class="string">"more"</span>;       <span class="comment">// — конкатенация после</span>
 
 <span class="comment">// 3. Идентификатор содержится в тексте — закроется раньше времени</span>
 <span class="variable">$x</span> = &lt;&lt;&lt;EOT
@@ -1892,7 +1892,7 @@ $                  — конец строки: после доменной зо
 ];</code></pre>
 
                     <div class="content-block" style="background:#FEF3C7;border-left:3px solid #F59E0B;padding:14px 18px;margin:10px 0;border-radius:4px">
-                        <strong>⚠ Частая ошибка: путают <code>=&gt;</code> внутри литерала vs <code>=</code> при добавлении в массив.</strong>
+                        <strong>Частая ошибка: путают <code>=&gt;</code> внутри литерала vs <code>=</code> при добавлении в массив.</strong>
                         <p style="margin:8px 0 0">Это <strong>два разных синтаксиса</strong> для разных операций:</p>
                     </div>
 
@@ -1901,10 +1901,10 @@ $                  — конец строки: после доменной зо
 <span class="variable">$arr</span> = [<span class="string">'name'</span> =&gt; <span class="string">'Иван'</span>, <span class="string">'age'</span> =&gt; <span class="number">30</span>];
 
 <span class="comment">// ─── Добавление элемента в существующий массив — снаружи [...] нужен = ───</span>
-<span class="variable">$arr</span>[<span class="string">'email'</span>] = <span class="string">'ivan@x.kz'</span>;       <span class="comment">// ✓ ключ в [], значение через =</span>
-<span class="variable">$arr</span>[<span class="number">5</span>] = <span class="string">'пять'</span>;                 <span class="comment">// ✓</span>
+<span class="variable">$arr</span>[<span class="string">'email'</span>] = <span class="string">'ivan@x.kz'</span>;       <span class="comment">// ключ в [], значение через =</span>
+<span class="variable">$arr</span>[<span class="number">5</span>] = <span class="string">'пять'</span>;                 <span class="comment">// верно</span>
 
-<span class="comment">// ─── ❌ Синтаксические ошибки ───</span>
+<span class="comment">// ─── Синтаксические ошибки ───</span>
 <span class="variable">$arr</span>[<span class="string">'name'</span> =&gt; <span class="string">'Иван'</span>];        <span class="comment">// SYNTAX ERROR: внутри [] только ключ</span>
 <span class="variable">$arr</span>[<span class="string">'name'</span>] =&gt; <span class="string">'Иван'</span>;        <span class="comment">// SYNTAX ERROR: => не оператор присваивания</span></code></pre>
 
@@ -1914,12 +1914,12 @@ $                  — конец строки: после доменной зо
                             <tr><th>Конструкция</th><th>Что делает</th><th>Валидно?</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td><code>[1, 2, 3]</code></td><td>Литерал массива без ключей</td><td>✅</td></tr>
-                            <tr><td><code>['a' =&gt; 1, 'b' =&gt; 2]</code></td><td>Литерал с ключами (<code>=&gt;</code> ВНУТРИ <code>[]</code>)</td><td>✅</td></tr>
-                            <tr><td><code>$arr[$key] = $value</code></td><td>Присваивание элементу (<code>=</code> СНАРУЖИ <code>[]</code>)</td><td>✅</td></tr>
-                            <tr><td><code>$arr[] = $value</code></td><td>Добавление в конец (PHP сам генерит ключ)</td><td>✅</td></tr>
-                            <tr><td><code>$arr[$key] =&gt; $value</code></td><td>Попытка использовать <code>=&gt;</code> как оператор присваивания</td><td>❌ syntax error</td></tr>
-                            <tr><td><code>$arr[$key =&gt; $value]</code></td><td>Попытка втиснуть пару в индексатор</td><td>❌ syntax error</td></tr>
+                            <tr><td><code>[1, 2, 3]</code></td><td>Литерал массива без ключей</td><td></td></tr>
+                            <tr><td><code>['a' =&gt; 1, 'b' =&gt; 2]</code></td><td>Литерал с ключами (<code>=&gt;</code> ВНУТРИ <code>[]</code>)</td><td></td></tr>
+                            <tr><td><code>$arr[$key] = $value</code></td><td>Присваивание элементу (<code>=</code> СНАРУЖИ <code>[]</code>)</td><td></td></tr>
+                            <tr><td><code>$arr[] = $value</code></td><td>Добавление в конец (PHP сам генерит ключ)</td><td></td></tr>
+                            <tr><td><code>$arr[$key] =&gt; $value</code></td><td>Попытка использовать <code>=&gt;</code> как оператор присваивания</td><td>syntax error</td></tr>
+                            <tr><td><code>$arr[$key =&gt; $value]</code></td><td>Попытка втиснуть пару в индексатор</td><td>syntax error</td></tr>
                         </tbody>
                     </table>
 
@@ -2012,7 +2012,7 @@ $                  — конец строки: после доменной зо
 <span class="keyword">echo</span> <span class="variable">$obj</span>-&gt;<span class="variable">a</span>;  <span class="comment">// 1
 // (через -> потому что это объект, не массив)</span>
 
-<span class="comment">// ⚠ Ключи с пробелами или цифровые становятся "магическими":</span>
+<span class="comment">// Ключи с пробелами или цифровые становятся "магическими":</span>
 <span class="variable">$obj</span> = (<span class="keyword">object</span>)[<span class="string">"first name"</span> =&gt; <span class="string">"Alice"</span>, <span class="number">0</span> =&gt; <span class="string">"zero"</span>];
 <span class="keyword">echo</span> <span class="variable">$obj</span>-&gt;{<span class="string">"first name"</span>};  <span class="comment">// "Alice" — через {} для невалидных имён
 // $obj->0 — SYNTAX ERROR, тоже только через $obj->{0}</span></code></pre>
@@ -2022,15 +2022,15 @@ $                  — конец строки: после доменной зо
                     </div>
 
                     <div class="example-label">Что => НЕ значит в PHP</div>
-                    <pre><code><span class="comment">// ❌ Не оператор сравнения — для этого == или ===
+                    <pre><code><span class="comment">// Не оператор сравнения — для этого == или ===
 $a => $b   <span class="comment">// SYNTAX ERROR</span>
 
-<span class="comment">// ❌ Не стрелочный метод классов (в PHP такого синтаксиса нет)
+<span class="comment">// Не стрелочный метод классов (в PHP такого синтаксиса нет)
 class User {
     public name => "default";   <span class="comment">// SYNTAX ERROR</span>
 }
 
-<span class="comment">// ❌ Не используется в enum для задания значения — там просто =
+<span class="comment">// Не используется в enum для задания значения — там просто =
 enum Status: string {
     case DRAFT = 'черновик';     <span class="comment">// = (одно равно), не =></span>
     case DRAFT => 'черновик';    <span class="comment">// SYNTAX ERROR</span>
@@ -2228,13 +2228,13 @@ enum Status: string {
 // Но если вы остаётесь в мире Laravel — у Collection есть СВОИ методы filter() и where(),
 // которые умнее и идиоматичнее:</span>
 
-<span class="comment">// ❌ Менее идиоматично — выйти из Collection, использовать PHP-функцию:</span>
+<span class="comment">// Менее идиоматично — выйти из Collection, использовать PHP-функцию:</span>
 <span class="variable">$active</span> = <span class="function">array_filter</span>(<span class="variable">$users</span>-><span class="function">toArray</span>(), <span class="keyword">fn</span>(<span class="variable">$u</span>) => <span class="variable">$u</span>[<span class="string">'is_active'</span>]);
 
-<span class="comment">// ✓ Лучше — остаться в Collection:</span>
+<span class="comment">// Лучше — остаться в Collection:</span>
 <span class="variable">$active</span> = <span class="variable">$users</span>-><span class="function">filter</span>(<span class="keyword">fn</span>(<span class="variable">$u</span>) => <span class="variable">$u</span>-><span class="variable">is_active</span>);
 
-<span class="comment">// ✓ Ещё лучше — where() для простых проверок:</span>
+<span class="comment">// Ещё лучше — where() для простых проверок:</span>
 <span class="variable">$active</span> = <span class="variable">$users</span>-><span class="function">where</span>(<span class="string">'is_active'</span>, <span class="keyword">true</span>);
 
 <span class="comment">// Если в итоге нужен массив — в конце .toArray():</span>
@@ -2371,14 +2371,14 @@ enum Status: string {
                         Без начального значения по умолчанию — <code>null</code>, что часто ломает callback (<code>null + 1</code> = warning + 1).
                     </div>
 
-                    <div class="example-label">⚡ Когда НЕ нужен array_reduce — есть встроенные функции</div>
+                    <div class="example-label">Когда НЕ нужен array_reduce — есть встроенные функции</div>
                     <pre><code><span class="comment">// Для типовых операций PHP предоставляет специализированные функции —
 // они короче, читаемее и БЫСТРЕЕ array_reduce (реализованы на C).</span>
 
-<span class="comment">// ❌ Избыточно — переизобретаешь array_sum:</span>
+<span class="comment">// Избыточно — переизобретаешь array_sum:</span>
 <span class="variable">$sum</span> = <span class="function">array_reduce</span>(<span class="variable">$numbers</span>, <span class="keyword">fn</span>(<span class="variable">$c</span>, <span class="variable">$i</span>) => <span class="variable">$c</span> + <span class="variable">$i</span>, <span class="number">0</span>);
 
-<span class="comment">// ✅ Идиоматично:</span>
+<span class="comment">// Идиоматично:</span>
 <span class="variable">$sum</span> = <span class="function">array_sum</span>(<span class="variable">$numbers</span>);
 
 <span class="comment">// Полный список:</span>
@@ -2440,9 +2440,9 @@ enum Status: string {
 //   $taxRate — копия userdata; присвоение внутри не повлияет на $tax снаружи
 
 // Что меняется в исходном $prices:
-//   ✓ значения элементов (11, 22, 33)
-//   ✗ ключи остаются прежними (0, 1, 2) — их вообще нельзя поменять через array_walk
-//   ✗ структура массива (количество элементов, порядок) не меняется</span></code></pre>
+//   значения элементов (11, 22, 33)
+//   ключи остаются прежними (0, 1, 2) — их вообще нельзя поменять через array_walk
+//   структура массива (количество элементов, порядок) не меняется</span></code></pre>
                     <pre><code><span class="comment">// Сигнатура callback для array_walk:
 //   function(&$value, $key, $userdata)
 //   позиция 1: значение (можно с & для мутации)
@@ -2469,14 +2469,14 @@ enum Status: string {
                     </div>
 
                     <div class="example-label">Разница: с & vs без &</div>
-                    <pre><code><span class="comment">// ❌ Без & — копия, оригинал не меняется</span>
+                    <pre><code><span class="comment">// Без & — копия, оригинал не меняется</span>
 <span class="variable">$data</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
 <span class="function">array_walk</span>(<span class="variable">$data</span>, <span class="keyword">function</span>(<span class="variable">$item</span>) {
     <span class="variable">$item</span> *= <span class="number">10</span>;            <span class="comment">// меняем КОПИЮ — бесполезно</span>
 });
 <span class="function">print_r</span>(<span class="variable">$data</span>);              <span class="comment">// [1, 2, 3] — без изменений</span>
 
-<span class="comment">// ✓ С & — ссылка, оригинал изменяется</span>
+<span class="comment">// С & — ссылка, оригинал изменяется</span>
 <span class="variable">$data</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>];
 <span class="function">array_walk</span>(<span class="variable">$data</span>, <span class="keyword">function</span>(&<span class="variable">$item</span>) {
     <span class="variable">$item</span> *= <span class="number">10</span>;            <span class="comment">// меняем САМ элемент массива</span>
@@ -2539,7 +2539,7 @@ enum Status: string {
 }
 <span class="function">print_r</span>(<span class="variable">$arr</span>);    <span class="comment">// [10, 20, 20] вместо ожидаемого [10, 20, 30]</span>
 
-<span class="comment">// ✓ Решение: после foreach по ссылке всегда unset:</span>
+<span class="comment">// Решение: после foreach по ссылке всегда unset:</span>
 <span class="keyword">foreach</span> (<span class="variable">$arr</span> <span class="keyword">as</span> &<span class="variable">$val</span>) { <span class="variable">$val</span> *= <span class="number">10</span>; }
 <span class="keyword">unset</span>(<span class="variable">$val</span>);    <span class="comment">// разорвать ссылку</span></code></pre>
 
@@ -2619,11 +2619,11 @@ enum Status: string {
 <span class="comment">// С &lt;=&gt; — одна строка:</span>
 <span class="function">usort</span>(<span class="variable">$users</span>, <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) => <span class="variable">$a</span>[<span class="string">'age'</span>] <=> <span class="variable">$b</span>[<span class="string">'age'</span>]);
 
-<span class="comment">// ❌ ВАЖНО: НЕ используйте $a - $b как компаратор!
+<span class="comment">// ВАЖНО: НЕ используйте $a - $b как компаратор!
 // Работает для int, но ломается для float (теряется точность дробей)
 // и для больших чисел (integer overflow). &lt;=&gt; — безопасно всегда.</span>
-<span class="function">usort</span>(<span class="variable">$arr</span>, <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) => <span class="variable">$a</span> - <span class="variable">$b</span>);    <span class="comment">// ❌ хрупко</span>
-<span class="function">usort</span>(<span class="variable">$arr</span>, <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) => <span class="variable">$a</span> <=> <span class="variable">$b</span>);   <span class="comment">// ✓ правильно</span></code></pre>
+<span class="function">usort</span>(<span class="variable">$arr</span>, <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) => <span class="variable">$a</span> - <span class="variable">$b</span>);    <span class="comment">// хрупко</span>
+<span class="function">usort</span>(<span class="variable">$arr</span>, <span class="keyword">fn</span>(<span class="variable">$a</span>, <span class="variable">$b</span>) => <span class="variable">$a</span> <=> <span class="variable">$b</span>);   <span class="comment">// правильно</span></code></pre>
 
                     <div class="example-label">Сортировка по возрастанию и убыванию — поменять операнды</div>
                     <pre><code><span class="comment">// По возрастанию (ASC): $a слева, $b справа</span>
@@ -2775,8 +2775,8 @@ enum Status: string {
                     </div>
 
                     <div class="example-label">Почему <code>new User()</code>, а не просто <code>User</code>?</div>
-                    <pre><code><span class="variable">$array</span> = (<span class="keyword">array</span>)<span class="keyword">new</span> <span class="function">User</span>();   <span class="comment">// ✓ объект → массив</span>
-<span class="variable">$array</span> = (<span class="keyword">array</span>)<span class="function">User</span>;          <span class="comment">// ✗ ошибка: класс не значение</span>
+                    <pre><code><span class="variable">$array</span> = (<span class="keyword">array</span>)<span class="keyword">new</span> <span class="function">User</span>();   <span class="comment">// объект → массив</span>
+<span class="variable">$array</span> = (<span class="keyword">array</span>)<span class="function">User</span>;          <span class="comment">// ошибка: класс не значение</span>
 
 <span class="comment">// Почему так:
 // User — это ИМЯ КЛАССА (тип данных), как int или string.
@@ -2787,8 +2787,8 @@ enum Status: string {
 // А с объектом уже можно делать что угодно: кастить, передавать, сохранять.</span>
 
 <span class="comment">// Аналогично с другими операциями над типом:</span>
-<span class="function">var_dump</span>(<span class="function">User</span>);            <span class="comment">// ✗ ошибка</span>
-<span class="function">var_dump</span>(<span class="keyword">new</span> <span class="function">User</span>());      <span class="comment">// ✓ дамп объекта</span>
+<span class="function">var_dump</span>(<span class="function">User</span>);            <span class="comment">// ошибка</span>
+<span class="function">var_dump</span>(<span class="keyword">new</span> <span class="function">User</span>());      <span class="comment">// дамп объекта</span>
 
 <span class="comment">// Имя класса как СТРОКА — можно (через ::class или просто "User"):</span>
 <span class="keyword">echo</span> <span class="function">User</span>::<span class="keyword">class</span>;        <span class="comment">// "User" — это уже строка, не класс</span>
@@ -2978,12 +2978,12 @@ enum Status: string {
 
                     <div class="remember-box">
                         <strong>Чек-лист по $this:</strong><br>
-                        ✓ Внутри нестатических методов класса &mdash; обращайтесь к свойствам и методам через <code>$this-&gt;</code>.<br>
-                        ✓ В конструкторе &mdash; <code>$this-&gt;поле = $аргумент</code> присваивает значение свойству объекта.<br>
-                        ✓ <code>return $this</code> в setter'ах &mdash; даёт fluent interface (method chaining).<br>
-                        ✗ В static-методах <code>$this</code> отсутствует &mdash; используйте <code>self::</code> или <code>static::</code> для доступа к классу.<br>
-                        ✗ В замыканиях по умолчанию нет &mdash; используйте <code>Closure::bind</code> или стрелочные функции (<code>fn() =&gt; $this-&gt;x</code> внутри метода захватят <code>$this</code> автоматически).<br>
-                        💡 С PHP 8.0+ для конструкторов используйте <strong>promoted properties</strong> &mdash; короче и без повторов.
+                        Внутри нестатических методов класса &mdash; обращайтесь к свойствам и методам через <code>$this-&gt;</code>.<br>
+                        В конструкторе &mdash; <code>$this-&gt;поле = $аргумент</code> присваивает значение свойству объекта.<br>
+                        <code>return $this</code> в setter'ах &mdash; даёт fluent interface (method chaining).<br>
+                        В static-методах <code>$this</code> отсутствует &mdash; используйте <code>self::</code> или <code>static::</code> для доступа к классу.<br>
+                        В замыканиях по умолчанию нет &mdash; используйте <code>Closure::bind</code> или стрелочные функции (<code>fn() =&gt; $this-&gt;x</code> внутри метода захватят <code>$this</code> автоматически).<br>
+                        С PHP 8.0+ для конструкторов используйте <strong>promoted properties</strong> &mdash; короче и без повторов.
                     </div>
                 </div>
 
@@ -3039,7 +3039,7 @@ enum Status: string {
                     </div>
 
                     <div class="content-block" style="background:#FEE2E2;border-left:3px solid #DC2626;padding:14px 18px;margin:10px 0;border-radius:4px">
-                        <strong>⚠ Классическая ловушка: <code>$this-&gt;$field</code> с двумя <code>$</code></strong>
+                        <strong>Классическая ловушка: <code>$this-&gt;$field</code> с двумя <code>$</code></strong>
                         <p style="margin:6px 0 0">Это <strong>не опечатка, а variable property</strong> — обращение к свойству, имя которого хранится в переменной <code>$field</code>.</p>
                         <pre style="background:#1F2937;color:#F3F4F6;padding:10px 14px;border-radius:4px;font-size:12px;margin:8px 0;overflow-x:auto"><span style="color:#A5B4FC">$this-&gt;items</span>     <span style="color:#9CA3AF">// обращение к свойству items</span>
 <span style="color:#FCA5A5">$this-&gt;$items</span>    <span style="color:#9CA3AF">// variable property — ищет свойство с именем из $items
@@ -3229,8 +3229,8 @@ self::who() физически находится в файле ParentClass.</sp
 <span class="keyword">echo</span> <span class="function">BaseModel</span>::<span class="function">getTable</span>();      <span class="comment">// "base"  — self::$table → BaseModel::$table</span>
 <span class="keyword">echo</span> <span class="function">BaseModel</span>::<span class="function">getTableLate</span>();  <span class="comment">// "base"  — static = BaseModel (вызвали от BaseModel)</span>
 
-<span class="keyword">echo</span> <span class="function">UserModel</span>::<span class="function">getTable</span>();      <span class="comment">// "base"  ⚠ self заблокирован на BaseModel</span>
-<span class="keyword">echo</span> <span class="function">UserModel</span>::<span class="function">getTableLate</span>();  <span class="comment">// "users" ✓ static подхватил UserModel::$table</span></code></pre>
+<span class="keyword">echo</span> <span class="function">UserModel</span>::<span class="function">getTable</span>();      <span class="comment">// "base"  self заблокирован на BaseModel</span>
+<span class="keyword">echo</span> <span class="function">UserModel</span>::<span class="function">getTableLate</span>();  <span class="comment">// "users" static подхватил UserModel::$table</span></code></pre>
 
                     <div class="example-label">Что именно происходит — таблица</div>
                     <pre><code><span class="comment">+--------------------------------+------+--------------+----------+
@@ -3238,8 +3238,8 @@ self::who() физически находится в файле ParentClass.</sp
 +--------------------------------+------+--------------+----------+
 | BaseModel::getTable()          | Base | (не использ) | "base"   |
 | BaseModel::getTableLate()      | —    | BaseModel    | "base"   |
-| UserModel::getTable()          | Base | (не использ) | "base" ⚠ |
-| UserModel::getTableLate()      | —    | UserModel    | "users" ✓|
+| UserModel::getTable()          | Base | (не использ) | "base" |
+| UserModel::getTableLate()      | —    | UserModel    | "users"|
 +--------------------------------+------+--------------+----------+
 
 Колонка "self" — какой класс PHP подставляет под self при выполнении
@@ -3247,11 +3247,11 @@ self::who() физически находится в файле ParentClass.</sp
 Колонка "static" — какой класс подставляется под static
                   (тот, через который начали вызов).
 
-⚠ UserModel::getTable() возвращает "base" — частая ловушка.
+UserModel::getTable() возвращает "base" — частая ловушка.
    Программист переопределил $table в UserModel, ожидая что метод
    подхватит новое значение. Но getTable() жёстко смотрит на
    BaseModel::$table из-за self.
-✓ Чтобы наследники работали полиморфно — пишите static:: в базовом
+Чтобы наследники работали полиморфно — пишите static:: в базовом
    классе для всего, что наследники могут переопределять.</span></code></pre>
 
                     <div class="content-block">
@@ -3331,29 +3331,29 @@ static::  → ПОЛИМОРФНО: берёт из класса, через к�
 
 <span class="variable">$order</span> = <span class="keyword">new</span> <span class="function">Order</span>();
 <span class="keyword">echo</span> <span class="variable">$order</span>::<span class="variable">STATUS_PAID</span>;       <span class="comment">// "paid" (тоже через :: после объекта)
-// echo $order->STATUS_PAID;       — ❌ ошибка, через -> только свойства</span></code></pre>
+// echo $order->STATUS_PAID;       — ошибка, через -> только свойства</span></code></pre>
 
                     <div class="example-label">Когда использовать static вообще</div>
-                    <pre><code><span class="comment">// ✓ Утилитарные функции без состояния</span>
+                    <pre><code><span class="comment">// Утилитарные функции без состояния</span>
 <span class="keyword">class</span> <span class="function">StringHelper</span> {
     <span class="keyword">public static function</span> <span class="function">slugify</span>(<span class="keyword">string</span> <span class="variable">$text</span>): <span class="keyword">string</span> {
         <span class="keyword">return</span> <span class="function">strtolower</span>(<span class="function">str_replace</span>(<span class="string">' '</span>, <span class="string">'-'</span>, <span class="variable">$text</span>));
     }
 }
 
-<span class="comment">// ✓ Фабричные методы (named constructors)</span>
+<span class="comment">// Фабричные методы (named constructors)</span>
 <span class="keyword">class</span> <span class="function">Date</span> {
     <span class="keyword">public static function</span> <span class="function">today</span>(): <span class="keyword">static</span> { <span class="keyword">return new</span> <span class="keyword">static</span>(<span class="function">date</span>(<span class="string">'Y-m-d'</span>)); }
     <span class="keyword">public static function</span> <span class="function">fromString</span>(<span class="keyword">string</span> <span class="variable">$s</span>): <span class="keyword">static</span> { <span class="keyword">return new</span> <span class="keyword">static</span>(<span class="variable">$s</span>); }
 }
 
-<span class="comment">// ✓ Константы (как enum-замена до PHP 8.1)</span>
+<span class="comment">// Константы (как enum-замена до PHP 8.1)</span>
 <span class="keyword">class</span> <span class="function">HttpStatus</span> {
     <span class="keyword">const</span> <span class="variable">OK</span>        = <span class="number">200</span>;
     <span class="keyword">const</span> <span class="variable">NOT_FOUND</span> = <span class="number">404</span>;
 }
 
-<span class="comment">// ❌ НЕ для сервисов с состоянием — таблица плюсов/минусов:
+<span class="comment">// НЕ для сервисов с состоянием — таблица плюсов/минусов:
 // Static-сервис:                  Обычный сервис через DI:
 //   — невозможно мокать в тестах    + легко мокать
 //   — глобальное состояние          + изолированный state
@@ -3373,9 +3373,9 @@ static::  → ПОЛИМОРФНО: берёт из класса, через к�
 }
 
 <span class="comment">// 2. Свойства через -> вместо ::</span>
-<span class="function">Counter</span>::<span class="variable">$count</span>++;     <span class="comment">// ✓ правильно</span>
+<span class="function">Counter</span>::<span class="variable">$count</span>++;     <span class="comment">// правильно</span>
 <span class="variable">$counter</span> = <span class="keyword">new</span> <span class="function">Counter</span>();
-<span class="variable">$counter</span>-><span class="variable">count</span>++;     <span class="comment">// ❌ ошибка — у объекта нет такого свойства,
+<span class="variable">$counter</span>-><span class="variable">count</span>++;     <span class="comment">// ошибка — у объекта нет такого свойства,
                        //    статическое живёт на классе</span>
 
 <span class="comment">// 3. Static в Octane / RoadRunner / Swoole — утечка состояния
@@ -3410,12 +3410,12 @@ static::  → ПОЛИМОРФНО: берёт из класса, через к�
 
                     <div class="remember-box">
                         <strong>Короткие правила:</strong><br>
-                        ✓ <code>self::</code> &mdash; когда вы пишете код, который не будет переопределяться в наследниках. Гарантия что вызывается именно этот класс.<br>
-                        ✓ <code>static::</code> &mdash; в фабриках (<code>new static()</code>) и методах, которые наследники могут переопределить. Это Late Static Binding.<br>
-                        ✓ <code>parent::</code> &mdash; чтобы дополнить (а не заменить) реализацию родителя; типично <code>parent::__construct()</code>.<br>
-                        ✓ <code>ClassName::CONSTANT</code> &mdash; константы класса всегда через <code>::</code>, даже если у вас есть объект.<br>
-                        ✗ Избегайте static-сервисов с состоянием &mdash; они не мокаются в тестах и текут под Octane.<br>
-                        💡 С PHP 8.0+ <code>new static()</code> можно типизировать как <code>: static</code> в return type &mdash; явный полиморфизм для фабрик.
+                        <code>self::</code> &mdash; когда вы пишете код, который не будет переопределяться в наследниках. Гарантия что вызывается именно этот класс.<br>
+                        <code>static::</code> &mdash; в фабриках (<code>new static()</code>) и методах, которые наследники могут переопределить. Это Late Static Binding.<br>
+                        <code>parent::</code> &mdash; чтобы дополнить (а не заменить) реализацию родителя; типично <code>parent::__construct()</code>.<br>
+                        <code>ClassName::CONSTANT</code> &mdash; константы класса всегда через <code>::</code>, даже если у вас есть объект.<br>
+                        Избегайте static-сервисов с состоянием &mdash; они не мокаются в тестах и текут под Octane.<br>
+                        С PHP 8.0+ <code>new static()</code> можно типизировать как <code>: static</code> в return type &mdash; явный полиморфизм для фабрик.
                     </div>
                 </div>
 
@@ -3494,7 +3494,7 @@ static::  → ПОЛИМОРФНО: берёт из класса, через к�
     <span class="keyword">private</span> <span class="keyword">readonly</span> <span class="keyword">int</span> <span class="variable">$constId</span>;       <span class="comment">// readonly (PHP 8.1+): записать можно ОДИН раз</span>
 }</code></pre>
 
-                    <div class="example-label">⚠ Ловушка: доступ до инициализации</div>
+                    <div class="example-label">Ловушка: доступ до инициализации</div>
                     <pre><code><span class="keyword">class</span> <span class="function">User</span>
 {
     <span class="keyword">private</span> <span class="keyword">int</span> <span class="variable">$id</span>;  <span class="comment">// нет дефолта</span>
@@ -3535,25 +3535,25 @@ static::  → ПОЛИМОРФНО: берёт из класса, через к�
                     </table>
 
                     <div class="example-label">Типичные ошибки которые увидишь на code review</div>
-                    <pre><code><span class="comment">// ❌ Метод в PascalCase — путают с классом</span>
+                    <pre><code><span class="comment">// Метод в PascalCase — путают с классом</span>
 <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">AddItem</span>(<span class="variable">$item</span>) {}
 
-<span class="comment">// ✓ Метод в camelCase</span>
+<span class="comment">// Метод в camelCase</span>
 <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">addItem</span>(<span class="variable">$item</span>) {}
 
 
-<span class="comment">// ❌ Метод множественного числа когда добавляет ОДНО</span>
+<span class="comment">// Метод множественного числа когда добавляет ОДНО</span>
 <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">addItems</span>(<span class="variable">$item</span>) {}
 
-<span class="comment">// ✓ Соответствие имени и действия</span>
+<span class="comment">// Соответствие имени и действия</span>
 <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">addItem</span>(<span class="variable">$item</span>) {}      <span class="comment">// один</span>
 <span class="keyword">public</span> <span class="keyword">function</span> <span class="function">addItems</span>(<span class="keyword">array</span> <span class="variable">$items</span>) {} <span class="comment">// несколько</span>
 
 
-<span class="comment">// ❌ Класс в lowercase</span>
+<span class="comment">// Класс в lowercase</span>
 <span class="keyword">class</span> <span class="function">user</span> {}
 
-<span class="comment">// ✓ Класс в PascalCase</span>
+<span class="comment">// Класс в PascalCase</span>
 <span class="keyword">class</span> <span class="function">User</span> {}</code></pre>
 
                     <div class="remember-box">
@@ -3562,15 +3562,15 @@ static::  → ПОЛИМОРФНО: берёт из класса, через к�
                 </div>
 
                 <div class="subsection">
-                    <h3 class="subsection-title">⚠ <code>echo</code> — языковая конструкция, не функция</h3>
+                    <h3 class="subsection-title"><code>echo</code> — языковая конструкция, не функция</h3>
                     <div class="content-block">
                         <code>echo</code> в PHP — это <strong>языковая конструкция</strong> (как <code>if</code>, <code>return</code>, <code>break</code>), а не функция. Поэтому со скобками вокруг аргумента она ведёт себя необычно — и это источник тонких багов.
                     </div>
 
                     <div class="example-label">Правильный синтаксис</div>
-                    <pre><code><span class="keyword">echo</span> <span class="string">"Hello"</span>;                <span class="comment">// ✓ без скобок</span>
-<span class="keyword">echo</span> <span class="string">"a"</span>, <span class="string">"b"</span>, <span class="string">"c"</span>;          <span class="comment">// ✓ несколько аргументов через запятую</span>
-<span class="keyword">echo</span> <span class="variable">$user</span>-><span class="function">summary</span>();      <span class="comment">// ✓ цепочка методов — БЕЗ скобок</span></code></pre>
+                    <pre><code><span class="keyword">echo</span> <span class="string">"Hello"</span>;                <span class="comment">// без скобок</span>
+<span class="keyword">echo</span> <span class="string">"a"</span>, <span class="string">"b"</span>, <span class="string">"c"</span>;          <span class="comment">// несколько аргументов через запятую</span>
+<span class="keyword">echo</span> <span class="variable">$user</span>-><span class="function">summary</span>();      <span class="comment">// цепочка методов — БЕЗ скобок</span></code></pre>
 
                     <div class="example-label">Ловушка: <code>echo($x)->method()</code> работает «случайно»</div>
                     <pre><code><span class="comment">// Это часто пишут думая что echo — функция:</span>
@@ -3589,7 +3589,7 @@ static::  → ПОЛИМОРФНО: берёт из класса, через к�
 // которая не принимает несколько аргументов через запятую.
 
 // Без скобок — работает:</span>
-<span class="keyword">echo</span> <span class="variable">$a</span>, <span class="variable">$b</span>;  <span class="comment">// ✓</span></code></pre>
+<span class="keyword">echo</span> <span class="variable">$a</span>, <span class="variable">$b</span>;  <span class="comment">// верно</span></code></pre>
 
                     <div class="example-label">Различие <code>echo</code> и <code>print</code></div>
                     <table class="data-table">
@@ -3599,7 +3599,7 @@ static::  → ПОЛИМОРФНО: берёт из класса, через к�
                         <tbody>
                             <tr><td>Тип</td><td>Языковая конструкция</td><td>Языковая конструкция</td></tr>
                             <tr><td>Возвращает</td><td>Ничего (void)</td><td>Всегда <code>1</code> (можно использовать в выражении)</td></tr>
-                            <tr><td>Несколько аргументов</td><td>✅ <code>echo $a, $b, $c</code></td><td>❌ только один</td></tr>
+                            <tr><td>Несколько аргументов</td><td><code>echo $a, $b, $c</code></td><td>только один</td></tr>
                             <tr><td>Скорость</td><td>Чуть быстрее</td><td>Чуть медленнее (из-за return)</td></tr>
                         </tbody>
                     </table>
@@ -3669,7 +3669,7 @@ static::  → ПОЛИМОРФНО: берёт из класса, через к�
 {
     <span class="keyword">private</span> <span class="keyword">array</span> <span class="variable">$items</span> = [];
 
-    <span class="comment">// ❌ Геттер возвращает ССЫЛКУ на массив — внешний код может менять</span>
+    <span class="comment">// Геттер возвращает ССЫЛКУ на массив — внешний код может менять</span>
     <span class="keyword">public</span> <span class="keyword">function</span> &<span class="function">getItems</span>(): <span class="keyword">array</span>
     {
         <span class="keyword">return</span> <span class="variable">$this</span>-><span class="variable">items</span>;
@@ -3829,9 +3829,9 @@ static::  → ПОЛИМОРФНО: берёт из класса, через к�
                             <tr><th>Аспект</th><th>Cached (хранить)</th><th>Computed (считать)</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td>Чтение total()</td><td><strong>O(1)</strong> ⚡</td><td>O(n) — пройти весь массив</td></tr>
+                            <tr><td>Чтение total()</td><td><strong>O(1)</strong></td><td>O(n) — пройти весь массив</td></tr>
                             <tr><td>Запись (add/remove)</td><td>O(1) + обновить total</td><td>O(1)</td></tr>
-                            <tr><td>Риск рассинхрона</td><td><strong>⚠ ВЫСОКИЙ</strong> — добавили метод <code>updatePrice()</code> и забыли пересчитать total → баг</td><td>✅ <strong>Нет</strong> — total всегда актуален</td></tr>
+                            <tr><td>Риск рассинхрона</td><td><strong>ВЫСОКИЙ</strong> — добавили метод <code>updatePrice()</code> и забыли пересчитать total → баг</td><td><strong>Нет</strong> — total всегда актуален</td></tr>
                             <tr><td>Сложность кода</td><td>Выше — синхронизация в каждом mutator</td><td>Ниже — одно место расчёта</td></tr>
                             <tr><td>Тестируемость</td><td>Хуже — скрытое state</td><td>Лучше — pure function</td></tr>
                             <tr><td>Sserialization</td><td>В JSON попадёт «лишний» total</td><td>Только items, total на лету</td></tr>
@@ -4023,7 +4023,7 @@ readonly НЕ влияет на методы (нельзя сделать "не�
 
     <span class="keyword">public function</span> <span class="function">__construct</span>(<span class="keyword">int</span> <span class="variable">$id</span>) {
         <span class="keyword">parent</span>::<span class="function">__construct</span>(<span class="variable">$id</span>);
-        <span class="variable">$this</span>-><span class="variable">id</span> = <span class="number">999</span>;       <span class="comment">// ✓ теперь меняется, наследник убрал readonly</span>
+        <span class="variable">$this</span>-><span class="variable">id</span> = <span class="number">999</span>;       <span class="comment">// теперь меняется, наследник убрал readonly</span>
     }
 }
 
@@ -4197,15 +4197,15 @@ readonly НЕ влияет на методы (нельзя сделать "не�
 
                     <div class="remember-box">
                         <strong>Когда переопределять — да:</strong><br>
-                        ✓ Когда поведение наследника логически отличается (Dog::makeSound vs Animal::makeSound).<br>
-                        ✓ Когда нужно добавить логику до/после родительской (parent::save + audit).<br>
-                        ✓ Когда реализуете интерфейс/абстрактный метод &mdash; обязаны переопределить.<br>
-                        ✓ Для специализации (admin-bypass в authorize).<br>
+                        Когда поведение наследника логически отличается (Dog::makeSound vs Animal::makeSound).<br>
+                        Когда нужно добавить логику до/после родительской (parent::save + audit).<br>
+                        Когда реализуете интерфейс/абстрактный метод &mdash; обязаны переопределить.<br>
+                        Для специализации (admin-bypass в authorize).<br>
                         <br>
                         <strong>Когда переопределять — нет:</strong><br>
-                        ✗ Если метод критичный для контракта (тогда автор пометит <code>final</code>).<br>
-                        ✗ Просто чтобы «было своё» без реальной разницы поведения.<br>
-                        ✗ Когда лучше композиция: вместо <code>extends</code> &mdash; инжектировать зависимость с другой реализацией интерфейса (Strategy pattern, см. KB_5).
+                        Если метод критичный для контракта (тогда автор пометит <code>final</code>).<br>
+                        Просто чтобы «было своё» без реальной разницы поведения.<br>
+                        Когда лучше композиция: вместо <code>extends</code> &mdash; инжектировать зависимость с другой реализацией интерфейса (Strategy pattern, см. KB_5).
                     </div>
 
                     <div class="content-block">
@@ -4266,19 +4266,19 @@ readonly НЕ влияет на методы (нельзя сделать "не�
 }
 
 <span class="keyword">class</span> <span class="function">Dog</span> <span class="keyword">extends</span> <span class="function">Animal</span> {
-    <span class="comment">// ❌ Сужение видимости — Fatal Error</span>
+    <span class="comment">// Сужение видимости — Fatal Error</span>
     <span class="keyword">protected function</span> <span class="function">eat</span>(<span class="function">Food</span> <span class="variable">$f</span>): <span class="function">Food</span> { ... }
 
-    <span class="comment">// ❌ Несовместимый тип параметра (более узкий, не contravariant)</span>
+    <span class="comment">// Несовместимый тип параметра (более узкий, не contravariant)</span>
     <span class="keyword">public function</span> <span class="function">eat</span>(<span class="function">DogFood</span> <span class="variable">$f</span>): <span class="function">Food</span> { ... }
 
-    <span class="comment">// ❌ Меняем static на не-static</span>
+    <span class="comment">// Меняем static на не-static</span>
     <span class="keyword">public static function</span> <span class="function">eat</span>(<span class="function">Food</span> <span class="variable">$f</span>): <span class="function">Food</span> { ... }
 
-    <span class="comment">// ✓ Уточнение return type (covariant) — разрешено</span>
+    <span class="comment">// Уточнение return type (covariant) — разрешено</span>
     <span class="keyword">public function</span> <span class="function">eat</span>(<span class="function">Food</span> <span class="variable">$f</span>): <span class="function">DogFood</span> { ... }
 
-    <span class="comment">// ✓ Расширение visibility — разрешено</span>
+    <span class="comment">// Расширение visibility — разрешено</span>
     <span class="keyword">public function</span> <span class="function">eat</span>(<span class="function">Food</span> <span class="variable">$f</span>): <span class="function">Food</span> { ... }  <span class="comment">// если в Animal был protected</span>
 }</code></pre>
 
@@ -4298,7 +4298,7 @@ readonly НЕ влияет на методы (нельзя сделать "не�
 // Для полиморфизма со static-методами используйте static:: (Late Static Binding,
 // см. предыдущую подсекцию про self/static).
 
-// ❌ А вот final static — переопределить нельзя:</span>
+// А вот final static — переопределить нельзя:</span>
 <span class="keyword">class</span> <span class="function">A</span> {
     <span class="keyword">final public static function</span> <span class="function">test</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="string">"A"</span>; }
 }
@@ -4318,10 +4318,10 @@ readonly НЕ влияет на методы (нельзя сделать "не�
 
 <span class="keyword">class</span> <span class="function">Cat</span> <span class="keyword">extends</span> <span class="function">Animal</span> {
     <span class="comment">#[\Override]</span>
-    <span class="keyword">public function</span> <span class="function">makeSound</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="string">"Мяу"</span>; }   <span class="comment">// ✓ если в Animal есть makeSound</span>
+    <span class="keyword">public function</span> <span class="function">makeSound</span>(): <span class="keyword">string</span> { <span class="keyword">return</span> <span class="string">"Мяу"</span>; }   <span class="comment">// если в Animal есть makeSound</span>
 
     <span class="comment">#[\Override]
-    public function makesSound(): string { ... }   ⚠ опечатка!
+    public function makesSound(): string { ... }   опечатка!
     // PHP кинет Fatal — метода makesSound нет в родителе.
     // Атрибут #[\Override] защищает от случайных опечаток и от ситуаций,
     // когда родитель переименовал метод, а наследник остался со старым именем.</span>
@@ -4331,18 +4331,18 @@ readonly НЕ влияет на методы (нельзя сделать "не�
                     <pre><code><span class="comment">+-----------------------------------+----------------------+--------------------+
 | Условие                           | Можно ли override?   | Что произойдёт     |
 +-----------------------------------+----------------------+--------------------+
-| Метод final в родителе            | ❌ нет                | Fatal Error        |
-| Класс final                       | ❌ нельзя наследовать | Fatal Error        |
-| Метод private                     | ⚠ синтаксически да,  | НЕ override —      |
+| Метод final в родителе            | нет                | Fatal Error        |
+| Класс final                       | нельзя наследовать | Fatal Error        |
+| Метод private                     | синтаксически да,  | НЕ override —      |
 |                                   |   но это не override | новый метод в      |
 |                                   |                      | дочернем           |
-| Сужение visibility                | ❌ нет                | Fatal Error        |
-| Несовместимый тип параметра       | ❌ нет                | Fatal Error        |
-| Несовместимый return type         | ❌ нет (без covariance)| Fatal Error       |
-| Меняем static/non-static          | ❌ нет                | Fatal Error        |
-| Метод protected/public, не final  | ✓ да                  | работает           |
-| static (не final)                 | ✓ да, но не полиморф | работает           |
-| Метода нет в родителе             | ✓ да, но это новый,  | предупреждение     |
+| Сужение visibility                | нет                | Fatal Error        |
+| Несовместимый тип параметра       | нет                | Fatal Error        |
+| Несовместимый return type         | нет (без covariance)| Fatal Error       |
+| Меняем static/non-static          | нет                | Fatal Error        |
+| Метод protected/public, не final  | да                  | работает           |
+| static (не final)                 | да, но не полиморф | работает           |
+| Метода нет в родителе             | да, но это новый,  | предупреждение     |
 |                                   |   не override        | если #[\Override]  |
 +-----------------------------------+----------------------+--------------------+</span></code></pre>
 
@@ -4640,14 +4640,14 @@ readonly НЕ влияет на методы (нельзя сделать "не�
                     <pre><code><span class="comment">+-------------------------+--------+--------+----------+
 | Характеристика          | Class  | Abstr. | Interface|
 +-------------------------+--------+--------+----------+
-| new ClassName()         | ✓      | ❌     | ❌       |
-| Готовые методы          | ✓      | ✓      | ❌ (PHP&lt;8.1)|
-| Абстрактные методы      | ❌     | ✓      | ✓ (по сути)|
-| Свойства/поля           | ✓      | ✓      | ❌       |
-| Конструктор             | ✓      | ✓      | ❌       |
+| new ClassName()         |      |     |       |
+| Готовые методы          |      |      | (PHP&lt;8.1)|
+| Абстрактные методы      |     |      | (по сути)|
+| Свойства/поля           |      |      |       |
+| Конструктор             |      |      |       |
 | Множественное наследов. | 1 родит| 1 родит| много    |
-| Константы               | ✓      | ✓      | ✓        |
-| Тип в type hint         | ✓      | ✓      | ✓        |
+| Константы               |      |      |        |
+| Тип в type hint         |      |      |        |
 +-------------------------+--------+--------+----------+</span></code></pre>
 
                     <div class="remember-box">
@@ -4793,33 +4793,33 @@ readonly НЕ влияет на методы (нельзя сделать "не�
                             </tr>
                             <tr>
                                 <td style="padding:8px 12px;border:1px solid #E5E7EB"><strong>Множественное использование</strong></td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">❌ Один родитель</td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Сколько угодно</td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Сколько угодно</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Один родитель</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Сколько угодно</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Сколько угодно</td>
                             </tr>
                             <tr>
                                 <td style="padding:8px 12px;border:1px solid #E5E7EB"><strong>Свойства (поля)</strong></td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Да, любая видимость</td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">❌ Только константы</td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Да, любая видимость</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Да, любая видимость</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Только константы</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Да, любая видимость</td>
                             </tr>
                             <tr>
                                 <td style="padding:8px 12px;border:1px solid #E5E7EB"><strong>Реализация методов</strong></td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Смесь abstract + concrete</td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">❌ Только сигнатуры</td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Полные методы</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Смесь abstract + concrete</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Только сигнатуры</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Полные методы</td>
                             </tr>
                             <tr>
                                 <td style="padding:8px 12px;border:1px solid #E5E7EB"><strong>Конструктор</strong></td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Да</td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">❌ Нет</td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">⚠️ Технически да, но опасно</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Да</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Нет</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Технически да, но опасно</td>
                             </tr>
                             <tr>
                                 <td style="padding:8px 12px;border:1px solid #E5E7EB"><strong>Можно ли создать инстанс</strong></td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">❌ Нет (только наследник)</td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">❌ Нет</td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">❌ Нет (только через <code>use</code>)</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Нет (только наследник)</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Нет</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Нет (только через <code>use</code>)</td>
                             </tr>
                             <tr>
                                 <td style="padding:8px 12px;border:1px solid #E5E7EB"><strong>Приоритет при конфликте</strong></td>
@@ -4829,9 +4829,9 @@ readonly НЕ влияет на методы (нельзя сделать "не�
                             </tr>
                             <tr>
                                 <td style="padding:8px 12px;border:1px solid #E5E7EB"><strong>Полиморфизм через type-hint</strong></td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Да</td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">✅ Да (рекомендовано)</td>
-                                <td style="padding:8px 12px;border:1px solid #E5E7EB">❌ Нет (trait — не тип)</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Да</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Да (рекомендовано)</td>
+                                <td style="padding:8px 12px;border:1px solid #E5E7EB">Нет (trait — не тип)</td>
                             </tr>
                         </tbody>
                     </table>
@@ -5020,7 +5020,7 @@ readonly НЕ влияет на методы (нельзя сделать "не�
 
                 <!-- ═══ Пояснялка-сноска по Traits ═══ -->
                 <div class="subsection" style="margin-top:48px;padding:20px 22px;background:#FAFAF7;border-top:1px solid #D1D5DB;border-left:3px solid #9CA3AF;color:#374151;font-size:14px;line-height:1.7">
-                    <h3 style="font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#6B7280;margin:0 0 14px">📖 Пояснялка — частые вопросы по разделу</h3>
+                    <h3 style="font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#6B7280;margin:0 0 14px">Пояснялка — частые вопросы по разделу</h3>
 
                     <p style="margin:0 0 12px"><strong>① Что такое <code>isset</code> в trait Cacheable?</strong><br>
                     В фрагменте кода <code>if (isset($this->cache[$key]))</code> — это <strong>встроенная языковая конструкция PHP</strong> (не часть trait). Она проверяет, что элемент массива <code>$this->cache</code> с ключом <code>$key</code> существует <strong>И не равен <code>null</code></strong>. В контексте трейта <code>Cacheable</code> логика такая: если ключ есть → вернуть закэшированное значение (без повторного вычисления); если нет → вызвать <code>$callback()</code>, сохранить результат в <code>$cache[$key]</code> и вернуть.</p>
@@ -5062,7 +5062,7 @@ class UserService implements CacheableInterface {
                     </ul>
                     <p style="margin:0 0 12px"><em>Правильнее сказать: трейт даёт классу готовые свойства, а класс может использовать и модифицировать их значения, но не может «отменить» или «изменить сигнатуру» самого свойства без конфликта.</em></p>
 
-                    <p style="margin:0 0 12px"><strong>⑥ ⚠ Ограничения trait Cacheable</strong></p>
+                    <p style="margin:0 0 12px"><strong>⑥ Ограничения trait Cacheable</strong></p>
                     <ul style="margin:0;padding:0 0 0 20px;line-height:1.7">
                         <li><strong>Свойство <code>private $cache</code></strong> — область видимости <code>private</code> внутри трейта, но оно становится частью класса, использующего трейт. Если в классе уже есть свойство <code>$cache</code> — конфликт (его можно разрешить в классе).</li>
                         <li><strong>Кэш живёт только в пределах одного запроса</strong> (in-memory, не сохраняется между HTTP-запросами).</li>
@@ -5100,7 +5100,7 @@ class UserService implements CacheableInterface {
 <span class="comment">// Output: "Disconnected"</span></code></pre>
 
                     <div class="content-block" style="background:#F3F4F6;padding:10px 14px;border-radius:6px;font-size:13px;margin:10px 0">
-                        <em>📖 Откуда берутся <code>$host</code>, <code>$user</code>, <code>$connection</code>, что такое RAII, когда деструктор не подходит — см. <strong>«❓ Вопросник / Объяснялка» в конце раздела</strong>.</em>
+                        <em>Откуда берутся <code>$host</code>, <code>$user</code>, <code>$connection</code>, что такое RAII, когда деструктор не подходит — см. <strong>«Вопросник / Объяснялка» в конце раздела</strong>.</em>
                     </div>
 
                     <div class="example-label">RAII — реальные сценарии __construct + __destruct</div>
@@ -5216,7 +5216,7 @@ class UserService implements CacheableInterface {
 <span class="keyword">isset</span>(<span class="variable">$user</span>-><span class="variable">name</span>);        <span class="comment">// Вызовет __isset</span></code></pre>
 
                     <div class="content-block" style="background:#F3F4F6;padding:10px 14px;border-radius:6px;font-size:13px;margin:10px 0">
-                        <em>📖 Что такое «несуществующее свойство», два кейса срабатывания магии, цена за магию, что такое <code>unset()</code> — см. <strong>«❓ Вопросник / Объяснялка» в конце раздела</strong>.</em>
+                        <em>Что такое «несуществующее свойство», два кейса срабатывания магии, цена за магию, что такое <code>unset()</code> — см. <strong>«Вопросник / Объяснялка» в конце раздела</strong>.</em>
                     </div>
 
                     <div class="example-label">Поток вызовов магических методов</div>
@@ -5341,7 +5341,7 @@ class UserService implements CacheableInterface {
 
                 <!-- ═══ Пояснялка-сноска по Магическим методам ═══ -->
                 <div class="subsection" style="margin-top:48px;padding:20px 22px;background:#FAFAF7;border-top:1px solid #D1D5DB;border-left:3px solid #9CA3AF;color:#374151;font-size:14px;line-height:1.7">
-                    <h3 style="font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#6B7280;margin:0 0 14px">📖 Пояснялка — частые вопросы по разделу</h3>
+                    <h3 style="font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#6B7280;margin:0 0 14px">Пояснялка — частые вопросы по разделу</h3>
 
                     <p style="margin:0 0 12px"><strong>① Откуда в примере <code>Database</code> берутся <code>$host</code>, <code>$user</code> и <code>$connection</code>?</strong><br>
                     Распространённое замешательство: в коде класса нет видимого определения <code>$host</code> и <code>$user</code>. Они не являются полями класса — они приходят извне.</p>
@@ -5350,7 +5350,7 @@ class UserService implements CacheableInterface {
                         <li><code>$connection</code> — <strong>свойство класса</strong> (<code>private $connection;</code>). Внутри конструктора выполняется <code>$this->connection = mysqli_connect($host, $user)</code>. Функция <code>mysqli_connect()</code> открывает реальное TCP-соединение с сервером MySQL и аутентифицируется. Возвращает объект-ссылку на соединение, который сохраняется в свойстве.</li>
                         <li><strong>Связь с БД:</strong> <code>mysqli_connect()</code> внутри устанавливает TCP-соединение с MySQL по указанному хосту (<code>localhost</code> = сокет или <code>127.0.0.1:3306</code>) и аутентифицируется с указанным пользователем. Если пароль не передан, PHP попытается подключиться без пароля — сработает только если у пользователя действительно нет пароля.</li>
                         <li><strong>В реальных проектах</strong> параметры обычно читаются из <code>.env</code> / <code>config.php</code> и передаются в конструктор. Это стандартный приём: класс не знает, какой именно хост и пользователь будут использоваться — это решает тот, кто создаёт объект.</li>
-                        <li><strong>⚠ Опечатка-капкан:</strong> в исходном коде было написано <code>$this->$connection</code> (с двумя <code>$</code>). Правильно: <code>$this->connection</code> (без лишнего <code>$</code> после <code>-&gt;</code>). <code>$this->$connection</code> — это обращение к свойству, имя которого хранится в переменной <code>$connection</code> (variable property). Если переменная не определена — fatal error.</li>
+                        <li><strong>Опечатка-капкан:</strong> в исходном коде было написано <code>$this->$connection</code> (с двумя <code>$</code>). Правильно: <code>$this->connection</code> (без лишнего <code>$</code> после <code>-&gt;</code>). <code>$this->$connection</code> — это обращение к свойству, имя которого хранится в переменной <code>$connection</code> (variable property). Если переменная не определена — fatal error.</li>
                     </ul>
 
                     <p style="margin:0 0 12px"><strong>② Что значит «несуществующее свойство» для <code>__get/__set/__isset/__unset</code>?</strong><br>
@@ -5383,7 +5383,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                         <li><code>unset($obj->prop)</code> — удаляет свойство объекта (либо вызывает <code>__unset</code>, если свойства нет).</li>
                     </ul>
                     <p style="margin:0 0 12px"><strong>В нашем коде:</strong> <code>unset($this->data[$name])</code> удаляет ключ <code>$name</code> из приватного массива <code>$data</code>. Это нужно, чтобы виртуальное свойство «исчезло» — в следующий раз <code>isset($user->name)</code> вернёт <code>false</code>.</p>
-                    <p style="margin:0 0 12px"><strong>⚠ Важный нюанс:</strong> для индексированных массивов (<code>[1,2,3]</code>) <code>unset</code> <em>не</em> переиндексирует числовые ключи. После <code>unset($arr[1])</code> массив станет <code>[0 =&gt; 1, 2 =&gt; 3]</code> — пропуск в ключах. Чтобы переиндексировать, используй <code>array_values($arr)</code>.</p>
+                    <p style="margin:0 0 12px"><strong>Важный нюанс:</strong> для индексированных массивов (<code>[1,2,3]</code>) <code>unset</code> <em>не</em> переиндексирует числовые ключи. После <code>unset($arr[1])</code> массив станет <code>[0 =&gt; 1, 2 =&gt; 3]</code> — пропуск в ключах. Чтобы переиндексировать, используй <code>array_values($arr)</code>.</p>
                     <p style="margin:0 0 12px"><em>Разница для переменных:</em> <code>unset</code> переменной уничтожает её, освобождая память. Для массива — удаляет элемент.</p>
 
                     <p style="margin:0 0 12px"><strong>④ Что такое RAII? Зачем <code>__construct</code> + <code>__destruct</code>?</strong><br>
@@ -6243,7 +6243,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 
             <!-- ═══════════ SECTION 13: CHEATSHEET ═══════════ -->
             <div id="cheatsheet" class="section">
-                <h2 class="section-title">📋 Шпаргалка PHP — всё в одной таблице</h2>
+                <h2 class="section-title">Шпаргалка PHP — всё в одной таблице</h2>
 
                 <div class="content-block">
                     Финальная распечатка перед проверкой. Все ключевые темы в виде таблиц с примерами. Используй как Anki-колоду или как референс «один взгляд — освежил память».
@@ -6270,12 +6270,12 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                     <pre><code><span class="comment">// 6 значений (все остальные — true):</span>
 <span class="keyword">false</span>, <span class="number">0</span>, <span class="number">0.0</span>, <span class="string">""</span>, <span class="string">"0"</span>, <span class="keyword">null</span>, []
 
-<span class="comment">// ⚠ Ловушки:
+<span class="comment">// Ловушки:
 // "0.0"  → true (это строка не пустая!)
 // "false" → true (это строка не пустая!)
 // [0] → true (массив не пустой)</span></code></pre>
 
-                    <div class="example-label" style="background:#DC2626">⚠ PHP 8.0 — ИЗМЕНЕНИЕ сравнения строка vs число (RFC)</div>
+                    <div class="example-label" style="background:#DC2626">PHP 8.0 — ИЗМЕНЕНИЕ сравнения строка vs число (RFC)</div>
                     <div class="content-block" style="background:#FEF2F2;border-left:3px solid #DC2626;padding:14px 18px;margin:10px 0;border-radius:4px">
                         <p style="margin:0 0 8px"><strong>Старое поведение (PHP &lt; 8.0):</strong> при <code>==</code> между строкой и числом — <strong>строка приводилась к числу</strong>. Нечисловая строка → <code>0</code>. Поэтому <code>"abc" == 0</code> было <code>true</code> — источник классических уязвимостей.</p>
                         <p style="margin:0 0 8px"><strong>Новое поведение (PHP 8.0+):</strong> если строка <strong>нечисловая</strong> — наоборот, <strong>число приводится к строке</strong>, сравниваются две строки. Если строка <strong>числовая</strong> (<code>"10"</code>, <code>"1e2"</code>) — по-прежнему сравниваются как числа.</p>
@@ -6349,12 +6349,12 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                             <tr><th>Характеристика</th><th>Abstract Class</th><th>Interface</th><th>Trait</th></tr>
                         </thead>
                         <tbody>
-                            <tr><td>Множественное использование</td><td>❌ один родитель</td><td>✅ сколько угодно</td><td>✅ сколько угодно</td></tr>
-                            <tr><td>Свойства (поля)</td><td>✅ любая видимость</td><td>❌ только константы</td><td>✅ любая видимость</td></tr>
-                            <tr><td>Реализация методов</td><td>микс abstract+concrete</td><td>❌ только сигнатуры</td><td>✅ полные методы</td></tr>
-                            <tr><td>Конструктор</td><td>✅ да</td><td>❌ нет</td><td>⚠ технически да, опасно</td></tr>
-                            <tr><td>Создать инстанс</td><td>❌ нет</td><td>❌ нет</td><td>❌ только через <code>use</code></td></tr>
-                            <tr><td>Type-hint в функциях</td><td>✅ да</td><td>✅ да (рекомендовано)</td><td>❌ trait — не тип</td></tr>
+                            <tr><td>Множественное использование</td><td>один родитель</td><td>сколько угодно</td><td>сколько угодно</td></tr>
+                            <tr><td>Свойства (поля)</td><td>любая видимость</td><td>только константы</td><td>любая видимость</td></tr>
+                            <tr><td>Реализация методов</td><td>микс abstract+concrete</td><td>только сигнатуры</td><td>полные методы</td></tr>
+                            <tr><td>Конструктор</td><td>да</td><td>нет</td><td>технически да, опасно</td></tr>
+                            <tr><td>Создать инстанс</td><td>нет</td><td>нет</td><td>только через <code>use</code></td></tr>
+                            <tr><td>Type-hint в функциях</td><td>да</td><td>да (рекомендовано)</td><td>trait — не тип</td></tr>
                             <tr><td>Семантика</td><td>«is-a»</td><td>«can-do»</td><td>«копипаст методов»</td></tr>
                             <tr><td>Когда выбирать</td><td>иерархия + общее состояние</td><td>контракт для DI / полиморфизма</td><td>код для разных веток</td></tr>
                         </tbody>
@@ -6464,7 +6464,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 
             <!-- ═══════════ SECTION 14: INTERVIEW QUESTIONS ═══════════ -->
             <div id="interview" class="section">
-                <h2 class="section-title">❓ Вопросник для самопроверки (PHP Core)</h2>
+                <h2 class="section-title">Вопросник для самопроверки (PHP Core)</h2>
 
                 <div class="content-block">
                     Реальные вопросы, которые закрывают уровень middle PHP / Laravel. <strong>Сначала отвечай вслух</strong>, потом кликни вопрос — увидишь развёрнутый ответ. Если запнулся — открой соответствующий раздел KB. Важен не дословный ответ, а понимание сути.
@@ -6478,7 +6478,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                         <div class="qa-a">
                             <p><code>==</code> (loose) приводит типы перед сравнением — это <strong>type juggling</strong>. <code>===</code> (strict) сравнивает <strong>и тип, и значение</strong>.</p>
                             <p>Пример: <code>'0' == false</code> → <code>true</code> (PHP сначала привёл к bool, получил false, сравнил с false). Но <code>'0' === false</code> → <code>false</code> (тип строки и тип bool — разные).</p>
-                            <p><strong>⚠ PHP 8.0 изменил правила:</strong> сравнение нечисловой строки с числом раньше было <code>"abc" == 0</code> → <code>true</code> (строка → 0). С PHP 8.0 наоборот — <strong>число приводится к строке</strong>, поэтому <code>"abc" == 0</code> → <code>false</code> (т.к. <code>"abc"</code> ≠ <code>"0"</code>). Подробнее — в Шпаргалке, раздел «Типы».</p>
+                            <p><strong>PHP 8.0 изменил правила:</strong> сравнение нечисловой строки с числом раньше было <code>"abc" == 0</code> → <code>true</code> (строка → 0). С PHP 8.0 наоборот — <strong>число приводится к строке</strong>, поэтому <code>"abc" == 0</code> → <code>false</code> (т.к. <code>"abc"</code> ≠ <code>"0"</code>). Подробнее — в Шпаргалке, раздел «Типы».</p>
                             <p>Правило: <strong>всегда используй <code>===</code></strong>. Loose-сравнение даёт неочевидные баги.</p>
                         </div>
                     </div>
@@ -6488,7 +6488,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                         <div class="qa-a">
                             <p><code>'0' == false</code> → <code>bool(true)</code>. Строка <code>'0'</code> в bool-контексте превращается в <code>false</code>, потому сравнение <code>false == false</code> = true.</p>
                             <p><code>'0' === false</code> → <code>bool(false)</code>. Тип <code>string</code> ≠ тип <code>bool</code>.</p>
-                            <p><strong>⚠ Ловушка:</strong> <code>'0.0' == false</code> → <code>false</code> (это непустая строка, не равна '0'). Поэтому <code>filter_var</code> в PHP осторожнее.</p>
+                            <p><strong>Ловушка:</strong> <code>'0.0' == false</code> → <code>false</code> (это непустая строка, не равна '0'). Поэтому <code>filter_var</code> в PHP осторожнее.</p>
                         </div>
                     </div>
 
@@ -6585,9 +6585,9 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                     <div class="qa-item">
                         <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">13</span> Может ли trait хранить свойства? А интерфейс? А abstract?</div>
                         <div class="qa-a">
-                            <p><strong>Abstract class:</strong> ✅ да, любые свойства любой видимости.</p>
-                            <p><strong>Interface:</strong> ❌ только константы (<code>const</code>), свойств нет.</p>
-                            <p><strong>Trait:</strong> ✅ да, любые свойства. При <code>use</code> попадают в класс как родные. Если в классе уже есть свойство с тем же именем — fatal error при несовместимом объявлении.</p>
+                            <p><strong>Abstract class:</strong> да, любые свойства любой видимости.</p>
+                            <p><strong>Interface:</strong> только константы (<code>const</code>), свойств нет.</p>
+                            <p><strong>Trait:</strong> да, любые свойства. При <code>use</code> попадают в класс как родные. Если в классе уже есть свойство с тем же именем — fatal error при несовместимом объявлении.</p>
                         </div>
                     </div>
 
@@ -6855,7 +6855,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                         <div class="qa-a">
                             <p><code>function f() { static $count = 0; $count++; return $count; }</code> — <code>$count</code> сохраняется между вызовами, инициализируется один раз.</p>
                             <p>Это не глобальная переменная — она видна только внутри функции. Полезно для счётчиков, мемоизации (хотя для серьёзной мемоизации лучше делать отдельный объект-кэш).</p>
-                            <p>⚠ Не работает с recursion-эффектами в parallel testing — статика общая на процесс.</p>
+                            <p>Не работает с recursion-эффектами в parallel testing — статика общая на процесс.</p>
                         </div>
                     </div>
 
@@ -6897,14 +6897,14 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                     </div>
 
                     <div class="remember-box">
-                        <strong>💡 Если тема не вспоминается:</strong> если не знаешь точно — скажи «не помню точно, но логика была примерно такая...» и рассуждай. Лучше ошибиться рассуждая, чем молчать. На уровне middle оценивают не только знание, но и способ думания.
+                        <strong>Если тема не вспоминается:</strong> если не знаешь точно — скажи «не помню точно, но логика была примерно такая...» и рассуждай. Лучше ошибиться рассуждая, чем молчать. На уровне middle оценивают не только знание, но и способ думания.
                     </div>
                 </div>
             </div>
 
             <!-- ═══════════ SECTION 15: PRACTICE ═══════════ -->
             <div id="practice" class="section">
-                <h2 class="section-title">🛠 Практика руками (PHP Core)</h2>
+                <h2 class="section-title">Практика руками (PHP Core)</h2>
 
                 <div class="content-block">
                     Без практики теория не приклеивается. Здесь — задания трёх уровней: <strong>микро-задачи</strong> (15 мин) для разогрева, <strong>готовые задания</strong> (30-60 мин) с полным разбором и эталонным кодом, <strong>мини-проекты</strong> (1-2 часа) в стиле LeetCode. Каждое задание — Постановка → Шаги → Эталонный код → Тесты → Подводные камни. Не подсматривай решение до первой попытки.
@@ -6912,7 +6912,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 
                 <!-- ─────── Микро-задачи ─────── -->
                 <div class="subsection">
-                    <h3 class="subsection-title">📌 Микро-задачи (15 мин каждая) — разогрев</h3>
+                    <h3 class="subsection-title">Микро-задачи (15 мин каждая) — разогрев</h3>
                     <div class="content-block">
                         Каждая задача с эталонным решением. Сначала пиши сам, потом сверяй.
                     </div>
@@ -6953,7 +6953,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 }</code></pre>
 
                         <div class="practice-pitfalls">
-                            <strong>⚠ Подводные камни:</strong> <code>"0.0"</code>, <code>"false"</code>, <code>[0]</code> — НЕ false-y (это классическая ловушка). Не пиши свой список — <code>(bool)$x</code> точнее и короче.
+                            <strong>Подводные камни:</strong> <code>"0.0"</code>, <code>"false"</code>, <code>[0]</code> — НЕ false-y (это классическая ловушка). Не пиши свой список — <code>(bool)$x</code> точнее и короче.
                         </div>
                     </div>
 
@@ -6985,7 +6985,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 <span class="keyword">echo</span> <span class="function">add</span>(<span class="string">'5'</span>, <span class="string">'3'</span>);  <span class="comment">// 8 (PHP молча привёл '5' и '3' к int)</span></code></pre>
 
                         <div class="practice-pitfalls">
-                            <strong>⚠ Подводные камни:</strong> <code>declare(strict_types=1)</code> работает <strong>только в файле, где написан</strong>. Не наследуется по include/autoload. Должен быть <strong>первым оператором</strong> файла (после <code>&lt;?php</code>).
+                            <strong>Подводные камни:</strong> <code>declare(strict_types=1)</code> работает <strong>только в файле, где написан</strong>. Не наследуется по include/autoload. Должен быть <strong>первым оператором</strong> файла (после <code>&lt;?php</code>).
                         </div>
                     </div>
 
@@ -7012,7 +7012,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 <span class="comment">// ['alice@example.com', 'bob@test.io']</span></code></pre>
 
                         <div class="practice-pitfalls">
-                            <strong>⚠ Подводные камни:</strong> для прода — <code>filter_var($email, FILTER_VALIDATE_EMAIL)</code> точнее regex. <code>array_unique</code> сохраняет ключи — оборачивай в <code>array_values</code>. Флаг <code>/i</code> — case-insensitive, но в результат вернётся оригинальный регистр.
+                            <strong>Подводные камни:</strong> для прода — <code>filter_var($email, FILTER_VALIDATE_EMAIL)</code> точнее regex. <code>array_unique</code> сохраняет ключи — оборачивай в <code>array_values</code>. Флаг <code>/i</code> — case-insensitive, но в результат вернётся оригинальный регистр.
                         </div>
                     </div>
 
@@ -7041,7 +7041,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 <span class="keyword">echo</span> <span class="function">formatPrice</span>(<span class="number">5500</span>, <span class="string">'KZT'</span>);     <span class="comment">// "₸5,500.00 KZT"</span></code></pre>
 
                         <div class="practice-pitfalls">
-                            <strong>⚠ Подводные камни:</strong> для локализации (русские числа: «1 234,56») — использовать <code>NumberFormatter::CURRENCY</code> из ext-intl. В JSON-API лучше отдавать <strong>цена + валюта отдельно</strong> (минимальные единицы — копейки/центы), а форматировать на фронте.
+                            <strong>Подводные камни:</strong> для локализации (русские числа: «1 234,56») — использовать <code>NumberFormatter::CURRENCY</code> из ext-intl. В JSON-API лучше отдавать <strong>цена + валюта отдельно</strong> (минимальные единицы — копейки/центы), а форматировать на фронте.
                         </div>
                     </div>
 
@@ -7103,7 +7103,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 
                 <!-- ─────── Готовые задания ─────── -->
                 <div class="subsection">
-                    <h3 class="subsection-title">📦 Готовые задания — полный разбор (30-60 мин)</h3>
+                    <h3 class="subsection-title">Готовые задания — полный разбор (30-60 мин)</h3>
 
                     <div class="practice-task">
                         <div class="practice-task-title">Задание 1: trait <code>Cacheable</code> с защитой от <code>null</code> <span class="practice-task-meta">~30 мин</span></div>
@@ -7174,7 +7174,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 }</code></pre>
 
                         <div class="practice-pitfalls">
-                            <strong>⚠ Подводные камни:</strong> наивная реализация с <code>isset</code> — НЕ сработает для <code>null</code>: <code>isset($cache['k'])</code> вернёт <code>false</code> если значение null, и callback вызовется снова (классический баг). Также если в классе уже есть <code>$cache</code> с другой видимостью — fatal error при <code>use Cacheable</code>.
+                            <strong>Подводные камни:</strong> наивная реализация с <code>isset</code> — НЕ сработает для <code>null</code>: <code>isset($cache['k'])</code> вернёт <code>false</code> если значение null, и callback вызовется снова (классический баг). Также если в классе уже есть <code>$cache</code> с другой видимостью — fatal error при <code>use Cacheable</code>.
                         </div>
                     </div>
 
@@ -7251,7 +7251,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 }</code></pre>
 
                         <div class="practice-pitfalls">
-                            <strong>⚠ Подводные камни:</strong> деструктор вызывается при GC — порядок не гарантирован. Если <code>TransactionGuard</code> ссылается на другие объекты, которые тоже на GC — могут быть проблемы. В long-running процессах лучше явный <code>finally { $tx-&gt;rollBackIfNeeded(); }</code>. Также проверка <code>$db-&gt;inTransaction()</code> важна — без неё <code>rollBack</code> на уже зафиксированной транзакции бросит exception.
+                            <strong>Подводные камни:</strong> деструктор вызывается при GC — порядок не гарантирован. Если <code>TransactionGuard</code> ссылается на другие объекты, которые тоже на GC — могут быть проблемы. В long-running процессах лучше явный <code>finally { $tx-&gt;rollBackIfNeeded(); }</code>. Также проверка <code>$db-&gt;inTransaction()</code> важна — без неё <code>rollBack</code> на уже зафиксированной транзакции бросит exception.
                         </div>
                     </div>
 
@@ -7315,7 +7315,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 <span class="comment">// "SELECT * FROM users WHERE age > 18 AND country = 'KZ' ORDER BY name ASC LIMIT 10"</span></code></pre>
 
                         <div class="practice-pitfalls">
-                            <strong>⚠ Подводные камни:</strong> <code>addslashes</code> в реальном коде — НЕ защита от SQLi! Используй prepared statements (<code>PDO::prepare</code> с параметрами). Магия через <code>__call</code> ломает IDE-автодополнение — поэтому Laravel <code>QueryBuilder</code> уже добавил явные методы. Магия хороша для прототипов / DSL, но в production хочется явных сигнатур.
+                            <strong>Подводные камни:</strong> <code>addslashes</code> в реальном коде — НЕ защита от SQLi! Используй prepared statements (<code>PDO::prepare</code> с параметрами). Магия через <code>__call</code> ломает IDE-автодополнение — поэтому Laravel <code>QueryBuilder</code> уже добавил явные методы. Магия хороша для прототипов / DSL, но в production хочется явных сигнатур.
                         </div>
                     </div>
 
@@ -7370,7 +7370,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 <span class="variable">$paypalId</span> = <span class="function">processOrder</span>(<span class="keyword">new</span> <span class="function">PayPalPayment</span>(), <span class="number">1000</span>);</code></pre>
 
                         <div class="practice-pitfalls">
-                            <strong>⚠ Подводные камни:</strong> <strong>сумма в центах</strong> (<code>int</code>) — никогда <code>float</code>! <code>0.1 + 0.2 !== 0.3</code> в плавающей точке. Reusable check: интерфейс должен быть достаточно широким (Stripe и PayPal оба умеют refund, capture, partial refund, idempotency_key — учти на проектировании).
+                            <strong>Подводные камни:</strong> <strong>сумма в центах</strong> (<code>int</code>) — никогда <code>float</code>! <code>0.1 + 0.2 !== 0.3</code> в плавающей точке. Reusable check: интерфейс должен быть достаточно широким (Stripe и PayPal оба умеют refund, capture, partial refund, idempotency_key — учти на проектировании).
                         </div>
                     </div>
 
@@ -7433,14 +7433,14 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 <span class="variable">$all</span> = <span class="variable">$users</span>-><span class="function">all</span>(<span class="number">50</span>);</code></pre>
 
                         <div class="practice-pitfalls">
-                            <strong>⚠ Подводные камни:</strong> <strong>имя таблицы в SQL через интерполяцию</strong> — НЕ через prepared params (PDO не позволяет биндить идентификаторы). Поэтому критично, чтобы <code>table()</code> возвращал <strong>литерал</strong>, а не user input. <code>LIMIT</code> в PDO с MySQL надо биндить через <code>PARAM_INT</code> — иначе lexer воспримет число как строку и SQL сломается.
+                            <strong>Подводные камни:</strong> <strong>имя таблицы в SQL через интерполяцию</strong> — НЕ через prepared params (PDO не позволяет биндить идентификаторы). Поэтому критично, чтобы <code>table()</code> возвращал <strong>литерал</strong>, а не user input. <code>LIMIT</code> в PDO с MySQL надо биндить через <code>PARAM_INT</code> — иначе lexer воспримет число как строку и SQL сломается.
                         </div>
                     </div>
                 </div>
 
                 <!-- ─────── Мини-проекты ─────── -->
                 <div class="subsection">
-                    <h3 class="subsection-title">🚀 Мини-проекты в стиле LeetCode (1-2 часа)</h3>
+                    <h3 class="subsection-title">Мини-проекты в стиле LeetCode (1-2 часа)</h3>
 
                     <div class="practice-task">
                         <div class="practice-task-title">Mini Project 1: Свой <code>my_array_reduce</code> <span class="practice-task-meta">~60 мин</span></div>
@@ -7481,7 +7481,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 <span class="function">assert</span>(<span class="function">my_array_reduce</span>([], <span class="keyword">fn</span>(<span class="variable">$a</span>,<span class="variable">$b</span>) => <span class="variable">$a</span>+<span class="variable">$b</span>, <span class="number">99</span>) === <span class="number">99</span>);</code></pre>
 
                         <div class="practice-pitfalls">
-                            <strong>⚠ Подводные камни:</strong> убедись что callback получает аккумулятор <strong>1-м аргументом</strong>. Если перевернёшь — все assert упадут. Это и есть правильный ответ «как PHP понимает порядок»: <em>зашито в реализации функции</em>.
+                            <strong>Подводные камни:</strong> убедись что callback получает аккумулятор <strong>1-м аргументом</strong>. Если перевернёшь — все assert упадут. Это и есть правильный ответ «как PHP понимает порядок»: <em>зашито в реализации функции</em>.
                         </div>
                     </div>
 
@@ -7542,7 +7542,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 <span class="function">assert</span>(<span class="variable">$result</span> === [<span class="number">4</span>, <span class="number">6</span>]);</code></pre>
 
                         <div class="practice-pitfalls">
-                            <strong>⚠ Подводные камни:</strong> <code>readonly array</code> — иммутабельный, но если в массиве лежат объекты, они НЕ становятся readonly. Это <em>shallow immutability</em>. <code>array_filter</code> сохраняет ключи — оборачиваем в <code>array_values</code> чтобы collection всегда была sequential.
+                            <strong>Подводные камни:</strong> <code>readonly array</code> — иммутабельный, но если в массиве лежат объекты, они НЕ становятся readonly. Это <em>shallow immutability</em>. <code>array_filter</code> сохраняет ключи — оборачиваем в <code>array_values</code> чтобы collection всегда была sequential.
                         </div>
                     </div>
 
@@ -7562,13 +7562,13 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 
                 <!-- ─────── План применения ─────── -->
                 <div class="subsection">
-                    <h3 class="subsection-title">🎯 План применения на 2 недели</h3>
+                    <h3 class="subsection-title">План применения на 2 недели</h3>
                     <div class="remember-box">
                         <strong>Перед финальной проверкой:</strong>
                         <ul style="margin:8px 0 0 20px;line-height:1.8">
                             <li><strong>Неделя 1:</strong> Все 10 микро-задач (по 2/день) + готовые задания 1-2 (Cacheable + TransactionGuard).</li>
                             <li><strong>Неделя 2:</strong> Готовые задания 3-5 (Builder + PaymentInterface + BaseRepository) + Mini Project 2 (Collection).</li>
-                            <li><strong>За 3 дня до финальной проверки:</strong> прогон 45 вопросов из «❓ Вопросник» вслух, таймер 90 сек.</li>
+                            <li><strong>За 3 дня до финальной проверки:</strong> прогон 45 вопросов из «Вопросник» вслух, таймер 90 сек.</li>
                             <li><strong>День перед:</strong> распечатать Шпаргалку, ещё раз пробежать ключевые таблицы.</li>
                         </ul>
                         <p style="margin:10px 0 0">Это задания напрямую отрабатывают то, что спросят. Mini Project 2 (Collection) — её часто разбирают через Eloquent Collection: «как реализована filter?» — ты будешь знать на собственном коде.</p>

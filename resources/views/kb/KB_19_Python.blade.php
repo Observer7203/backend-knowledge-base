@@ -311,7 +311,7 @@ pip install -r requirements.txt
 <span class="c-comment"># Обновить сам pip</span>
 python -m pip install --upgrade pip</code></pre>
 
-    <div class="pitfall"><strong>⚠ Не ставь пакеты в глобальный Python.</strong> Разные проекты — разные версии зависимостей. Ставь через <a href="#" onclick="showSection('venv', document.querySelector('[onclick*=venv]')); return false;">venv</a> (виртуальные окружения) — это как <code>vendor/</code> в PHP, только на уровне интерпретатора. В Ubuntu 24.04 <code>pip install</code> в глобал вообще запрещён по умолчанию (<code>externally-managed-environment</code>).</div>
+    <div class="pitfall"><strong>Не ставь пакеты в глобальный Python.</strong> Разные проекты — разные версии зависимостей. Ставь через <a href="#" onclick="showSection('venv', document.querySelector('[onclick*=venv]')); return false;">venv</a> (виртуальные окружения) — это как <code>vendor/</code> в PHP, только на уровне интерпретатора. В Ubuntu 24.04 <code>pip install</code> в глобал вообще запрещён по умолчанию (<code>externally-managed-environment</code>).</div>
   </div>
 
   <div class="subsection">
@@ -358,7 +358,7 @@ uv run uvicorn main:app --reload</code></pre>
 <span class="c-comment">#     echo "minor";</span>
 <span class="c-comment"># }</span></code></pre>
 
-    <div class="pitfall"><strong>⚠ Смешал tab и spaces</strong> — получишь <code>TabError: inconsistent use of tabs and spaces</code>. Настрой IDE, чтобы Tab превращался в 4 пробела. В PyCharm/VS Code с плагином Python — по умолчанию так.</div>
+    <div class="pitfall"><strong>Смешал tab и spaces</strong> — получишь <code>TabError: inconsistent use of tabs and spaces</code>. Настрой IDE, чтобы Tab превращался в 4 пробела. В PyCharm/VS Code с плагином Python — по умолчанию так.</div>
   </div>
 
   <div class="subsection">
@@ -436,7 +436,7 @@ age: <span class="c-type">int</span> = <span class="c-num">30</span></code></pre
 <span class="c-key">if</span> user <span class="c-key">is not None</span>:
     ...</code></pre>
 
-    <div class="pitfall"><strong>⚠ <code>if x == None</code> — работает, но не питонично.</strong> Правильно: <code>if x is None</code>. Причина: <code>is</code> сравнивает идентичность (быстрее и точнее для singletons), <code>None</code> — синглтон.</div>
+    <div class="pitfall"><strong><code>if x == None</code> — работает, но не питонично.</strong> Правильно: <code>if x is None</code>. Причина: <code>is</code> сравнивает идентичность (быстрее и точнее для singletons), <code>None</code> — синглтон.</div>
   </div>
 
   <div class="subsection">
@@ -581,12 +581,12 @@ unique_users = <span class="c-fn">list</span>(<span class="c-fn">set</span>(user
     <div class="subsection-title"><i data-lucide="repeat-1"></i> Изменяемость (mutable vs immutable)</div>
     <table class="data-table">
       <tr><th>Тип</th><th>Изменяемый?</th></tr>
-      <tr><td><code>int</code>, <code>float</code>, <code>str</code>, <code>bool</code>, <code>None</code>, <code>tuple</code>, <code>frozenset</code></td><td>❌ Immutable</td></tr>
-      <tr><td><code>list</code>, <code>dict</code>, <code>set</code></td><td>✅ Mutable</td></tr>
+      <tr><td><code>int</code>, <code>float</code>, <code>str</code>, <code>bool</code>, <code>None</code>, <code>tuple</code>, <code>frozenset</code></td><td>Immutable</td></tr>
+      <tr><td><code>list</code>, <code>dict</code>, <code>set</code></td><td>Mutable</td></tr>
     </table>
     <p class="text">Immutable-объекты нельзя менять «на месте» — методы возвращают <em>новую</em> копию. У str: <code>s.upper()</code> вернёт новую строку, оригинал не тронется. Это как в PHP: str — value type.</p>
 
-    <div class="pitfall"><strong>⚠ Классический баг: mutable default argument.</strong>
+    <div class="pitfall"><strong>Классический баг: mutable default argument.</strong>
 <pre style="margin-top:6px"><code><span class="c-key">def</span> <span class="c-fn">add_item</span>(item, items=[]):    <span class="c-comment"># ← []  создаётся ОДИН раз при определении функции!</span>
     items.<span class="c-fn">append</span>(item)
     <span class="c-key">return</span> items
@@ -808,7 +808,7 @@ s2 = b.<span class="c-fn">decode</span>(<span class="c-str">"utf-8"</span>)     
 <span class="c-key">with</span> <span class="c-fn">open</span>(<span class="c-str">"image.png"</span>, <span class="c-str">"rb"</span>) <span class="c-key">as</span> f:
     data = f.<span class="c-fn">read</span>()             <span class="c-comment"># bytes</span></code></pre>
 
-    <div class="pitfall"><strong>⚠ Никогда не полагайся на дефолтный encoding.</strong> <code>open("f.txt")</code> без явного <code>encoding="utf-8"</code> — на Windows возьмёт cp1251, на Linux — utf-8. Один и тот же код будет ломаться на разных ОС.</div>
+    <div class="pitfall"><strong>Никогда не полагайся на дефолтный encoding.</strong> <code>open("f.txt")</code> без явного <code>encoding="utf-8"</code> — на Windows возьмёт cp1251, на Linux — utf-8. Один и тот же код будет ломаться на разных ОС.</div>
   </div>
 
   <div class="subsection">
@@ -837,7 +837,7 @@ s2 = b.<span class="c-fn">decode</span>(<span class="c-str">"utf-8"</span>)     
 status = <span class="c-str">"adult"</span> <span class="c-key">if</span> age &gt;= <span class="c-num">18</span> <span class="c-key">else</span> <span class="c-str">"minor"</span>
 
 <span class="c-comment"># Не путать с C-style — синтаксис Python другой:</span>
-<span class="c-comment"># ❌ status = age &gt;= 18 ? "adult" : "minor"   — SyntaxError</span>
+<span class="c-comment"># status = age &gt;= 18 ? "adult" : "minor"   — SyntaxError</span>
 
 <span class="c-comment"># Chained comparisons — красивая питоническая фича</span>
 <span class="c-key">if</span> <span class="c-num">18</span> &lt;= age &lt; <span class="c-num">65</span>:                <span class="c-comment"># эквивалент age &gt;= 18 and age &lt; 65</span>
@@ -903,7 +903,7 @@ ages  = [<span class="c-num">30</span>, <span class="c-num">25</span>]
 <span class="c-key">for</span> user <span class="c-key">in</span> <span class="c-fn">sorted</span>(users, key=<span class="c-key">lambda</span> u: u.age):
     ...</code></pre>
 
-    <div class="pitfall"><strong>⚠ Не используй <code>for i in range(len(items))</code></strong> — это анти-паттерн. Питонично:
+    <div class="pitfall"><strong>Не используй <code>for i in range(len(items))</code></strong> — это анти-паттерн. Питонично:
       <ul style="margin-top:6px">
         <li>нужно только значение → <code>for item in items</code></li>
         <li>нужен индекс + значение → <code>for i, item in enumerate(items)</code></li>
@@ -1004,8 +1004,8 @@ ages  = [<span class="c-num">30</span>, <span class="c-num">25</span>]
 <span class="c-comment"># Keyword-only — принудительно через *</span>
 <span class="c-key">def</span> <span class="c-fn">create_order</span>(items, *, currency=<span class="c-str">"USD"</span>, express=<span class="c-key">False</span>):
     ...
-<span class="c-fn">create_order</span>([...], currency=<span class="c-str">"EUR"</span>)   <span class="c-comment"># ✅</span>
-<span class="c-fn">create_order</span>([...], <span class="c-str">"EUR"</span>)             <span class="c-comment"># ❌ TypeError</span>
+<span class="c-fn">create_order</span>([...], currency=<span class="c-str">"EUR"</span>)   <span class="c-comment">#</span>
+<span class="c-fn">create_order</span>([...], <span class="c-str">"EUR"</span>)             <span class="c-comment"># TypeError</span>
 
 <span class="c-comment"># Positional-only — до /</span>
 <span class="c-key">def</span> <span class="c-fn">divmod_</span>(a, b, /):     <span class="c-comment"># a и b нельзя передать как keyword</span>
@@ -1058,8 +1058,8 @@ ages  = [<span class="c-num">30</span>, <span class="c-num">25</span>]
     <span class="c-key">return</span> a + b + c
 
 nums = [<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>]
-<span class="c-fn">add</span>(nums)                <span class="c-comment"># ❌ TypeError — передался ОДИН список</span>
-<span class="c-fn">add</span>(*nums)               <span class="c-comment"># ✅ = add(1, 2, 3) → 6</span>
+<span class="c-fn">add</span>(nums)                <span class="c-comment"># TypeError — передался ОДИН список</span>
+<span class="c-fn">add</span>(*nums)               <span class="c-comment"># = add(1, 2, 3) → 6</span>
 
 <span class="c-comment"># ** при вызове — раскрыть словарь в именованные</span>
 <span class="c-key">def</span> <span class="c-fn">create_user</span>(name, age): ...
@@ -1145,7 +1145,7 @@ kwargs = {<span class="c-str">"x"</span>: <span class="c-num">10</span>, <span c
     <div class="pitfall"><strong>4. <code>args</code> — кортеж (неизменяемый).</strong> <code>args[0] = 99</code> → <code>TypeError</code>. Хочешь менять — <code>list(args)</code>.</div>
     <div class="pitfall"><strong>5. Не путать <code>*</code> в <code>def</code> и <code>*</code> при вызове.</strong> Один и тот же символ, но противоположные операции. Смотри по позиции: <code>def f(*args)</code> — собирает; <code>f(*[1,2,3])</code> — раскрывает.</div>
 
-    <div class="pitfall"><strong>⚠ Mutable default argument — классический баг.</strong>
+    <div class="pitfall"><strong>Mutable default argument — классический баг.</strong>
 <pre style="margin-top:6px"><code><span class="c-key">def</span> <span class="c-fn">add</span>(item, items=[]):    <span class="c-comment"># [] создаётся ОДИН раз при определении!</span>
     items.<span class="c-fn">append</span>(item)
     <span class="c-key">return</span> items
@@ -1153,7 +1153,7 @@ kwargs = {<span class="c-str">"x"</span>: <span class="c-num">10</span>, <span c
 <span class="c-fn">add</span>(<span class="c-str">"a"</span>)     <span class="c-comment"># ["a"]</span>
 <span class="c-fn">add</span>(<span class="c-str">"b"</span>)     <span class="c-comment"># ["a", "b"] — не пустой!</span>
 
-<span class="c-comment"># ✅ Правильно:</span>
+<span class="c-comment"># Правильно:</span>
 <span class="c-key">def</span> <span class="c-fn">add</span>(item, items=<span class="c-key">None</span>):
     <span class="c-key">if</span> items <span class="c-key">is None</span>:
         items = []
@@ -1219,12 +1219,12 @@ triple = <span class="c-fn">make_multiplier</span>(<span class="c-num">3</span>)
 next_id = <span class="c-fn">counter</span>()
 <span class="c-fn">next_id</span>(), <span class="c-fn">next_id</span>(), <span class="c-fn">next_id</span>()   <span class="c-comment"># 1, 2, 3</span></code></pre>
 
-    <div class="pitfall"><strong>⚠ Late binding в закрытии по циклу — классическая ловушка.</strong>
+    <div class="pitfall"><strong>Late binding в закрытии по циклу — классическая ловушка.</strong>
 <pre style="margin-top:6px"><code>funcs = [<span class="c-key">lambda</span>: i <span class="c-key">for</span> i <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">3</span>)]
 [f() <span class="c-key">for</span> f <span class="c-key">in</span> funcs]           <span class="c-comment"># [2, 2, 2] — не [0, 1, 2]!</span>
 <span class="c-comment"># Все lambda ссылаются на ОДНУ и ту же i, к моменту вызова = 2</span>
 
-<span class="c-comment"># ✅ Фикс через default:</span>
+<span class="c-comment"># Фикс через default:</span>
 funcs = [<span class="c-key">lambda</span> i=i: i <span class="c-key">for</span> i <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">3</span>)]
 [f() <span class="c-key">for</span> f <span class="c-key">in</span> funcs]           <span class="c-comment"># [0, 1, 2]</span></code></pre>
     </div>
@@ -1416,8 +1416,8 @@ pairs = []
 
     <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="alert-octagon" style="width:14px;height:14px"></i> Частые ошибки</div>
     <div class="pitfall"><strong>1. Путать порядок <code>for</code>:</strong>
-<pre style="margin-top:6px"><code>[x <span class="c-key">for</span> row <span class="c-key">in</span> matrix <span class="c-key">for</span> x <span class="c-key">in</span> row]     <span class="c-comment"># ✅</span>
-[x <span class="c-key">for</span> x <span class="c-key">in</span> row <span class="c-key">for</span> row <span class="c-key">in</span> matrix]     <span class="c-comment"># ❌ NameError: row не объявлен</span></code></pre>
+<pre style="margin-top:6px"><code>[x <span class="c-key">for</span> row <span class="c-key">in</span> matrix <span class="c-key">for</span> x <span class="c-key">in</span> row]     <span class="c-comment">#</span>
+[x <span class="c-key">for</span> x <span class="c-key">in</span> row <span class="c-key">for</span> row <span class="c-key">in</span> matrix]     <span class="c-comment"># NameError: row не объявлен</span></code></pre>
     Первый <code>for</code> должен <em>объявить</em> переменную, которую использует второй.</div>
 
     <div class="pitfall"><strong>2. Путать <code>if</code> в начале и в конце:</strong>
@@ -1425,7 +1425,7 @@ pairs = []
 [x <span class="c-key">for</span> x <span class="c-key">in</span> nums <span class="c-key">if</span> x &gt; <span class="c-num">0</span>]            <span class="c-comment"># ← фильтр (отбор)</span></code></pre>
     <code>if</code> <em>после</em> <code>for</code> — фильтр. <code>if...else</code> <em>перед</em> <code>for</code> — часть выражения.</div>
 
-    <div class="pitfall"><strong>3. Три уровня вложенности — уже нечитабельно.</strong> <code>[x for a in A for b in a for c in b for d in c]</code> — 🤯 разверни в циклы или вспомогательные функции.</div>
+    <div class="pitfall"><strong>3. Три уровня вложенности — уже нечитабельно.</strong> <code>[x for a in A for b in a for c in b for d in c]</code> — разверни в циклы или вспомогательные функции.</div>
 
     <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="list-checks" style="width:14px;height:14px"></i> Практические примеры</div>
 <pre><code><span class="c-comment"># Все слова из списка предложений (плоский)</span>
@@ -1559,9 +1559,9 @@ merged = [{**u, **<span class="c-fn">next</span>((o <span class="c-key">for</spa
       <strong>Правило:</strong> для мелких списков (до ~10k) — обычные comprehensions хватает. Для больших датасетов и множества операций — <a href="#" onclick="showSection('pandas', document.querySelector('[onclick*=pandas]')); return false;">pandas</a> (векторизация быстрее). Для реальной БД — SQL через <code>GROUP BY</code>/<code>ORDER BY</code>/<code>JOIN</code>.
     </div>
 
-    <div class="pitfall"><strong>⚠ Опечатка в ключе — молчит.</strong> <code>u["nmae"]</code> кинет <code>KeyError</code> при доступе. Безопаснее <code>u.get("name")</code> — вернёт <code>None</code>. Ещё безопаснее — <code>@dataclass</code> или <code>Pydantic</code>: IDE и mypy подсветят опечатку.</div>
+    <div class="pitfall"><strong>Опечатка в ключе — молчит.</strong> <code>u["nmae"]</code> кинет <code>KeyError</code> при доступе. Безопаснее <code>u.get("name")</code> — вернёт <code>None</code>. Ещё безопаснее — <code>@dataclass</code> или <code>Pydantic</code>: IDE и mypy подсветят опечатку.</div>
 
-    <div class="pitfall"><strong>⚠ Мутация во время итерации.</strong> <code>for u in users: users.remove(u)</code> — пропустит элементы. Собирай новый список или итерируй по копии <code>users[:]</code>.</div>
+    <div class="pitfall"><strong>Мутация во время итерации.</strong> <code>for u in users: users.remove(u)</code> — пропустит элементы. Собирай новый список или итерируй по копии <code>users[:]</code>.</div>
   </div>
 </div>
 
@@ -1599,7 +1599,7 @@ merged = [{**u, **<span class="c-fn">next</span>((o <span class="c-key">for</spa
       <tr><td><code>issubclass(A, B)</code></td><td><code>A</code> — подкласс <code>B</code></td><td><code>issubclass(bool, int)</code> → <code>True</code></td></tr>
     </table>
 
-    <div class="pitfall"><strong>⚠ Правило:</strong> <code>isinstance(x, T)</code> — <em>всегда</em> вместо <code>type(x) == T</code>. Первое учитывает наследование (<code>isinstance(True, int)</code> → <code>True</code>, потому что <code>bool</code> — наследник <code>int</code>). Второе — строгое сравнение классов.</div>
+    <div class="pitfall"><strong>Правило:</strong> <code>isinstance(x, T)</code> — <em>всегда</em> вместо <code>type(x) == T</code>. Первое учитывает наследование (<code>isinstance(True, int)</code> → <code>True</code>, потому что <code>bool</code> — наследник <code>int</code>). Второе — строгое сравнение классов.</div>
   </div>
 
   <div class="subsection">
@@ -1619,7 +1619,7 @@ merged = [{**u, **<span class="c-fn">next</span>((o <span class="c-key">for</spa
       <tr><td><code>frozenset(x)</code></td><td>Неизменяемое множество (hashable — можно как ключ dict)</td><td><code>frozenset([1, 2])</code></td></tr>
     </table>
 
-    <div class="pitfall"><strong>⚠ <code>int(3.9)</code> = <code>3</code>, не <code>4</code></strong> — обрезает к нулю. Для правильного округления — <code>round(3.9)</code>.</div>
+    <div class="pitfall"><strong><code>int(3.9)</code> = <code>3</code>, не <code>4</code></strong> — обрезает к нулю. Для правильного округления — <code>round(3.9)</code>.</div>
   </div>
 
   <div class="subsection">
@@ -1667,7 +1667,7 @@ merged = [{**u, **<span class="c-fn">next</span>((o <span class="c-key">for</spa
       <tr><td><code>chr(n)</code></td><td>Int → char (Unicode)</td><td><code>chr(65)</code> → <code>'A'</code></td></tr>
     </table>
 
-    <div class="pitfall"><strong>⚠ <code>round(2.5)</code> → <code>2</code>, не <code>3</code>.</strong> Python использует <em>bankers' rounding</em> (half to even) — половина округляется к чётному. Это стандарт IEEE 754 для избежания статистического смещения. Не баг — фича.</div>
+    <div class="pitfall"><strong><code>round(2.5)</code> → <code>2</code>, не <code>3</code>.</strong> Python использует <em>bankers' rounding</em> (half to even) — половина округляется к чётному. Это стандарт IEEE 754 для избежания статистического смещения. Не баг — фича.</div>
   </div>
 
   <div class="subsection">
@@ -1699,7 +1699,7 @@ merged = [{**u, **<span class="c-fn">next</span>((o <span class="c-key">for</spa
       <tr><td><code>dir(x)</code></td><td>Список атрибутов и методов объекта</td><td><code>dir("hi")</code> → <code>[..., 'split', 'upper', ...]</code></td></tr>
       <tr><td><code>repr(x)</code></td><td>«Отладочное» представление (видны escape-символы, кавычки)</td><td><code>repr("hi\n")</code> → <code>"'hi\\n'"</code></td></tr>
       <tr><td><code>id(x)</code></td><td>Адрес объекта в памяти (для <code>is</code>)</td><td><code>id(42)</code></td></tr>
-      <tr><td><code>hash(x)</code></td><td>Хеш immutable-объекта. Для list — ошибка (unhashable)</td><td><code>hash((1, 2))</code> ✓; <code>hash([1, 2])</code> ✗</td></tr>
+      <tr><td><code>hash(x)</code></td><td>Хеш immutable-объекта. Для list — ошибка (unhashable)</td><td><code>hash((1, 2))</code> — да; <code>hash([1, 2])</code> — нет</td></tr>
       <tr><td><code>getattr(obj, name, default)</code></td><td>Атрибут по имени (динамически), с дефолтом</td><td><code>getattr(user, "email", "none")</code></td></tr>
       <tr><td><code>setattr(obj, name, value)</code></td><td>Установить атрибут по имени</td><td><code>setattr(user, "role", "admin")</code></td></tr>
       <tr><td><code>hasattr(obj, name)</code></td><td>Есть ли атрибут</td><td><code>hasattr(user, "email")</code></td></tr>
@@ -1727,7 +1727,7 @@ merged = [{**u, **<span class="c-fn">next</span>((o <span class="c-key">for</spa
 
 <span class="c-fn">exec</span>(<span class="c-str">"x = 5\nprint(x)"</span>)     <span class="c-comment"># выполнить ИНСТРУКЦИИ, вернуть None</span></code></pre>
 
-    <div class="pitfall"><strong>⚠ КРИТИЧНО:</strong> <code>eval</code>/<code>exec</code> на пользовательских данных = RCE. <code>eval(user_input)</code> с вводом <code>"__import__('os').system('rm -rf /')"</code> — уничтожит сервер. Использовать <strong>только</strong> для доверенных строк (свои шаблоны, тесты), никогда для внешнего ввода.</div>
+    <div class="pitfall"><strong>КРИТИЧНО:</strong> <code>eval</code>/<code>exec</code> на пользовательских данных = RCE. <code>eval(user_input)</code> с вводом <code>"__import__('os').system('rm -rf /')"</code> — уничтожит сервер. Использовать <strong>только</strong> для доверенных строк (свои шаблоны, тесты), никогда для внешнего ввода.</div>
 
     <p class="text"><strong>Безопасные альтернативы:</strong></p>
     <ul class="bullets">
@@ -1820,7 +1820,7 @@ admin.<span class="c-fn">greet</span>()                       <span class="c-com
 <span class="c-type">D</span>().<span class="c-fn">hi</span>()               <span class="c-comment"># "B" — MRO: D → B → C → A → object</span>
 <span class="c-type">D</span>.<span class="c-fn">__mro__</span>              <span class="c-comment"># покажет полный порядок</span></code></pre>
 
-    <div class="pitfall"><strong>⚠ Множественное наследование — редко.</strong> В 95% кода одиночное наследование или композиция. Multiple inheritance используется в основном для <em>mixin</em>-паттерна (класс с одним методом, добавляется как «примесь»).</div>
+    <div class="pitfall"><strong>Множественное наследование — редко.</strong> В 95% кода одиночное наследование или композиция. Multiple inheritance используется в основном для <em>mixin</em>-паттерна (класс с одним методом, добавляется как «примесь»).</div>
   </div>
 
   <div class="subsection">
@@ -2170,7 +2170,7 @@ math_utils.PI
 <span class="c-key">from</span> math_utils <span class="c-key">import</span> area <span class="c-key">as</span> circle_area   <span class="c-comment"># переименовать</span>
 <span class="c-fn">circle_area</span>(<span class="c-num">5</span>)
 
-<span class="c-key">from</span> math_utils <span class="c-key">import</span> *                    <span class="c-comment"># ❌ анти-паттерн, засоряет namespace</span></code></pre>
+<span class="c-key">from</span> math_utils <span class="c-key">import</span> *                    <span class="c-comment"># анти-паттерн, засоряет namespace</span></code></pre>
   </div>
 
   <div class="subsection">
@@ -2306,7 +2306,7 @@ poetry run pytest</code></pre>
       <tr><td><code>pip + venv</code></td><td>Медленно</td><td><code>requirements.txt</code> (плоский)</td><td>Нет</td><td>Legacy, простые скрипты</td></tr>
       <tr><td><code>pip-tools</code></td><td>Медленно</td><td><code>requirements.lock</code></td><td>Нет</td><td>Есть <code>pip</code>, нужен lock</td></tr>
       <tr><td><code>Poetry</code></td><td>Медленно</td><td>Да</td><td>Нет (нужен pyenv)</td><td>Существующие проекты</td></tr>
-      <tr><td><code>pipenv</code></td><td>Очень медленно</td><td>Да</td><td>Нет</td><td>❌ Не выбирать</td></tr>
+      <tr><td><code>pipenv</code></td><td>Очень медленно</td><td>Да</td><td>Нет</td><td>Не выбирать</td></tr>
       <tr><td><strong><code>uv</code></strong></td><td><strong>Мгновенно</strong></td><td>Да</td><td><strong>Да</strong></td><td><strong>Новые проекты (2026)</strong></td></tr>
     </table>
   </div>
@@ -2433,12 +2433,12 @@ strict = <span class="c-key">true</span></code></pre>
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="box"></i> <code>with</code> — context managers</div>
     <p class="text">Гарантированное освобождение ресурсов даже при исключении. Аналог <code>try/finally</code>, только короче:</p>
-<pre><code><span class="c-comment"># ❌ Без with — легко забыть закрыть</span>
+<pre><code><span class="c-comment"># Без with — легко забыть закрыть</span>
 f = <span class="c-fn">open</span>(<span class="c-str">"data.txt"</span>)
 data = f.<span class="c-fn">read</span>()
 f.<span class="c-fn">close</span>()                          <span class="c-comment"># не выполнится если read() кинет</span>
 
-<span class="c-comment"># ✅ С with — close автоматически</span>
+<span class="c-comment"># С with — close автоматически</span>
 <span class="c-key">with</span> <span class="c-fn">open</span>(<span class="c-str">"data.txt"</span>) <span class="c-key">as</span> f:
     data = f.<span class="c-fn">read</span>()
 
@@ -2529,7 +2529,7 @@ f.<span class="c-fn">close</span>()                          <span class="c-comm
     f.<span class="c-fn">write</span>(<span class="c-str">"one line\n"</span>)
     f.<span class="c-fn">writelines</span>([<span class="c-str">"a\n"</span>, <span class="c-str">"b\n"</span>])   <span class="c-comment"># не добавит \n сам!</span></code></pre>
 
-    <div class="pitfall"><strong>⚠ Всегда указывай <code>encoding="utf-8"</code>.</strong> Без него берётся дефолтный OS — на Windows это cp1251, на Linux utf-8. Один код будет ломаться на разных ОС.</div>
+    <div class="pitfall"><strong>Всегда указывай <code>encoding="utf-8"</code>.</strong> Без него берётся дефолтный OS — на Windows это cp1251, на Linux utf-8. Один код будет ломаться на разных ОС.</div>
   </div>
 
   <div class="subsection">
@@ -2608,7 +2608,7 @@ s = <span class="c-fn">json</span>.<span class="c-fn">dumps</span>(data, indent=
 <span class="c-key">except</span> <span class="c-type">json</span>.<span class="c-type">JSONDecodeError</span> <span class="c-key">as</span> e:
     logger.<span class="c-fn">error</span>(<span class="c-fn">f</span><span class="c-str">"bad JSON: {e}"</span>)</code></pre>
 
-    <div class="pitfall"><strong>⚠ <code>datetime</code> не сериализуется по умолчанию.</strong> <code>json.dumps({"created": datetime.now()})</code> → <code>TypeError</code>. Решения: конвертировать в строку заранее (<code>.isoformat()</code>), либо <code>json.dumps(..., default=str)</code>, либо использовать Pydantic.</div>
+    <div class="pitfall"><strong><code>datetime</code> не сериализуется по умолчанию.</strong> <code>json.dumps({"created": datetime.now()})</code> → <code>TypeError</code>. Решения: конвертировать в строку заранее (<code>.isoformat()</code>), либо <code>json.dumps(..., default=str)</code>, либо использовать Pydantic.</div>
   </div>
 
   <div class="subsection">
@@ -2638,7 +2638,7 @@ s = <span class="c-fn">json</span>.<span class="c-fn">dumps</span>(data, indent=
 <span class="c-comment"># Кастомный разделитель — TSV, semicolon</span>
 reader = <span class="c-fn">csv</span>.<span class="c-fn">reader</span>(f, delimiter=<span class="c-str">";"</span>)</code></pre>
 
-    <div class="pitfall"><strong>⚠ Excel «съедает» leading zeros.</strong> Если открываешь CSV в Excel — <code>"00123"</code> станет <code>123</code>. Не проблема Python, но пользователи ругаются. Для reliable выгрузки в Excel — <code>.xlsx</code> через <code>openpyxl</code>.</div>
+    <div class="pitfall"><strong>Excel «съедает» leading zeros.</strong> Если открываешь CSV в Excel — <code>"00123"</code> станет <code>123</code>. Не проблема Python, но пользователи ругаются. Для reliable выгрузки в Excel — <code>.xlsx</code> через <code>openpyxl</code>.</div>
   </div>
 
   <div class="subsection">
@@ -2850,8 +2850,8 @@ users: <span class="c-type">list</span>[<span class="c-type">User</span> | <span
 <span class="c-comment"># Literal — конкретные значения</span>
 <span class="c-key">def</span> <span class="c-fn">set_status</span>(status: <span class="c-type">Literal</span>[<span class="c-str">"active"</span>, <span class="c-str">"paused"</span>, <span class="c-str">"stopped"</span>]) -&gt; <span class="c-key">None</span>:
     ...
-<span class="c-fn">set_status</span>(<span class="c-str">"active"</span>)     <span class="c-comment"># ✅</span>
-<span class="c-fn">set_status</span>(<span class="c-str">"deleted"</span>)    <span class="c-comment"># ❌ mypy error</span>
+<span class="c-fn">set_status</span>(<span class="c-str">"active"</span>)     <span class="c-comment">#</span>
+<span class="c-fn">set_status</span>(<span class="c-str">"deleted"</span>)    <span class="c-comment"># mypy error</span>
 
 <span class="c-comment"># Final — константа, mypy запретит перезаписать</span>
 MAX_RETRIES: <span class="c-type">Final</span>[<span class="c-type">int</span>] = <span class="c-num">3</span>
@@ -2963,13 +2963,13 @@ asyncio.<span class="c-fn">run</span>(<span class="c-fn">main</span>())</code></
     <span class="c-key">await</span> asyncio.<span class="c-fn">sleep</span>(<span class="c-num">1</span>)
     <span class="c-key">return</span> {<span class="c-str">"id"</span>: id}
 
-<span class="c-comment"># ❌ Последовательно — 3 секунды</span>
+<span class="c-comment"># Последовательно — 3 секунды</span>
 <span class="c-key">async def</span> <span class="c-fn">bad</span>():
     a = <span class="c-key">await</span> <span class="c-fn">fetch_user</span>(<span class="c-num">1</span>)
     b = <span class="c-key">await</span> <span class="c-fn">fetch_user</span>(<span class="c-num">2</span>)
     c = <span class="c-key">await</span> <span class="c-fn">fetch_user</span>(<span class="c-num">3</span>)
 
-<span class="c-comment"># ✅ Параллельно — 1 секунда</span>
+<span class="c-comment"># Параллельно — 1 секунда</span>
 <span class="c-key">async def</span> <span class="c-fn">good</span>():
     a, b, c = <span class="c-key">await</span> asyncio.<span class="c-fn">gather</span>(
         <span class="c-fn">fetch_user</span>(<span class="c-num">1</span>),
@@ -3036,7 +3036,7 @@ engine = <span class="c-fn">create_async_engine</span>(<span class="c-str">"post
       <tr><td>GIL мешает?</td><td>Нет (один поток)</td><td>Да, но I/O освобождает</td><td>Нет (разные процессы)</td></tr>
       <tr><td>Overhead</td><td>Минимальный</td><td>Средний</td><td>Высокий</td></tr>
       <tr><td>Общая память</td><td>Да (тот же процесс)</td><td>Да, нужны locks</td><td>Нет (IPC)</td></tr>
-      <tr><td>Тысячи задач</td><td>✅ Легко</td><td>❌ Кончится память</td><td>❌ Overhead убьёт</td></tr>
+      <tr><td>Тысячи задач</td><td>Легко</td><td>Кончится память</td><td>Overhead убьёт</td></tr>
     </table>
   </div>
 
@@ -3108,12 +3108,12 @@ gen = <span class="c-fn">count_up_to</span>(<span class="c-num">3</span>)   <spa
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="zap"></i> Зачем это надо — ленивость</div>
     <p class="text"><strong>Главный use-case</strong>: обработка больших потоков данных без загрузки всего в память.</p>
-<pre><code><span class="c-comment"># ❌ Загрузим весь 10GB лог в память — OOM</span>
+<pre><code><span class="c-comment"># Загрузим весь 10GB лог в память — OOM</span>
 <span class="c-key">def</span> <span class="c-fn">read_all</span>(path):
     <span class="c-key">with</span> <span class="c-fn">open</span>(path) <span class="c-key">as</span> f:
         <span class="c-key">return</span> f.<span class="c-fn">readlines</span>()      <span class="c-comment"># list всех строк</span>
 
-<span class="c-comment"># ✅ Читаем по строке, память O(1)</span>
+<span class="c-comment"># Читаем по строке, память O(1)</span>
 <span class="c-key">def</span> <span class="c-fn">read_lazy</span>(path):
     <span class="c-key">with</span> <span class="c-fn">open</span>(path) <span class="c-key">as</span> f:
         <span class="c-key">for</span> line <span class="c-key">in</span> f:
@@ -3382,12 +3382,12 @@ python manage.py sqlmigrate users <span class="c-num">0002</span></code></pre>
     <div class="subsection-title"><i data-lucide="git-compare"></i> Django vs FastAPI — когда что</div>
     <table class="data-table">
       <tr><th>Задача</th><th>Django</th><th>FastAPI</th></tr>
-      <tr><td>Сайт с админкой</td><td>✅ Идеально</td><td>Не подходит</td></tr>
-      <tr><td>Внутренняя система с CRUD-формами</td><td>✅ Огромная экономия времени</td><td>Больше кода писать</td></tr>
-      <tr><td>Публичный REST API</td><td>DRF — работает, но многословно</td><td>✅ Стандарт 2026</td></tr>
-      <tr><td>Микросервис / AI-backend</td><td>Тяжеловат</td><td>✅ Быстро и легко</td></tr>
-      <tr><td>WebSocket / real-time</td><td>Django Channels — через костыли</td><td>✅ Async из коробки</td></tr>
-      <tr><td>Стартап-прототип с сайтом</td><td>✅ Мгновенно рабочий MVP</td><td>Придётся собирать всё</td></tr>
+      <tr><td>Сайт с админкой</td><td>Идеально</td><td>Не подходит</td></tr>
+      <tr><td>Внутренняя система с CRUD-формами</td><td>Огромная экономия времени</td><td>Больше кода писать</td></tr>
+      <tr><td>Публичный REST API</td><td>DRF — работает, но многословно</td><td>Стандарт 2026</td></tr>
+      <tr><td>Микросервис / AI-backend</td><td>Тяжеловат</td><td>Быстро и легко</td></tr>
+      <tr><td>WebSocket / real-time</td><td>Django Channels — через костыли</td><td>Async из коробки</td></tr>
+      <tr><td>Стартап-прототип с сайтом</td><td>Мгновенно рабочий MVP</td><td>Придётся собирать всё</td></tr>
     </table>
   </div>
 
@@ -3583,11 +3583,11 @@ app.<span class="c-fn">include_router</span>(users_router, prefix=<span class="c
     <table class="data-table">
       <tr><th></th><th>FastAPI</th><th>Django</th><th>Flask</th></tr>
       <tr><td>Тип</td><td>Micro/API-first, async</td><td>Batteries-included</td><td>Micro</td></tr>
-      <tr><td>Async</td><td>✅ Первого класса</td><td>Частично (3.1+)</td><td>Нет (только через расширения)</td></tr>
+      <tr><td>Async</td><td>Первого класса</td><td>Частично (3.1+)</td><td>Нет (только через расширения)</td></tr>
       <tr><td>ORM</td><td>Нет — свой выбор (SQLAlchemy)</td><td>Свой мощный ORM</td><td>Нет — Flask-SQLAlchemy</td></tr>
-      <tr><td>Admin panel</td><td>Нет из коробки</td><td>✅ Мощная</td><td>Нет</td></tr>
+      <tr><td>Admin panel</td><td>Нет из коробки</td><td>Мощная</td><td>Нет</td></tr>
       <tr><td>Валидация</td><td>Pydantic — на type hints</td><td>Django Forms / DRF Serializers</td><td>Отдельные libs</td></tr>
-      <tr><td>OpenAPI/Swagger</td><td>✅ Автоматически</td><td>Через DRF + пакеты</td><td>Нужны пакеты</td></tr>
+      <tr><td>OpenAPI/Swagger</td><td>Автоматически</td><td>Через DRF + пакеты</td><td>Нужны пакеты</td></tr>
       <tr><td>Кривая обучения</td><td>Быстро — type hints и всё</td><td>Долго — много концепций</td><td>Быстро — но всё собирать</td></tr>
       <tr><td>Когда выбирать</td><td><strong>HTTP-API, микросервис, AI-backend</strong></td><td><strong>Сайт с админкой, монолит</strong></td><td>Скрипт, прототип, legacy</td></tr>
     </table>
@@ -3687,15 +3687,15 @@ app = <span class="c-fn">Flask</span>(__name__)
       <tr><td>Тип</td><td>Full-stack</td><td>Micro / API-first</td><td>Micro</td></tr>
       <tr><td>Год</td><td>2005</td><td>2018</td><td>2010</td></tr>
       <tr><td>Философия</td><td>Batteries included</td><td>Type-driven, async-first</td><td>Do-it-yourself</td></tr>
-      <tr><td>Async</td><td>Частично (4.1+)</td><td>✅ Первого класса</td><td>❌ (только Quart-fork)</td></tr>
-      <tr><td>ORM в комплекте</td><td>✅ Django ORM</td><td>❌ (SQLAlchemy отдельно)</td><td>❌ (Flask-SQLAlchemy отдельно)</td></tr>
-      <tr><td>Admin-панель</td><td>✅ Из коробки</td><td>❌</td><td>Flask-Admin (отдельно)</td></tr>
-      <tr><td>Auth-система</td><td>✅ Полная</td><td>Собирать (FastAPI Users / OAuth2)</td><td>Flask-Login</td></tr>
-      <tr><td>Валидация</td><td>Django Forms / DRF Serializers</td><td>✅ Pydantic на type hints</td><td>Вручную / Flask-WTF</td></tr>
-      <tr><td>Автодоки OpenAPI</td><td>Через DRF + drf-spectacular</td><td>✅ Автоматически</td><td>Через плагин Flask-Smorest</td></tr>
-      <tr><td>Templates</td><td>✅ Django templates</td><td>Jinja2 через Starlette</td><td>✅ Jinja2</td></tr>
-      <tr><td>Миграции</td><td>✅ Автогенерация</td><td>Alembic отдельно</td><td>Flask-Migrate</td></tr>
-      <tr><td>Скорость (RPS)</td><td>Средняя</td><td>✅ Высокая (async)</td><td>Средняя</td></tr>
+      <tr><td>Async</td><td>Частично (4.1+)</td><td>Первого класса</td><td>(только Quart-fork)</td></tr>
+      <tr><td>ORM в комплекте</td><td>Django ORM</td><td>(SQLAlchemy отдельно)</td><td>(Flask-SQLAlchemy отдельно)</td></tr>
+      <tr><td>Admin-панель</td><td>Из коробки</td><td></td><td>Flask-Admin (отдельно)</td></tr>
+      <tr><td>Auth-система</td><td>Полная</td><td>Собирать (FastAPI Users / OAuth2)</td><td>Flask-Login</td></tr>
+      <tr><td>Валидация</td><td>Django Forms / DRF Serializers</td><td>Pydantic на type hints</td><td>Вручную / Flask-WTF</td></tr>
+      <tr><td>Автодоки OpenAPI</td><td>Через DRF + drf-spectacular</td><td>Автоматически</td><td>Через плагин Flask-Smorest</td></tr>
+      <tr><td>Templates</td><td>Django templates</td><td>Jinja2 через Starlette</td><td>Jinja2</td></tr>
+      <tr><td>Миграции</td><td>Автогенерация</td><td>Alembic отдельно</td><td>Flask-Migrate</td></tr>
+      <tr><td>Скорость (RPS)</td><td>Средняя</td><td>Высокая (async)</td><td>Средняя</td></tr>
       <tr><td>Кривая обучения</td><td>Крутая — много концепций</td><td>Пологая, но нужны type hints</td><td>Очень пологая</td></tr>
       <tr><td>Комьюнити 2026</td><td>Огромное, зрелое</td><td>Взрывной рост, активное</td><td>Стабильное, но растёт медленно</td></tr>
       <tr><td>Кто использует</td><td>Instagram, Pinterest, Reddit</td><td>Netflix, Uber, Microsoft</td><td>Небольшие сервисы, скрипты</td></tr>
@@ -3784,7 +3784,7 @@ app = <span class="c-fn">Flask</span>(__name__)
         <span class="c-key">for</span> row <span class="c-key">in</span> cur:
             <span class="c-fn">print</span>(row[<span class="c-str">"name"</span>])</code></pre>
 
-    <div class="pitfall"><strong>⚠ Только параметризация через <code>%s</code>, никогда f-string / concat.</strong> <code>cur.execute(f"SELECT ... WHERE id = {user_input}")</code> — SQL-инъекция. Всегда <code>cur.execute("... WHERE id = %s", (user_input,))</code> — драйвер эскейпит.</div>
+    <div class="pitfall"><strong>Только параметризация через <code>%s</code>, никогда f-string / concat.</strong> <code>cur.execute(f"SELECT ... WHERE id = {user_input}")</code> — SQL-инъекция. Всегда <code>cur.execute("... WHERE id = %s", (user_input,))</code> — драйвер эскейпит.</div>
   </div>
 
   <div class="subsection">
@@ -3916,9 +3916,9 @@ alembic history</code></pre>
       <tr><th></th><th><code>requests</code></th><th><code>httpx</code></th></tr>
       <tr><td>Год</td><td>2011</td><td>2019</td></tr>
       <tr><td>API</td><td>Простой, стандартный</td><td>Такой же — можно мигрировать с sed</td></tr>
-      <tr><td>Async</td><td>❌ Нет</td><td>✅ Sync + Async в одном пакете</td></tr>
-      <tr><td>HTTP/2</td><td>❌ Нет</td><td>✅ Да</td></tr>
-      <tr><td>Timeout по умолчанию</td><td>❌ Нет (висит навсегда)</td><td>✅ 5 секунд</td></tr>
+      <tr><td>Async</td><td>Нет</td><td>Sync + Async в одном пакете</td></tr>
+      <tr><td>HTTP/2</td><td>Нет</td><td>Да</td></tr>
+      <tr><td>Timeout по умолчанию</td><td>Нет (висит навсегда)</td><td>5 секунд</td></tr>
       <tr><td>Проверка типов</td><td>Слабая</td><td>Полные type hints</td></tr>
     </table>
     <p class="text"><strong>Для нового кода — <code>httpx</code></strong>. <code>requests</code> — для legacy или совсем маленьких скриптов.</p>
@@ -4088,7 +4088,7 @@ b.ndim                              <span class="c-comment"># 2</span>
 a.dtype                             <span class="c-comment"># int64 — тип элементов</span>
 a.size                              <span class="c-comment"># 4 — общее число элементов</span></code></pre>
 
-    <div class="pitfall"><strong>⚠ Массивы одного типа.</strong> В отличие от list, ndarray хранит элементы <em>одного dtype</em>. <code>np.array([1, "hello"])</code> сконвертит всё в строки. Задавать явно: <code>np.array([1, 2], dtype=np.float32)</code>.</div>
+    <div class="pitfall"><strong>Массивы одного типа.</strong> В отличие от list, ndarray хранит элементы <em>одного dtype</em>. <code>np.array([1, "hello"])</code> сконвертит всё в строки. Задавать явно: <code>np.array([1, 2], dtype=np.float32)</code>.</div>
   </div>
 
   <div class="subsection">
@@ -4143,12 +4143,12 @@ X_normalized = (X - X.<span class="c-fn">mean</span>(axis=<span class="c-num">0<
       <li>Иначе — ошибка.</li>
     </ol>
 <pre><code><span class="c-comment"># Совместимые</span>
-(<span class="c-num">3</span>, <span class="c-num">4</span>) + (<span class="c-num">4</span>,)       <span class="c-comment"># (3,4) + (1,4) → (3,4) ✓</span>
-(<span class="c-num">3</span>, <span class="c-num">4</span>) + (<span class="c-num">3</span>, <span class="c-num">1</span>)     <span class="c-comment">→ (3,4) ✓</span>
-(<span class="c-num">2</span>, <span class="c-num">1</span>, <span class="c-num">4</span>) + (<span class="c-num">3</span>, <span class="c-num">4</span>)  <span class="c-comment">→ (2,3,4) ✓</span>
+(<span class="c-num">3</span>, <span class="c-num">4</span>) + (<span class="c-num">4</span>,)       <span class="c-comment"># (3,4) + (1,4) → (3,4)</span>
+(<span class="c-num">3</span>, <span class="c-num">4</span>) + (<span class="c-num">3</span>, <span class="c-num">1</span>)     <span class="c-comment">→ (3,4)</span>
+(<span class="c-num">2</span>, <span class="c-num">1</span>, <span class="c-num">4</span>) + (<span class="c-num">3</span>, <span class="c-num">4</span>)  <span class="c-comment">→ (2,3,4)</span>
 
 <span class="c-comment"># Несовместимые — ValueError</span>
-(<span class="c-num">3</span>, <span class="c-num">4</span>) + (<span class="c-num">3</span>,)       <span class="c-comment">❌ операнды не совпадают</span></code></pre>
+(<span class="c-num">3</span>, <span class="c-num">4</span>) + (<span class="c-num">3</span>,)       <span class="c-comment">операнды не совпадают</span></code></pre>
   </div>
 
   <div class="subsection">
@@ -4175,7 +4175,7 @@ a[a % <span class="c-num">2</span> == <span class="c-num">0</span>]         <spa
 <span class="c-comment"># Модификация через маску</span>
 a[a &lt; <span class="c-num">5</span>] = <span class="c-num">0</span>           <span class="c-comment"># все &lt; 5 → 0</span></code></pre>
 
-    <div class="pitfall"><strong>⚠ Срез — это VIEW, не копия.</strong> <code>b = a[:, 1:3]; b[0, 0] = 99</code> изменит <em>оригинал</em> <code>a</code>. Хочешь копию — явно <code>a[:, 1:3].copy()</code>. В Pandas та же ловушка (SettingWithCopyWarning).</div>
+    <div class="pitfall"><strong>Срез — это VIEW, не копия.</strong> <code>b = a[:, 1:3]; b[0, 0] = 99</code> изменит <em>оригинал</em> <code>a</code>. Хочешь копию — явно <code>a[:, 1:3].copy()</code>. В Pandas та же ловушка (SettingWithCopyWarning).</div>
   </div>
 
   <div class="subsection">
@@ -4376,7 +4376,7 @@ df.<span class="c-fn">loc</span>[<span class="c-num">0</span>, <span class="c-st
 <span class="c-comment"># Сортировка</span>
 df.<span class="c-fn">sort_values</span>(<span class="c-str">"age"</span>, ascending=<span class="c-key">False</span>)</code></pre>
 
-    <div class="pitfall"><strong>⚠ Логические операторы — <code>&amp;</code>/<code>|</code>/<code>~</code>, не <code>and</code>/<code>or</code>/<code>not</code>.</strong> Из-за перегрузки операторов Pandas. И скобки вокруг каждого условия обязательны.</div>
+    <div class="pitfall"><strong>Логические операторы — <code>&amp;</code>/<code>|</code>/<code>~</code>, не <code>and</code>/<code>or</code>/<code>not</code>.</strong> Из-за перегрузки операторов Pandas. И скобки вокруг каждого условия обязательны.</div>
   </div>
 
   <div class="subsection">
@@ -5157,7 +5157,7 @@ mock.<span class="c-fn">some_method</span>.<span class="c-fn">assert_called_once
         <span class="c-fn">register_user</span>(<span class="c-str">"Alice"</span>)
         mock_send.<span class="c-fn">assert_called_once</span>()</code></pre>
 
-    <div class="pitfall"><strong>⚠ Патчить надо там где ИСПОЛЬЗУЕТСЯ, не где ОБЪЯВЛЕНО.</strong> <code>register_user</code> внутри делает <code>from src.email import send; send(...)</code> — <code>@patch("src.email.send")</code> НЕ сработает. Патчи <code>@patch("src.users.send")</code> — там где импортировано.</div>
+    <div class="pitfall"><strong>Патчить надо там где ИСПОЛЬЗУЕТСЯ, не где ОБЪЯВЛЕНО.</strong> <code>register_user</code> внутри делает <code>from src.email import send; send(...)</code> — <code>@patch("src.email.send")</code> НЕ сработает. Патчи <code>@patch("src.users.send")</code> — там где импортировано.</div>
   </div>
 
   <div class="subsection">
@@ -5233,7 +5233,7 @@ logger.<span class="c-fn">info</span>(<span class="c-str">"user %s created with 
 <span class="c-key">except</span> <span class="c-type">Exception</span>:
     logger.<span class="c-fn">exception</span>(<span class="c-str">"unexpected"</span>)     <span class="c-comment"># == error() + traceback</span></code></pre>
 
-    <div class="pitfall"><strong>⚠ Не используй f-string в логах.</strong> <code>logger.info(f"user {name}")</code> сформирует строку ВСЕГДА, даже если этот уровень отключён. <code>logger.info("user %s", name)</code> — форматирование только когда handler решил залогировать. На горячем пути экономия времени.</div>
+    <div class="pitfall"><strong>Не используй f-string в логах.</strong> <code>logger.info(f"user {name}")</code> сформирует строку ВСЕГДА, даже если этот уровень отключён. <code>logger.info("user %s", name)</code> — форматирование только когда handler решил залогировать. На горячем пути экономия времени.</div>
   </div>
 
   <div class="subsection">

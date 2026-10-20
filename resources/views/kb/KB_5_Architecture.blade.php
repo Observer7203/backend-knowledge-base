@@ -237,7 +237,7 @@ ul.bullets strong{color:var(--text);}
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика: SRP в контроллере</div>
-<pre><code><span class="c-comment">// ❌ Контроллер делает всё</span>
+<pre><code><span class="c-comment">// Контроллер делает всё</span>
 <span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>)
 {
     <span class="c-var">$validated</span> = <span class="c-var">$request</span>-&gt;<span class="c-fn">validate</span>([<span class="c-str">'email'</span> =&gt; <span class="c-str">'required|email'</span>]);
@@ -247,7 +247,7 @@ ul.bullets strong{color:var(--text);}
     <span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">json</span>(<span class="c-var">$order</span>);
 }
 
-<span class="c-comment">// ✓ Каждый класс — одна ответственность</span>
+<span class="c-comment">// Каждый класс — одна ответственность</span>
 <span class="c-key">public function</span> <span class="c-fn">store</span>(<span class="c-type">StoreOrderRequest</span> <span class="c-var">$request</span>, <span class="c-type">CreateOrder</span> <span class="c-var">$action</span>): <span class="c-type">JsonResponse</span>
 {
     <span class="c-var">$order</span> = <span class="c-var">$action</span>(<span class="c-var">$request</span>-&gt;<span class="c-fn">validated</span>());
@@ -297,13 +297,13 @@ ul.bullets strong{color:var(--text);}
     <span class="c-key">return</span> (<span class="c-key">int</span>) (<span class="c-var">$refund</span>-&gt;<span class="c-var">total</span> * <span class="c-num">0.12</span>);
 }
 
-<span class="c-comment">// ❌ Преждевременное DRY: единая абстракция.
+<span class="c-comment">// Преждевременное DRY: единая абстракция.
 // Если правила для refund изменятся (другие ставки) — придётся ломать.</span>
 <span class="c-key">public function</span> <span class="c-fn">calculateTax</span>(<span class="c-key">int</span> <span class="c-var">$amount</span>): <span class="c-key">int</span> {
     <span class="c-key">return</span> (<span class="c-key">int</span>) (<span class="c-var">$amount</span> * <span class="c-num">0.12</span>);
 }
 
-<span class="c-comment">// ✓ KISS / YAGNI: оставить два метода до третьего случая.
+<span class="c-comment">// KISS / YAGNI: оставить два метода до третьего случая.
 // Эволюция: дублирование → паттерн → абстракция.</span>
 </code></pre>
   </div>
@@ -443,7 +443,7 @@ ul.bullets strong{color:var(--text);}
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика: Strategy вместо switch</div>
-<pre><code><span class="c-comment">// ❌ Switch на тип — нарушение Open/Closed</span>
+<pre><code><span class="c-comment">// Switch на тип — нарушение Open/Closed</span>
 <span class="c-key">public function</span> <span class="c-fn">ship</span>(<span class="c-type">Order</span> <span class="c-var">$order</span>, <span class="c-key">string</span> <span class="c-var">$carrier</span>): <span class="c-key">string</span>
 {
     <span class="c-key">return match</span> (<span class="c-var">$carrier</span>) {
@@ -453,7 +453,7 @@ ul.bullets strong{color:var(--text);}
     };
 }
 
-<span class="c-comment">// ✓ Strategy</span>
+<span class="c-comment">// Strategy</span>
 <span class="c-key">interface</span> <span class="c-type">ShippingStrategy</span> { <span class="c-key">public function</span> <span class="c-fn">ship</span>(<span class="c-type">Order</span> <span class="c-var">$o</span>): <span class="c-key">string</span>; }
 <span class="c-key">final class</span> <span class="c-type">DhlStrategy</span>   <span class="c-key">implements</span> <span class="c-type">ShippingStrategy</span> { ... }
 <span class="c-key">final class</span> <span class="c-type">FedExStrategy</span> <span class="c-key">implements</span> <span class="c-type">ShippingStrategy</span> { ... }
@@ -846,8 +846,8 @@ ul.bullets strong{color:var(--text);}
 
     <table class="data-table">
       <tr><th>Что произошло</th><th>Последствие</th></tr>
-      <tr><td>Заказ сохранён ✅, событие <em>не</em> отправлено ❌ (упал брокер / сеть)</td><td>Другие сервисы никогда не узнают о заказе. Оплата не спишется, склад не зарезервирует, письмо не уйдёт.</td></tr>
-      <tr><td>Событие отправлено ✅, транзакция откачена ❌ (упал SQL после публикации)</td><td>Downstream начнёт обрабатывать <em>несуществующий</em> заказ — грязные данные в других сервисах.</td></tr>
+      <tr><td>Заказ сохранён, событие <em>не</em> отправлено (упал брокер / сеть)</td><td>Другие сервисы никогда не узнают о заказе. Оплата не спишется, склад не зарезервирует, письмо не уйдёт.</td></tr>
+      <tr><td>Событие отправлено, транзакция откачена (упал SQL после публикации)</td><td>Downstream начнёт обрабатывать <em>несуществующий</em> заказ — грязные данные в других сервисах.</td></tr>
     </table>
 
     <div class="pitfall"><strong>Наивное «решение», которое НЕ работает:</strong> <code>DB::transaction(fn () => { $order-&gt;save(); Kafka::publish(...); });</code>. Publish не в БД — <code>rollback</code> Laravel не откатит уже отправленное сообщение. Аналогично «сначала опубликую, потом сохраню» — брокер не откатывается по сигналу приложения.</div>
@@ -861,9 +861,9 @@ ul.bullets strong{color:var(--text);}
 │   Сервис заказов (одна транзакция БД)           │
 │                                                 │
 │  BEGIN                                          │
-│    INSERT INTO orders   (id, total, ...)  ✅    │
+│    INSERT INTO orders   (id, total, ...)     │
 │    INSERT INTO outbox   (event_type,            │
-│                          payload, ...)     ✅    │
+│                          payload, ...)        │
 │  COMMIT                                         │
 │                                                 │
 └──────────┬──────────────────────────────────────┘

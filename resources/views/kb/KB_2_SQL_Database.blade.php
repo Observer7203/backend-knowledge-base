@@ -287,11 +287,11 @@ ul.bullets strong{color:var(--text);}
 
     <table class="data-table">
       <tr><th>Аспект</th><th>Row-oriented</th><th>Column-oriented</th></tr>
-      <tr><td>Чтение <code>SELECT *</code> одной строки</td><td>⚡ 1 seek</td><td>N seeks (по одному на колонку)</td></tr>
-      <tr><td>Агрегация <code>SUM/AVG</code> одной колонки</td><td>Читает ВСЕ колонки</td><td>⚡ Читает только нужную</td></tr>
-      <tr><td>INSERT одной строки</td><td>⚡ Быстро</td><td>Медленнее (запись в N файлов)</td></tr>
-      <tr><td>UPDATE / DELETE</td><td>⚡ Норм</td><td>Дорого (некоторые вообще запрещают)</td></tr>
-      <tr><td>Сжатие</td><td>Хуже (разные типы вперемешку)</td><td>⚡ Отличное (одинаковые данные подряд)</td></tr>
+      <tr><td>Чтение <code>SELECT *</code> одной строки</td><td>1 seek</td><td>N seeks (по одному на колонку)</td></tr>
+      <tr><td>Агрегация <code>SUM/AVG</code> одной колонки</td><td>Читает ВСЕ колонки</td><td>Читает только нужную</td></tr>
+      <tr><td>INSERT одной строки</td><td>Быстро</td><td>Медленнее (запись в N файлов)</td></tr>
+      <tr><td>UPDATE / DELETE</td><td>Норм</td><td>Дорого (некоторые вообще запрещают)</td></tr>
+      <tr><td>Сжатие</td><td>Хуже (разные типы вперемешку)</td><td>Отличное (одинаковые данные подряд)</td></tr>
       <tr><td>Индексы нужны часто?</td><td>Да, много</td><td>Реже — скан быстрый</td></tr>
       <tr><td>Типичная задача</td><td>OLTP (транзакции)</td><td>OLAP (аналитика)</td></tr>
     </table>
@@ -433,14 +433,14 @@ ul.bullets strong{color:var(--text);}
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="dollar-sign"></i> Деньги: DECIMAL, не FLOAT</div>
-<pre><code><span class="c-comment">-- ❌ Никогда. FLOAT/DOUBLE — приблизительные.</span>
+<pre><code><span class="c-comment">-- Никогда. FLOAT/DOUBLE — приблизительные.</span>
 <span class="c-key">CREATE TABLE</span> <span class="c-type">orders</span> (<span class="c-var">total</span> <span class="c-type">FLOAT</span>);
 <span class="c-comment">-- SELECT 0.1 + 0.2; → 0.30000000000000004</span>
 
-<span class="c-comment">-- ✓ INT в минорных единицах (центы/копейки)</span>
+<span class="c-comment">-- INT в минорных единицах (центы/копейки)</span>
 <span class="c-key">CREATE TABLE</span> <span class="c-type">orders</span> (<span class="c-var">total_minor</span> <span class="c-type">INT UNSIGNED</span>);
 
-<span class="c-comment">-- ✓ DECIMAL(precision, scale) — точное хранение</span>
+<span class="c-comment">-- DECIMAL(precision, scale) — точное хранение</span>
 <span class="c-key">CREATE TABLE</span> <span class="c-type">products</span> (<span class="c-var">price</span> <span class="c-type">DECIMAL</span>(<span class="c-num">10</span>, <span class="c-num">2</span>)); <span class="c-comment">-- до 99 999 999.99</span>
 </code></pre>
     <p class="text">Если <em>обязаны</em> сравнить FLOAT'ы &mdash; через эпсилон: <code>ABS(a - b) &lt; 0.0001</code>, никогда <code>a = b</code>. Для финансовых сумм правило строгое &mdash; только DECIMAL или INT в минорных единицах.</p>
@@ -717,14 +717,14 @@ ul.bullets strong{color:var(--text);}
     <div class="subsection-title"><i data-lucide="filter"></i> ON vs WHERE: критичная разница для OUTER JOIN</div>
     <p class="text">Условие в <code>ON</code> применяется <strong>до</strong> JOIN-а &mdash; контролирует, какие строки соединяются. Условие в <code>WHERE</code> применяется <strong>после</strong> JOIN-а &mdash; фильтрует результат. Для INNER JOIN разницы нет; для OUTER &mdash; разница принципиальная.</p>
 
-<pre><code><span class="c-comment">-- ❌ WHERE на правую таблицу превращает LEFT JOIN в INNER</span>
+<pre><code><span class="c-comment">-- WHERE на правую таблицу превращает LEFT JOIN в INNER</span>
 <span class="c-key">SELECT</span> <span class="c-var">u</span>.<span class="c-var">id</span>, <span class="c-var">u</span>.<span class="c-var">email</span>, <span class="c-var">o</span>.<span class="c-var">id</span> <span class="c-key">AS</span> <span class="c-var">order_id</span>
 <span class="c-key">FROM</span> <span class="c-type">users</span> <span class="c-var">u</span>
 <span class="c-key">LEFT JOIN</span> <span class="c-type">orders</span> <span class="c-var">o</span> <span class="c-key">ON</span> <span class="c-var">o</span>.<span class="c-var">user_id</span> = <span class="c-var">u</span>.<span class="c-var">id</span>
 <span class="c-key">WHERE</span> <span class="c-var">o</span>.<span class="c-var">status</span> = <span class="c-str">'paid'</span>;
 <span class="c-comment">-- Пользователи без заказов выпадут: их status = NULL, NULL = 'paid' → false</span>
 
-<span class="c-comment">-- ✓ Условие в ON: LEFT JOIN сохранён</span>
+<span class="c-comment">-- Условие в ON: LEFT JOIN сохранён</span>
 <span class="c-key">SELECT</span> <span class="c-var">u</span>.<span class="c-var">id</span>, <span class="c-var">u</span>.<span class="c-var">email</span>, <span class="c-var">o</span>.<span class="c-var">id</span> <span class="c-key">AS</span> <span class="c-var">order_id</span>
 <span class="c-key">FROM</span> <span class="c-type">users</span> <span class="c-var">u</span>
 <span class="c-key">LEFT JOIN</span> <span class="c-type">orders</span> <span class="c-var">o</span> <span class="c-key">ON</span> <span class="c-var">o</span>.<span class="c-var">user_id</span> = <span class="c-var">u</span>.<span class="c-var">id</span> <span class="c-key">AND</span> <span class="c-var">o</span>.<span class="c-var">status</span> = <span class="c-str">'paid'</span>;
@@ -770,14 +770,14 @@ ul.bullets strong{color:var(--text);}
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика: дублирование строк</div>
-<pre><code><span class="c-comment">-- ❌ Двойной JOIN ломает SUM: каждый платёж умножается на количество заказов</span>
+<pre><code><span class="c-comment">-- Двойной JOIN ломает SUM: каждый платёж умножается на количество заказов</span>
 <span class="c-key">SELECT</span> <span class="c-var">u</span>.<span class="c-var">id</span>, <span class="c-fn">COUNT</span>(<span class="c-var">o</span>.<span class="c-var">id</span>) <span class="c-key">AS</span> <span class="c-var">orders_count</span>, <span class="c-fn">SUM</span>(<span class="c-var">p</span>.<span class="c-var">amount</span>) <span class="c-key">AS</span> <span class="c-var">total_paid</span>
 <span class="c-key">FROM</span>      <span class="c-type">users</span>    <span class="c-var">u</span>
 <span class="c-key">LEFT JOIN</span> <span class="c-type">orders</span>   <span class="c-var">o</span> <span class="c-key">ON</span> <span class="c-var">o</span>.<span class="c-var">user_id</span> = <span class="c-var">u</span>.<span class="c-var">id</span>
 <span class="c-key">LEFT JOIN</span> <span class="c-type">payments</span> <span class="c-var">p</span> <span class="c-key">ON</span> <span class="c-var">p</span>.<span class="c-var">user_id</span> = <span class="c-var">u</span>.<span class="c-var">id</span>
 <span class="c-key">GROUP BY</span> <span class="c-var">u</span>.<span class="c-var">id</span>;
 </code></pre>
-<pre><code><span class="c-comment">-- ✓ Агрегировать каждую сторону отдельно через подзапросы</span>
+<pre><code><span class="c-comment">-- Агрегировать каждую сторону отдельно через подзапросы</span>
 <span class="c-key">SELECT</span> <span class="c-var">u</span>.<span class="c-var">id</span>,
        <span class="c-fn">COALESCE</span>(<span class="c-var">o</span>.<span class="c-var">orders_count</span>, <span class="c-num">0</span>) <span class="c-key">AS</span> <span class="c-var">orders_count</span>,
        <span class="c-fn">COALESCE</span>(<span class="c-var">p</span>.<span class="c-var">total_paid</span>,  <span class="c-num">0</span>) <span class="c-key">AS</span> <span class="c-var">total_paid</span>
@@ -823,11 +823,11 @@ ul.bullets strong{color:var(--text);}
     <p class="text">Композитный индекс <code>INDEX (a, b, c)</code> используется при запросах, фильтрующих по <code>a</code>, <code>(a, b)</code>, <code>(a, b, c)</code>. Не работает для <code>(b)</code>, <code>(c)</code>, <code>(b, c)</code>. Из этого следует основа дизайна композитных индексов: первой ставится колонка, по которой чаще всего идёт точная фильтрация.</p>
 <pre><code><span class="c-key">CREATE INDEX</span> <span class="c-var">idx</span> <span class="c-key">ON</span> <span class="c-type">orders</span> (<span class="c-var">user_id</span>, <span class="c-var">status</span>, <span class="c-var">created_at</span>);
 
-<span class="c-comment">-- ✓ Используется полностью</span>
+<span class="c-comment">-- Используется полностью</span>
 <span class="c-key">SELECT</span> * <span class="c-key">FROM</span> <span class="c-type">orders</span> <span class="c-key">WHERE</span> <span class="c-var">user_id</span> = <span class="c-num">42</span> <span class="c-key">AND</span> <span class="c-var">status</span> = <span class="c-str">'paid'</span> <span class="c-key">ORDER BY</span> <span class="c-var">created_at</span>;
-<span class="c-comment">-- ✓ Используется по первой колонке</span>
+<span class="c-comment">-- Используется по первой колонке</span>
 <span class="c-key">SELECT</span> * <span class="c-key">FROM</span> <span class="c-type">orders</span> <span class="c-key">WHERE</span> <span class="c-var">user_id</span> = <span class="c-num">42</span>;
-<span class="c-comment">-- ✗ НЕ используется: нет фильтра по user_id</span>
+<span class="c-comment">-- НЕ используется: нет фильтра по user_id</span>
 <span class="c-key">SELECT</span> * <span class="c-key">FROM</span> <span class="c-type">orders</span> <span class="c-key">WHERE</span> <span class="c-var">status</span> = <span class="c-str">'paid'</span>;
 </code></pre>
   </div>
@@ -1009,12 +1009,12 @@ ul.bullets strong{color:var(--text);}
     <div class="subsection-title"><i data-lucide="bar-chart-3"></i> Иерархия <code>type</code> в MySQL (от худшего к лучшему)</div>
     <table class="data-table">
       <tr><th>type</th><th>Что значит</th><th>Хорошо/плохо</th></tr>
-      <tr><td><code>ALL</code></td><td>Full table scan &mdash; все строки</td><td>❌ Плохо на больших таблицах</td></tr>
-      <tr><td><code>index</code></td><td>Full index scan &mdash; все строки индекса</td><td>❌ Не быстрее ALL</td></tr>
-      <tr><td><code>range</code></td><td>Диапазон по индексу (<code>BETWEEN</code>, <code>&gt;</code>, <code>IN</code>)</td><td>✓ Приемлемо</td></tr>
-      <tr><td><code>ref</code></td><td>Поиск по неуникальному индексу (несколько строк)</td><td>✓ Хорошо</td></tr>
-      <tr><td><code>eq_ref</code></td><td>Поиск по уникальному индексу для JOIN (одна строка)</td><td>✓✓ Отлично</td></tr>
-      <tr><td><code>const</code></td><td>Найдена ровно одна строка через PK/UNIQUE</td><td>✓✓✓ Идеал</td></tr>
+      <tr><td><code>ALL</code></td><td>Full table scan &mdash; все строки</td><td>Плохо на больших таблицах</td></tr>
+      <tr><td><code>index</code></td><td>Full index scan &mdash; все строки индекса</td><td>Не быстрее ALL</td></tr>
+      <tr><td><code>range</code></td><td>Диапазон по индексу (<code>BETWEEN</code>, <code>&gt;</code>, <code>IN</code>)</td><td>Приемлемо</td></tr>
+      <tr><td><code>ref</code></td><td>Поиск по неуникальному индексу (несколько строк)</td><td>Хорошо</td></tr>
+      <tr><td><code>eq_ref</code></td><td>Поиск по уникальному индексу для JOIN (одна строка)</td><td>Отлично</td></tr>
+      <tr><td><code>const</code></td><td>Найдена ровно одна строка через PK/UNIQUE</td><td>Идеал</td></tr>
       <tr><td><code>system</code></td><td>Таблица с одной строкой</td><td>Особый случай</td></tr>
     </table>
     <p class="text">Правило: если в плане <code>type=ALL</code> или <code>type=index</code> на большой таблице &mdash; вы ещё не закончили оптимизацию. Стремитесь к <code>ref</code> или лучше для всех «горячих» запросов.</p>
@@ -1093,7 +1093,7 @@ Limit  (actual time=<span class="c-num">120.4</span>..<span class="c-num">120.5<
     <div class="card">
       <h3>Correlated &mdash; зависимый (опасный)</h3>
       <p class="text">Подзапрос ссылается на колонку внешнего. СУБД выполняет его <strong>для каждой строки</strong> внешнего. На 1000 строк &mdash; 1001 SELECT.</p>
-<pre><code><span class="c-comment">-- ❌ N+1 на уровне SQL: SELECT users — 1, SELECT MAX — для каждого user</span>
+<pre><code><span class="c-comment">-- N+1 на уровне SQL: SELECT users — 1, SELECT MAX — для каждого user</span>
 <span class="c-key">SELECT</span> <span class="c-var">u</span>.<span class="c-var">id</span>, <span class="c-var">u</span>.<span class="c-var">email</span>,
        (<span class="c-key">SELECT</span> <span class="c-fn">MAX</span>(<span class="c-var">created_at</span>) <span class="c-key">FROM</span> <span class="c-type">orders</span> <span class="c-key">WHERE</span> <span class="c-var">user_id</span> = <span class="c-var">u</span>.<span class="c-var">id</span>) <span class="c-key">AS</span> <span class="c-var">last_order</span>
 <span class="c-key">FROM</span> <span class="c-type">users</span> <span class="c-var">u</span>;
@@ -1204,16 +1204,16 @@ Limit  (actual time=<span class="c-num">120.4</span>..<span class="c-num">120.5<
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика: четыре подхода</div>
-<pre><code><span class="c-comment">// ❌ Классический N+1: 51 запрос</span>
+<pre><code><span class="c-comment">// Классический N+1: 51 запрос</span>
 <span class="c-var">$orders</span> = <span class="c-type">Order</span>::<span class="c-fn">where</span>(<span class="c-str">'status'</span>, <span class="c-str">'paid'</span>)-&gt;<span class="c-fn">limit</span>(<span class="c-num">50</span>)-&gt;<span class="c-fn">get</span>();
 <span class="c-key">foreach</span> (<span class="c-var">$orders</span> <span class="c-key">as</span> <span class="c-var">$order</span>) {
     <span class="c-fn">echo</span> <span class="c-var">$order</span>-&gt;<span class="c-var">user</span>-&gt;<span class="c-var">name</span>; <span class="c-comment">// каждое обращение — SQL-запрос</span>
 }
 
-<span class="c-comment">// ✓ Eager loading: 2 запроса</span>
+<span class="c-comment">// Eager loading: 2 запроса</span>
 <span class="c-var">$orders</span> = <span class="c-type">Order</span>::<span class="c-fn">with</span>(<span class="c-str">'user'</span>)-&gt;<span class="c-fn">where</span>(<span class="c-str">'status'</span>, <span class="c-str">'paid'</span>)-&gt;<span class="c-fn">limit</span>(<span class="c-num">50</span>)-&gt;<span class="c-fn">get</span>();
 
-<span class="c-comment">// ✓ Через JOIN (query builder): 1 запрос</span>
+<span class="c-comment">// Через JOIN (query builder): 1 запрос</span>
 <span class="c-var">$orders</span> = <span class="c-type">DB</span>::<span class="c-fn">table</span>(<span class="c-str">'orders'</span>)
     -&gt;<span class="c-fn">join</span>(<span class="c-str">'users'</span>, <span class="c-str">'users.id'</span>, <span class="c-str">'orders.user_id'</span>)
     -&gt;<span class="c-fn">select</span>(<span class="c-str">'orders.*'</span>, <span class="c-str">'users.name as user_name'</span>)
@@ -1864,13 +1864,13 @@ $$;
     <div class="subsection-title"><i data-lucide="git-compare"></i> UNION vs UNION ALL</div>
     <p class="text"><code>UNION</code> убирает дубликаты (требует сортировки/хеширования всего результата). <code>UNION ALL</code> &mdash; просто склеивает строки. На больших объёмах разница огромная: <code>UNION ALL</code> в 5-10 раз быстрее.</p>
 
-<pre><code><span class="c-comment">-- ❌ UNION без необходимости — лишний overhead</span>
+<pre><code><span class="c-comment">-- UNION без необходимости — лишний overhead</span>
 <span class="c-key">SELECT</span> <span class="c-var">id</span> <span class="c-key">FROM</span> <span class="c-type">active_users</span>
 <span class="c-key">UNION</span>
 <span class="c-key">SELECT</span> <span class="c-var">id</span> <span class="c-key">FROM</span> <span class="c-type">archived_users</span>;
 <span class="c-comment">-- СУБД проверяет на дубли даже если они невозможны</span>
 
-<span class="c-comment">-- ✓ UNION ALL — если дубли невозможны/неважны</span>
+<span class="c-comment">-- UNION ALL — если дубли невозможны/неважны</span>
 <span class="c-key">SELECT</span> <span class="c-var">id</span> <span class="c-key">FROM</span> <span class="c-type">active_users</span>
 <span class="c-key">UNION ALL</span>
 <span class="c-key">SELECT</span> <span class="c-var">id</span> <span class="c-key">FROM</span> <span class="c-type">archived_users</span>;

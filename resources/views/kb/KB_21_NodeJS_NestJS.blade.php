@@ -384,7 +384,7 @@ node -p <span class="c-str">"process.versions"</span>
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="alert-triangle"></i> Как это выглядит в коде</div>
-<pre><code><span class="c-comment">// ❌ В PHP безобидно, в Node — утечка и протекание данных</span>
+<pre><code><span class="c-comment">// В PHP безобидно, в Node — утечка и протекание данных</span>
 <span class="c-key">let</span> currentUser;                  <span class="c-comment">// модульная переменная, одна на весь процесс</span>
 <span class="c-key">const</span> cache = <span class="c-key">new</span> <span class="c-type">Map</span>();          <span class="c-comment">// растёт бесконечно</span>
 
@@ -393,7 +393,7 @@ node -p <span class="c-str">"process.versions"</span>
   cache.<span class="c-fn">set</span>(req.id, req.body);     <span class="c-comment">// никто никогда не чистит</span>
 }
 
-<span class="c-comment">// ✓ Состояние запроса живёт в самом запросе</span>
+<span class="c-comment">// Состояние запроса живёт в самом запросе</span>
 <span class="c-key">export function</span> <span class="c-fn">handler</span>(req, res) {
   <span class="c-key">const</span> user = req.user;           <span class="c-comment">// локально, умрёт с вызовом</span>
 }</code></pre>
@@ -603,13 +603,13 @@ npx tsc --init               <span class="c-comment"># выполнить пак
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="split"></i> Блокирующий против неблокирующего</div>
     <p class="text">Одно и то же чтение файла двумя способами:</p>
-<pre><code><span class="c-comment">// ❌ Блокирующий: поток Node замирает, пока файл читается</span>
+<pre><code><span class="c-comment">// Блокирующий: поток Node замирает, пока файл читается</span>
 <span class="c-key">const</span> fs = <span class="c-fn">require</span>(<span class="c-str">'node:fs'</span>);
 <span class="c-key">const</span> data = fs.<span class="c-fn">readFileSync</span>(<span class="c-str">'big.txt'</span>, <span class="c-str">'utf8'</span>);
 <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'прочитано'</span>, data.length);
 <span class="c-comment">// следующие строки не выполнятся, пока чтение не закончится</span>
 
-<span class="c-comment">// ✅ Неблокирующий: Node работает дальше, результат придёт позже</span>
+<span class="c-comment">// Неблокирующий: Node работает дальше, результат придёт позже</span>
 <span class="c-key">const</span> fs = <span class="c-fn">require</span>(<span class="c-str">'node:fs'</span>);
 fs.<span class="c-fn">readFile</span>(<span class="c-str">'big.txt'</span>, <span class="c-str">'utf8'</span>, (err, data) =&gt; {
   <span class="c-key">if</span> (err) <span class="c-key">throw</span> err;
@@ -662,14 +662,14 @@ fs.<span class="c-fn">readFile</span>(<span class="c-str">'big.txt'</span>, <spa
     <div class="subsection-title"><i data-lucide="scale"></i> I/O-bound против CPU-bound</div>
     <p class="text">Node оптимизирован под <strong>I/O-bound</strong> задачи — где время уходит на ожидание сети и диска, а не на вычисления: API-серверы, прокси, real-time, чаты, стриминг. Здесь он силён.</p>
     <p class="text">Но JS исполняется в одном потоке V8. Тяжёлые вычисления — сортировка гигантского массива, обработка изображений, криптография на чистом JS — останавливают event loop, и все соединения ждут, хотя никакого I/O нет:</p>
-<pre><code><span class="c-comment">// ❌ Блокирует event loop на секунды — все запросы повиснут</span>
+<pre><code><span class="c-comment">// Блокирует event loop на секунды — все запросы повиснут</span>
 <span class="c-key">function</span> <span class="c-fn">heavyCpu</span>() {
   <span class="c-key">let</span> sum = <span class="c-num">0</span>;
   <span class="c-key">for</span> (<span class="c-key">let</span> i = <span class="c-num">0</span>; i &lt; <span class="c-num">1e10</span>; i++) sum += i;
   <span class="c-key">return</span> sum;
 }
 
-<span class="c-comment">// ✅ Уводим в worker thread — event loop свободен</span>
+<span class="c-comment">// Уводим в worker thread — event loop свободен</span>
 <span class="c-key">const</span> { Worker } = <span class="c-fn">require</span>(<span class="c-str">'node:worker_threads'</span>);
 <span class="c-key">new</span> <span class="c-type">Worker</span>(<span class="c-str">'./heavy-worker.js'</span>);</code></pre>
     <table class="data-table">

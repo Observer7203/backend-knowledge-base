@@ -1333,7 +1333,7 @@ pre code{color:#ABB2BF;font-family:'JetBrains Mono','Fira Code',Consolas,monospa
 
   <div class="helper-card">
     <h3><code>env()</code></h3>
-    <p class="h-what">Чтение из <code>.env</code>. ⚠️ Работает только если <code>config:cache</code> НЕ запущен.</p>
+    <p class="h-what">Чтение из <code>.env</code>. Работает только если <code>config:cache</code> НЕ запущен.</p>
 <pre><code><span class="c-fn">env</span>(<span class="c-str">'APP_ENV'</span>);                  <span class="c-comment">// "local" / "production"</span>
 <span class="c-fn">env</span>(<span class="c-str">'STRIPE_KEY'</span>, <span class="c-str">'default'</span>);
 </code></pre>

@@ -563,11 +563,11 @@ ul.bullets strong{color:var(--text);}
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика в Laravel</div>
-<pre><code><span class="c-comment">{{-- ✓ Безопасно: {{ }} экранирует HTML --}}</span>
+<pre><code><span class="c-comment">{{-- Безопасно: {{ }} экранирует HTML --}}</span>
 &lt;<span class="c-key">div</span>&gt;{{ <span class="c-var">$comment</span>-&gt;<span class="c-var">text</span> }}&lt;/<span class="c-key">div</span>&gt;
 <span class="c-comment">{{-- &lt;script&gt;alert(1)&lt;/script&gt; → &amp;lt;script&amp;gt;alert(1)&amp;lt;/script&amp;gt; --}}</span>
 
-<span class="c-comment">{{-- ❌ Опасно: {!! !!} выводит как есть --}}</span>
+<span class="c-comment">{{-- Опасно: {!! !!} выводит как есть --}}</span>
 &lt;<span class="c-key">div</span>&gt;{!! <span class="c-var">$comment</span>-&gt;<span class="c-var">html</span> !!}&lt;/<span class="c-key">div</span>&gt;
 
 <span class="c-comment">{{-- Если нужен HTML — санитизируйте через HtmlPurifier --}}</span>
@@ -619,19 +619,19 @@ ul.bullets strong{color:var(--text);}
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="hammer"></i> Защита: prepared statements</div>
-<pre><code><span class="c-comment">// ❌ Уязвимо — конкатенация</span>
+<pre><code><span class="c-comment">// Уязвимо — конкатенация</span>
 <span class="c-var">$users</span> = <span class="c-type">DB</span>::<span class="c-fn">select</span>(<span class="c-str">"SELECT * FROM users WHERE email = '"</span> . <span class="c-var">$_GET</span>[<span class="c-str">'email'</span>] . <span class="c-str">"'"</span>);
 
-<span class="c-comment">// ✓ Безопасно — параметр через ?</span>
+<span class="c-comment">// Безопасно — параметр через ?</span>
 <span class="c-var">$users</span> = <span class="c-type">DB</span>::<span class="c-fn">select</span>(<span class="c-str">'SELECT * FROM users WHERE email = ?'</span>, [<span class="c-var">$_GET</span>[<span class="c-str">'email'</span>]]);
 
-<span class="c-comment">// ✓ Eloquent — bindings автоматически</span>
+<span class="c-comment">// Eloquent — bindings автоматически</span>
 <span class="c-type">User</span>::<span class="c-fn">where</span>(<span class="c-str">'email'</span>, <span class="c-var">$_GET</span>[<span class="c-str">'email'</span>])-&gt;<span class="c-fn">first</span>();
 
-<span class="c-comment">// ⚠ DB::raw с пользовательским вводом — снова уязвимо</span>
+<span class="c-comment">// DB::raw с пользовательским вводом — снова уязвимо</span>
 <span class="c-type">DB</span>::<span class="c-fn">table</span>(<span class="c-str">'users'</span>)-&gt;<span class="c-fn">whereRaw</span>(<span class="c-str">"email = '"</span> . <span class="c-var">$_GET</span>[<span class="c-str">'email'</span>] . <span class="c-str">"'"</span>);
 
-<span class="c-comment">// ✓ DB::raw с bindings — безопасно</span>
+<span class="c-comment">// DB::raw с bindings — безопасно</span>
 <span class="c-type">DB</span>::<span class="c-fn">table</span>(<span class="c-str">'users'</span>)-&gt;<span class="c-fn">whereRaw</span>(<span class="c-str">'email = ?'</span>, [<span class="c-var">$_GET</span>[<span class="c-str">'email'</span>]]);
 </code></pre>
 
@@ -962,7 +962,7 @@ ul.bullets strong{color:var(--text);}
     <div class="subsection-title"><i data-lucide="target"></i> Постановка</div>
     <p class="text">Разработчик принёс на ревью endpoint загрузки аватарки. Сделаем поэтапный security-review, отмечая уязвимости.</p>
 
-<pre><code><span class="c-comment">// ❌ Множество проблем — найдите все</span>
+<pre><code><span class="c-comment">// Множество проблем — найдите все</span>
 <span class="c-key">final class</span> <span class="c-type">AvatarController</span>
 {
     <span class="c-key">public function</span> <span class="c-fn">upload</span>(<span class="c-type">Request</span> <span class="c-var">$request</span>)

@@ -424,7 +424,7 @@ ul.bullets strong{color:var(--text);}
     </div>
 
     <p class="text"><strong>Три стадии на PHP (Laravel-стиль):</strong></p>
-    <pre><code><span class="c-comment">// ❌ Нарушены оба принципа: создание зависимости внутри</span>
+    <pre><code><span class="c-comment">// Нарушены оба принципа: создание зависимости внутри</span>
 <span class="c-key">class</span> <span class="c-type">OrderService</span>
 {
     <span class="c-key">public function</span> <span class="c-fn">process</span>()
@@ -434,7 +434,7 @@ ul.bullets strong{color:var(--text);}
     }
 }</code></pre>
 
-    <pre><code><span class="c-comment">// ⚠ DI есть, но DIP нарушен: внедряем конкретный класс</span>
+    <pre><code><span class="c-comment">// DI есть, но DIP нарушен: внедряем конкретный класс</span>
 <span class="c-key">class</span> <span class="c-type">OrderService</span>
 {
     <span class="c-key">public function</span> <span class="c-fn">__construct</span>(<span class="c-key">private</span> <span class="c-type">PayPalGateway</span> <span class="c-var">$gateway</span>) {}
@@ -443,7 +443,7 @@ ul.bullets strong{color:var(--text);}
     // Смена на Stripe = правка type-hint во всех местах.</span>
 }</code></pre>
 
-    <pre><code><span class="c-comment">// ✅ DI + DIP соблюдены: внедряем абстракцию</span>
+    <pre><code><span class="c-comment">// DI + DIP соблюдены: внедряем абстракцию</span>
 <span class="c-key">interface</span> <span class="c-type">PaymentGatewayInterface</span>
 {
     <span class="c-key">public function</span> <span class="c-fn">charge</span>(): <span class="c-type">ChargeResult</span>;
@@ -463,7 +463,7 @@ ul.bullets strong{color:var(--text);}
 <span class="c-var">$this</span>-&gt;<span class="c-var">app</span>-&gt;<span class="c-fn">bind</span>(<span class="c-type">PaymentGatewayInterface</span>::<span class="c-key">class</span>, <span class="c-type">StripeGateway</span>::<span class="c-key">class</span>);</code></pre>
 
     <table class="data-table">
-      <thead><tr><th></th><th>❌ new внутри</th><th>⚠ DI + конкретный класс</th><th>✅ DI + интерфейс</th></tr></thead>
+      <thead><tr><th></th><th>new внутри</th><th>DI + конкретный класс</th><th>DI + интерфейс</th></tr></thead>
       <tbody>
         <tr><td><strong>DI</strong></td><td>Нет</td><td>Да</td><td>Да</td></tr>
         <tr><td><strong>DIP</strong></td><td>Нет</td><td>Нет</td><td>Да</td></tr>
@@ -2021,17 +2021,17 @@ ul.bullets strong{color:var(--text);}
       </ul>
 <pre><code><span class="c-key">public function</span> <span class="c-fn">register</span>(): <span class="c-key">void</span>
 {
-    <span class="c-comment">// ✓ Допустимо: регистрация связки.</span>
+    <span class="c-comment">// Допустимо: регистрация связки.</span>
     <span class="c-var">$this</span>-><span class="c-fn">app</span>-><span class="c-fn">singleton</span>(<span class="c-type">PaymentGateway</span>::<span class="c-key">class</span>, <span class="c-type">StripeGateway</span>::<span class="c-key">class</span>);
 
-    <span class="c-comment">// ✓ Допустимо: контекстный binding.</span>
+    <span class="c-comment">// Допустимо: контекстный binding.</span>
     <span class="c-var">$this</span>-><span class="c-fn">app</span>-><span class="c-fn">when</span>(<span class="c-type">PhotoController</span>::<span class="c-key">class</span>)
         -><span class="c-fn">needs</span>(<span class="c-type">Filesystem</span>::<span class="c-key">class</span>)
         -><span class="c-fn">give</span>(<span class="c-key">fn</span> () =&gt; <span class="c-type">Storage</span>::<span class="c-fn">disk</span>(<span class="c-str">'photos'</span>));
         <span class="c-comment">// Здесь Storage::disk() в замыкании — выполнится при разрешении PhotoController,</span>
         <span class="c-comment">// а не сейчас. Это безопасно.</span>
 
-    <span class="c-comment">// ✗ Опасно: попытка использовать другие сервисы прямо сейчас.</span>
+    <span class="c-comment">// Опасно: попытка использовать другие сервисы прямо сейчас.</span>
     <span class="c-comment">// $config = $this->app->make('config'); ← может быть не зарегистрирован.</span>
     <span class="c-comment">// Route::get(...);  ← фасад работает с сервисом router, которого может не быть.</span>
 }
@@ -2049,15 +2049,15 @@ ul.bullets strong{color:var(--text);}
       </ul>
 <pre><code><span class="c-key">public function</span> <span class="c-fn">boot</span>(<span class="c-type">EventBus</span> <span class="c-var">$events</span>, <span class="c-type">CacheManager</span> <span class="c-var">$cache</span>): <span class="c-key">void</span>
 {
-    <span class="c-comment">// ✓ Все сервисы доступны.</span>
+    <span class="c-comment">// Все сервисы доступны.</span>
     <span class="c-type">Route</span>::<span class="c-fn">prefix</span>(<span class="c-str">'api'</span>)-><span class="c-fn">group</span>(<span class="c-fn">base_path</span>(<span class="c-str">'routes/api.php'</span>));
     <span class="c-type">Product</span>::<span class="c-fn">observe</span>(<span class="c-type">ProductObserver</span>::<span class="c-key">class</span>);
     <span class="c-type">Blade</span>::<span class="c-fn">directive</span>(<span class="c-str">'money'</span>, <span class="c-key">fn</span> (<span class="c-var">$expr</span>) =&gt; <span class="c-str">"&lt;?php echo number_format($expr, 2); ?&gt;"</span>);
 
-    <span class="c-comment">// ✓ Параметры boot() разрешаются через method injection.</span>
+    <span class="c-comment">// Параметры boot() разрешаются через method injection.</span>
     <span class="c-var">$events</span>-><span class="c-fn">listen</span>(<span class="c-type">OrderPlaced</span>::<span class="c-key">class</span>, <span class="c-type">SendOrderConfirmation</span>::<span class="c-key">class</span>);
 
-    <span class="c-comment">// ✓ Можно делать переменную, влияющую на runtime-поведение.</span>
+    <span class="c-comment">// Можно делать переменную, влияющую на runtime-поведение.</span>
     <span class="c-key">if</span> (<span class="c-var">$this</span>-><span class="c-fn">app</span>-><span class="c-fn">isProduction</span>()) {
         <span class="c-type">Model</span>::<span class="c-fn">preventLazyLoading</span>(<span class="c-key">false</span>);
     } <span class="c-key">else</span> {
@@ -2146,15 +2146,15 @@ ul.bullets strong{color:var(--text);}
 
     <span class="c-key">public function</span> <span class="c-fn">register</span>(): <span class="c-key">void</span>
     {
-        <span class="c-comment">// ✓ Контекстный binding — выполняется при разрешении.</span>
+        <span class="c-comment">// Контекстный binding — выполняется при разрешении.</span>
         <span class="c-var">$this</span>-><span class="c-fn">app</span>-><span class="c-fn">when</span>([<span class="c-type">SmsChannel</span>::<span class="c-key">class</span>])
             -><span class="c-fn">needs</span>(<span class="c-str">'$apiKey'</span>)
             -><span class="c-fn">giveConfig</span>(<span class="c-str">'notifications.sms.api_key'</span>);
 
-        <span class="c-comment">// ✓ Слияние дефолтной конфигурации.</span>
+        <span class="c-comment">// Слияние дефолтной конфигурации.</span>
         <span class="c-var">$this</span>-><span class="c-fn">mergeConfigFrom</span>(<span class="c-fn">__DIR__</span> . <span class="c-str">'/../config/notifications.php'</span>, <span class="c-str">'notifications'</span>);
 
-        <span class="c-comment">// ✓ Tagging — пометки в контейнере, не вызов сервисов.</span>
+        <span class="c-comment">// Tagging — пометки в контейнере, не вызов сервисов.</span>
         <span class="c-var">$this</span>-><span class="c-fn">app</span>-><span class="c-fn">tag</span>([
             <span class="c-type">PushChannel</span>::<span class="c-key">class</span>,
             <span class="c-type">SlackChannel</span>::<span class="c-key">class</span>,
@@ -2164,29 +2164,29 @@ ul.bullets strong{color:var(--text);}
 
     <span class="c-key">public function</span> <span class="c-fn">boot</span>(<span class="c-type">Dispatcher</span> <span class="c-var">$events</span>): <span class="c-key">void</span>
     {
-        <span class="c-comment">// ✓ Маршруты — фасад Route доступен.</span>
+        <span class="c-comment">// Маршруты — фасад Route доступен.</span>
         <span class="c-type">Route</span>::<span class="c-fn">middleware</span>(<span class="c-str">'web'</span>)
             -><span class="c-fn">prefix</span>(<span class="c-str">'notifications'</span>)
             -><span class="c-fn">group</span>(<span class="c-fn">__DIR__</span> . <span class="c-str">'/../routes/web.php'</span>);
 
-        <span class="c-comment">// ✓ Миграции и шаблоны.</span>
+        <span class="c-comment">// Миграции и шаблоны.</span>
         <span class="c-var">$this</span>-><span class="c-fn">loadMigrationsFrom</span>(<span class="c-fn">__DIR__</span> . <span class="c-str">'/../database/migrations'</span>);
         <span class="c-var">$this</span>-><span class="c-fn">loadViewsFrom</span>(<span class="c-fn">__DIR__</span> . <span class="c-str">'/../resources/views'</span>, <span class="c-str">'notifications'</span>);
 
-        <span class="c-comment">// ✓ Observers — модель уже загружена и Eloquent готов.</span>
+        <span class="c-comment">// Observers — модель уже загружена и Eloquent готов.</span>
         <span class="c-type">NotificationLog</span>::<span class="c-fn">observe</span>(<span class="c-type">NotificationLogObserver</span>::<span class="c-key">class</span>);
 
-        <span class="c-comment">// ✓ Event listeners через method-injected dispatcher.</span>
+        <span class="c-comment">// Event listeners через method-injected dispatcher.</span>
         <span class="c-var">$events</span>-><span class="c-fn">listen</span>(
             \<span class="c-type">App\Events\UserRegistered</span>::<span class="c-key">class</span>,
             <span class="c-type">BroadcastUserEvent</span>::<span class="c-key">class</span>,
         );
 
-        <span class="c-comment">// ✓ Blade-директива.</span>
+        <span class="c-comment">// Blade-директива.</span>
         <span class="c-type">Blade</span>::<span class="c-fn">directive</span>(<span class="c-str">'notify'</span>, <span class="c-key">fn</span> (<span class="c-var">$expr</span>) =&gt;
             <span class="c-str">"&lt;?php echo notify($expr); ?&gt;"</span>);
 
-        <span class="c-comment">// ✓ Финальная инициализация, когда все провайдеры загружены.</span>
+        <span class="c-comment">// Финальная инициализация, когда все провайдеры загружены.</span>
         <span class="c-var">$this</span>-><span class="c-fn">app</span>-><span class="c-fn">booted</span>(<span class="c-key">function</span> () {
             <span class="c-comment">// Здесь гарантированно все сервисы готовы.</span>
             \<span class="c-type">Illuminate\Notifications\ChannelManager</span>::<span class="c-fn">macro</span>(<span class="c-str">'allOf'</span>, <span class="c-key">function</span> (<span class="c-key">array</span> <span class="c-var">$channels</span>) {

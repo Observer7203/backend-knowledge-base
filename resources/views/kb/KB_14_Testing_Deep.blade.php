@@ -378,7 +378,7 @@ ul.bullets strong{color:var(--text);}
     <div class="subsection-title"><i data-lucide="hammer"></i> Сравнение: одно действие vs один assert на тест</div>
     <p class="text">Популярный принцип «один assert на тест» нередко уродует тест: вместо одного логичного действия &mdash; десять методов, повторяющих setup. Точнее формулировать: <strong>одно действие</strong> и столько assert'ов, сколько нужно для полной проверки исхода этого действия. Если действий два &mdash; разделите на два теста.</p>
 
-<pre><code><span class="c-comment">// ❌ Anti-pattern: act-блок выполняет два независимых действия</span>
+<pre><code><span class="c-comment">// Anti-pattern: act-блок выполняет два независимых действия</span>
 <span class="c-key">public function</span> <span class="c-fn">test_user_lifecycle</span>(): <span class="c-key">void</span>
 {
     <span class="c-var">$user</span> = <span class="c-type">User</span>::<span class="c-fn">factory</span>()-&gt;<span class="c-fn">create</span>();
@@ -390,7 +390,7 @@ ul.bullets strong{color:var(--text);}
 }
 </code></pre>
 
-<pre><code><span class="c-comment">// ✓ Два теста, по одному действию каждый</span>
+<pre><code><span class="c-comment">// Два теста, по одному действию каждый</span>
 <span class="c-key">public function</span> <span class="c-fn">test_activate_marks_user_active</span>(): <span class="c-key">void</span>
 {
     <span class="c-var">$user</span> = <span class="c-type">User</span>::<span class="c-fn">factory</span>()-&gt;<span class="c-fn">create</span>();

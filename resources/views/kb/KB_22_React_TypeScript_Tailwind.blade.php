@@ -248,13 +248,13 @@ ol.numbered strong{color:var(--text);}
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="corner-down-right"></i> Один корень и фрагменты</div>
     <p class="text">Функция возвращает одно значение, поэтому и компонент возвращает один элемент. Когда лишняя обёртка <code>&lt;div&gt;</code> ломает вёрстку (например, внутри grid или таблицы), используют фрагмент.</p>
-<pre><code><span class="c-comment">// ❌ Ошибка сборки: два корневых элемента</span>
+<pre><code><span class="c-comment">// Ошибка сборки: два корневых элемента</span>
 <span class="c-key">return</span> (
   &lt;<span class="c-type">td</span>&gt;{row.name}&lt;/<span class="c-type">td</span>&gt;
   &lt;<span class="c-type">td</span>&gt;{row.total}&lt;/<span class="c-type">td</span>&gt;
 );
 
-<span class="c-comment">// ✅ Фрагмент — не создаёт узла в DOM</span>
+<span class="c-comment">// Фрагмент — не создаёт узла в DOM</span>
 <span class="c-key">return</span> (
   &lt;&gt;
     &lt;<span class="c-type">td</span>&gt;{row.name}&lt;/<span class="c-type">td</span>&gt;
@@ -301,9 +301,9 @@ ol.numbered strong{color:var(--text);}
     <p class="text">React не знает имён ваших переменных. Он хранит состояние компонента <strong>списком</strong> и на каждом рендере выдаёт значения по порядку вызовов. Отсюда и единственное жёсткое правило: порядок вызовов хуков должен быть одинаковым при каждом рендере.</p>
     <div class="diagram">Первый рендер                     Второй рендер
 ──────────────────────            ──────────────────────
-useState('')   → ячейка 0         useState('')   → ячейка 0  ✅
-useState(0)    → ячейка 1         useState(0)    → ячейка 1  ✅
-useEffect(...) → ячейка 2         useEffect(...) → ячейка 2  ✅
+useState('')   → ячейка 0         useState('')   → ячейка 0 
+useState(0)    → ячейка 1         useState(0)    → ячейка 1 
+useEffect(...) → ячейка 2         useEffect(...) → ячейка 2 
 
 А если хук спрятан в условии:
 
@@ -362,17 +362,17 @@ useState(0);                   на втором — сдвиг, и значен
         <tr><td>Сбросить состояние при смене сущности</td><td><code>useEffect</code> со сравнением id</td><td>Передать <code>key</code> компоненту — React пересоздаст его</td></tr>
       </tbody>
     </table>
-<pre><code><span class="c-comment">// ❌ Лишний эффект: два рендера и состояние, которое может разъехаться</span>
+<pre><code><span class="c-comment">// Лишний эффект: два рендера и состояние, которое может разъехаться</span>
 <span class="c-key">const</span> [fullName, setFullName] = <span class="c-fn">useState</span>(<span class="c-str">''</span>);
 <span class="c-fn">useEffect</span>(() =&gt; { <span class="c-fn">setFullName</span>(first + <span class="c-str">' '</span> + last); }, [first, last]);
 
-<span class="c-comment">// ✅ Обычное вычисление — всегда согласовано</span>
+<span class="c-comment">// Обычное вычисление — всегда согласовано</span>
 <span class="c-key">const</span> fullName = first + <span class="c-str">' '</span> + last;
 
-<span class="c-comment">// ❌ Сброс формы эффектом при смене пользователя</span>
+<span class="c-comment">// Сброс формы эффектом при смене пользователя</span>
 <span class="c-fn">useEffect</span>(() =&gt; { <span class="c-fn">setDraft</span>(<span class="c-str">''</span>); }, [userId]);
 
-<span class="c-comment">// ✅ Новый key — новый экземпляр компонента со свежим состоянием</span>
+<span class="c-comment">// Новый key — новый экземпляр компонента со свежим состоянием</span>
 &lt;<span class="c-type">ProfileForm</span> key={userId} userId={userId} /&gt;</code></pre>
     <div class="pitfall"><strong>Два вызова эффекта в разработке.</strong> В строгом режиме React монтирует компонент, размонтирует и монтирует снова, чтобы проверить корректность очистки. Это не ошибка: если эффект нельзя запустить дважды без последствий, в нём не хватает очистки.</div>
   </div>
@@ -460,14 +460,14 @@ useState(0);                   на втором — сдвиг, и значен
       </tbody>
     </table>
     <p class="text">Типичная находка: тормозит не тот компонент, который перерисовывается часто, а тот, что делает тяжёлую работу в теле.</p>
-<pre><code><span class="c-comment">// ❌ Сортировка на каждом рендере, даже когда менялся только фильтр</span>
+<pre><code><span class="c-comment">// Сортировка на каждом рендере, даже когда менялся только фильтр</span>
 <span class="c-key">function</span> <span class="c-fn">Table</span>({ rows, query }) {
   <span class="c-key">const</span> sorted = [...rows].<span class="c-fn">sort</span>(byDate);        <span class="c-comment">// 10 000 элементов</span>
   <span class="c-key">const</span> shown  = sorted.<span class="c-fn">filter</span>(r =&gt; r.name.<span class="c-fn">includes</span>(query));
   <span class="c-key">return</span> &lt;<span class="c-type">List</span> items={shown} /&gt;;
 }
 
-<span class="c-comment">// ✅ Дорогое закэшировано по своим зависимостям, дешёвое считается всегда</span>
+<span class="c-comment">// Дорогое закэшировано по своим зависимостям, дешёвое считается всегда</span>
 <span class="c-key">function</span> <span class="c-fn">Table</span>({ rows, query }) {
   <span class="c-key">const</span> sorted = <span class="c-fn">useMemo</span>(() =&gt; [...rows].<span class="c-fn">sort</span>(byDate), [rows]);
   <span class="c-key">const</span> shown  = sorted.<span class="c-fn">filter</span>(r =&gt; r.name.<span class="c-fn">includes</span>(query));
@@ -648,10 +648,10 @@ useState(0);                   на втором — сдвиг, и значен
   key=3 Вера  → остался на месте
   key=1 Анна  → удалён
   Итог: удалён один узел, остальные не тронуты.</div>
-<pre><code><span class="c-comment">// ❌ Индекс как key — ломается при вставке, удалении и сортировке</span>
+<pre><code><span class="c-comment">// Индекс как key — ломается при вставке, удалении и сортировке</span>
 {users.<span class="c-fn">map</span>((u, i) =&gt; &lt;<span class="c-type">UserRow</span> key={i} user={u} /&gt;)}
 
-<span class="c-comment">// ✅ Стабильный идентификатор из данных</span>
+<span class="c-comment">// Стабильный идентификатор из данных</span>
 {users.<span class="c-fn">map</span>(u =&gt; &lt;<span class="c-type">UserRow</span> key={u.id} user={u} /&gt;)}</code></pre>
     <div class="pitfall"><strong>Самый заметный симптом.</strong> В списке с полями ввода и <code>key={i}</code> удалите первую строку — введённый текст «съедет» на соседнюю строку. Состояние осталось привязано к позиции, а не к записи.</div>
     <div class="pitfall"><strong>Индекс допустим,</strong> только если список неизменяемый: не сортируется, не фильтруется, элементы не добавляются и не удаляются. Такие списки встречаются редко.</div>
@@ -1195,7 +1195,7 @@ raw.user;                          <span class="c-comment">// ошибка ко�
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="git-merge"></i> Сделать невозможное состояние невыразимым</div>
     <p class="text">Это главный приём, ради которого стоит переходить на TypeScript всерьёз. Вместо набора независимых полей — перечисление допустимых вариантов, где у каждого свой набор данных. Невозможная комбинация перестаёт компилироваться.</p>
-<pre><code><span class="c-comment">// ❌ Четыре поля дают 16 комбинаций, осмысленных — три</span>
+<pre><code><span class="c-comment">// Четыре поля дают 16 комбинаций, осмысленных — три</span>
 <span class="c-key">interface</span> <span class="c-type">State</span> {
   loading: <span class="c-type">boolean</span>;
   data?: <span class="c-type">Order</span>[];
@@ -1203,7 +1203,7 @@ raw.user;                          <span class="c-comment">// ошибка ко�
 }
 <span class="c-comment">// { loading: true, error: 'сбой', data: [...] } — тип это допускает</span>
 
-<span class="c-comment">// ✅ Размеченное объединение: поле-метка status различает варианты</span>
+<span class="c-comment">// Размеченное объединение: поле-метка status различает варианты</span>
 <span class="c-key">type</span> <span class="c-type">State</span> =
   | { status: <span class="c-str">'idle'</span> }
   | { status: <span class="c-str">'loading'</span> }
@@ -1482,10 +1482,10 @@ inputRef.current?.<span class="c-fn">focus</span>();</code></pre>
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="search-x"></i> Почему класс не применился</div>
     <p class="text">Сборщик ищет имена классов <strong>текстом</strong> по исходникам. Он не выполняет код, поэтому собранное из кусков имя в сборку не попадёт — класс просто не будет существовать.</p>
-<pre><code><span class="c-comment">// ❌ Класса не окажется в CSS: такой строки в исходнике нет</span>
+<pre><code><span class="c-comment">// Класса не окажется в CSS: такой строки в исходнике нет</span>
 <span class="c-key">const</span> cls = `text-${color}-500`;
 
-<span class="c-comment">// ✅ Полные имена классов записаны явно</span>
+<span class="c-comment">// Полные имена классов записаны явно</span>
 <span class="c-key">const</span> COLORS = {
   danger: <span class="c-str">'text-red-500'</span>,
   success: <span class="c-str">'text-green-500'</span>,
