@@ -340,7 +340,7 @@ const weeks = [
         { t: "Практика: рефактор модели", d: "Модель из своего проекта. Добавь local scope, accessor, custom cast.", type: "code" },
       ]},
       { tasks: [
-        { t: "N+1 Problem & Eager Loading", d: "KB_3 разд.7 — with(), load(), withCount(), preventLazyLoading. INTERVIEW MUST.", file: "KB_3_Laravel.html", type: "read" },
+        { t: "N+1 Problem & Eager Loading", d: "KB_3 разд.7 — with(), load(), withCount(), preventLazyLoading. Обязательно к пониманию.", file: "KB_3_Laravel.html", type: "read" },
         { t: "Практика: найди и исправь N+1", d: "Telescope/Debugbar в своём проекте. Список → посчитай запросы → with() → сравни.", type: "code" },
       ]},
       { tasks: [
@@ -485,7 +485,7 @@ const weeks = [
       ]},
       { tasks: [
         { t: "HTTPS/TLS + Headers + Secrets + RBAC/ABAC", d: "KB_4 разд.11-16 — TLS handshake, HSTS, CSP/X-Frame, env management, role/attribute access.", file: "KB_4_Security.html", type: "read" },
-        { t: "Финал KB_4: все квизы + INTERVIEW DRILL", d: "Ответь на все Security вопросы из Backend_Learning_Program вслух.", file: "Backend_Learning_Program.html", type: "quiz" },
+        { t: "Финал KB_4: все квизы + прогон вопросов", d: "Ответь на все Security вопросы из Backend_Learning_Program вслух.", file: "Backend_Learning_Program.html", type: "quiz" },
         { t: "❓ Вопросник KB_1 — Уровень 2 (Middle)", d: "KB_1 → раздел 'Вопросник для самопроверки'. Пройди 20 вопросов Уровня 2 ВСЛУХ. Это ключевые вопросы уровня Middle.", file: "KB_1_PHP_Core.html", type: "quiz" },
         { t: "Шпаргалка Security", d: "Token Rotation flow, JWT structure, OAuth flows, CSRF/XSS/CORS — по 2 предложения.", type: "review" },
       ]},
@@ -518,7 +518,7 @@ const weeks = [
       ]},
       { tasks: [
         { t: "DDD basics + Clean/Hexagonal Architecture", d: "KB_5 разд.10-13 — Entity/VO/Aggregate, Bounded Context, layers, dependency rule.", file: "KB_5_Architecture.html", type: "read" },
-        { t: "Финал KB_5: квизы + INTERVIEW DRILL", d: "Все Architecture квизы + вопросы из Backend_Learning_Program.", file: "Backend_Learning_Program.html", type: "quiz" },
+        { t: "Финал KB_5: квизы + прогон вопросов", d: "Все Architecture квизы + вопросы из Backend_Learning_Program.", file: "Backend_Learning_Program.html", type: "quiz" },
         { t: "🔄 Повтор: Security + JWT + Token Rotation", d: "Объясни вслух flow Token Rotation step by step.", type: "review" },
       ]},
     ]
@@ -608,7 +608,7 @@ const weeks = [
       { tasks: [
         { t: "❓ Финальный прогон KB_1 Вопросник — все 45 вопросов", d: "KB_1 → 'Вопросник для самопроверки'. Уровни 1+2+3 подряд. Таймер 90 сек на вопрос. Запиши на диктофон. Слушай и оценивай.", file: "KB_1_PHP_Core.html", type: "quiz" },
         { t: "🛠 Мини-проект на выбор", d: "KB_1 → 'Практика руками' → мини-проекты. Сделай 1 на выбор: Свой Collection / Validator / DI-контейнер / Mini-ORM. Это сильный аргумент в портфолио.", file: "KB_1_PHP_Core.html", type: "project" },
-        { t: "MOCK INTERVIEW: полный", d: "24 вопроса × 2 мин = 48 мин. Запиши на диктофон. Прослушай и оцени.", file: "Backend_Learning_Program.html", type: "quiz" },
+        { t: "Полный прогон вопросника", d: "24 вопроса × 2 мин = 48 мин. Запиши на диктофон. Прослушай и оцени.", file: "Backend_Learning_Program.html", type: "quiz" },
         { t: "Финал: README портфолио + резюме", d: "am.eabr.org (SSO+MegaRega) + pet-project + KB как proof. Резюме с этим стеком.", type: "project" },
       ]},
     ]

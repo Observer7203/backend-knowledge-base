@@ -6,7 +6,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PHP Core Knowledge Base - Interview Guide</title>
+    <title>PHP Core — Knowledge Base</title>
     <style>
   :root {
     --bg:           #F5F8FA;
@@ -506,7 +506,7 @@
         <div class="main">
             <div class="header">
                 <h1>PHP Core Knowledge Base</h1>
-                <p>Comprehensive study guide for PHP backend developers preparing for interviews</p>
+                <p>Подробное руководство по PHP для backend-разработчиков</p>
             </div>
 
             <!-- SECTION 1: ТИПЫ ДАННЫХ -->

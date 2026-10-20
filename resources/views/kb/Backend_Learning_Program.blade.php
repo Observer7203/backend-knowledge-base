@@ -859,7 +859,7 @@ function renderRoadmap() {
     phase.topics.forEach((topic, ti) => {
       const markerClass = topic.status === 'known' ? 'full' : topic.status === 'review' ? 'partial' : 'none';
       const tags = topic.tags.map(t => {
-        if (t === 'interview') return `<span class="topic-tag tag-interview">Interview</span>`;
+        if (t === 'interview') return `<span class="topic-tag tag-interview">Вопрос</span>`;
         if (t === 'practice')  return `<span class="topic-tag tag-practice">Practice</span>`;
         if (t === 'repeat')    return `<span class="topic-tag tag-repeat">Повторить</span>`;
         return `<span class="topic-tag tag-resource">${t}</span>`;

@@ -172,12 +172,12 @@ ul.bullets strong{color:var(--text);}
 <div class="main">
 <div class="page-header">
   <h1>Eloquent Advanced — глубокий разбор</h1>
-  <p>То что отличает middle от junior: polymorphic, hasManyThrough, custom casts, observers, race conditions, chunk vs cursor vs lazy. С практическими задачами и interview-вопросами.</p>
+  <p>То что отличает middle от junior: polymorphic, hasManyThrough, custom casts, observers, race conditions, chunk vs cursor vs lazy. С практическими задачами и вопросами для самопроверки.</p>
   <div class="badge-row">
     <span class="badge">Laravel</span>
     <span class="badge">Eloquent</span>
     <span class="badge">Advanced</span>
-    <span class="badge badge-success">Interview-ready</span>
+    <span class="badge badge-success">Для самопроверки</span>
   </div>
 </div>
 
