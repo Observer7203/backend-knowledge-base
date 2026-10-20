@@ -138,6 +138,13 @@ ol.numbered strong{color:var(--text);}
   <div class="sidebar-title">Node.js &amp; NestJS</div>
   <a class="nav-item active" onclick="showSection('overview',this)"><i data-lucide="info"></i> О разделе</a>
 
+  <div class="nav-group-label">Знакомство</div>
+  <a class="nav-item" onclick="showSection('node-what',this)"><i data-lucide="help-circle"></i> Что такое Node.js</a>
+  <a class="nav-item" onclick="showSection('node-inside',this)"><i data-lucide="layers"></i> Из чего состоит</a>
+  <a class="nav-item" onclick="showSection('node-vs-php',this)"><i data-lucide="git-compare"></i> Модель процесса: vs PHP</a>
+  <a class="nav-item" onclick="showSection('node-start',this)"><i data-lucide="play"></i> Первая программа и модули</a>
+  <a class="nav-item" onclick="showSection('node-npm',this)"><i data-lucide="file-json"></i> package.json и npm</a>
+
   <div class="nav-group-label">Node.js — ядро</div>
   <a class="nav-item" onclick="showSection('event-loop',this)"><i data-lucide="repeat"></i> Event loop и фазы</a>
   <a class="nav-item" onclick="showSection('threadpool',this)"><i data-lucide="cpu"></i> Thread pool и блокировка</a>
@@ -187,6 +194,217 @@ ol.numbered strong{color:var(--text);}
   </div>
 </div>
 
+@endverbatim
+@verbatim
+<div id="sec-node-what" class="section">
+  <div class="section-title">Что такое Node.js</div>
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="help-circle"></i> Не язык и не фреймворк</div>
+    <p class="text"><strong>Node.js — это среда выполнения (runtime) для JavaScript вне браузера.</strong> Язык остался тот же самый — JavaScript. Изменилось окружение: вместо DOM, <code>window</code> и запросов к серверу появились файловая система, сеть, процессы и всё, что нужно серверной программе.</p>
+    <table class="data-table">
+      <thead><tr><th>Что это</th><th>Пример</th><th>Node.js</th></tr></thead>
+      <tbody>
+        <tr><td>Язык</td><td>JavaScript, PHP, Python</td><td>Нет — язык здесь JavaScript</td></tr>
+        <tr><td><strong>Среда выполнения</strong></td><td>PHP-FPM, JVM, CPython</td><td><strong>Да, это она</strong></td></tr>
+        <tr><td>Фреймворк</td><td>Laravel, NestJS, Express</td><td>Нет — они пишутся <em>поверх</em> Node</td></tr>
+      </tbody>
+    </table>
+    <div class="analogy"><strong>Аналогия с PHP.</strong> Node.js занимает то же место, что PHP-FPM: он берёт твой код и исполняет его на сервере. NestJS в этой картине — Laravel, а Express — ближе к Slim. Сравнивать «PHP и Node» некорректно: сравнивать нужно либо языки (PHP и JavaScript), либо рантаймы (PHP-FPM и Node.js).</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="target"></i> Для чего подходит и для чего нет</div>
+    <table class="data-table">
+      <thead><tr><th>Сильная сторона</th><th>Слабая сторона</th></tr></thead>
+      <tbody>
+        <tr><td>Много одновременных соединений при лёгкой обработке: API, чаты, стриминг, прокси</td><td>Тяжёлые вычисления: обработка изображений, криптография в цикле, разбор гигабайтных файлов</td></tr>
+        <tr><td>Реалтайм: WebSocket, long polling, SSE</td><td>Задачи, где нужен настоящий параллелизм на одном процессе</td></tr>
+        <tr><td>Один язык на фронте и бэке, общие типы через TypeScript</td><td>Долгие синхронные операции — они блокируют всех</td></tr>
+      </tbody>
+    </table>
+    <div class="why-box"><strong>Откуда растут и плюсы, и минусы.</strong> Из одной архитектурной идеи: один поток для кода плюс неблокирующий ввод-вывод. Пока программа ждёт БД или сеть, процесс занимается другими запросами — отсюда тысячи соединений на одном процессе. Но если программа <em>считает</em>, а не ждёт, этот же поток занят, и ждут уже все остальные.</div>
+  </div>
+</div>
+@endverbatim
+@verbatim
+<div id="sec-node-inside" class="section">
+  <div class="section-title">Из чего состоит Node.js</div>
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layers"></i> Четыре слоя</div>
+    <div class="diagram">┌─────────────────────────────────────────────┐
+│  Твой код + пакеты из npm                   │
+├─────────────────────────────────────────────┤
+│  Стандартная библиотека Node                │  fs, http, path, crypto,
+│  (58 встроенных модулей)                    │  events, stream, os…
+├─────────────────────────────────────────────┤
+│  Bindings — мост из JavaScript в C++        │
+├──────────────────────┬──────────────────────┤
+│   V8                 │   libuv              │
+│   исполняет JS       │   event loop,        │
+│   (движок из Chrome) │   неблокирующий I/O, │
+│                      │   пул потоков        │
+├──────────────────────┴──────────────────────┤
+│  OpenSSL · zlib · c-ares · llhttp · undici  │  шифрование, сжатие,
+│                                             │  DNS, HTTP-парсер, fetch
+└─────────────────────────────────────────────┘</div>
+    <table class="data-table">
+      <thead><tr><th>Компонент</th><th>За что отвечает</th></tr></thead>
+      <tbody>
+        <tr><td><strong>V8</strong></td><td>Движок JavaScript от Google, тот же, что в Chrome. Компилирует JS в машинный код и исполняет его</td></tr>
+        <tr><td><strong>libuv</strong></td><td>Сердце асинхронности: event loop, неблокирующая работа с сетью и файлами, пул потоков. Написан на C</td></tr>
+        <tr><td><strong>Bindings</strong></td><td>Прослойка, через которую JS вызывает C++-функции — например, <code>fs.readFile</code></td></tr>
+        <tr><td><strong>OpenSSL</strong></td><td>Криптография и TLS: модуль <code>crypto</code>, HTTPS</td></tr>
+        <tr><td><strong>llhttp</strong></td><td>Парсер HTTP-протокола</td></tr>
+        <tr><td><strong>undici</strong></td><td>HTTP-клиент, на котором работает встроенный <code>fetch</code></td></tr>
+        <tr><td><strong>zlib, c-ares, zstd</strong></td><td>Сжатие и DNS-резолвинг</td></tr>
+      </tbody>
+    </table>
+<pre><code><span class="c-comment"># Посмотреть, что внутри именно твоей сборки</span>
+node -p <span class="c-str">"process.versions"</span>
+
+<span class="c-comment"># Пример вывода (Node 25):
+# node: '25.2.1', v8: '14.1.146', uv: '1.51.0',
+# openssl: '3.6.2', undici: '7.16.0', zlib: '1.2.12', ...</span></code></pre>
+    <div class="remember-box"><strong>Ключевая мысль.</strong> V8 умеет только исполнять JavaScript — он ничего не знает ни о файлах, ни о сокетах. Всё, что делает Node серверной платформой, даёт <strong>libuv</strong> и остальные C-библиотеки. Поэтому event loop — это не часть языка, а часть рантайма.</div>
+  </div>
+</div>
+@endverbatim
+@verbatim
+<div id="sec-node-vs-php" class="section">
+  <div class="section-title">Модель процесса: Node против PHP</div>
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> Главное отличие, из которого следует всё остальное</div>
+    <div class="diagram">PHP-FPM                              Node.js
+
+запрос → форкнутый процесс          запрос ─┐
+         ↓                           запрос ─┼→ ОДИН процесс
+      выполнение                     запрос ─┤   живёт неделями
+         ↓                           запрос ─┘
+      ответ → процесс очищен                 ↓
+      переменные умерли                   ответ
+                                   переменные остались</div>
+    <table class="data-table">
+      <thead><tr><th></th><th>PHP-FPM</th><th>Node.js</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Жизнь процесса</strong></td><td>Один запрос</td><td>Недели, пока не перезапустят</td></tr>
+        <tr><td><strong>Глобальные переменные</strong></td><td>Умирают с запросом</td><td>Живут и видны <strong>всем</strong> запросам</td></tr>
+        <tr><td><strong>Параллельность</strong></td><td>Несколько процессов-воркеров</td><td>Один поток + неблокирующий I/O</td></tr>
+        <tr><td><strong>Соединение с БД</strong></td><td>Обычно одно на запрос</td><td>Пул, общий на весь процесс</td></tr>
+        <tr><td><strong>Утечка памяти</strong></td><td>Почти незаметна — процесс умрёт</td><td>Копится и роняет сервис</td></tr>
+        <tr><td><strong>Тяжёлый цикл</strong></td><td>Тормозит только свой запрос</td><td>Тормозит <strong>все</strong> соединения</td></tr>
+        <tr><td><strong>Остановка</strong></td><td>Можно убивать в любой момент</td><td>Нужен graceful shutdown</td></tr>
+      </tbody>
+    </table>
+    <div class="info-box danger"><strong>Это сдвиг мышления номер один при переходе с PHP.</strong> Привычка «переменная живёт один запрос» в Node становится источником трёх классов багов разом: утечки памяти, протекание данных одного пользователя к другому, недетерминированное поведение из-за накопленного состояния.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-triangle"></i> Как это выглядит в коде</div>
+<pre><code><span class="c-comment">// ❌ В PHP безобидно, в Node — утечка и протекание данных</span>
+<span class="c-key">let</span> currentUser;                  <span class="c-comment">// модульная переменная, одна на весь процесс</span>
+<span class="c-key">const</span> cache = <span class="c-key">new</span> <span class="c-type">Map</span>();          <span class="c-comment">// растёт бесконечно</span>
+
+<span class="c-key">export function</span> <span class="c-fn">handler</span>(req, res) {
+  currentUser = req.user;          <span class="c-comment">// параллельный запрос перетрёт</span>
+  cache.<span class="c-fn">set</span>(req.id, req.body);     <span class="c-comment">// никто никогда не чистит</span>
+}
+
+<span class="c-comment">// ✓ Состояние запроса живёт в самом запросе</span>
+<span class="c-key">export function</span> <span class="c-fn">handler</span>(req, res) {
+  <span class="c-key">const</span> user = req.user;           <span class="c-comment">// локально, умрёт с вызовом</span>
+}</code></pre>
+    <div class="remember-box">В NestJS за это отвечает DI: сервисы по умолчанию синглтоны на весь процесс, и класть в их поля данные запроса нельзя. Для данных запроса — аргументы методов, <code>AsyncLocalStorage</code> или scope <code>REQUEST</code>.</div>
+  </div>
+</div>
+@endverbatim
+@verbatim
+<div id="sec-node-start" class="section">
+  <div class="section-title">Первая программа и встроенные модули</div>
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="play"></i> HTTP-сервер без единого пакета</div>
+<pre><code><span class="c-comment">// server.js — всё из коробки, npm install не нужен</span>
+<span class="c-key">import</span> { createServer } <span class="c-key">from</span> <span class="c-str">'node:http'</span>;
+
+<span class="c-key">const</span> server = <span class="c-fn">createServer</span>((req, res) =&gt; {
+  res.<span class="c-fn">writeHead</span>(<span class="c-num">200</span>, { <span class="c-str">'Content-Type'</span>: <span class="c-str">'application/json'</span> });
+  res.<span class="c-fn">end</span>(<span class="c-type">JSON</span>.<span class="c-fn">stringify</span>({ ok: <span class="c-key">true</span>, url: req.url }));
+});
+
+server.<span class="c-fn">listen</span>(<span class="c-num">3000</span>, () =&gt; <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'http://localhost:3000'</span>));</code></pre>
+<pre><code>node server.js</code></pre>
+    <div class="why-box"><strong>Разница с PHP видна сразу.</strong> В PHP веб-сервер — отдельная программа (Nginx, Apache), а код запускается по запросу. В Node <strong>сервер — это твоя программа</strong>: она сама слушает порт и живёт, пока её не остановят. Nginx перед ней обычно ставят, но уже как reverse proxy, а не как исполнителя кода.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="package"></i> Стандартная библиотека</div>
+    <p class="text">В Node <strong>58 встроенных модулей</strong>. Подключаются без установки, с префиксом <code>node:</code>.</p>
+    <table class="data-table">
+      <thead><tr><th>Модуль</th><th>Для чего</th></tr></thead>
+      <tbody>
+        <tr><td><code>node:http</code>, <code>node:https</code></td><td>HTTP-сервер и клиент</td></tr>
+        <tr><td><code>node:fs</code>, <code>node:fs/promises</code></td><td>Файловая система</td></tr>
+        <tr><td><code>node:path</code></td><td>Работа с путями, кроссплатформенно</td></tr>
+        <tr><td><code>node:crypto</code></td><td>Хеши, HMAC, шифрование, UUID</td></tr>
+        <tr><td><code>node:events</code></td><td><code>EventEmitter</code> — на нём построена половина Node</td></tr>
+        <tr><td><code>node:stream</code></td><td>Потоки и <code>pipeline</code></td></tr>
+        <tr><td><code>node:os</code>, <code>node:process</code></td><td>Система, переменные окружения, сигналы</td></tr>
+        <tr><td><code>node:child_process</code></td><td>Запуск внешних команд</td></tr>
+        <tr><td><code>node:worker_threads</code></td><td>Настоящие потоки для CPU-задач</td></tr>
+        <tr><td><code>node:test</code></td><td>Встроенный тест-раннер</td></tr>
+      </tbody>
+    </table>
+<pre><code><span class="c-comment">// Посмотреть полный список</span>
+node -p <span class="c-str">"require('module').builtinModules.join('\n')"</span></code></pre>
+    <div class="remember-box">Префикс <code>node:</code> не обязателен (<code>import 'fs'</code> тоже работает), но желателен: он явно говорит, что это встроенный модуль, а не пакет из <code>node_modules</code> с таким же именем.</div>
+  </div>
+</div>
+@endverbatim
+@verbatim
+<div id="sec-node-npm" class="section">
+  <div class="section-title">package.json и npm</div>
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="file-json"></i> Манифест проекта</div>
+<pre><code>{
+  <span class="c-str">"name"</span>: <span class="c-str">"my-api"</span>,
+  <span class="c-str">"type"</span>: <span class="c-str">"module"</span>,          <span class="c-comment">// ESM: import/export. Без этого — CommonJS</span>
+  <span class="c-str">"engines"</span>: { <span class="c-str">"node"</span>: <span class="c-str">"&gt;=22"</span> },
+  <span class="c-str">"scripts"</span>: {
+    <span class="c-str">"dev"</span>:   <span class="c-str">"node --watch src/main.js"</span>,
+    <span class="c-str">"start"</span>: <span class="c-str">"node src/main.js"</span>,
+    <span class="c-str">"test"</span>:  <span class="c-str">"node --test"</span>
+  },
+  <span class="c-str">"dependencies"</span>:    { <span class="c-str">"@nestjs/core"</span>: <span class="c-str">"^11.0.0"</span> },
+  <span class="c-str">"devDependencies"</span>: { <span class="c-str">"typescript"</span>: <span class="c-str">"^5.7.0"</span> }
+}</code></pre>
+    <table class="data-table">
+      <thead><tr><th>Понятие</th><th>Аналог в PHP</th><th>Смысл</th></tr></thead>
+      <tbody>
+        <tr><td><code>package.json</code></td><td><code>composer.json</code></td><td>Манифест: зависимости, скрипты, метаданные</td></tr>
+        <tr><td><code>package-lock.json</code></td><td><code>composer.lock</code></td><td>Точные версии всего дерева. <strong>В Git обязательно</strong></td></tr>
+        <tr><td><code>node_modules/</code></td><td><code>vendor/</code></td><td>Сами пакеты. В Git <strong>не кладут</strong></td></tr>
+        <tr><td><code>dependencies</code></td><td><code>require</code></td><td>Нужны в проде</td></tr>
+        <tr><td><code>devDependencies</code></td><td><code>require-dev</code></td><td>Только для разработки: TypeScript, тесты, линтер</td></tr>
+        <tr><td><code>npm ci</code></td><td><code>composer install</code></td><td>Строго по lock-файлу. Для CI и прода</td></tr>
+        <tr><td><code>npm install</code></td><td><code>composer update</code> (частично)</td><td>Может обновить lock в рамках диапазонов</td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong><code>npm install</code> на проде — та же ошибка, что <code>composer update</code>.</strong> Он может подтянуть версии, которых никто не тестировал, и переписать lock прямо на сервере. В CI и на проде только <code>npm ci</code>: он удаляет <code>node_modules</code> и ставит ровно то, что в lock-файле.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="terminal"></i> Команды на каждый день</div>
+<pre><code>npm init -y                  <span class="c-comment"># создать package.json</span>
+npm install express          <span class="c-comment"># поставить в dependencies</span>
+npm install -D typescript    <span class="c-comment"># -D → devDependencies</span>
+npm uninstall express        <span class="c-comment"># удалить</span>
+npm ci                       <span class="c-comment"># установка по lock — прод и CI</span>
+npm run dev                  <span class="c-comment"># запустить скрипт из "scripts"</span>
+npm outdated                 <span class="c-comment"># что устарело</span>
+npm audit                    <span class="c-comment"># известные уязвимости</span>
+npx tsc --init               <span class="c-comment"># выполнить пакет без установки</span></code></pre>
+    <div class="remember-box"><code>npx</code> — запуск бинарника пакета без глобальной установки. Именно так создают проекты: <code>npx @nestjs/cli new my-app</code>.</div>
+  </div>
+</div>
 @endverbatim
 @verbatim
 <div id="sec-event-loop" class="section">
