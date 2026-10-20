@@ -35,55 +35,173 @@
     }
   }
 
-  /* ---------- поиск по навигации текущей страницы ---------- */
+  /* ---------- поиск по всей базе ---------- */
+  var kbIndex = null;        // [{slug, title, sections:[{id,label}]}]
+  var indexLoading = false;
+
+  function currentSlug() {
+    var p = location.pathname.replace(/^\/+|\/+$/g, '');
+    return p || '';
+  }
+
+  function loadIndex(then) {
+    if (kbIndex) { then(kbIndex); return; }
+    if (indexLoading) { setTimeout(function () { loadIndex(then); }, 120); return; }
+    indexLoading = true;
+    fetch('/search-index.json', { credentials: 'same-origin' })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .catch(function () { return []; })
+      .then(function (data) {
+        kbIndex = Array.isArray(data) ? data : [];
+        indexLoading = false;
+        then(kbIndex);
+      });
+  }
+
+  /* нормализация: регистр и ё/е, чтобы «ёлка» находилась по «елка» */
+  function norm(s) { return (s || '').toLowerCase().replace(/ё/g, 'е'); }
+
+  function search(query) {
+    var q = norm(query).trim();
+    if (q.length < 2 || !kbIndex) return [];
+
+    var here = currentSlug();
+    var hits = [];
+
+    kbIndex.forEach(function (mod) {
+      var modTitle = mod.title || mod.slug;
+      var modHit = norm(modTitle).indexOf(q) !== -1;
+
+      /* сам модуль как результат */
+      if (modHit) {
+        hits.push({
+          kind: 'module', slug: mod.slug, title: modTitle,
+          label: modTitle, sub: 'Раздел базы',
+          score: norm(modTitle).indexOf(q) === 0 ? 0 : 2
+        });
+      }
+
+      (mod.sections || []).forEach(function (sec) {
+        var pos = norm(sec.label).indexOf(q);
+        if (pos === -1) return;
+        hits.push({
+          kind: 'section', slug: mod.slug, id: sec.id,
+          label: sec.label, sub: modTitle,
+          /* разделы текущей страницы — выше, совпадение с начала — выше */
+          score: (mod.slug === here ? 0 : 3) + (pos === 0 ? 0 : 1)
+        });
+      });
+    });
+
+    hits.sort(function (a, b) {
+      return a.score - b.score || a.label.length - b.label.length;
+    });
+    return hits.slice(0, 12);
+  }
+
+  function openHit(hit) {
+    if (hit.kind === 'module') { location.href = '/' + hit.slug; return; }
+    if (hit.slug === currentSlug() && typeof window.showSection === 'function') {
+      /* уже на нужной странице — просто переключаем раздел */
+      var link = document.querySelector('.sidebar .nav-item[onclick*="\'' + hit.id + '\'"]');
+      if (link) { link.click(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    }
+    location.href = '/' + hit.slug + '#sec-' + hit.id;
+  }
+
   function wireSearch(input) {
-    var items = [].slice.call(document.querySelectorAll('.sidebar .nav-item, .sidebar .nav-subitem'));
-    var labels = [].slice.call(document.querySelectorAll('.sidebar .nav-group-label'));
-    var groups = [].slice.call(document.querySelectorAll('.sidebar .nav-subgroup'));
+    var box = document.createElement('div');
+    box.id = 'kb-suggest';
+    box.setAttribute('role', 'listbox');
+    /* в body, а не в плашку: у неё overflow:hidden ради скруглённых углов */
+    document.body.appendChild(box);
 
-    function reset() {
-      items.forEach(function (el) { el.style.display = ''; });
-      labels.forEach(function (el) { el.style.display = ''; });
-      groups.forEach(function (el) { el.style.display = ''; });
+    function place() {
+      var r = input.getBoundingClientRect();
+      box.style.left = r.left + 'px';
+      box.style.top = (r.bottom + 8) + 'px';
+      box.style.width = r.width + 'px';
     }
 
-    function filter(q) {
-      q = q.trim().toLowerCase();
-      if (!q) { reset(); return; }
+    var items = [], active = -1;
 
-      items.forEach(function (el) {
-        var hit = (el.textContent || '').toLowerCase().indexOf(q) !== -1;
-        el.style.display = hit ? '' : 'none';
-      });
+    function hide() { box.classList.remove('open'); active = -1; }
 
-      /* подгруппа скрывается, если в ней не осталось видимых подпунктов */
-      groups.forEach(function (g) {
-        var any = [].slice.call(g.querySelectorAll('.nav-subitem'))
-          .some(function (el) { return el.style.display !== 'none'; });
-        g.style.display = any ? 'block' : 'none';
-        if (any) g.classList.add('open');
-      });
+    function mark(text, q) {
+      var i = norm(text).indexOf(norm(q));
+      if (i === -1) return escapeHtml(text);
+      return escapeHtml(text.slice(0, i)) + '<b>' + escapeHtml(text.slice(i, i + q.length)) +
+             '</b>' + escapeHtml(text.slice(i + q.length));
+    }
 
-      /* заголовок группы — если ничего видимого до следующего заголовка */
-      labels.forEach(function (lab) {
-        var any = false, n = lab.nextElementSibling;
-        while (n && !n.classList.contains('nav-group-label')) {
-          if ((n.classList.contains('nav-item') || n.classList.contains('nav-subgroup')) &&
-              n.style.display !== 'none') { any = true; break; }
-          n = n.nextElementSibling;
-        }
-        lab.style.display = any ? '' : 'none';
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"]/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
       });
     }
 
-    input.addEventListener('input', function () { filter(input.value); });
+    function render(hits, q) {
+      items = hits;
+      if (!hits.length) {
+        box.innerHTML = '<div class="kb-suggest-empty">Ничего не найдено</div>';
+        place();
+        box.classList.add('open');
+        return;
+      }
+      box.innerHTML = hits.map(function (h, i) {
+        return '<a class="kb-suggest-item" role="option" data-i="' + i + '" href="' +
+          (h.kind === 'module' ? '/' + h.slug : '/' + h.slug + '#sec-' + h.id) + '">' +
+          '<span class="kb-suggest-label">' + mark(h.label, q) + '</span>' +
+          '<span class="kb-suggest-sub">' + escapeHtml(h.sub) + '</span></a>';
+      }).join('');
+      place();
+      box.classList.add('open');
+      active = -1;
+    }
+
+    function setActive(i) {
+      var nodes = box.querySelectorAll('.kb-suggest-item');
+      if (!nodes.length) return;
+      if (i < 0) i = nodes.length - 1;
+      if (i >= nodes.length) i = 0;
+      active = i;
+      nodes.forEach(function (n, k) { n.classList.toggle('active', k === i); });
+      nodes[i].scrollIntoView({ block: 'nearest' });
+    }
+
+    function run() {
+      var q = input.value.trim();
+      if (q.length < 2) { hide(); return; }
+      loadIndex(function () { render(search(q), q); });
+    }
+
+    input.addEventListener('input', run);
+    input.addEventListener('focus', function () { if (input.value.trim().length >= 2) run(); });
+
+    box.addEventListener('mousedown', function (e) {
+      var a = e.target.closest('.kb-suggest-item');
+      if (!a) return;
+      e.preventDefault();
+      openHit(items[+a.dataset.i]);
+      hide();
+    });
+
     input.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') { input.value = ''; filter(''); input.blur(); }
-      if (e.key === 'Enter') {
-        var first = items.filter(function (el) { return el.style.display !== 'none'; })[0];
-        if (first) { first.click(); input.blur(); }
+      if (e.key === 'Escape') { input.value = ''; hide(); input.blur(); return; }
+      if (!box.classList.contains('open')) return;
+      if (e.key === 'ArrowDown') { e.preventDefault(); setActive(active + 1); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(active - 1); }
+      else if (e.key === 'Enter') {
+        var hit = items[active >= 0 ? active : 0];
+        if (hit) { e.preventDefault(); openHit(hit); hide(); input.blur(); }
       }
     });
+
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest('.kb-search') && !e.target.closest('#kb-suggest')) hide();
+    });
+    window.addEventListener('resize', function () { if (box.classList.contains('open')) place(); });
+    window.addEventListener('scroll', function () { if (box.classList.contains('open')) place(); }, { passive: true });
 
     document.addEventListener('keydown', function (e) {
       if (e.key === '/' && document.activeElement !== input &&
@@ -91,9 +209,11 @@
         e.preventDefault(); input.focus();
       }
     });
+
+    /* предзагружаем индекс, когда курсор впервые в поле */
+    input.addEventListener('focus', function () { loadIndex(function () {}); }, { once: true });
   }
 
-  /* ---------- выездное меню на мобильных ---------- */
   function wireDrawer(burger) {
     var sidebar = document.querySelector('.sidebar');
     if (!sidebar || !burger) return;
@@ -118,6 +238,21 @@
     window.addEventListener('resize', function () { if (window.innerWidth > 900) close(); });
   }
 
+
+  /* ---------- переход по ссылке вида /KB_21_NodeJS_NestJS#sec-io ---------- */
+  function openFromHash() {
+    var m = /^#sec-(.+)$/.exec(location.hash || '');
+    if (!m) return;
+    var link = document.querySelector('.sidebar .nav-item[onclick*="\'' + m[1] + '\'"]');
+    if (!link) return;
+    link.click();
+    /* браузер прыгает к элементу с этим id, и начало раздела уходит под
+       плашку. Убираем якорь и возвращаем страницу наверх — повторно после
+       текущего кадра, потому что прыжок может произойти позже. */
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    window.scrollTo(0, 0);
+    setTimeout(function () { window.scrollTo(0, 0); }, 0);
+  }
 
   /* ---------- правый бар «на этой странице» ---------- */
   function buildToc() {
@@ -281,6 +416,7 @@
     revealOnScroll();
     heroSticky();
     wireSearch(bar.querySelector('#kb-search-input'));
+    openFromHash();
     applyTheme(current());
     applyAccent(currentAccent());
   }

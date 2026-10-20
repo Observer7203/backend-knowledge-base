@@ -64,3 +64,6 @@ Homestead.yaml
 /resources/views/kb/KB_8_MegaRega.blade.php
 /resources/views/kb/KB_15_Career_Paths.blade.php
 /database/seeders/KbPagesSeederPrivate.php
+
+# Индекс поиска генерируется командой kb:search-index
+/public/search-index.json
