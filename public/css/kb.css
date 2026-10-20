@@ -119,22 +119,22 @@
    Идёт после тёмной темы: у обоих селекторов одинаковая
    специфичность, поэтому порядок решает. */
 :root[data-accent="blue"] {
-  --primary:        #0d87a8;
-  --primary-light:  #e9f6fa;
-  --primary-dark:   #0a6c88;
-  --primary-rgb:    13, 135, 168;
+  --primary:        #068c8e;
+  --primary-light:  #e6f6f6;
+  --primary-dark:   #056f71;
+  --primary-rgb:    6, 140, 142;
 
-  --lava1: 13, 135, 168;
-  --lava2: 34, 190, 210;
-  --lava3: 56, 150, 220;
-  --lava4: 45, 212, 191;
+  --lava1: 6, 160, 158;
+  --lava2: 34, 205, 200;
+  --lava3: 20, 170, 200;
+  --lava4: 64, 224, 208;
 }
 
 :root[data-accent="blue"][data-theme="dark"] {
-  --primary:        #4ac7de;
-  --primary-light:  #082027;
-  --primary-dark:   #0d87a8;
-  --primary-rgb:    74, 199, 222;
+  --primary:        #34cfcf;
+  --primary-light:  #06282a;
+  --primary-dark:   #068c8e;
+  --primary-rgb:    52, 207, 207;
 }
 
 /* ---------- База ---------- */
