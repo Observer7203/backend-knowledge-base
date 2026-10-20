@@ -130,6 +130,9 @@ ol.numbered strong{color:var(--text);}
   .data-table { display: block; overflow-x: auto; white-space: nowrap; }
 }
 </style>
+<link rel="stylesheet" href="/css/kb.css">
+<script>(function(){try{var t=localStorage.getItem('kb-theme')||(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();</script>
+<script src="/js/kb.js" defer></script>
 </head>
 <body>
 <div class="container">
