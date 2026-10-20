@@ -88,6 +88,7 @@ pre code{background:transparent;color:inherit;padding:0;border-radius:0;font-siz
 
   <div class="nav-group-label">JavaScript база</div>
   <a class="nav-item" onclick="showSection('js-types',this)">Типы, var/let/const</a>
+  <a class="nav-item" onclick="showSection('js-scope',this)">Scope и замыкания</a>
   <a class="nav-item" onclick="showSection('js-operators',this)">Операторы, == vs ===</a>
   <a class="nav-item" onclick="showSection('js-operators-full',this)">Все операторы (таблица)</a>
   <a class="nav-item" onclick="showSection('js-keywords',this)">Ключевые слова / команды</a>
@@ -198,8 +199,8 @@ pre code{background:transparent;color:inherit;padding:0;border-radius:0;font-siz
       <tbody>
         <tr><td>Область видимости</td><td>Функция (function scope)</td><td>Блок <code>{}</code> (block scope)</td><td>Блок <code>{}</code></td></tr>
         <tr><td>Hoisting</td><td>Да, с <code>undefined</code></td><td>Да, но TDZ (temporal dead zone) → ReferenceError</td><td>Да, но TDZ</td></tr>
-        <tr><td>Переопределение</td><td>Можно</td><td>Нельзя в том же scope</td><td>Нельзя</td></tr>
-        <tr><td>Переприсваивание</td><td>Можно</td><td>Можно</td><td>❌ Нельзя (но объекты можно мутировать!)</td></tr>
+        <tr><td>Переобъявление <span style="opacity:.6">(redeclaration)</span></td><td>Можно</td><td>Нельзя в том же scope</td><td>Нельзя</td></tr>
+        <tr><td>Переприсваивание <span style="opacity:.6">(reassignment)</span></td><td>Можно</td><td>Можно</td><td>❌ Нельзя (но объекты можно мутировать!)</td></tr>
         <tr><td>Когда использовать</td><td>Никогда (legacy)</td><td>Если значение меняется</td><td>По умолчанию, всегда</td></tr>
       </tbody>
     </table>
@@ -215,6 +216,67 @@ pre code{background:transparent;color:inherit;padding:0;border-radius:0;font-siz
   </div>
 
   <div class="subsection">
+    <h3 class="subsection-title">Четыре разные операции, которые часто путают</h3>
+    <p class="text">В таблице выше «переобъявление» и «переприсваивание» стоят соседними строками, и их легко смешать. Это разные операции, и запрещены они по разным причинам.</p>
+    <table class="data-table">
+      <thead><tr><th>Термин</th><th>По-английски</th><th>Что происходит</th><th>Пример</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Переприсваивание</strong></td><td>reassignment</td><td>Существующей переменной дают новое значение</td><td><code>let x = 1; x = 2;</code></td></tr>
+        <tr><td><strong>Переобъявление</strong></td><td>redeclaration</td><td>Заново объявляют переменную с тем же именем в том же scope</td><td><code>let x = 1; let x = 2;</code></td></tr>
+        <tr><td><strong>Мутация</strong></td><td>mutation</td><td>Меняют содержимое объекта или массива, не трогая саму переменную</td><td><code>const a = [1]; a.push(2);</code></td></tr>
+        <tr><td><strong>Затенение</strong></td><td>shadowing</td><td>Объявление с тем же именем во вложенном scope</td><td><code>let x = 1; { let x = 2; }</code></td></tr>
+      </tbody>
+    </table>
+
+    <p class="text"><strong>Переприсваивание</strong> — это <code>x = новоеЗначение</code>. Работает у <code>var</code> и <code>let</code>, запрещено у <code>const</code>:</p>
+<pre><code><span class="c-comment">// ── ПЕРЕПРИСВАИВАНИЕ (x = ...) ──</span>
+<span class="c-key">let</span> counter = <span class="c-num">0</span>;
+counter = counter + <span class="c-num">1</span>;   <span class="c-comment">// ✅ let разрешает</span>
+counter++;               <span class="c-comment">// ✅ то же самое</span>
+
+<span class="c-key">var</span> old = <span class="c-num">1</span>;
+old = <span class="c-num">2</span>;                 <span class="c-comment">// ✅ var разрешает</span>
+
+<span class="c-key">const</span> fixed = <span class="c-num">1</span>;
+fixed = <span class="c-num">2</span>;               <span class="c-comment">// ❌ TypeError: Assignment to constant variable</span></code></pre>
+
+    <div class="remember-box"><strong>Главное про <code>const</code>.</strong> Он не делает значение неизменяемым — он запрещает переприсваивать <em>саму переменную</em>. Ссылка на объект фиксируется навсегда, а содержимое по этой ссылке менять можно.</div>
+<pre><code><span class="c-comment">// ── МУТАЦИЯ: содержимое под const менять можно ──</span>
+<span class="c-key">const</span> user = { name: <span class="c-str">'Alice'</span> };
+user.name = <span class="c-str">'Bob'</span>;       <span class="c-comment">// ✅ мутация объекта</span>
+user.age = <span class="c-num">30</span>;           <span class="c-comment">// ✅ добавление поля</span>
+user = { name: <span class="c-str">'Eve'</span> };  <span class="c-comment">// ❌ переприсваивание ссылки — нельзя</span>
+
+<span class="c-key">const</span> arr = [<span class="c-num">1</span>, <span class="c-num">2</span>];
+arr.push(<span class="c-num">3</span>);             <span class="c-comment">// ✅ мутация</span>
+arr[<span class="c-num">0</span>] = <span class="c-num">99</span>;             <span class="c-comment">// ✅ мутация</span>
+arr = [<span class="c-num">4</span>, <span class="c-num">5</span>];            <span class="c-comment">// ❌ переприсваивание</span></code></pre>
+    <p class="text">Если нужна настоящая неизменяемость — <code>Object.freeze</code> (действует поверхностно, только на верхний уровень), глубокое копирование с заморозкой или библиотека вроде Immer.</p>
+
+    <p class="text"><strong>Переобъявление</strong> — это второе <code>let x = …</code> для той же переменной в том же scope. Здесь правила жёстче:</p>
+<pre><code><span class="c-comment">// ── ПЕРЕОБЪЯВЛЕНИЕ в ТОМ ЖЕ scope ──</span>
+<span class="c-key">var</span> a = <span class="c-num">1</span>;
+<span class="c-key">var</span> a = <span class="c-num">2</span>;    <span class="c-comment">// ✅ var разрешает — и молча затирает прежнее</span>
+
+<span class="c-key">let</span> b = <span class="c-num">1</span>;
+<span class="c-key">let</span> b = <span class="c-num">2</span>;    <span class="c-comment">// ❌ SyntaxError: Identifier 'b' has already been declared</span>
+
+<span class="c-key">const</span> c = <span class="c-num">1</span>;
+<span class="c-key">const</span> c = <span class="c-num">2</span>;  <span class="c-comment">// ❌ SyntaxError</span>
+
+<span class="c-comment">// var и let конфликтуют между собой в одном scope</span>
+<span class="c-key">var</span> x = <span class="c-num">1</span>;
+<span class="c-key">let</span> x = <span class="c-num">2</span>;    <span class="c-comment">// ❌ SyntaxError</span>
+
+<span class="c-comment">// но во вложенном блоке это уже ДРУГАЯ переменная — затенение</span>
+<span class="c-key">let</span> y = <span class="c-num">1</span>;
+{
+  <span class="c-key">let</span> y = <span class="c-num">2</span>;  <span class="c-comment">// ✅ внешняя y не тронута</span>
+}</code></pre>
+    <div class="pitfall"><strong>Зачем запрет.</strong> <code>let</code> и <code>const</code> не дают переобъявить переменную, чтобы вы случайно не затёрли уже существующую. <code>var</code> разрешает и делает это молча — отсюда значительная часть багов в старом коде.</div>
+  </div>
+
+  <div class="subsection">
     <h3 class="subsection-title">Truthy / Falsy — 6 значений false</h3>
     <pre><code><span class="c-comment">// Все эти → false в bool-контексте:</span>
 <span class="c-key">false</span>, <span class="c-num">0</span>, <span class="c-num">-0</span>, <span class="c-num">0n</span>, <span class="c-str">""</span>, <span class="c-key">null</span>, <span class="c-key">undefined</span>, <span class="c-num">NaN</span>
@@ -225,6 +287,132 @@ pre code{background:transparent;color:inherit;padding:0;border-radius:0;font-siz
 <span class="c-fn">Boolean</span>([]);            <span class="c-comment">// true — пустой массив truthy (!)</span>
 <span class="c-fn">Boolean</span>({});            <span class="c-comment">// true — пустой объект truthy (!)</span></code></pre>
     <div class="pitfall"><strong>⚠ Внимание PHP vs JS:</strong> в PHP <code>[]</code> falsy. В JS <code>[]</code> truthy. Часто путают.</div>
+  </div>
+</div>
+
+<!-- ═════════════════════════════════════════════════════════════════════ -->
+<div id="sec-js-scope" class="section">
+  <div class="section-title">Scope — область видимости</div>
+
+  <div class="subsection">
+    <h3 class="subsection-title">Что это и зачем</h3>
+    <p class="text">Scope (область видимости) — часть программы, внутри которой переменная доступна по имени. За пределами своего scope она не видна: обращение даёт <code>ReferenceError</code>. Проще говоря, scope отвечает на вопрос «откуда эта переменная видна».</p>
+    <p class="text">Именно от scope зависит, какие переменные конфликтуют между собой, какие затеняют друг друга и почему <code>var</code> и <code>let</code> ведут себя по-разному.</p>
+    <table class="data-table">
+      <thead><tr><th>Зачем нужен</th><th>Что это даёт на практике</th></tr></thead>
+      <tbody>
+        <tr><td>Изоляция</td><td>Переменные не протекают наружу и не затирают чужие</td></tr>
+        <tr><td>Инкапсуляция</td><td>Детали реализации можно скрыть — на этом стоят замыкания</td></tr>
+        <tr><td>Управление памятью</td><td>Вышедшее из scope может быть собрано сборщиком мусора</td></tr>
+        <tr><td>Предсказуемость</td><td>Понятно, где переменная существует, а где уже нет</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <h3 class="subsection-title">Четыре вида scope</h3>
+    <table class="data-table">
+      <thead><tr><th>Вид</th><th>Что попадает</th><th>Границы</th></tr></thead>
+      <tbody>
+        <tr><td>Глобальный</td><td>Всё объявленное на верхнем уровне скрипта</td><td>Весь скрипт</td></tr>
+        <tr><td>Модульный</td><td>Верхний уровень файла с <code>import</code>/<code>export</code></td><td>Файл модуля</td></tr>
+        <tr><td>Функциональный</td><td><code>var</code> и параметры функции</td><td>Вся функция, включая вложенные блоки</td></tr>
+        <tr><td>Блочный</td><td><code>let</code>, <code>const</code></td><td>Блок <code>{ }</code></td></tr>
+      </tbody>
+    </table>
+<pre><code><span class="c-comment">// Функциональный scope: var не замечает блоков</span>
+<span class="c-key">function</span> <span class="c-fn">f</span>() {
+  <span class="c-key">var</span> x = <span class="c-num">1</span>;
+  <span class="c-key">if</span> (<span class="c-key">true</span>) {
+    <span class="c-key">var</span> x = <span class="c-num">2</span>;   <span class="c-comment">// ⚠ это ТА ЖЕ переменная, не новая</span>
+  }
+  <span class="c-fn">console</span>.<span class="c-fn">log</span>(x);  <span class="c-comment">// 2</span>
+}
+
+<span class="c-comment">// Блочный scope: let и const живут только внутри { }</span>
+{
+  <span class="c-key">let</span> a = <span class="c-num">1</span>;
+  <span class="c-key">const</span> b = <span class="c-num">2</span>;
+  <span class="c-key">var</span> c = <span class="c-num">3</span>;
+}
+<span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-key">typeof</span> a);  <span class="c-comment">// 'undefined' — let не видна снаружи</span>
+<span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-key">typeof</span> b);  <span class="c-comment">// 'undefined' — const не видна</span>
+<span class="c-fn">console</span>.<span class="c-fn">log</span>(c);          <span class="c-comment">// 3 — var «протекла» наружу</span></code></pre>
+    <div class="pitfall"><strong>Классическая ловушка с <code>var</code> в цикле.</strong> <code>for (var i = 0; …)</code> создаёт одну переменную на всю функцию, поэтому все отложенные колбэки увидят её финальное значение. С <code>let</code> на каждой итерации создаётся своя переменная, и колбэки получают разные значения.</div>
+<pre><code><span class="c-key">for</span> (<span class="c-key">var</span> i = <span class="c-num">0</span>; i &lt; <span class="c-num">3</span>; i++) <span class="c-fn">setTimeout</span>(() =&gt; <span class="c-fn">console</span>.<span class="c-fn">log</span>(i));
+<span class="c-comment">// 3, 3, 3 — одна общая i, к моменту вызова она уже равна 3</span>
+
+<span class="c-key">for</span> (<span class="c-key">let</span> i = <span class="c-num">0</span>; i &lt; <span class="c-num">3</span>; i++) <span class="c-fn">setTimeout</span>(() =&gt; <span class="c-fn">console</span>.<span class="c-fn">log</span>(i));
+<span class="c-comment">// 0, 1, 2 — на каждой итерации своя i</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <h3 class="subsection-title">Лексический scope и цепочка поиска</h3>
+    <p class="text">JavaScript использует <strong>лексический</strong> (статический) scope: видимость определяется тем, <em>где функция написана</em> в коде, а не тем, откуда её вызвали.</p>
+<pre><code><span class="c-key">const</span> x = <span class="c-str">'global'</span>;
+
+<span class="c-key">function</span> <span class="c-fn">outer</span>() {
+  <span class="c-key">const</span> x = <span class="c-str">'outer'</span>;
+
+  <span class="c-key">function</span> <span class="c-fn">inner</span>() {
+    <span class="c-fn">console</span>.<span class="c-fn">log</span>(x);   <span class="c-comment">// 'outer' — по месту объявления, не вызова</span>
+  }
+  <span class="c-key">return</span> inner;
+}
+
+<span class="c-key">const</span> fn = <span class="c-fn">outer</span>();
+<span class="c-fn">fn</span>();   <span class="c-comment">// 'outer', хотя вызвана из глобального контекста</span></code></pre>
+    <p class="text">Когда движок встречает имя переменной, он ищет её снизу вверх по <strong>цепочке scope</strong>: текущий блок → внешняя функция → ещё внешняя → … → модульный или глобальный scope. Нашёл — использует, не нашёл нигде — <code>ReferenceError</code>.</p>
+    <pre><code>const a = 1;                 ← глобальный scope
+function outer() {
+  const b = 2;               ← scope функции outer
+  function inner() {
+    const c = 3;             ← scope функции inner
+    console.log(a, b, c);
+    │        │  │  └─ найдена здесь же
+    │        │  └──── не нашли здесь → ищем в outer → нашли
+    │        └─────── не нашли ни здесь, ни в outer → глобальный → нашли
+    └──────────────── поиск всегда идёт изнутри наружу, никогда наоборот
+  }
+  inner();
+}</code></pre>
+    <div class="remember-box"><strong>Отсюда растут замыкания.</strong> Функция <code>inner</code> запоминает своё лексическое окружение и сохраняет доступ к переменным внешней функции даже после того, как та завершилась. Это и есть замыкание — см. раздел про функции.</div>
+  </div>
+
+  <div class="subsection">
+    <h3 class="subsection-title">Затенение: другая переменная, а не переобъявление</h3>
+    <p class="text">Объявление с тем же именем во вложенном scope создаёт <strong>новую</strong> переменную, которая закрывает собой внешнюю. Внешняя при этом не меняется — это ключевое отличие затенения от переобъявления.</p>
+<pre><code><span class="c-key">let</span> x = <span class="c-str">'outer'</span>;
+{
+  <span class="c-key">let</span> x = <span class="c-str">'inner'</span>;    <span class="c-comment">// затеняет внешнюю</span>
+  <span class="c-fn">console</span>.<span class="c-fn">log</span>(x);      <span class="c-comment">// 'inner'</span>
+}
+<span class="c-fn">console</span>.<span class="c-fn">log</span>(x);        <span class="c-comment">// 'outer' — внешняя не тронута</span></code></pre>
+    <p class="text">С <code>var</code> затенение работает только на границе функций — блоки он не замечает, поэтому внутри <code>if</code> или <code>for</code> это будет та же самая переменная.</p>
+  </div>
+
+  <div class="subsection">
+    <h3 class="subsection-title">Hoisting и TDZ</h3>
+    <p class="text">Hoisting (поднятие) — объявления обрабатываются при входе в scope, до выполнения кода. Разница между <code>var</code> и <code>let</code> не в том, поднимается ли объявление, а в том, <em>инициализировано</em> ли оно к этому моменту.</p>
+    <table class="data-table">
+      <thead><tr><th></th><th><code>var</code></th><th><code>let</code> / <code>const</code></th></tr></thead>
+      <tbody>
+        <tr><td>Объявление поднимается</td><td>Да</td><td>Да</td></tr>
+        <tr><td>Значение до строки объявления</td><td><code>undefined</code></td><td>Переменная в TDZ</td></tr>
+        <tr><td>Обращение раньше объявления</td><td>Тихо вернёт <code>undefined</code></td><td><code>ReferenceError</code></td></tr>
+        <tr><td>Куда поднимается в блоке внутри функции</td><td>До начала функции</td><td>До начала блока</td></tr>
+      </tbody>
+    </table>
+<pre><code><span class="c-fn">console</span>.<span class="c-fn">log</span>(v);   <span class="c-comment">// undefined — var поднят и инициализирован</span>
+<span class="c-key">var</span> v = <span class="c-num">1</span>;
+
+<span class="c-fn">console</span>.<span class="c-fn">log</span>(l);   <span class="c-comment">// ❌ ReferenceError: Cannot access 'l' before initialization</span>
+<span class="c-key">let</span> l = <span class="c-num">1</span>;
+
+<span class="c-fn">console</span>.<span class="c-fn">log</span>(c);   <span class="c-comment">// ❌ ReferenceError — то же для const</span>
+<span class="c-key">const</span> c = <span class="c-num">1</span>;</code></pre>
+    <p class="text">TDZ (temporal dead zone, временная мёртвая зона) — промежуток от начала блока до строки объявления. Это защита: ошибка ловится сразу, вместо того чтобы код тихо продолжил работу с <code>undefined</code>, как было с <code>var</code>.</p>
+    <div class="remember-box"><strong>Короткая формула.</strong> Scope — это «где переменная видна». JavaScript использует лексический scope: видимость определяется местом объявления, а поиск идёт по цепочке снизу вверх. <code>var</code> живёт в функции, <code>let</code> и <code>const</code> — в блоке. Одинаковое имя во вложенном scope — затенение, а не переобъявление.</div>
   </div>
 </div>
 

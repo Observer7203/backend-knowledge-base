@@ -733,6 +733,120 @@ process.<span class="c-fn">nextTick</span>(() =&gt; <span class="c-fn">console</
     </table>
     <div class="why-box"><strong>Почему <code>2</code> и <code>3</code> плавают.</strong> В главном модуле результат зависит от того, успел ли истечь таймер к моменту входа в фазу timers — а это зависит от скорости запуска процесса. Но <strong>внутри I/O-колбэка <code>setImmediate</code> всегда раньше <code>setTimeout</code></strong>: цикл уже находится в фазе poll, и следующая фаза — check.</div>
   </div>
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layers"></i> Зачем вообще фазы</div>
+    <p class="text">Event loop — не одна общая очередь колбэков, а цикл из нескольких <strong>фаз</strong>. Каждая фаза держит собственную очередь задач своего типа. Node проходит фазы по кругу и на каждой обрабатывает только свою очередь. Смысл разделения — предсказуемость порядка и возможность дать разным видам работы разный приоритет.</p>
+    <div class="diagram">timers → pending callbacks → idle/prepare → poll → check → close callbacks → (снова timers)</div>
+    <p class="text">Фаза <code>idle/prepare</code> — внутренняя, она нужна самому Node, и в прикладном коде вы с ней не сталкиваетесь. Остальные разбираем по порядку.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="list-ordered"></i> Фазы по порядку</div>
+    <table class="data-table">
+      <thead><tr><th>Фаза</th><th>Что выполняет</th><th>Чем важна</th></tr></thead>
+      <tbody>
+        <tr><td><strong>timers</strong></td><td>Колбэки <code>setTimeout</code> и <code>setInterval</code>, у которых истёк срок</td><td>Таймер срабатывает не «ровно через N мс», а при первом заходе в эту фазу после истечения N мс</td></tr>
+        <tr><td><strong>pending callbacks</strong></td><td>Системные колбэки, отложенные ОС на следующий проход — например, часть ошибок TCP на некоторых платформах</td><td>В прикладном коде встречается редко</td></tr>
+        <tr><td><strong>poll</strong></td><td>Забирает готовые события ввода-вывода и выполняет их колбэки; если событий нет — блокируется и ждёт</td><td>Сердце цикла. Именно здесь процесс «спит», не тратя процессор, пока ждёт сеть или диск</td></tr>
+        <tr><td><strong>check</strong></td><td>Колбэки <code>setImmediate</code></td><td>Идёт сразу после poll — отсюда вся разница с <code>setTimeout(fn, 0)</code></td></tr>
+        <tr><td><strong>close callbacks</strong></td><td>События закрытия: <code>socket.on('close')</code>, <code>stream.on('close')</code></td><td>Замыкает круг, после чего цикл начинается заново с timers</td></tr>
+      </tbody>
+    </table>
+    <p class="text">Если в очереди таймеров есть готовые к исполнению, фаза poll не станет блокироваться надолго, а быстро передаст управление дальше по кругу.</p>
+    <div class="pitfall"><strong><code>setTimeout(fn, 0)</code> — это не «немедленно».</strong> Минимальная задержка в Node фактически равна 1 мс, и колбэк всё равно ждёт захода в фазу timers. Если нужно «как можно скорее, но после текущего ввода-вывода» — это <code>setImmediate</code>.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare-arrows"></i> setImmediate против setTimeout(0)</div>
+    <p class="text">Самая известная задача на понимание фаз. Внутри колбэка ввода-вывода порядок строго определён, а на верхнем уровне — нет.</p>
+<pre><code><span class="c-key">const</span> fs = <span class="c-fn">require</span>(<span class="c-str">'node:fs'</span>);
+
+fs.<span class="c-fn">readFile</span>(__filename, () =&gt; {
+  <span class="c-fn">setTimeout</span>(() =&gt; <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'timeout'</span>), <span class="c-num">0</span>);
+  <span class="c-fn">setImmediate</span>(() =&gt; <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'immediate'</span>));
+});
+<span class="c-comment">// Всегда: immediate → timeout</span>
+<span class="c-comment">// Мы внутри poll, а check идёт сразу за ней;</span>
+<span class="c-comment">// timers наступит только на следующем проходе цикла.</span></code></pre>
+<pre><code><span class="c-comment">// А на верхнем уровне гарантии нет — зависит от того, успел ли</span>
+<span class="c-comment">// истечь таймер к моменту первого захода в фазу timers</span>
+<span class="c-fn">setTimeout</span>(() =&gt; <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'timeout'</span>), <span class="c-num">0</span>);
+<span class="c-fn">setImmediate</span>(() =&gt; <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'immediate'</span>));
+<span class="c-comment">// Порядок может отличаться от запуска к запуску</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="zap"></i> Микрозадачи: две очереди между колбэками</div>
+    <p class="text">Это самое важное для практики. Микрозадачи — очереди, которые опустошаются <strong>полностью</strong> после каждого колбэка, прежде чем цикл пойдёт дальше. Очередей две, и порядок между ними строгий:</p>
+    <table class="data-table">
+      <thead><tr><th>Очередь</th><th>Что попадает</th><th>Приоритет</th></tr></thead>
+      <tbody>
+        <tr><td><code>process.nextTick</code></td><td>Только <code>process.nextTick</code></td><td>Первая — выше промисов</td></tr>
+        <tr><td>Микрозадачи промисов</td><td><code>.then</code>, <code>.catch</code>, <code>.finally</code>, <code>queueMicrotask</code>, продолжение после <code>await</code></td><td>Вторая</td></tr>
+      </tbody>
+    </table>
+<pre><code><span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'1 — синхронно'</span>);
+
+<span class="c-fn">setTimeout</span>(() =&gt; <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'5 — timers'</span>), <span class="c-num">0</span>);
+
+<span class="c-type">Promise</span>.<span class="c-fn">resolve</span>().<span class="c-fn">then</span>(() =&gt; <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'3 — promise'</span>));
+
+process.<span class="c-fn">nextTick</span>(() =&gt; <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'2 — nextTick'</span>));
+
+<span class="c-fn">queueMicrotask</span>(() =&gt; <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'4 — queueMicrotask'</span>));
+
+<span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'1.5 — синхронно'</span>);
+
+<span class="c-comment">// Вывод:
+// 1 — синхронно
+// 1.5 — синхронно
+// 2 — nextTick
+// 3 — promise
+// 4 — queueMicrotask
+// 5 — timers</span></code></pre>
+    <p class="text">Сначала до конца отрабатывает синхронный код, затем вся очередь <code>nextTick</code>, затем все промисы — и только потом цикл уходит в следующую фазу.</p>
+    <p class="text"><strong>Почему <code>nextTick</code> раньше промисов.</strong> Исторически: он появился в Node задолго до промисов, и внутренний код платформы опирался на него для гарантий согласованности — например, чтобы событие <code>'close'</code> точно возникало после завершения текущей операции. Когда добавили промисы, их поставили после, чтобы не сломать существующее поведение.</p>
+    <div class="remember-box"><strong>Деталь, которую чаще всего упускают.</strong> Микрозадачи опустошаются после <em>каждого отдельного колбэка</em>, а не только на границе фаз. Выполнился один таймер → слили все микрозадачи → выполнился следующий таймер → снова слили. То же самое для каждого колбэка ввода-вывода в фазе poll.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-octagon"></i> Как заморить event loop микрозадачами</div>
+    <p class="text">Прямое следствие предыдущего правила: цепочка микрозадач, которая пополняет сама себя, никогда не закончится — и цикл просто не дойдёт до ввода-вывода.</p>
+<pre><code><span class="c-key">function</span> <span class="c-fn">starve</span>() {
+  process.<span class="c-fn">nextTick</span>(starve);   <span class="c-comment">// добавляет новый nextTick прямо во время слива</span>
+}
+<span class="c-fn">starve</span>();
+<span class="c-comment">// Очередь nextTick никогда не опустеет →
+// ни ввод-вывод, ни таймеры, ни setImmediate больше не выполнятся.</span>
+
+<span class="c-key">function</span> <span class="c-fn">loop</span>() {
+  <span class="c-type">Promise</span>.<span class="c-fn">resolve</span>().<span class="c-fn">then</span>(loop);   <span class="c-comment">// то же самое с промисами</span>
+}
+<span class="c-fn">loop</span>();   <span class="c-comment">// сервер встанет: до фазы poll дело не дойдёт</span></code></pre>
+    <p class="text">Поэтому <code>nextTick</code> и промисы хороши для «сразу после текущей операции», но не годятся для длинных циклов обработки. Чтобы отдавать управление циклу между итерациями, берут <code>setImmediate</code>:</p>
+<pre><code><span class="c-comment">// Правильно: между порциями работы цикл успевает обслужить ввод-вывод</span>
+<span class="c-key">function</span> <span class="c-fn">processChunk</span>() {
+  <span class="c-comment">// ...немного работы...</span>
+  <span class="c-fn">setImmediate</span>(processChunk);   <span class="c-comment">// уходим в фазу check, даём шанс poll</span>
+}</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="table-2"></i> Сводная шпаргалка приоритетов</div>
+    <table class="data-table">
+      <thead><tr><th>Что</th><th>Когда выполняется</th><th>Очередь</th></tr></thead>
+      <tbody>
+        <tr><td>Синхронный код</td><td>Сразу</td><td>—</td></tr>
+        <tr><td><code>process.nextTick</code></td><td>После текущего колбэка, до промисов</td><td>Микрозадачи, приоритет 1</td></tr>
+        <tr><td><code>.then</code>, <code>await</code>, <code>queueMicrotask</code></td><td>После очереди <code>nextTick</code></td><td>Микрозадачи, приоритет 2</td></tr>
+        <tr><td><code>setTimeout</code>, <code>setInterval</code></td><td>Фаза timers</td><td>Макрозадачи</td></tr>
+        <tr><td>Колбэки ввода-вывода (<code>fs</code>, сеть)</td><td>Фаза poll</td><td>Макрозадачи</td></tr>
+        <tr><td><code>setImmediate</code></td><td>Фаза check, сразу после poll</td><td>Макрозадачи</td></tr>
+        <tr><td>События закрытия</td><td>Фаза close callbacks</td><td>Макрозадачи</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Короткая формула.</strong> Одна макрозадача (колбэк из фазы) → полный слив очереди <code>nextTick</code> → полный слив очереди промисов → следующая макрозадача. Понимание этого порядка снимает большую часть вопросов вида «почему лог вывелся не там» и «почему сервер завис».</div>
+  </div>
 </div>
 
 @endverbatim
