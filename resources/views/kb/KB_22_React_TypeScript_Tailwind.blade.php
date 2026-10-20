@@ -142,19 +142,26 @@ ol.numbered strong{color:var(--text);}
   <a class="nav-item active" onclick="showSection('overview',this)"><i data-lucide="info"></i> О разделе</a>
 
   <div class="nav-group-label">React</div>
+  <a class="nav-item" onclick="showSection('jsx',this)"><i data-lucide="file-code"></i> JSX и рендеринг</a>
   <a class="nav-item" onclick="showSection('hooks',this)"><i data-lucide="anchor"></i> useState и useEffect</a>
   <a class="nav-item" onclick="showSection('rerender',this)"><i data-lucide="refresh-cw"></i> Перерисовки и мемоизация</a>
   <a class="nav-item" onclick="showSection('state-where',this)"><i data-lucide="layers"></i> Где хранить состояние</a>
   <a class="nav-item" onclick="showSection('custom-hooks',this)"><i data-lucide="puzzle"></i> Свои хуки</a>
+  <a class="nav-item" onclick="showSection('lists-forms',this)"><i data-lucide="list"></i> Списки, ключи и формы</a>
+  <a class="nav-item" onclick="showSection('context-reducer',this)"><i data-lucide="share-2"></i> Контекст, reducer, ref</a>
+  <a class="nav-item" onclick="showSection('data-fetching',this)"><i data-lucide="download-cloud"></i> Загрузка данных</a>
 
   <div class="nav-group-label">TypeScript</div>
+  <a class="nav-item" onclick="showSection('ts-config',this)"><i data-lucide="settings-2"></i> tsconfig и strict</a>
   <a class="nav-item" onclick="showSection('ts-base',this)"><i data-lucide="type"></i> interface, type, дженерики</a>
   <a class="nav-item" onclick="showSection('ts-utils',this)"><i data-lucide="wrench"></i> Утилитарные типы</a>
   <a class="nav-item" onclick="showSection('ts-narrowing',this)"><i data-lucide="filter"></i> Сужение типов</a>
+  <a class="nav-item" onclick="showSection('ts-unions',this)"><i data-lucide="git-merge"></i> Размеченные объединения</a>
   <a class="nav-item" onclick="showSection('ts-runtime',this)"><i data-lucide="shield-alert"></i> Типы против валидации</a>
   <a class="nav-item" onclick="showSection('ts-react',this)"><i data-lucide="component"></i> TypeScript в React</a>
 
   <div class="nav-group-label">Tailwind</div>
+  <a class="nav-item" onclick="showSection('tw-config',this)"><i data-lucide="palette"></i> Токены и тёмная тема</a>
   <a class="nav-item" onclick="showSection('tw-base',this)"><i data-lucide="palette"></i> Утилитарный подход</a>
   <a class="nav-item" onclick="showSection('tw-responsive',this)"><i data-lucide="smartphone"></i> Адаптив и состояния</a>
   <a class="nav-item" onclick="showSection('tw-organize',this)"><i data-lucide="boxes"></i> Как не утонуть в классах</a>
@@ -185,6 +192,105 @@ ol.numbered strong{color:var(--text);}
   </div>
 </div>
 
+@endverbatim
+@verbatim
+<div id="sec-jsx" class="section">
+  <div class="section-title">JSX и как React рисует экран</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="file-code"></i> JSX — это вызовы функций, а не шаблон</div>
+    <p class="text">JSX не является частью JavaScript. Сборщик (Vite, esbuild, tsc) превращает его в обычные вызовы функции. Понимать это важно: отсюда следуют все правила — почему атрибут называется <code>className</code>, почему нельзя вернуть два элемента подряд и почему условие пишется выражением, а не оператором.</p>
+<pre><code><span class="c-comment">// Что вы пишете</span>
+<span class="c-key">const</span> el = &lt;<span class="c-type">button</span> className=<span class="c-str">"btn"</span> onClick={save}&gt;Сохранить&lt;/<span class="c-type">button</span>&gt;;
+
+<span class="c-comment">// Во что это превращается (новый JSX-трансформ, React 17+)</span>
+<span class="c-key">import</span> { jsx <span class="c-key">as</span> _jsx } <span class="c-key">from</span> <span class="c-str">'react/jsx-runtime'</span>;
+<span class="c-key">const</span> el = <span class="c-fn">_jsx</span>(<span class="c-str">'button'</span>, { className: <span class="c-str">'btn'</span>, onClick: save, children: <span class="c-str">'Сохранить'</span> });
+
+<span class="c-comment">// Результат — обычный объект, описание того, что нужно нарисовать:</span>
+<span class="c-comment">// { type: 'button', props: { className: 'btn', onClick: f, children: 'Сохранить' } }</span></code></pre>
+    <div class="remember-box"><strong>Ключевая мысль.</strong> Компонент не рисует DOM. Он возвращает <strong>описание</strong> желаемого результата, а React сам решает, какие узлы DOM создать, обновить или удалить. Поэтому один и тот же компонент работает и в браузере, и при серверном рендеринге, и в React Native.</div>
+    <table class="data-table">
+      <thead><tr><th>В HTML</th><th>В JSX</th><th>Почему</th></tr></thead>
+      <tbody>
+        <tr><td><code>class</code></td><td><code>className</code></td><td><code>class</code> — зарезервированное слово JavaScript</td></tr>
+        <tr><td><code>for</code></td><td><code>htmlFor</code></td><td><code>for</code> — оператор цикла</td></tr>
+        <tr><td><code>onclick="..."</code></td><td><code>onClick={fn}</code></td><td>Передаётся функция, а не строка кода</td></tr>
+        <tr><td><code>style="color:red"</code></td><td><code>style={{ color: 'red' }}</code></td><td>Объект свойств, имена в camelCase</td></tr>
+        <tr><td><code>&lt;!-- … --&gt;</code></td><td><code>{/* … */}</code></td><td>Комментарий — это выражение JavaScript</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="braces"></i> Фигурные скобки: только выражения</div>
+    <p class="text">В <code>{}</code> подставляется <strong>выражение</strong> — то, что имеет значение. Оператор <code>if</code> или цикл <code>for</code> значения не имеют, поэтому внутри JSX используют тернарный оператор, <code>&amp;&amp;</code> и <code>map</code>.</p>
+<pre><code><span class="c-key">function</span> <span class="c-fn">OrderStatus</span>({ order, user }) {
+  <span class="c-key">return</span> (
+    &lt;<span class="c-type">div</span>&gt;
+      <span class="c-comment">{/* тернарный — когда нужны обе ветки */}</span>
+      {order.paid ? &lt;<span class="c-type">Badge</span> kind=<span class="c-str">"ok"</span>&gt;Оплачен&lt;/<span class="c-type">Badge</span>&gt; : &lt;<span class="c-type">Badge</span>&gt;Ожидает оплаты&lt;/<span class="c-type">Badge</span>&gt;}
+
+      <span class="c-comment">{/* && — когда ветка одна */}</span>
+      {user.isAdmin &amp;&amp; &lt;<span class="c-type">AdminPanel</span> orderId={order.id} /&gt;}
+
+      <span class="c-comment">{/* список — через map, не через for */}</span>
+      &lt;<span class="c-type">ul</span>&gt;
+        {order.items.<span class="c-fn">map</span>(item =&gt; &lt;<span class="c-type">li</span> key={item.id}&gt;{item.title}&lt;/<span class="c-type">li</span>&gt;)}
+      &lt;/<span class="c-type">ul</span>&gt;
+    &lt;/<span class="c-type">div</span>&gt;
+  );
+}</code></pre>
+    <div class="pitfall"><strong>Ноль вместо пустоты.</strong> <code>{items.length &amp;&amp; &lt;List /&gt;}</code> при пустом массиве выведет на экран <code>0</code>: <code>0 &amp;&amp; x</code> возвращает <code>0</code>, а React печатает числа. React не рисует только <code>false</code>, <code>null</code> и <code>undefined</code>. Пишите <code>items.length &gt; 0 &amp;&amp; …</code>.</div>
+    <div class="pitfall"><strong>Объект в разметке.</strong> <code>{user}</code>, где <code>user</code> — объект, роняет рендер с «Objects are not valid as a React child». Нужно выбрать поле: <code>{user.name}</code>.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="corner-down-right"></i> Один корень и фрагменты</div>
+    <p class="text">Функция возвращает одно значение, поэтому и компонент возвращает один элемент. Когда лишняя обёртка <code>&lt;div&gt;</code> ломает вёрстку (например, внутри grid или таблицы), используют фрагмент.</p>
+<pre><code><span class="c-comment">// ❌ Ошибка сборки: два корневых элемента</span>
+<span class="c-key">return</span> (
+  &lt;<span class="c-type">td</span>&gt;{row.name}&lt;/<span class="c-type">td</span>&gt;
+  &lt;<span class="c-type">td</span>&gt;{row.total}&lt;/<span class="c-type">td</span>&gt;
+);
+
+<span class="c-comment">// ✅ Фрагмент — не создаёт узла в DOM</span>
+<span class="c-key">return</span> (
+  &lt;&gt;
+    &lt;<span class="c-type">td</span>&gt;{row.name}&lt;/<span class="c-type">td</span>&gt;
+    &lt;<span class="c-type">td</span>&gt;{row.total}&lt;/<span class="c-type">td</span>&gt;
+  &lt;/&gt;
+);
+
+<span class="c-comment">// Если нужен key — только полная форма</span>
+{rows.<span class="c-fn">map</span>(row =&gt; (
+  &lt;<span class="c-type">React.Fragment</span> key={row.id}&gt;
+    &lt;<span class="c-type">dt</span>&gt;{row.name}&lt;/<span class="c-type">dt</span>&gt;
+    &lt;<span class="c-type">dd</span>&gt;{row.total}&lt;/<span class="c-type">dd</span>&gt;
+  &lt;/<span class="c-type">React.Fragment</span>&gt;
+))}</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="repeat-2"></i> Что происходит при обновлении</div>
+    <p class="text">Когда состояние меняется, React вызывает компонент заново, получает новое описание и сравнивает его с предыдущим. В DOM уходят только отличия — это и называют согласованием (reconciliation).</p>
+    <div class="diagram">setState(…)
+   │
+   ├─ 1. React помечает компонент как требующий обновления
+   │
+   ├─ 2. Вызывает функцию компонента → получает новое дерево описаний
+   │
+   ├─ 3. Сравнивает с предыдущим деревом:
+   │      • тип узла изменился  → старый узел удаляется, создаётся новый
+   │      • тип тот же          → обновляются только изменившиеся атрибуты
+   │      • узлы списка         → сопоставляются по key
+   │
+   └─ 4. Применяет минимальный набор правок к настоящему DOM
+          (эта фаза называется commit)</div>
+    <p class="text">Сравнение идёт по позиции в дереве и по типу элемента. Именно поэтому <code>key</code> в списках так важен — он подсказывает React, какой элемент какому соответствует, когда порядок меняется. Подробнее — в разделе <strong>Списки, ключи и формы</strong>.</p>
+    <div class="pitfall"><strong>Условная обёртка сбрасывает состояние.</strong> Если один и тот же <code>&lt;Form /&gt;</code> в одной ветке условия обёрнут в <code>&lt;div&gt;</code>, а в другой нет — React видит разный тип на этой позиции, уничтожает старое поддерево и создаёт новое. Всё внутреннее состояние формы теряется.</div>
+  </div>
+</div>
 @endverbatim
 @verbatim
 <div id="sec-hooks" class="section">
@@ -286,6 +392,347 @@ ol.numbered strong{color:var(--text);}
 
 @endverbatim
 @verbatim
+<div id="sec-lists-forms" class="section">
+  <div class="section-title">Списки, ключи и формы</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="key-round"></i> Зачем нужен key</div>
+    <p class="text">При обновлении списка React сопоставляет старые и новые элементы. Без <code>key</code> сопоставление идёт по порядковому номеру, и если элементы переставили, вставили или удалили, React решит, что изменилось <em>содержимое</em> каждой позиции, а не порядок.</p>
+    <div class="diagram">Было:  [ Анна ] [ Борис ] [ Вера ]
+Стало: [ Борис ] [ Вера ]          ← удалили Анну
+
+Без key — сопоставление по позиции:
+  позиция 0: Анна  → Борис   «текст изменился»
+  позиция 1: Борис → Вера    «текст изменился»
+  позиция 2: Вера  → нет     «удалить»
+  Итог: переписаны все узлы; состояние внутри строк уехало на соседей.
+
+С key — сопоставление по идентификатору:
+  key=2 Борис → остался на месте
+  key=3 Вера  → остался на месте
+  key=1 Анна  → удалён
+  Итог: удалён один узел, остальные не тронуты.</div>
+<pre><code><span class="c-comment">// ❌ Индекс как key — ломается при вставке, удалении и сортировке</span>
+{users.<span class="c-fn">map</span>((u, i) =&gt; &lt;<span class="c-type">UserRow</span> key={i} user={u} /&gt;)}
+
+<span class="c-comment">// ✅ Стабильный идентификатор из данных</span>
+{users.<span class="c-fn">map</span>(u =&gt; &lt;<span class="c-type">UserRow</span> key={u.id} user={u} /&gt;)}</code></pre>
+    <div class="pitfall"><strong>Самый заметный симптом.</strong> В списке с полями ввода и <code>key={i}</code> удалите первую строку — введённый текст «съедет» на соседнюю строку. Состояние осталось привязано к позиции, а не к записи.</div>
+    <div class="pitfall"><strong>Индекс допустим,</strong> только если список неизменяемый: не сортируется, не фильтруется, элементы не добавляются и не удаляются. Такие списки встречаются редко.</div>
+    <div class="pitfall"><strong>key уникален среди соседей,</strong> а не глобально. Два разных списка на странице могут содержать одинаковые ключи — это нормально. И <code>key</code> не попадает в props: прочитать его внутри компонента нельзя, нужно передать отдельным атрибутом.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="text-cursor-input"></i> Управляемые и неуправляемые поля</div>
+    <p class="text">У поля ввода есть собственное состояние в DOM. Вопрос в том, кто считается источником истины — React или сам браузер.</p>
+    <table class="data-table">
+      <thead><tr><th></th><th>Управляемое</th><th>Неуправляемое</th></tr></thead>
+      <tbody>
+        <tr><td>Источник истины</td><td>Состояние React</td><td>Сам DOM-узел</td></tr>
+        <tr><td>Как пишется</td><td><code>value</code> + <code>onChange</code></td><td><code>defaultValue</code> + <code>ref</code></td></tr>
+        <tr><td>Перерисовка</td><td>На каждое нажатие клавиши</td><td>Не происходит</td></tr>
+        <tr><td>Когда удобно</td><td>Валидация на лету, зависимые поля, форматирование ввода</td><td>Большие формы, файлы, интеграция со сторонним кодом</td></tr>
+      </tbody>
+    </table>
+<pre><code><span class="c-comment">// Управляемое: React знает значение в любой момент</span>
+<span class="c-key">const</span> [email, setEmail] = <span class="c-fn">useState</span>(<span class="c-str">''</span>);
+&lt;<span class="c-type">input</span> value={email} onChange={e =&gt; <span class="c-fn">setEmail</span>(e.target.value)} /&gt;
+
+<span class="c-comment">// Неуправляемое: значение читаем в момент отправки</span>
+<span class="c-key">const</span> emailRef = <span class="c-fn">useRef</span>(<span class="c-key">null</span>);
+&lt;<span class="c-type">input</span> defaultValue=<span class="c-str">""</span> ref={emailRef} /&gt;
+<span class="c-comment">// ... emailRef.current.value</span></code></pre>
+    <div class="pitfall"><strong>value без onChange.</strong> Поле станет доступным только для чтения, а в консоли появится предупреждение. Если значение задаётся один раз — нужен <code>defaultValue</code>.</div>
+    <div class="pitfall"><strong>undefined как начальное значение.</strong> <code>useState()</code> без аргумента делает поле неуправляемым, а первый ввод переключает его в управляемое. React предупреждает об этом в консоли. Начинайте с пустой строки.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="send"></i> Отправка формы</div>
+    <p class="text">Браузер по умолчанию перезагружает страницу при отправке. Это нужно отменить и обязательно блокировать повторную отправку, пока запрос в пути.</p>
+<pre><code><span class="c-key">function</span> <span class="c-fn">LoginForm</span>() {
+  <span class="c-key">const</span> [form, setForm] = <span class="c-fn">useState</span>({ email: <span class="c-str">''</span>, password: <span class="c-str">''</span> });
+  <span class="c-key">const</span> [sending, setSending] = <span class="c-fn">useState</span>(<span class="c-key">false</span>);
+  <span class="c-key">const</span> [error, setError] = <span class="c-fn">useState</span>(<span class="c-key">null</span>);
+
+  <span class="c-comment">// одна функция на все поля — по атрибуту name</span>
+  <span class="c-key">const</span> <span class="c-fn">change</span> = e =&gt;
+    <span class="c-fn">setForm</span>(f =&gt; ({ ...f, [e.target.name]: e.target.value }));
+
+  <span class="c-key">async function</span> <span class="c-fn">submit</span>(e) {
+    e.<span class="c-fn">preventDefault</span>();        <span class="c-comment">// без этого страница перезагрузится</span>
+    <span class="c-key">if</span> (sending) <span class="c-key">return</span>;       <span class="c-comment">// защита от двойного клика</span>
+    <span class="c-fn">setSending</span>(<span class="c-key">true</span>); <span class="c-fn">setError</span>(<span class="c-key">null</span>);
+    <span class="c-key">try</span> {
+      <span class="c-key">await</span> <span class="c-fn">login</span>(form);
+    } <span class="c-key">catch</span> (err) {
+      <span class="c-fn">setError</span>(err.message);
+    } <span class="c-key">finally</span> {
+      <span class="c-fn">setSending</span>(<span class="c-key">false</span>);     <span class="c-comment">// finally — иначе форма зависнет после ошибки</span>
+    }
+  }
+
+  <span class="c-key">return</span> (
+    &lt;<span class="c-type">form</span> onSubmit={submit}&gt;
+      &lt;<span class="c-type">input</span> name=<span class="c-str">"email"</span> value={form.email} onChange={change} /&gt;
+      &lt;<span class="c-type">input</span> name=<span class="c-str">"password"</span> type=<span class="c-str">"password"</span> value={form.password} onChange={change} /&gt;
+      {error &amp;&amp; &lt;<span class="c-type">p</span> role=<span class="c-str">"alert"</span>&gt;{error}&lt;/<span class="c-type">p</span>&gt;}
+      &lt;<span class="c-type">button</span> disabled={sending}&gt;{sending ? <span class="c-str">'Входим…'</span> : <span class="c-str">'Войти'</span>}&lt;/<span class="c-type">button</span>&gt;
+    &lt;/<span class="c-type">form</span>&gt;
+  );
+}</code></pre>
+    <div class="pitfall"><strong>Мутация состояния.</strong> <code>form.email = v; setForm(form)</code> не вызовет перерисовку: ссылка на объект не изменилась, а React сравнивает именно ссылки. Всегда создавайте новый объект через расширение.</div>
+    <div class="pitfall"><strong>Сброс sending без finally.</strong> Если сбрасывать флаг только в удачной ветке, после первой же ошибки кнопка останется заблокированной навсегда.</div>
+  </div>
+</div>
+@endverbatim
+@verbatim
+<div id="sec-context-reducer" class="section">
+  <div class="section-title">Контекст, useReducer и useRef</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="share-2"></i> Контекст: против передачи props через этажи</div>
+    <p class="text">Когда значение нужно глубоко внизу дерева, его приходится передавать через все промежуточные компоненты, которым оно не нужно (это называют prop drilling). Контекст позволяет положить значение наверху и прочитать внизу напрямую.</p>
+<pre><code><span class="c-comment">// 1. Создаём контекст со значением по умолчанию</span>
+<span class="c-key">const</span> ThemeContext = <span class="c-fn">createContext</span>(<span class="c-str">'light'</span>);
+
+<span class="c-comment">// 2. Отдаём значение поддереву</span>
+<span class="c-key">function</span> <span class="c-fn">App</span>() {
+  <span class="c-key">const</span> [theme, setTheme] = <span class="c-fn">useState</span>(<span class="c-str">'light'</span>);
+  <span class="c-comment">// объект создаётся заново на каждом рендере — мемоизируем,</span>
+  <span class="c-comment">// иначе все потребители перерисуются даже без реальных изменений</span>
+  <span class="c-key">const</span> value = <span class="c-fn">useMemo</span>(() =&gt; ({ theme, setTheme }), [theme]);
+  <span class="c-key">return</span> &lt;<span class="c-type">ThemeContext.Provider</span> value={value}&gt;&lt;<span class="c-type">Layout</span> /&gt;&lt;/<span class="c-type">ThemeContext.Provider</span>&gt;;
+}
+
+<span class="c-comment">// 3. Читаем на любой глубине</span>
+<span class="c-key">function</span> <span class="c-fn">ThemeToggle</span>() {
+  <span class="c-key">const</span> { theme, setTheme } = <span class="c-fn">useContext</span>(ThemeContext);
+  <span class="c-key">return</span> &lt;<span class="c-type">button</span> onClick={() =&gt; <span class="c-fn">setTheme</span>(theme === <span class="c-str">'light'</span> ? <span class="c-str">'dark'</span> : <span class="c-str">'light'</span>)}&gt;{theme}&lt;/<span class="c-type">button</span>&gt;;
+}</code></pre>
+    <div class="pitfall"><strong>Контекст — не замена состоянию приложения.</strong> Любое изменение значения перерисовывает <em>всех</em> потребителей, даже тех, кому нужна лишь часть объекта. Для часто меняющихся данных (позиция курсора, ввод в поле) это заметно. Решения: разделить на несколько контекстов или взять внешнее хранилище.</div>
+    <div class="pitfall"><strong>Новый объект в value.</strong> <code>value={{ user, logout }}</code> создаёт новую ссылку на каждом рендере родителя — потребители обновятся всегда. Отсюда <code>useMemo</code> в примере.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-branch"></i> useReducer: когда useState перестаёт помогать</div>
+    <p class="text">Признак, что пора переходить: несколько <code>useState</code> меняются вместе, а правила перехода между состояниями размазаны по обработчикам. Редьюсер собирает эти правила в одном месте и делает невозможные комбинации невыразимыми.</p>
+<pre><code><span class="c-comment">// Было: три состояния, которые нужно держать согласованными вручную</span>
+<span class="c-key">const</span> [loading, setLoading] = <span class="c-fn">useState</span>(<span class="c-key">false</span>);
+<span class="c-key">const</span> [data, setData]       = <span class="c-fn">useState</span>(<span class="c-key">null</span>);
+<span class="c-key">const</span> [error, setError]     = <span class="c-fn">useState</span>(<span class="c-key">null</span>);
+<span class="c-comment">// ничто не мешает получить loading: true и error: 'сбой' одновременно</span>
+
+<span class="c-comment">// Стало: одно состояние, переходы описаны явно</span>
+<span class="c-key">function</span> <span class="c-fn">reducer</span>(state, action) {
+  <span class="c-key">switch</span> (action.type) {
+    <span class="c-key">case</span> <span class="c-str">'load'</span>:    <span class="c-key">return</span> { status: <span class="c-str">'loading'</span> };
+    <span class="c-key">case</span> <span class="c-str">'success'</span>: <span class="c-key">return</span> { status: <span class="c-str">'ready'</span>, data: action.payload };
+    <span class="c-key">case</span> <span class="c-str">'failure'</span>: <span class="c-key">return</span> { status: <span class="c-str">'error'</span>, message: action.error };
+    <span class="c-key">default</span>:        <span class="c-key">return</span> state;
+  }
+}
+
+<span class="c-key">const</span> [state, dispatch] = <span class="c-fn">useReducer</span>(reducer, { status: <span class="c-str">'idle'</span> });
+<span class="c-comment">// dispatch({ type: 'load' }) — компонент не знает, как устроен переход</span></code></pre>
+    <table class="data-table">
+      <thead><tr><th>Берите useState</th><th>Берите useReducer</th></tr></thead>
+      <tbody>
+        <tr><td>Одно-два независимых значения</td><td>Несколько значений меняются согласованно</td></tr>
+        <tr><td>Переход очевиден из места вызова</td><td>Переходы образуют конечный автомат</td></tr>
+        <tr><td>Логика помещается в обработчик</td><td>Логику хочется покрыть тестами отдельно от компонента</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Редьюсер — чистая функция.</strong> Никаких запросов, таймеров и <code>Math.random()</code> внутри. Те же аргументы — тот же результат. Это делает его тестируемым без React и предсказуемым в строгом режиме, который вызывает редьюсер дважды.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="pin"></i> useRef: значение, которое переживает рендер</div>
+    <p class="text">У <code>useRef</code> две разные работы, и обе сводятся к одному: это изменяемая ячейка, которая не вызывает перерисовку.</p>
+<pre><code><span class="c-comment">// 1. Доступ к узлу DOM</span>
+<span class="c-key">const</span> inputRef = <span class="c-fn">useRef</span>(<span class="c-key">null</span>);
+<span class="c-fn">useEffect</span>(() =&gt; { inputRef.current?.<span class="c-fn">focus</span>(); }, []);
+&lt;<span class="c-type">input</span> ref={inputRef} /&gt;
+
+<span class="c-comment">// 2. Хранилище между рендерами: таймеры, предыдущее значение, флаги</span>
+<span class="c-key">const</span> timerRef = <span class="c-fn">useRef</span>(<span class="c-key">null</span>);
+<span class="c-key">function</span> <span class="c-fn">start</span>() {
+  timerRef.current = <span class="c-fn">setInterval</span>(tick, <span class="c-num">1000</span>);
+}
+<span class="c-fn">useEffect</span>(() =&gt; () =&gt; <span class="c-fn">clearInterval</span>(timerRef.current), []); <span class="c-comment">// очистка</span></code></pre>
+    <table class="data-table">
+      <thead><tr><th></th><th>useState</th><th>useRef</th></tr></thead>
+      <tbody>
+        <tr><td>Изменение вызывает рендер</td><td>Да</td><td>Нет</td></tr>
+        <tr><td>Значение между рендерами</td><td>Сохраняется</td><td>Сохраняется</td></tr>
+        <tr><td>Чтение во время рендера</td><td>Можно</td><td>Нежелательно</td></tr>
+        <tr><td>Для чего</td><td>Данные, влияющие на разметку</td><td>Всё, что на разметку не влияет</td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong>Ref не для данных на экране.</strong> Записали в <code>ref.current</code> и ждёте обновления интерфейса — его не будет, React о записи не знает. Если значение видно пользователю, это состояние.</div>
+  </div>
+</div>
+@endverbatim
+@verbatim
+<div id="sec-data-fetching" class="section">
+  <div class="section-title">Загрузка данных и состояния экрана</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="list-checks"></i> Четыре состояния, а не одно</div>
+    <p class="text">Самая частая ошибка новичка — рисовать только удачный случай. У любого экрана с запросом к серверу состояний как минимум четыре, и каждое должно быть нарисовано.</p>
+    <table class="data-table">
+      <thead><tr><th>Состояние</th><th>Что видит пользователь</th><th>Что забывают</th></tr></thead>
+      <tbody>
+        <tr><td>Загрузка</td><td>Скелетон или индикатор</td><td>Прыжок вёрстки, когда данные пришли</td></tr>
+        <tr><td>Ошибка</td><td>Текст и кнопка «Повторить»</td><td>Экран остаётся пустым навсегда</td></tr>
+        <tr><td>Пусто</td><td>«Пока ничего нет» и подсказка</td><td>Выглядит как поломка</td></tr>
+        <tr><td>Данные</td><td>Собственно содержимое</td><td>—</td></tr>
+      </tbody>
+    </table>
+<pre><code><span class="c-key">if</span> (status === <span class="c-str">'loading'</span>) <span class="c-key">return</span> &lt;<span class="c-type">Skeleton</span> rows={5} /&gt;;
+<span class="c-key">if</span> (status === <span class="c-str">'error'</span>)   <span class="c-key">return</span> &lt;<span class="c-type">ErrorBox</span> message={message} onRetry={reload} /&gt;;
+<span class="c-key">if</span> (!items.length)         <span class="c-key">return</span> &lt;<span class="c-type">Empty</span> hint=<span class="c-str">"Добавьте первый заказ"</span> /&gt;;
+<span class="c-key">return</span> &lt;<span class="c-type">OrderList</span> items={items} /&gt;;</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="download-cloud"></i> Запрос в useEffect: полный вариант</div>
+    <p class="text">Если писать загрузку руками, необходимы две вещи: отмена устаревшего запроса и защита от записи в размонтированный компонент.</p>
+<pre><code><span class="c-key">function</span> <span class="c-fn">useOrders</span>(userId) {
+  <span class="c-key">const</span> [state, setState] = <span class="c-fn">useState</span>({ status: <span class="c-str">'loading'</span> });
+
+  <span class="c-fn">useEffect</span>(() =&gt; {
+    <span class="c-key">const</span> ac = <span class="c-key">new</span> <span class="c-type">AbortController</span>();
+    <span class="c-fn">setState</span>({ status: <span class="c-str">'loading'</span> });
+
+    <span class="c-fn">fetch</span>(`/api/users/${userId}/orders`, { signal: ac.signal })
+      .<span class="c-fn">then</span>(r =&gt; {
+        <span class="c-comment">// fetch не считает 404 и 500 ошибкой — проверяем сами</span>
+        <span class="c-key">if</span> (!r.ok) <span class="c-key">throw</span> <span class="c-key">new</span> <span class="c-type">Error</span>(`HTTP ${r.status}`);
+        <span class="c-key">return</span> r.<span class="c-fn">json</span>();
+      })
+      .<span class="c-fn">then</span>(data =&gt; <span class="c-fn">setState</span>({ status: <span class="c-str">'ready'</span>, data }))
+      .<span class="c-fn">catch</span>(err =&gt; {
+        <span class="c-key">if</span> (err.name === <span class="c-str">'AbortError'</span>) <span class="c-key">return</span>;  <span class="c-comment">// это мы сами отменили</span>
+        <span class="c-fn">setState</span>({ status: <span class="c-str">'error'</span>, message: err.message });
+      });
+
+    <span class="c-key">return</span> () =&gt; ac.<span class="c-fn">abort</span>();   <span class="c-comment">// userId сменился или компонент ушёл</span>
+  }, [userId]);
+
+  <span class="c-key">return</span> state;
+}</code></pre>
+    <div class="pitfall"><strong>Гонка ответов.</strong> Без отмены быстрое переключение между пользователями приведёт к тому, что медленный ответ по старому <code>userId</code> придёт последним и перетрёт правильные данные. Экран покажет чужие заказы.</div>
+    <div class="pitfall"><strong>fetch не бросает на 4xx и 5xx.</strong> Промис отклоняется только при сетевом сбое. Без проверки <code>r.ok</code> страница HTML с ошибкой уедет в <code>r.json()</code> и упадёт уже там, с непонятным сообщением про синтаксис.</div>
+    <div class="pitfall"><strong>async прямо в useEffect.</strong> <code>useEffect(async () =&gt; …)</code> вернёт промис вместо функции очистки, и React предупредит об этом. Объявляйте асинхронную функцию внутри и вызывайте её.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="package-check"></i> Почему в проектах берут библиотеку</div>
+    <p class="text">Приведённый хук решает один экран. В приложении появляются кэш, повторные попытки, обновление в фоне, инвалидация после изменения данных — и это уже отдельная задача. Её закрывают TanStack Query (React Query) или RTK Query.</p>
+<pre><code><span class="c-comment">// То же самое через TanStack Query</span>
+<span class="c-key">const</span> { data, isPending, isError, refetch } = <span class="c-fn">useQuery</span>({
+  queryKey: [<span class="c-str">'orders'</span>, userId],   <span class="c-comment">// ключ кэша: сменился userId — новый запрос</span>
+  queryFn: ({ signal }) =&gt; <span class="c-fn">fetch</span>(`/api/users/${userId}/orders`, { signal })
+    .<span class="c-fn">then</span>(r =&gt; r.ok ? r.<span class="c-fn">json</span>() : <span class="c-type">Promise</span>.<span class="c-fn">reject</span>(<span class="c-key">new</span> <span class="c-type">Error</span>(r.status))),
+  staleTime: <span class="c-num">30_000</span>,            <span class="c-comment">// 30 секунд данные считаются свежими</span>
+});</code></pre>
+    <table class="data-table">
+      <thead><tr><th>Что даёт библиотека</th><th>Что придётся писать руками</th></tr></thead>
+      <tbody>
+        <tr><td>Кэш по ключу и дедупликация одинаковых запросов</td><td>Свой словарь запросов и проверка «уже грузим»</td></tr>
+        <tr><td>Повтор при сбое и обновление при возврате на вкладку</td><td>Счётчик попыток, подписка на <code>visibilitychange</code></td></tr>
+        <tr><td>Инвалидация после отправки формы</td><td>Ручной перезапрос во всех местах, где показаны данные</td></tr>
+        <tr><td>Единое состояние загрузки для всего приложения</td><td>Свой флаг в каждом компоненте</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Разделение, которое стоит усвоить.</strong> Состояние сервера (пришло по сети, может устареть, принадлежит не вам) и состояние интерфейса (открыт ли модал, какая вкладка активна) — разные вещи. Первое удобно отдать библиотеке запросов, второе оставить в <code>useState</code>. Попытка хранить и то и другое в одном глобальном хранилище — источник большей части сложности в старых проектах на Redux.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="shield-alert"></i> Чтобы одна ошибка не гасила страницу</div>
+    <p class="text">Исключение при рендере размонтирует всё дерево — пользователь увидит белый экран. Граница ошибок перехватывает сбой поддерева и рисует запасной интерфейс.</p>
+<pre><code>&lt;<span class="c-type">ErrorBoundary</span> fallback={&lt;<span class="c-type">p</span>&gt;Виджет временно недоступен&lt;/<span class="c-type">p</span>&gt;}&gt;
+  &lt;<span class="c-type">RevenueChart</span> /&gt;
+&lt;/<span class="c-type">ErrorBoundary</span>&gt;</code></pre>
+    <div class="pitfall"><strong>Что граница не ловит:</strong> ошибки в обработчиках событий, в асинхронном коде, при серверном рендеринге и внутри самой границы. Обработчик клика нужно оборачивать в <code>try/catch</code> самостоятельно.</div>
+  </div>
+</div>
+@endverbatim
+@verbatim
+<div id="sec-ts-config" class="section">
+  <div class="section-title">tsconfig и строгий режим</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="settings-2"></i> Что вообще делает компилятор</div>
+    <p class="text">TypeScript не выполняется. Он проверяет типы и <strong>стирает</strong> их, оставляя обычный JavaScript. Отсюда главное следствие: ни одна аннотация не существует во время работы программы — проверить тип данных, пришедших с сервера, типами нельзя.</p>
+<pre><code><span class="c-comment">// Исходник на TypeScript</span>
+<span class="c-key">interface</span> <span class="c-type">User</span> { id: <span class="c-type">number</span>; name: <span class="c-type">string</span>; }
+<span class="c-key">function</span> <span class="c-fn">greet</span>(u: <span class="c-type">User</span>): <span class="c-type">string</span> { <span class="c-key">return</span> `Привет, ${u.name}`; }
+
+<span class="c-comment">// Что останется после компиляции — интерфейс исчез целиком</span>
+<span class="c-key">function</span> <span class="c-fn">greet</span>(u) { <span class="c-key">return</span> `Привет, ${u.name}`; }</code></pre>
+    <div class="remember-box"><strong>Разделение, которое снимает большинство вопросов.</strong> Типы живут во время сборки, данные — во время работы. Всё, что приходит извне (ответ API, параметр адреса, содержимое localStorage), нужно проверять настоящим кодом. Подробнее — в разделе <strong>Типы против валидации</strong>.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="shield"></i> strict: ради чего всё затевалось</div>
+    <p class="text"><code>"strict": true</code> включает набор проверок разом. Без него TypeScript теряет большую часть пользы: <code>null</code> проходит всюду, а необъявленные типы молча становятся <code>any</code>.</p>
+    <table class="data-table">
+      <thead><tr><th>Флаг внутри strict</th><th>Что ловит</th></tr></thead>
+      <tbody>
+        <tr><td><code>strictNullChecks</code></td><td>Главный. Без него <code>null</code> и <code>undefined</code> допустимы в любом типе, и обращение к полю отсутствующего объекта не будет ошибкой</td></tr>
+        <tr><td><code>noImplicitAny</code></td><td>Параметр без аннотации, тип которого вывести не удалось</td></tr>
+        <tr><td><code>strictFunctionTypes</code></td><td>Несовместимую подстановку функции вместо другой функции</td></tr>
+        <tr><td><code>strictPropertyInitialization</code></td><td>Поле класса, которое объявлено, но никогда не присваивается</td></tr>
+        <tr><td><code>useUnknownInCatchVariables</code></td><td>Переменная в <code>catch</code> получает <code>unknown</code>, а не <code>any</code> — исключение придётся проверить</td></tr>
+      </tbody>
+    </table>
+    <p class="text">Полезны и те, что в <code>strict</code> не входят:</p>
+    <table class="data-table">
+      <thead><tr><th>Флаг</th><th>Зачем</th></tr></thead>
+      <tbody>
+        <tr><td><code>noUncheckedIndexedAccess</code></td><td>Доступ по индексу даёт <code>T | undefined</code>. Снимает целый класс ошибок с массивами и словарями</td></tr>
+        <tr><td><code>noImplicitOverride</code></td><td>Переопределение метода родителя требует слова <code>override</code></td></tr>
+        <tr><td><code>exactOptionalPropertyTypes</code></td><td>Различает «поля нет» и «поле равно undefined»</td></tr>
+        <tr><td><code>verbatimModuleSyntax</code></td><td>Требует <code>import type</code> для импорта только типов — важно для корректной сборки</td></tr>
+      </tbody>
+    </table>
+<pre><code><span class="c-comment">// Чем помогает noUncheckedIndexedAccess</span>
+<span class="c-key">const</span> ids: <span class="c-type">number</span>[] = [];
+<span class="c-key">const</span> first = ids[<span class="c-num">0</span>];
+<span class="c-comment">// без флага: number  → first.toFixed() компилируется и падает в рантайме</span>
+<span class="c-comment">// с флагом:  number | undefined → компилятор требует проверку</span>
+<span class="c-key">if</span> (first !== <span class="c-key">undefined</span>) first.<span class="c-fn">toFixed</span>();</code></pre>
+    <div class="pitfall"><strong>Перевод старого проекта.</strong> Включать <code>strict</code> разом на большой кодовой базе — тысячи ошибок и соблазн всё отключить. Включают по одному флагу, начиная с <code>noImplicitAny</code>, либо держат строгость только для новых файлов.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="ban"></i> any, unknown и never</div>
+    <table class="data-table">
+      <thead><tr><th>Тип</th><th>Смысл</th><th>Когда уместен</th></tr></thead>
+      <tbody>
+        <tr><td><code>any</code></td><td>Проверки отключены. Любая операция разрешена</td><td>Почти никогда. Точечно при переводе старого кода</td></tr>
+        <tr><td><code>unknown</code></td><td>Значение есть, но тип неизвестен. Ничего делать нельзя, пока не проверите</td><td>Ответ сети, <code>JSON.parse</code>, переменная в <code>catch</code></td></tr>
+        <tr><td><code>never</code></td><td>Значения не бывает в принципе</td><td>Функция, которая всегда бросает; проверка полноты <code>switch</code></td></tr>
+      </tbody>
+    </table>
+<pre><code><span class="c-comment">// any заражает всё вокруг — ошибка всплывёт далеко от причины</span>
+<span class="c-key">const</span> data: <span class="c-type">any</span> = <span class="c-type">JSON</span>.<span class="c-fn">parse</span>(raw);
+data.user.profile.name.<span class="c-fn">trim</span>();   <span class="c-comment">// компилируется; падает в рантайме</span>
+
+<span class="c-comment">// unknown заставляет проверить</span>
+<span class="c-key">const</span> data: <span class="c-type">unknown</span> = <span class="c-type">JSON</span>.<span class="c-fn">parse</span>(raw);
+<span class="c-key">if</span> (<span class="c-key">typeof</span> data === <span class="c-str">'object'</span> &amp;&amp; data !== <span class="c-key">null</span> &amp;&amp; <span class="c-str">'user'</span> <span class="c-key">in</span> data) {
+  <span class="c-comment">// здесь TypeScript уже знает, что поле есть</span>
+}
+
+<span class="c-comment">// never ловит забытую ветку при добавлении нового варианта</span>
+<span class="c-key">function</span> <span class="c-fn">assertNever</span>(x: <span class="c-type">never</span>): <span class="c-type">never</span> { <span class="c-key">throw</span> <span class="c-key">new</span> <span class="c-type">Error</span>(<span class="c-str">'Необработанный вариант: '</span> + x); }</code></pre>
+    <div class="pitfall"><strong>Утверждение типа — не проверка.</strong> <code>value as User</code> ничего не проверяет, а лишь приказывает компилятору замолчать. Если данные другие, ошибка просто переедет дальше по коду и станет труднее для поиска.</div>
+  </div>
+</div>
+@endverbatim
+@verbatim
 <div id="sec-ts-base" class="section">
   <div class="section-title">TypeScript: interface, type, дженерики</div>
   <div class="subsection">
@@ -378,6 +825,85 @@ raw.user;                          <span class="c-comment">// ошибка ко�
 
 @endverbatim
 @verbatim
+<div id="sec-ts-unions" class="section">
+  <div class="section-title">Размеченные объединения</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-merge"></i> Сделать невозможное состояние невыразимым</div>
+    <p class="text">Это главный приём, ради которого стоит переходить на TypeScript всерьёз. Вместо набора независимых полей — перечисление допустимых вариантов, где у каждого свой набор данных. Невозможная комбинация перестаёт компилироваться.</p>
+<pre><code><span class="c-comment">// ❌ Четыре поля дают 16 комбинаций, осмысленных — три</span>
+<span class="c-key">interface</span> <span class="c-type">State</span> {
+  loading: <span class="c-type">boolean</span>;
+  data?: <span class="c-type">Order</span>[];
+  error?: <span class="c-type">string</span>;
+}
+<span class="c-comment">// { loading: true, error: 'сбой', data: [...] } — тип это допускает</span>
+
+<span class="c-comment">// ✅ Размеченное объединение: поле-метка status различает варианты</span>
+<span class="c-key">type</span> <span class="c-type">State</span> =
+  | { status: <span class="c-str">'idle'</span> }
+  | { status: <span class="c-str">'loading'</span> }
+  | { status: <span class="c-str">'ready'</span>; data: <span class="c-type">Order</span>[] }
+  | { status: <span class="c-str">'error'</span>; message: <span class="c-type">string</span> };</code></pre>
+    <p class="text">Теперь компилятор сам проводит по веткам и в каждой знает, какие поля доступны:</p>
+<pre><code><span class="c-key">function</span> <span class="c-fn">render</span>(state: <span class="c-type">State</span>) {
+  <span class="c-key">switch</span> (state.status) {
+    <span class="c-key">case</span> <span class="c-str">'idle'</span>:
+    <span class="c-key">case</span> <span class="c-str">'loading'</span>: <span class="c-key">return</span> &lt;<span class="c-type">Skeleton</span> /&gt;;
+    <span class="c-key">case</span> <span class="c-str">'ready'</span>:   <span class="c-key">return</span> &lt;<span class="c-type">List</span> items={state.data} /&gt;;      <span class="c-comment">// data точно есть</span>
+    <span class="c-key">case</span> <span class="c-str">'error'</span>:   <span class="c-key">return</span> &lt;<span class="c-type">Error</span> text={state.message} /&gt;;   <span class="c-comment">// message точно есть</span>
+  }
+}
+<span class="c-comment">// state.data в ветке 'error' — ошибка компиляции, а не падение у пользователя</span></code></pre>
+    <div class="remember-box"><strong>Признак, что приём нужен.</strong> В коде встречается <code>data!</code> с восклицательным знаком или <code>as</code> — значит, вы знаете о данных больше, чем тип. Почти всегда это означает, что тип описан через необязательные поля там, где нужно объединение.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="check-check"></i> Проверка полноты</div>
+    <p class="text">Через год в объединение добавят новый вариант. Нужно, чтобы компилятор показал все места, которые его не обрабатывают, — иначе ошибка найдётся на проде.</p>
+<pre><code><span class="c-key">type</span> <span class="c-type">Payment</span> =
+  | { kind: <span class="c-str">'card'</span>; last4: <span class="c-type">string</span> }
+  | { kind: <span class="c-str">'cash'</span> }
+  | { kind: <span class="c-str">'crypto'</span>; chain: <span class="c-type">string</span> };   <span class="c-comment">// ← добавили позже</span>
+
+<span class="c-key">function</span> <span class="c-fn">label</span>(p: <span class="c-type">Payment</span>): <span class="c-type">string</span> {
+  <span class="c-key">switch</span> (p.kind) {
+    <span class="c-key">case</span> <span class="c-str">'card'</span>: <span class="c-key">return</span> `Карта •••• ${p.last4}`;
+    <span class="c-key">case</span> <span class="c-str">'cash'</span>: <span class="c-key">return</span> <span class="c-str">'Наличные'</span>;
+    <span class="c-key">default</span>: {
+      <span class="c-comment">// если какой-то вариант не обработан, он «дотечёт» сюда</span>
+      <span class="c-comment">// и не подойдёт под never — будет ошибка компиляции</span>
+      <span class="c-key">const</span> rest: <span class="c-type">never</span> = p;
+      <span class="c-key">throw</span> <span class="c-key">new</span> <span class="c-type">Error</span>(`Неизвестный способ оплаты: ${<span class="c-type">JSON</span>.<span class="c-fn">stringify</span>(rest)}`);
+    }
+  }
+}
+<span class="c-comment">// Ошибка: Type '{ kind: "crypto"; chain: string; }' is not assignable to type 'never'</span></code></pre>
+    <div class="pitfall"><strong>Метка должна быть литералом.</strong> Если поле объявлено как <code>kind: string</code>, сужение не работает — TypeScript не может различить варианты. Нужны именно строковые литералы.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="box"></i> Объединение вместо enum</div>
+    <p class="text">В TypeScript есть <code>enum</code>, но в современном коде чаще берут объединение строковых литералов: оно не оставляет следа после компиляции, проще сериализуется и лучше читается в отладчике.</p>
+    <table class="data-table">
+      <thead><tr><th></th><th>enum</th><th>Объединение литералов</th></tr></thead>
+      <tbody>
+        <tr><td>Код после сборки</td><td>Создаёт объект в бандле</td><td>Исчезает полностью</td></tr>
+        <tr><td>Значение в отладчике</td><td>Число, если не строковый enum</td><td>Читаемая строка</td></tr>
+        <tr><td>Сравнение с данными API</td><td>Нужно приводить</td><td>Напрямую</td></tr>
+        <tr><td>Перебор вариантов</td><td>Встроенный</td><td>Через массив <code>as const</code></td></tr>
+      </tbody>
+    </table>
+<pre><code><span class="c-key">const</span> ROLES = [<span class="c-str">'admin'</span>, <span class="c-str">'editor'</span>, <span class="c-str">'viewer'</span>] <span class="c-key">as const</span>;
+<span class="c-key">type</span> <span class="c-type">Role</span> = <span class="c-key">typeof</span> ROLES[<span class="c-type">number</span>];   <span class="c-comment">// 'admin' | 'editor' | 'viewer'</span>
+
+<span class="c-comment">// Массив можно перебирать, тип выводится из него — источник один</span>
+ROLES.<span class="c-fn">forEach</span>(r =&gt; <span class="c-fn">console</span>.<span class="c-fn">log</span>(r));</code></pre>
+    <div class="pitfall"><strong>const enum</strong> ведёт себя иначе при раздельной сборке модулей и ломается с <code>isolatedModules</code>, который включён в сборщиках на основе esbuild (Vite). В новом коде его лучше не использовать.</div>
+  </div>
+</div>
+@endverbatim
+@verbatim
 <div id="sec-ts-runtime" class="section">
   <div class="section-title">TypeScript: типы против валидации</div>
   <div class="subsection">
@@ -432,6 +958,105 @@ raw.user;                          <span class="c-comment">// ошибка ко�
   </div>
 </div>
 
+@endverbatim
+@verbatim
+<div id="sec-tw-config" class="section">
+  <div class="section-title">Токены, тема и тёмный режим</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="palette"></i> Откуда берутся классы</div>
+    <p class="text">Tailwind не даёт готовых компонентов. Он берёт набор значений — цвета, отступы, размеры шрифта, радиусы — и генерирует из них классы. Этот набор называют дизайн-токенами, и именно его настраивают под проект.</p>
+<pre><code><span class="c-comment">/* Tailwind v4: конфигурация прямо в CSS, отдельный tailwind.config.js не нужен */</span>
+<span class="c-key">@import</span> <span class="c-str">"tailwindcss"</span>;
+
+<span class="c-key">@theme</span> {
+  <span class="c-comment">/* имя токена определяет имя класса: --color-brand → bg-brand, text-brand */</span>
+  --color-brand: <span class="c-str">#ea2845</span>;
+  --color-surface: <span class="c-str">#fdfdfd</span>;
+  --font-display: <span class="c-str">"Manrope"</span>, sans-serif;
+  --radius-card: <span class="c-num">14px</span>;
+}</code></pre>
+<pre><code><span class="c-comment">// Tailwind v3: привычный файл конфигурации</span>
+<span class="c-comment">// extend добавляет к стандартной палитре, без него она заменяется целиком</span>
+<span class="c-key">export default</span> {
+  content: [<span class="c-str">'./src/**/*.{ts,tsx}'</span>],
+  theme: {
+    extend: {
+      colors: { brand: <span class="c-str">'#ea2845'</span> },
+      borderRadius: { card: <span class="c-str">'14px'</span> },
+    },
+  },
+};</code></pre>
+    <div class="remember-box"><strong>Почему это важнее, чем кажется.</strong> Пока цвета и отступы берутся из токенов, интерфейс остаётся согласованным сам собой: нельзя случайно поставить «почти такой же» оттенок. Как только в разметке появляются произвольные значения вроде <code>bg-[#e82746]</code>, это свойство теряется.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="moon"></i> Тёмная тема</div>
+    <p class="text">Вариант <code>dark:</code> применяет класс в тёмном режиме. Вопрос лишь в том, откуда берётся признак темноты.</p>
+    <table class="data-table">
+      <thead><tr><th>Стратегия</th><th>Как включается</th><th>Когда подходит</th></tr></thead>
+      <tbody>
+        <tr><td>По системной настройке</td><td>Поведение по умолчанию, через медиазапрос</td><td>Переключателя в интерфейсе нет</td></tr>
+        <tr><td>По классу или атрибуту</td><td><code>&lt;html class="dark"&gt;</code> и своё правило варианта</td><td>Пользователь выбирает тему сам</td></tr>
+      </tbody>
+    </table>
+<pre><code><span class="c-comment">/* v4: объявляем, что тёмная тема включается атрибутом на html */</span>
+<span class="c-key">@custom-variant</span> dark (&amp;:where([data-theme=<span class="c-str">"dark"</span>], [data-theme=<span class="c-str">"dark"</span>] *));</code></pre>
+<pre><code>&lt;<span class="c-type">div</span> className=<span class="c-str">"bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100"</span>&gt;
+  Карточка, которая умеет обе темы
+&lt;/<span class="c-type">div</span>&gt;</code></pre>
+    <div class="pitfall"><strong>Мигание при загрузке.</strong> Если тема читается из <code>localStorage</code> после загрузки React, страница сначала покажется светлой, а потом перекрасится. Лечится маленьким скриптом в <code>&lt;head&gt;</code>, который выставляет атрибут до первой отрисовки — ровно так сделано в этой базе знаний.</div>
+    <div class="pitfall"><strong>Удвоение классов.</strong> Писать <code>dark:</code> у каждого элемента утомительно и легко забыть. Надёжнее описать цвета переменными CSS, переопределить их для тёмной темы один раз и ссылаться на токены.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="search-x"></i> Почему класс не применился</div>
+    <p class="text">Сборщик ищет имена классов <strong>текстом</strong> по исходникам. Он не выполняет код, поэтому собранное из кусков имя в сборку не попадёт — класс просто не будет существовать.</p>
+<pre><code><span class="c-comment">// ❌ Класса не окажется в CSS: такой строки в исходнике нет</span>
+<span class="c-key">const</span> cls = `text-${color}-500`;
+
+<span class="c-comment">// ✅ Полные имена классов записаны явно</span>
+<span class="c-key">const</span> COLORS = {
+  danger: <span class="c-str">'text-red-500'</span>,
+  success: <span class="c-str">'text-green-500'</span>,
+} <span class="c-key">as const</span>;
+<span class="c-key">const</span> cls = COLORS[kind];</code></pre>
+    <table class="data-table">
+      <thead><tr><th>Симптом</th><th>Обычная причина</th></tr></thead>
+      <tbody>
+        <tr><td>Класс не работает только в проде</td><td>Имя собиралось из кусков; в разработке спасал полный набор классов</td></tr>
+        <tr><td>Не работает в новой папке</td><td>Путь не попал в <code>content</code> (v3) или не просматривается сборщиком (v4)</td></tr>
+        <tr><td>Классы из библиотеки не применяются</td><td>Её файлы лежат в <code>node_modules</code> и не просматриваются</td></tr>
+        <tr><td>Два класса конфликтуют</td><td>Порядок в атрибуте не решает ничего — выигрывает тот, что идёт позже в CSS. Нужен <code>tailwind-merge</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="combine"></i> Склейка классов в компонентах</div>
+    <p class="text">Когда компонент принимает <code>className</code> снаружи, простая конкатенация даёт конфликт: в разметке будут оба класса, а применится не тот, который ожидали.</p>
+<pre><code><span class="c-key">import</span> { twMerge } <span class="c-key">from</span> <span class="c-str">'tailwind-merge'</span>;
+<span class="c-key">import</span> { clsx } <span class="c-key">from</span> <span class="c-str">'clsx'</span>;
+
+<span class="c-comment">// clsx — собирает классы по условиям</span>
+<span class="c-comment">// twMerge — убирает конфликтующие, оставляя последний</span>
+<span class="c-key">export function</span> <span class="c-fn">Button</span>({ variant = <span class="c-str">'primary'</span>, className, ...rest }) {
+  <span class="c-key">return</span> (
+    &lt;<span class="c-type">button</span>
+      className={<span class="c-fn">twMerge</span>(<span class="c-fn">clsx</span>(
+        <span class="c-str">'rounded-card px-4 py-2 font-semibold transition'</span>,
+        variant === <span class="c-str">'primary'</span> &amp;&amp; <span class="c-str">'bg-brand text-white hover:opacity-90'</span>,
+        variant === <span class="c-str">'ghost'</span>   &amp;&amp; <span class="c-str">'bg-transparent text-brand'</span>,
+      ), className)}
+      {...rest}
+    /&gt;
+  );
+}
+
+<span class="c-comment">// &lt;Button className="px-6" /&gt; → останется px-6, а не оба px-4 и px-6</span></code></pre>
+    <div class="remember-box"><strong>Для разработчика на бэкенде.</strong> Это та же задача, что и с конфликтом CSS-правил по специфичности, только решённая на уровне сборки строки классов, а не каскада. Класс в атрибуте — лишь имя; какое правило победит, решает порядок в итоговом файле CSS.</div>
+  </div>
+</div>
 @endverbatim
 @verbatim
 <div id="sec-tw-base" class="section">
