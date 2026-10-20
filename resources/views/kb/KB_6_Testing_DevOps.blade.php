@@ -362,56 +362,53 @@
 <script src="/js/kb.js" defer></script>
 </head>
 <body>
-    <div class="container">
+<div class="container">
+<div class="sidebar">
+  <a href="/" class="sidebar-back"><i data-lucide="arrow-left"></i> На главную</a>
+  <div class="sidebar-title">Testing &amp; DevOps</div>
 
-        <div class="top-nav"><a href="/"><i data-lucide="arrow-left"></i> На главную</a></div>
-        <header>
-            <h1>Testing & DevOps Knowledge Base</h1>
-            <p>PHP/Laravel Backend Developer Guide - Master Testing, Deployment & Infrastructure</p>
-        </header>
+  <div class="nav-group-label">Часть 1 — Тестирование</div>
+  <a class="nav-item active" onclick="showSection('phpunit',this)"><i data-lucide="flask-conical"></i> 1. PHPUnit Basics</a>
+  <a class="nav-item" onclick="showSection('unit-tests',this)"><i data-lucide="box"></i> 2. Unit Tests</a>
+  <a class="nav-item" onclick="showSection('feature-tests',this)"><i data-lucide="globe"></i> 3. Feature Tests</a>
+  <a class="nav-item" onclick="showSection('mocking',this)"><i data-lucide="venetian-mask"></i> 4. Mocking &amp; Fakes in Laravel</a>
+  <a class="nav-item" onclick="showSection('tdd',this)"><i data-lucide="repeat"></i> 5. Test-Driven Development (TDD)</a>
+  <a class="nav-item" onclick="showSection('pest',this)"><i data-lucide="bug"></i> 6. Pest PHP</a>
+  <a class="nav-item" onclick="showSection('pyramid',this)"><i data-lucide="triangle"></i> 7. Testing Pyramid</a>
 
-        <div class="toc">
-            <h2>Table of Contents</h2>
-            <div class="toc-section">
-                <h3>PART 1: TESTING</h3>
-                <ul>
-                    <li><a href="#phpunit">1. PHPUnit Basics</a></li>
-                    <li><a href="#unit-tests">2. Unit Tests</a></li>
-                    <li><a href="#feature-tests">3. Feature Tests</a></li>
-                    <li><a href="#mocking">4. Mocking & Fakes in Laravel</a></li>
-                    <li><a href="#tdd">5. Test-Driven Development (TDD)</a></li>
-                    <li><a href="#pest">6. Pest PHP</a></li>
-                    <li><a href="#pyramid">7. Testing Pyramid</a></li>
-                </ul>
-            </div>
-            <div class="toc-section">
-                <h3>PART 2: DEVOPS</h3>
-                <ul>
-                    <li><a href="#docker">8. Docker Fundamentals</a></li>
-                    <li><a href="#docker-compose">9. Docker Compose for Laravel</a></li>
-                    <li><a href="#git">10. Git Advanced</a></li>
-                    <li><a href="#github-actions">11. CI/CD with GitHub Actions</a></li>
-                    <li><a href="#linux">12. Linux Basics for Backend</a></li>
-                    <li><a href="#nginx">13. Nginx Configuration</a></li>
-                    <li><a href="#deployment">14. Laravel Deployment</a></li>
-                    <li><a href="#monitoring">15. Monitoring & Debugging</a></li>
-                </ul>
-            </div>
-        </div>
+  <div class="nav-group-label">Часть 2 — DevOps</div>
+  <a class="nav-item" onclick="showSection('docker',this)"><i data-lucide="container"></i> 8. Docker Fundamentals</a>
+  <a class="nav-item" onclick="showSection('docker-compose',this)"><i data-lucide="layers"></i> 9. Docker Compose for Laravel</a>
+  <a class="nav-item" onclick="showSection('git',this)"><i data-lucide="git-branch"></i> 10. Git Advanced</a>
+  <a class="nav-item" onclick="showSection('github-actions',this)"><i data-lucide="workflow"></i> 11. CI/CD with GitHub Actions</a>
+  <a class="nav-item" onclick="showSection('linux',this)"><i data-lucide="terminal"></i> 12. Linux Basics for Backend</a>
+  <a class="nav-item" onclick="showSection('nginx',this)"><i data-lucide="server"></i> 13. Nginx Configuration</a>
+  <a class="nav-item" onclick="showSection('deployment',this)"><i data-lucide="rocket"></i> 14. Laravel Deployment</a>
+  <a class="nav-item" onclick="showSection('monitoring',this)"><i data-lucide="activity"></i> 15. Monitoring &amp; Debugging</a>
+</div>
 
-        <!-- PART 1: TESTING -->
+<div class="main">
+<div class="page-header">
+  <h1>Testing &amp; DevOps</h1>
+  <p>PHPUnit и Pest, unit- и feature-тесты, моки и фейки, TDD, пирамида тестирования. Docker и Compose, Git advanced, CI/CD на GitHub Actions, Linux, Nginx, деплой Laravel и мониторинг.</p>
+  <div class="badge-row">
+    <span class="badge">PHPUnit</span><span class="badge">Pest</span>
+    <span class="badge">Docker</span><span class="badge">CI/CD</span>
+    <span class="badge badge-success">Практика</span>
+  </div>
+</div>
 
-        <section id="phpunit">
-            <h2>1. PHPUnit Basics</h2>
+<div id="sec-phpunit" class="section active">
+            <div class="section-title">1. PHPUnit Basics</div>
 
-            <h3>Installation & Setup</h3>
+            <div class="subsection-title">Installation & Setup</div>
             <p>PHPUnit is Laravel's default testing framework. It comes pre-configured with Laravel.</p>
 
             <pre><code class="bash-code">composer require --dev phpunit/phpunit
 php artisan make:test UserTest --unit
 php artisan make:test UserControllerTest</code></pre>
 
-            <h3>Test Structure</h3>
+            <div class="subsection-title">Test Structure</div>
             <pre><code class="php-code">&lt;?php
 
 namespace Tests\Unit;
@@ -427,7 +424,7 @@ class CalculatorTest extends TestCase
     }
 }</code></pre>
 
-            <h3>Essential Assertions</h3>
+            <div class="subsection-title">Essential Assertions</div>
             <p><strong>Assertions (утверждения)</strong> — методы класса <code>PHPUnit\Framework\TestCase</code>, доступные в любом тестовом классе Laravel (Laravel-ный <code>Tests\TestCase</code> наследует его). Каждый метод проверяет, соответствует ли <em>фактическое состояние</em> ожидаемому. Не совпало — тест валится с диагностическим сообщением.</p>
             <p><em>Почему через <code>$this-&gt;</code>:</em> потому что тестовый класс наследует <code>TestCase</code>, где эти методы объявлены. Без них тесты не имеют смысла — код прогонится, но никто не проверит результат.</p>
             <table>
@@ -533,7 +530,7 @@ class CalculatorTest extends TestCase
                 </tr>
             </table>
 
-            <h3>Разбор реального теста: <code>test_order_can_be_created</code></h3>
+            <div class="subsection-title">Разбор реального теста: <code>test_order_can_be_created</code></div>
             <p>Типичный feature-тест, показывающий как assertion-методы работают вместе:</p>
             <pre><code class="php-code">public function test_order_can_be_created()
 {
@@ -566,13 +563,13 @@ class CalculatorTest extends TestCase
                 <li><code>assertDatabaseHas(...)</code> — Laravel-специфичная проверка: в таблице <code>orders</code> реально лежит строка с этими полями. Более надёжно, чем полагаться только на in-memory объект.</li>
             </ul>
 
-            <h3>Где какие используются</h3>
+            <div class="subsection-title">Где какие используются</div>
             <ul>
                 <li><strong>Unit-тесты</strong> — отдельные классы и методы (сервисы, actions, модели). Обычно только PHPUnit-ассерты: <code>assertEquals</code>, <code>assertInstanceOf</code>, <code>assertTrue</code>, <code>assertCount</code>.</li>
                 <li><strong>Feature-тесты</strong> — маршрут → контроллер → middleware → БД. PHPUnit-ассерты + Laravel: <code>assertStatus</code>, <code>assertRedirect</code>, <code>assertJson</code>, <code>assertJsonStructure</code>, <code>assertDatabaseHas</code>, <code>assertSee</code>.</li>
             </ul>
 
-            <h3>Test Lifecycle</h3>
+            <div class="subsection-title">Test Lifecycle</div>
             <pre><code class="php-code">class UserTest extends TestCase
 {
     protected function setUp(): void
@@ -594,7 +591,7 @@ class CalculatorTest extends TestCase
     }
 }</code></pre>
 
-            <h3>Data Providers</h3>
+            <div class="subsection-title">Data Providers</div>
             <pre><code class="php-code">/**
  * @dataProvider emailProvider
  */
@@ -613,7 +610,7 @@ public static function emailProvider()
     ];
 }</code></pre>
 
-            <h3>Running Tests</h3>
+            <div class="subsection-title">Running Tests</div>
             <pre><code class="bash-code"># Run all tests
 php artisan test
 
@@ -632,7 +629,7 @@ php artisan test --coverage
 # Run specific test group
 php artisan test --group=auth</code></pre>
 
-            <h3>Test Groups</h3>
+            <div class="subsection-title">Test Groups</div>
             <pre><code class="php-code">#[Group('auth')]
 public function test_user_login()
 {
@@ -640,7 +637,7 @@ public function test_user_login()
 }</code></pre>
 
             <div class="quiz-box">
-                <h4>Проверь себя: PHPUnit Basics</h4>
+                <div class="card-title">Проверь себя: PHPUnit Basics</div>
                 <div class="quiz-question">
                     <strong>Q1: What is the difference between setUp() and the constructor?</strong>
                     <div class="quiz-answer">A: setUp() is called before EACH test method, while constructor is called once. setUp() is the standard place to initialize test fixtures.</div>
@@ -652,7 +649,7 @@ public function test_user_login()
             </div>
 
             <div class="exercise-box">
-                <h4>Exercise: Create PHPUnit Test</h4>
+                <div class="card-title">Exercise: Create PHPUnit Test</div>
                 <p><strong>Task:</strong> Create a test file for a simple Calculator class with methods add(), subtract(), multiply(), divide(). Write tests using data providers to test multiple scenarios for each method. Run with coverage.</p>
                 <p><strong>Hint:</strong> Create the Calculator class first, then write feature tests using test() function.</p>
             </div>
@@ -660,12 +657,12 @@ public function test_user_login()
             <div class="reference">
                 <strong>Reference:</strong> <a href="https://phpunit.de/" style="color: #74b9ff;">PHPUnit Documentation</a> | <a href="https://laravel.com/docs/testing" style="color: #74b9ff;">Laravel Testing Guide</a>
             </div>
-        </section>
+        </div>
 
-        <section id="unit-tests">
-            <h2>2. Unit Tests</h2>
+        <div id="sec-unit-tests" class="section">
+            <div class="section-title">2. Unit Tests</div>
 
-            <h3>What to Test in Unit Tests</h3>
+            <div class="subsection-title">What to Test in Unit Tests</div>
             <p>Unit tests focus on small, isolated pieces of code. Test business logic, calculations, and pure functions.</p>
 
             <ul>
@@ -676,7 +673,7 @@ public function test_user_login()
                 <li><strong>Model methods:</strong> Computed properties, relationships (mocked)</li>
             </ul>
 
-            <h3>Isolation with Mocking</h3>
+            <div class="subsection-title">Isolation with Mocking</div>
             <p>Unit tests must be isolated. Use Mockery to mock dependencies:</p>
             <pre><code class="php-code">use Mockery;
 
@@ -698,7 +695,7 @@ class OrderServiceTest extends TestCase
     }
 }</code></pre>
 
-            <h3>Practical Example: Order Calculator Service</h3>
+            <div class="subsection-title">Practical Example: Order Calculator Service</div>
             <pre><code class="php-code">// Service class
 class OrderCalculator
 {
@@ -731,7 +728,7 @@ class OrderCalculatorTest extends TestCase
     }
 }</code></pre>
 
-            <h3>Testing Pure Functions</h3>
+            <div class="subsection-title">Testing Pure Functions</div>
             <pre><code class="php-code">class StringHelper
 {
     public static function slugify(string $text): string
@@ -757,7 +754,7 @@ class StringHelperTest extends TestCase
             </div>
 
             <div class="quiz-box">
-                <h4>Проверь себя: Unit Tests</h4>
+                <div class="card-title">Проверь себя: Unit Tests</div>
                 <div class="quiz-question">
                     <strong>Q1: Why mock dependencies in unit tests?</strong>
                     <div class="quiz-answer">A: Mocking isolates the unit being tested from external dependencies, making tests fast, reliable, and focused on a single responsibility.</div>
@@ -767,12 +764,12 @@ class StringHelperTest extends TestCase
                     <div class="quiz-answer">A: No. You test the real implementation of the class. Only mock its dependencies (external services, repositories, etc).</div>
                 </div>
             </div>
-        </section>
+        </div>
 
-        <section id="feature-tests">
-            <h2>3. Feature Tests</h2>
+        <div id="sec-feature-tests" class="section">
+            <div class="section-title">3. Feature Tests</div>
 
-            <h3>HTTP Testing Basics</h3>
+            <div class="subsection-title">HTTP Testing Basics</div>
             <p>Feature tests test entire HTTP requests/responses. They exercise controllers, middleware, and routing.</p>
 
             <pre><code class="php-code">use Tests\TestCase;
@@ -802,7 +799,7 @@ class UserControllerTest extends TestCase
     }
 }</code></pre>
 
-            <h3>HTTP Method Testing</h3>
+            <div class="subsection-title">HTTP Method Testing</div>
             <table>
                 <tr>
                     <th>Method</th>
@@ -830,7 +827,7 @@ class UserControllerTest extends TestCase
                 </tr>
             </table>
 
-            <h3>Response Assertions</h3>
+            <div class="subsection-title">Response Assertions</div>
             <pre><code class="php-code">$response = $this->get('/users/1');
 
 $response->assertStatus(200);              // Check HTTP status
@@ -843,7 +840,7 @@ $response->assertCookie('session_id');     // Check cookie
 $response->assertHeader('Content-Type');   // Check header
 $response->assertJsonCount(5, 'data');     // Check array length</code></pre>
 
-            <h3>Testing Authenticated Routes</h3>
+            <div class="subsection-title">Testing Authenticated Routes</div>
             <pre><code class="php-code">class ProtectedRouteTest extends TestCase
 {
     use RefreshDatabase;
@@ -873,7 +870,7 @@ $response->assertJsonCount(5, 'data');     // Check array length</code></pre>
     }
 }</code></pre>
 
-            <h3>RefreshDatabase Trait</h3>
+            <div class="subsection-title">RefreshDatabase Trait</div>
             <p>Use <code>RefreshDatabase</code> trait to reset database after each test:</p>
             <pre><code class="php-code">class UserApiTest extends TestCase
 {
@@ -890,7 +887,7 @@ $response->assertJsonCount(5, 'data');     // Check array length</code></pre>
     }
 }</code></pre>
 
-            <h3>Testing JSON APIs</h3>
+            <div class="subsection-title">Testing JSON APIs</div>
             <pre><code class="php-code">class ProductApiTest extends TestCase
 {
     use RefreshDatabase;
@@ -917,19 +914,19 @@ $response->assertJsonCount(5, 'data');     // Check array length</code></pre>
             </div>
 
             <div class="exercise-box">
-                <h4>Exercise: Feature Test for API Endpoint</h4>
+                <div class="card-title">Exercise: Feature Test for API Endpoint</div>
                 <p><strong>Task:</strong> Write a complete feature test for a Blog API with endpoints: GET /blogs (paginated), POST /blogs (create), GET /blogs/{id}, PUT /blogs/{id}, DELETE /blogs/{id}. Test authentication, validation errors, and successful operations.</p>
             </div>
-        </section>
+        </div>
 
-        <section id="mocking">
-            <h2>4. Mocking & Fakes in Laravel</h2>
+        <div id="sec-mocking" class="section">
+            <div class="section-title">4. Mocking & Fakes in Laravel</div>
 
-            <h3>When to Mock vs Fake</h3>
+            <div class="subsection-title">When to Mock vs Fake</div>
             <p><strong>Fakes:</strong> Built-in Laravel test doubles that simulate behavior (Event::fake, Queue::fake). Use these when available.</p>
             <p><strong>Mocks (Mockery):</strong> Manual mocks for custom dependencies. Use when fakes don't exist.</p>
 
-            <h3>Event Fakes</h3>
+            <div class="subsection-title">Event Fakes</div>
             <pre><code class="php-code">use Illuminate\Support\Facades\Event;
 
 class OrderTest extends TestCase
@@ -955,7 +952,7 @@ class OrderTest extends TestCase
     }
 }</code></pre>
 
-            <h3>Queue Fakes</h3>
+            <div class="subsection-title">Queue Fakes</div>
             <pre><code class="php-code">use Illuminate\Support\Facades\Queue;
 
 class EmailTest extends TestCase
@@ -979,7 +976,7 @@ class EmailTest extends TestCase
     }
 }</code></pre>
 
-            <h3>Notification Fakes</h3>
+            <div class="subsection-title">Notification Fakes</div>
             <pre><code class="php-code">use Illuminate\Support\Facades\Notification;
 
 class OrderNotificationTest extends TestCase
@@ -995,7 +992,7 @@ class OrderNotificationTest extends TestCase
     }
 }</code></pre>
 
-            <h3>Mail Fakes</h3>
+            <div class="subsection-title">Mail Fakes</div>
             <pre><code class="php-code">use Illuminate\Support\Facades\Mail;
 
 class MailTest extends TestCase
@@ -1012,7 +1009,7 @@ class MailTest extends TestCase
     }
 }</code></pre>
 
-            <h3>HTTP Fakes (External API Calls)</h3>
+            <div class="subsection-title">HTTP Fakes (External API Calls)</div>
             <pre><code class="php-code">use Illuminate\Support\Facades\Http;
 
 class PaymentServiceTest extends TestCase
@@ -1032,7 +1029,7 @@ class PaymentServiceTest extends TestCase
     }
 }</code></pre>
 
-            <h3>Storage Fakes</h3>
+            <div class="subsection-title">Storage Fakes</div>
             <pre><code class="php-code">use Illuminate\Support\Facades\Storage;
 
 class UploadTest extends TestCase
@@ -1054,22 +1051,22 @@ class UploadTest extends TestCase
             </div>
 
             <div class="exercise-box">
-                <h4>Exercise: Complete Mocking Scenario</h4>
+                <div class="card-title">Exercise: Complete Mocking Scenario</div>
                 <p><strong>Task:</strong> Write a test for a UserService that: 1) Creates a user, 2) Sends welcome email via queue, 3) Dispatches UserCreated event. Test all three behaviors are triggered without actually sending emails or processing queues.</p>
             </div>
-        </section>
+        </div>
 
-        <section id="tdd">
-            <h2>5. Test-Driven Development (TDD)</h2>
+        <div id="sec-tdd" class="section">
+            <div class="section-title">5. Test-Driven Development (TDD)</div>
 
-            <h3>The Red → Green → Refactor Cycle</h3>
+            <div class="subsection-title">The Red → Green → Refactor Cycle</div>
             <p><strong>Red:</strong> Write a failing test that describes desired behavior.</p>
             <p><strong>Green:</strong> Write minimal code to make the test pass.</p>
             <p><strong>Refactor:</strong> Improve code quality while keeping tests passing.</p>
 
-            <h3>Real Example: Building a Discount System TDD-Style</h3>
+            <div class="subsection-title">Real Example: Building a Discount System TDD-Style</div>
 
-            <h4>Step 1: RED - Write the failing test</h4>
+            <div class="card-title">Step 1: RED - Write the failing test</div>
             <pre><code class="php-code">class DiscountServiceTest extends TestCase
 {
     public function test_first_time_customer_gets_10_percent_discount()
@@ -1083,7 +1080,7 @@ class UploadTest extends TestCase
     }
 }</code></pre>
 
-            <h4>Step 2: GREEN - Minimal implementation</h4>
+            <div class="card-title">Step 2: GREEN - Minimal implementation</div>
             <pre><code class="php-code">class DiscountService
 {
     public function calculateDiscount(Customer $customer): float
@@ -1092,7 +1089,7 @@ class UploadTest extends TestCase
     }
 }</code></pre>
 
-            <h4>Step 3: RED - Add another test</h4>
+            <div class="card-title">Step 3: RED - Add another test</div>
             <pre><code class="php-code">public function test_returning_customer_with_3_orders_gets_15_percent()
 {
     $service = new DiscountService();
@@ -1103,7 +1100,7 @@ class UploadTest extends TestCase
     $this->assertEquals(0.15, $discount);
 }</code></pre>
 
-            <h4>Step 4: GREEN - Real implementation</h4>
+            <div class="card-title">Step 4: GREEN - Real implementation</div>
             <pre><code class="php-code">public function calculateDiscount(Customer $customer): float
 {
     if ($customer->orders_count === 0) {
@@ -1115,7 +1112,7 @@ class UploadTest extends TestCase
     return 0.05;
 }</code></pre>
 
-            <h4>Step 5: REFACTOR - Improve without changing behavior</h4>
+            <div class="card-title">Step 5: REFACTOR - Improve without changing behavior</div>
             <pre><code class="php-code">public function calculateDiscount(Customer $customer): float
 {
     return match (true) {
@@ -1125,14 +1122,14 @@ class UploadTest extends TestCase
     };
 }</code></pre>
 
-            <h3>When TDD is Most Valuable</h3>
+            <div class="subsection-title">When TDD is Most Valuable</div>
             <ul>
                 <li><strong>Complex business logic:</strong> TDD helps design the API and edge cases</li>
                 <li><strong>Refactoring:</strong> Tests ensure behavior doesn't change</li>
                 <li><strong>Legacy code:</strong> Write tests before modifying untested code</li>
             </ul>
 
-            <h3>When TDD Can Be Overkill</h3>
+            <div class="subsection-title">When TDD Can Be Overkill</div>
             <ul>
                 <li>Simple CRUD operations with standard patterns</li>
                 <li>Throwaway proof-of-concept code</li>
@@ -1144,21 +1141,21 @@ class UploadTest extends TestCase
             </div>
 
             <div class="exercise-box">
-                <h4>Exercise: TDD A Complete Feature</h4>
+                <div class="card-title">Exercise: TDD A Complete Feature</div>
                 <p><strong>Task:</strong> Use TDD to build a Product Recommendation system. Start with: 1) Customers get recommendations based on purchase history, 2) Similar products are ranked by relevance, 3) Bought items are excluded. Write tests first, then implementation.</p>
             </div>
-        </section>
+        </div>
 
-        <section id="pest">
-            <h2>6. Pest PHP</h2>
+        <div id="sec-pest" class="section">
+            <div class="section-title">6. Pest PHP</div>
 
-            <h3>What is Pest?</h3>
+            <div class="subsection-title">What is Pest?</div>
             <p>Pest is a modern PHP testing framework built on PHPUnit. It's cleaner, more expressive syntax with focus on readability.</p>
 
-            <h3>Installation</h3>
+            <div class="subsection-title">Installation</div>
             <pre><code class="bash-code">composer require --dev pestphp/pest pestphp/pest-plugin-laravel</code></pre>
 
-            <h3>Syntax: test() vs it()</h3>
+            <div class="subsection-title">Syntax: test() vs it()</div>
             <p>Pest uses simple <code>test()</code> and <code>it()</code> functions instead of class-based tests:</p>
             <pre><code class="php-code">// Pest syntax
 test('user can login', function () {
@@ -1182,7 +1179,7 @@ it('logs in with valid credentials', function () {
     ])->assertRedirect('/dashboard');
 });</code></pre>
 
-            <h3>Pest Expectations API</h3>
+            <div class="subsection-title">Pest Expectations API</div>
             <pre><code class="php-code">// Old PHPUnit style
 $this->assertEquals(5, $result);
 $this->assertTrue($user->isAdmin());
@@ -1193,7 +1190,7 @@ expect($user->isAdmin())->toBeTrue();
 expect($users)->toHaveCount(3);
 expect($email)->toMatch('/\S+@\S+\.\S+/');</code></pre>
 
-            <h3>Higher-Order Tests</h3>
+            <div class="subsection-title">Higher-Order Tests</div>
             <p>Pest allows skipping tests with <code>->skip()</code> or marking as <code>->todo()</code>:</p>
             <pre><code class="php-code">it('validates email format', function () {
     expect('invalid@')->not()->toMatch('/\S+@\S+\.\S+/');
@@ -1203,7 +1200,7 @@ it('implements payment processing', function () {
     // Not implemented yet
 })->todo();</code></pre>
 
-            <h3>Arch Testing (Structural Tests)</h3>
+            <div class="subsection-title">Arch Testing (Structural Tests)</div>
             <p>Pest can test code architecture and dependencies:</p>
             <pre><code class="php-code">use Pest\Arch\Targets\Target;
 
@@ -1222,7 +1219,7 @@ arch()
     ->expect('Jobs')
     ->toUse('Models');</code></pre>
 
-            <h3>Migration from PHPUnit</h3>
+            <div class="subsection-title">Migration from PHPUnit</div>
             <p>You can mix PHPUnit and Pest in the same project. Gradually migrate:</p>
             <pre><code class="bash-code"># Convert existing tests
 composer require pestphp/pest-plugin-drift --dev
@@ -1233,15 +1230,15 @@ php artisan pest:drift</code></pre>
             </div>
 
             <div class="exercise-box">
-                <h4>Exercise: Rewrite in Pest</h4>
+                <div class="card-title">Exercise: Rewrite in Pest</div>
                 <p><strong>Task:</strong> Take your PHPUnit tests from previous exercises and rewrite using Pest syntax. Use expectations API instead of assertions. Add arch tests to ensure your services don't depend on controllers.</p>
             </div>
-        </section>
+        </div>
 
-        <section id="pyramid">
-            <h2>7. Testing Pyramid</h2>
+        <div id="sec-pyramid" class="section">
+            <div class="section-title">7. Testing Pyramid</div>
 
-            <h3>The Pyramid Structure</h3>
+            <div class="subsection-title">The Pyramid Structure</div>
             <div class="pyramid">
 ┌────────────────┐<br>
 │   E2E Tests    │ Few, slow (seconds)<br>
@@ -1259,7 +1256,7 @@ php artisan pest:drift</code></pre>
 └────────────────────┘<br>
             </div>
 
-            <h3>Level 1: Unit Tests (Base)</h3>
+            <div class="subsection-title">Level 1: Unit Tests (Base)</div>
             <ul>
                 <li><strong>Goal:</strong> Test isolated business logic</li>
                 <li><strong>Coverage:</strong> 70-80% of code should be here</li>
@@ -1268,7 +1265,7 @@ php artisan pest:drift</code></pre>
                 <li><strong>Isolation:</strong> Mock all dependencies</li>
             </ul>
 
-            <h3>Level 2: Integration Tests (Middle)</h3>
+            <div class="subsection-title">Level 2: Integration Tests (Middle)</div>
             <ul>
                 <li><strong>Goal:</strong> Test multiple components working together</li>
                 <li><strong>Coverage:</strong> 15-20% of code</li>
@@ -1277,7 +1274,7 @@ php artisan pest:drift</code></pre>
                 <li><strong>Scope:</strong> Use real database or in-memory SQLite</li>
             </ul>
 
-            <h3>Level 3: E2E Tests (Top)</h3>
+            <div class="subsection-title">Level 3: E2E Tests (Top)</div>
             <ul>
                 <li><strong>Goal:</strong> Test complete user workflows</li>
                 <li><strong>Coverage:</strong> 5-10% of code (critical happy paths)</li>
@@ -1286,7 +1283,7 @@ php artisan pest:drift</code></pre>
                 <li><strong>Tools:</strong> Laravel Dusk, Selenium, Playwright</li>
             </ul>
 
-            <h3>Coverage Targets</h3>
+            <div class="subsection-title">Coverage Targets</div>
             <pre><code class="bash-code"># Generate coverage report
 php artisan test --coverage
 
@@ -1296,7 +1293,7 @@ php artisan test --coverage
 # - Simple getters/setters: 20-40% coverage
 # - Overall target: 60-75% for health</code></pre>
 
-            <h3>Coverage Configuration</h3>
+            <div class="subsection-title">Coverage Configuration</div>
             <pre><code class="php-code">// phpunit.xml
 &lt;coverage processUncoveredFiles="true"&gt;
     &lt;include&gt;
@@ -1317,17 +1314,17 @@ php artisan test --coverage
             </div>
 
             <div class="exercise-box">
-                <h4>Exercise: Analyze Test Pyramid</h4>
+                <div class="card-title">Exercise: Analyze Test Pyramid</div>
                 <p><strong>Task:</strong> Take an existing Laravel project (or create a simple one with 3 features). Write tests for it following the pyramid: 1) 10+ unit tests, 2) 3-4 integration tests, 3) 1 E2E test. Generate coverage report and identify gaps.</p>
             </div>
-        </section>
+        </div>
 
         <!-- PART 2: DEVOPS -->
 
-        <section id="docker" class="devops">
-            <h2>8. Docker Fundamentals</h2>
+        <div id="sec-docker" class="section">
+            <div class="section-title">8. Docker Fundamentals</div>
 
-            <h3>Images vs Containers</h3>
+            <div class="subsection-title">Images vs Containers</div>
             <p><strong>Image:</strong> Blueprint/template with OS, dependencies, code (immutable).</p>
             <p><strong>Container:</strong> Running instance of an image (mutable runtime).</p>
 
@@ -1337,7 +1334,7 @@ docker run image-name            # Create and run container from image
 docker ps                        # List running containers
 docker ps -a                     # List all containers</code></pre>
 
-            <h3>Dockerfile Instructions</h3>
+            <div class="subsection-title">Dockerfile Instructions</div>
             <table>
                 <tr>
                     <th>Instruction</th>
@@ -1381,7 +1378,7 @@ docker ps -a                     # List all containers</code></pre>
                 </tr>
             </table>
 
-            <h3>Basic Dockerfile for Laravel</h3>
+            <div class="subsection-title">Basic Dockerfile for Laravel</div>
             <pre><code class="docker-code">FROM php:8.2-fpm
 
 WORKDIR /app
@@ -1403,7 +1400,7 @@ EXPOSE 9000
 
 CMD ["php-fpm"]</code></pre>
 
-            <h3>Layers and Caching</h3>
+            <div class="subsection-title">Layers and Caching</div>
             <p>Each instruction creates a layer. Docker caches layers for faster builds:</p>
 
             <pre><code class="docker-code"># Bad: System packages + composer install in one layer
@@ -1419,7 +1416,7 @@ RUN composer install --no-dev
 COPY . .
 RUN npm run build  # Only rebuilds if source changes</code></pre>
 
-            <h3>Multi-Stage Builds</h3>
+            <div class="subsection-title">Multi-Stage Builds</div>
             <p>Use multiple stages to reduce final image size:</p>
             <pre><code class="docker-code"># Stage 1: Builder
 FROM php:8.2 as builder
@@ -1438,7 +1435,7 @@ COPY --from=builder /build /app
 EXPOSE 9000
 CMD ["php-fpm"]</code></pre>
 
-            <h3>Building and Running</h3>
+            <div class="subsection-title">Building and Running</div>
             <pre><code class="bash-code"># Build image
 docker build -t myapp:1.0 .
 
@@ -1462,15 +1459,15 @@ docker exec container-name php artisan migrate</code></pre>
             </div>
 
             <div class="exercise-box">
-                <h4>Exercise: Build Multi-Stage Docker Image</h4>
+                <div class="card-title">Exercise: Build Multi-Stage Docker Image</div>
                 <p><strong>Task:</strong> Create a multi-stage Dockerfile for Laravel that: 1) Builds assets in first stage, 2) Installs composer dependencies, 3) Final stage only contains runtime files. Verify image size reduction.</p>
             </div>
-        </section>
+        </div>
 
-        <section id="docker-compose" class="devops">
-            <h2>9. Docker Compose for Laravel</h2>
+        <div id="sec-docker-compose" class="section">
+            <div class="section-title">9. Docker Compose for Laravel</div>
 
-            <h3>Full Stack Setup: PHP + Nginx + MySQL + Redis</h3>
+            <div class="subsection-title">Full Stack Setup: PHP + Nginx + MySQL + Redis</div>
             <pre><code class="yaml-code">version: '3.8'
 
 services:
@@ -1540,7 +1537,7 @@ networks:
   laravel:
     driver: bridge</code></pre>
 
-            <h3>Essential Commands</h3>
+            <div class="subsection-title">Essential Commands</div>
             <pre><code class="bash-code"># Start all services
 docker-compose up -d
 
@@ -1561,7 +1558,7 @@ docker-compose down -v
 # Rebuild images
 docker-compose build --no-cache</code></pre>
 
-            <h3>Nginx Configuration Example</h3>
+            <div class="subsection-title">Nginx Configuration Example</div>
             <pre><code class="yaml-code">server {
     listen 80;
     server_name localhost;
@@ -1585,7 +1582,7 @@ docker-compose build --no-cache</code></pre>
     }
 }</code></pre>
 
-            <h3>Laravel Sail (Docker Alternative)</h3>
+            <div class="subsection-title">Laravel Sail (Docker Alternative)</div>
             <p>Laravel Sail is a pre-built Docker setup for Laravel:</p>
             <pre><code class="bash-code"># Install Sail in new project
 composer require laravel/sail --dev
@@ -1603,17 +1600,17 @@ php artisan sail:install
             </div>
 
             <div class="exercise-box">
-                <h4>Exercise: Docker Compose Stack</h4>
+                <div class="card-title">Exercise: Docker Compose Stack</div>
                 <p><strong>Task:</strong> Create a complete docker-compose.yml for a Laravel project with: 1) PHP-FPM container, 2) Nginx reverse proxy, 3) PostgreSQL database, 4) Redis cache. Get a fresh Laravel app running in containers with all services communicating.</p>
             </div>
-        </section>
+        </div>
 
-        <section id="git" class="devops">
-            <h2>10. Git Advanced</h2>
+        <div id="sec-git" class="section">
+            <div class="section-title">10. Git Advanced</div>
 
-            <h3>Branching Strategies</h3>
+            <div class="subsection-title">Branching Strategies</div>
 
-            <h4>GitFlow</h4>
+            <div class="card-title">GitFlow</div>
             <ul>
                 <li><strong>main:</strong> Production-ready code</li>
                 <li><strong>develop:</strong> Integration branch</li>
@@ -1633,7 +1630,7 @@ git checkout develop && git pull
 git merge --no-ff feature/user-auth
 git push origin develop</code></pre>
 
-            <h4>Trunk-Based Development</h4>
+            <div class="card-title">Trunk-Based Development</div>
             <ul>
                 <li>Short-lived feature branches (1-2 days max)</li>
                 <li>Frequent merges to main</li>
@@ -1652,9 +1649,9 @@ git checkout main && git pull
 git merge feature/payment-processing
 git push  # CI/CD deploys automatically</code></pre>
 
-            <h3>Rebase vs Merge</h3>
+            <div class="subsection-title">Rebase vs Merge</div>
 
-            <h4>Merge (Default)</h4>
+            <div class="card-title">Merge (Default)</div>
             <pre><code class="bash-code"># Creates merge commit
 git checkout main
 git merge feature/x
@@ -1667,7 +1664,7 @@ git merge feature/x
 # |/
 # * main commit</code></pre>
 
-            <h4>Rebase (Linear History)</h4>
+            <div class="card-title">Rebase (Linear History)</div>
             <pre><code class="bash-code"># Replay commits on top of main
 git rebase main
 
@@ -1676,7 +1673,7 @@ git rebase main
 # * feature commit 1
 # * main commit</code></pre>
 
-            <h3>Squash Commits Before Merge</h3>
+            <div class="subsection-title">Squash Commits Before Merge</div>
             <pre><code class="bash-code"># Interactive rebase to squash
 git rebase -i HEAD~3
 
@@ -1687,7 +1684,7 @@ git rebase -i HEAD~3
 
 # Result: Single clean commit</code></pre>
 
-            <h3>Cherry-Pick Specific Commits</h3>
+            <div class="subsection-title">Cherry-Pick Specific Commits</div>
             <pre><code class="bash-code"># Apply specific commit to current branch
 git cherry-pick abc123
 
@@ -1695,7 +1692,7 @@ git cherry-pick abc123
 git checkout release/v2.0
 git cherry-pick bugfix-commit-hash</code></pre>
 
-            <h3>Stash for Context Switching</h3>
+            <div class="subsection-title">Stash for Context Switching</div>
             <pre><code class="bash-code"># Save work without committing
 git stash
 
@@ -1707,7 +1704,7 @@ git checkout hotfix/critical-bug
 git checkout feature/my-feature
 git stash pop</code></pre>
 
-            <h3>Conventional Commits</h3>
+            <div class="subsection-title">Conventional Commits</div>
             <p>Standard commit format for clarity:</p>
             <pre><code class="bash-code">feat: add user authentication with OAuth
 fix: resolve race condition in cache layer
@@ -1720,7 +1717,7 @@ chore: upgrade Laravel to 10.0
 # Breaking changes
 feat!: change API response structure</code></pre>
 
-            <h3>Pre-Commit Hooks</h3>
+            <div class="subsection-title">Pre-Commit Hooks</div>
             <pre><code class="bash-code">#!/bin/sh
 # .git/hooks/pre-commit
 
@@ -1741,15 +1738,15 @@ fi
 exit 0</code></pre>
 
             <div class="exercise-box">
-                <h4>Exercise: Git Workflow Practice</h4>
+                <div class="card-title">Exercise: Git Workflow Practice</div>
                 <p><strong>Task:</strong> 1) Create feature branches following GitFlow, 2) Rebase to squash messy commits, 3) Use cherry-pick to backport fix to release branch, 4) Write conventional commit messages throughout.</p>
             </div>
-        </section>
+        </div>
 
-        <section id="github-actions" class="devops">
-            <h2>11. CI/CD with GitHub Actions</h2>
+        <div id="sec-github-actions" class="section">
+            <div class="section-title">11. CI/CD with GitHub Actions</div>
 
-            <h3>Workflow File Structure</h3>
+            <div class="subsection-title">Workflow File Structure</div>
             <p>Create <code>.github/workflows/ci.yml</code>:</p>
             <pre><code class="yaml-code">name: CI Pipeline
 
@@ -1799,7 +1796,7 @@ jobs:
         with:
           files: ./coverage.xml</code></pre>
 
-            <h3>Running Tests in Parallel</h3>
+            <div class="subsection-title">Running Tests in Parallel</div>
             <pre><code class="yaml-code">jobs:
   unit-tests:
     runs-on: ubuntu-latest
@@ -1834,7 +1831,7 @@ jobs:
       - run: composer install
       - run: php artisan test tests/Feature</code></pre>
 
-            <h3>Complete CI/CD Pipeline with Deployment</h3>
+            <div class="subsection-title">Complete CI/CD Pipeline with Deployment</div>
             <pre><code class="yaml-code">name: Deploy to Production
 
 on:
@@ -1873,7 +1870,7 @@ jobs:
             php artisan route:cache
             sudo systemctl restart app-queue</code></pre>
 
-            <h3>Useful Actions</h3>
+            <div class="subsection-title">Useful Actions</div>
             <table>
                 <tr>
                     <th>Action</th>
@@ -1906,15 +1903,15 @@ jobs:
             </div>
 
             <div class="exercise-box">
-                <h4>Exercise: Complete CI/CD Pipeline</h4>
+                <div class="card-title">Exercise: Complete CI/CD Pipeline</div>
                 <p><strong>Task:</strong> Create a GitHub Actions workflow that: 1) Runs tests on push, 2) Tests multiple PHP versions in parallel, 3) Lints and analyzes code, 4) Uploads coverage, 5) Deploys to staging on PR merge.</p>
             </div>
-        </section>
+        </div>
 
-        <section id="linux" class="devops">
-            <h2>12. Linux Basics for Backend</h2>
+        <div id="sec-linux" class="section">
+            <div class="section-title">12. Linux Basics for Backend</div>
 
-            <h3>Essential Commands</h3>
+            <div class="subsection-title">Essential Commands</div>
             <table>
                 <tr>
                     <th>Command</th>
@@ -1973,7 +1970,7 @@ jobs:
                 </tr>
             </table>
 
-            <h3>File Permissions (rwx)</h3>
+            <div class="subsection-title">File Permissions (rwx)</div>
             <pre><code class="bash-code"># Permission format: user | group | others
 # Read (r) = 4, Write (w) = 2, Execute (x) = 1
 
@@ -1985,7 +1982,7 @@ chmod 700 private    # User: rwx (7), Group: --- (0), Others: --- (0)
 chmod 755 /var/www   # rwx for user, rx for group/others (can enter)
 chmod 700 ~/.ssh     # Only user can enter</code></pre>
 
-            <h3>SSH Key Management</h3>
+            <div class="subsection-title">SSH Key Management</div>
             <pre><code class="bash-code"># Generate SSH key pair
 ssh-keygen -t ed25519 -C "deploy@server"
 # Generates: ~/.ssh/id_ed25519 (private) and ~/.ssh/id_ed25519.pub (public)
@@ -2002,7 +1999,7 @@ Host production
   User deploy
   IdentityFile ~/.ssh/id_ed25519</code></pre>
 
-            <h3>Cron Jobs</h3>
+            <div class="subsection-title">Cron Jobs</div>
             <pre><code class="bash-code"># Edit crontab
 crontab -e
 
@@ -2019,7 +2016,7 @@ crontab -e
 # View active crons
 crontab -l</code></pre>
 
-            <h3>Systemd Services</h3>
+            <div class="subsection-title">Systemd Services</div>
             <pre><code class="bash-code"># Create service file
 sudo nano /etc/systemd/system/laravel-queue.service
 
@@ -2043,7 +2040,7 @@ sudo systemctl enable laravel-queue
 sudo systemctl start laravel-queue
 sudo systemctl status laravel-queue</code></pre>
 
-            <h3>Log Files</h3>
+            <div class="subsection-title">Log Files</div>
             <pre><code class="bash-code"># Common log locations
 /var/log/syslog          # System logs
 /var/log/auth.log        # Authentication logs
@@ -2059,15 +2056,15 @@ grep "GET /api" /var/log/nginx/access.log
 grep -i error /var/log/app.log | tail -20</code></pre>
 
             <div class="exercise-box">
-                <h4>Exercise: Linux Server Setup</h4>
+                <div class="card-title">Exercise: Linux Server Setup</div>
                 <p><strong>Task:</strong> 1) SSH into a test server, 2) Create appropriate directories with proper permissions, 3) Set up SSH key authentication, 4) Create a cron job for Laravel scheduler, 5) Create a systemd service for queue worker.</p>
             </div>
-        </section>
+        </div>
 
-        <section id="nginx" class="devops">
-            <h2>13. Nginx Configuration</h2>
+        <div id="sec-nginx" class="section">
+            <div class="section-title">13. Nginx Configuration</div>
 
-            <h3>Server Block (Virtual Host)</h3>
+            <div class="subsection-title">Server Block (Virtual Host)</div>
             <pre><code class="yaml-code">server {
     listen 80;
     listen [::]:80;
@@ -2092,7 +2089,7 @@ server {
     # ... rest of config
 }</code></pre>
 
-            <h3>Location Directives and Routing</h3>
+            <div class="subsection-title">Location Directives and Routing</div>
             <pre><code class="yaml-code">server {
     root /var/www/app/public;
 
@@ -2129,7 +2126,7 @@ server {
     }
 }</code></pre>
 
-            <h3>Reverse Proxy to PHP-FPM</h3>
+            <div class="subsection-title">Reverse Proxy to PHP-FPM</div>
             <pre><code class="yaml-code">upstream php_upstream {
     server 127.0.0.1:9000;
     server 127.0.0.1:9001;  # Load balance across FPM instances
@@ -2159,7 +2156,7 @@ server {
     }
 }</code></pre>
 
-            <h3>Gzip Compression</h3>
+            <div class="subsection-title">Gzip Compression</div>
             <pre><code class="yaml-code">gzip on;
 gzip_vary on;
 gzip_proxied any;
@@ -2167,7 +2164,7 @@ gzip_comp_level 6;
 gzip_types text/plain text/css text/xml text/javascript
            application/json application/javascript application/xml+rss;</code></pre>
 
-            <h3>Security Headers</h3>
+            <div class="subsection-title">Security Headers</div>
             <pre><code class="yaml-code">server {
     # Prevent MIME sniffing
     add_header X-Content-Type-Options "nosniff" always;
@@ -2185,7 +2182,7 @@ gzip_types text/plain text/css text/xml text/javascript
     add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'" always;
 }</code></pre>
 
-            <h3>Testing Nginx Config</h3>
+            <div class="subsection-title">Testing Nginx Config</div>
             <pre><code class="bash-code"># Validate syntax
 nginx -t
 
@@ -2199,15 +2196,15 @@ systemctl reload nginx
 nginx -T | grep -A 20 "server {"</code></pre>
 
             <div class="exercise-box">
-                <h4>Exercise: Complete Nginx Setup</h4>
+                <div class="card-title">Exercise: Complete Nginx Setup</div>
                 <p><strong>Task:</strong> Create nginx config for a Laravel app with: 1) HTTP → HTTPS redirect, 2) SSL certificates, 3) PHP-FPM reverse proxy, 4) Static file caching, 5) Gzip compression, 6) Security headers, 7) Load balancing across multiple FPM instances.</p>
             </div>
-        </section>
+        </div>
 
-        <section id="deployment" class="devops">
-            <h2>14. Laravel Deployment</h2>
+        <div id="sec-deployment" class="section">
+            <div class="section-title">14. Laravel Deployment</div>
 
-            <h3>Zero-Downtime Deployment</h3>
+            <div class="subsection-title">Zero-Downtime Deployment</div>
             <p>Deploying without interrupting current users:</p>
             <pre><code class="bash-code"># Traditional: Downtime during deployment
 git pull
@@ -2233,7 +2230,7 @@ ln -sfn releases/release-2024-01-15 app
 # If issue, revert instantly:
 ln -sfn releases/release-2024-01-14 app</code></pre>
 
-            <h3>Deployer (PHP Deployment Tool)</h3>
+            <div class="subsection-title">Deployer (PHP Deployment Tool)</div>
             <pre><code class="php-code">// deploy.php
 use Deployer as dep;
 
@@ -2272,7 +2269,7 @@ dep\task('deploy:run_migrations', function () {
 // Deploy
 // deployer deploy</code></pre>
 
-            <h3>Post-Deployment Commands</h3>
+            <div class="subsection-title">Post-Deployment Commands</div>
             <p>Run these commands after deploying new code:</p>
             <pre><code class="bash-code"># Migrations (most important)
 php artisan migrate --force
@@ -2293,7 +2290,7 @@ sudo systemctl restart laravel-scheduler
 # Verify deployment
 curl https://example.com/api/health</code></pre>
 
-            <h3>Server Requirements</h3>
+            <div class="subsection-title">Server Requirements</div>
             <table>
                 <tr>
                     <th>Component</th>
@@ -2325,7 +2322,7 @@ curl https://example.com/api/health</code></pre>
                 </tr>
             </table>
 
-            <h3>Managed Hosting Platforms</h3>
+            <div class="subsection-title">Managed Hosting Platforms</div>
             <ul>
                 <li><strong>Laravel Forge:</strong> Server management, zero-downtime deploys, SSL, backups, monitoring</li>
                 <li><strong>DigitalOcean App Platform:</strong> Fully managed, auto-scaling, integrated database</li>
@@ -2338,15 +2335,15 @@ curl https://example.com/api/health</code></pre>
             </div>
 
             <div class="exercise-box">
-                <h4>Exercise: Deploy with Zero Downtime</h4>
+                <div class="card-title">Exercise: Deploy with Zero Downtime</div>
                 <p><strong>Task:</strong> Set up Deployer for a Laravel project with: 1) Symlink-based releases, 2) Shared files/dirs, 3) Automated migrations, 4) Config/route caching, 5) Queue restart. Deploy and verify zero downtime.</p>
             </div>
-        </section>
+        </div>
 
-        <section id="monitoring" class="devops">
-            <h2>15. Monitoring & Debugging</h2>
+        <div id="sec-monitoring" class="section">
+            <div class="section-title">15. Monitoring & Debugging</div>
 
-            <h3>Laravel Telescope</h3>
+            <div class="subsection-title">Laravel Telescope</div>
             <p>Powerful debugging tool for Laravel applications:</p>
             <pre><code class="bash-code">composer require laravel/telescope --dev
 php artisan telescope:install
@@ -2364,7 +2361,7 @@ php artisan migrate
                 <li>Exceptions</li>
             </ul>
 
-            <h3>Debugbar</h3>
+            <div class="subsection-title">Debugbar</div>
             <pre><code class="bash-code">composer require barryvdh/laravel-debugbar --dev
 
 # Access toolbar at bottom of page in dev</code></pre>
@@ -2378,7 +2375,7 @@ php artisan migrate
                 <li>Route information</li>
             </ul>
 
-            <h3>Error Tracking (Sentry)</h3>
+            <div class="subsection-title">Error Tracking (Sentry)</div>
             <pre><code class="bash-code">composer require sentry/sentry-laravel
 
 # Generate config
@@ -2395,7 +2392,7 @@ SENTRY_DSN=https://your-key@sentry.io/project-id</code></pre>
                 <li>Breadcrumbs (event trail)</li>
             </ul>
 
-            <h3>Detecting N+1 Queries</h3>
+            <div class="subsection-title">Detecting N+1 Queries</div>
             <pre><code class="php-code">// Problem: N+1 query
 $users = User::all();
 foreach ($users as $user) {
@@ -2410,7 +2407,7 @@ foreach ($users as $user) {
 
 // Detect in Laravel Telescope: View queries tab to spot duplicate patterns</code></pre>
 
-            <h3>APM (Application Performance Monitoring)</h3>
+            <div class="subsection-title">APM (Application Performance Monitoring)</div>
             <p>Tools like Datadog or New Relic monitor:</p>
             <ul>
                 <li>Transaction performance</li>
@@ -2429,7 +2426,7 @@ cp dd-library-php /opt/datadog/
 extension=/opt/datadog/dd_trace.so
 datadog.trace.sample_rate=1.0</code></pre>
 
-            <h3>Log Aggregation</h3>
+            <div class="subsection-title">Log Aggregation</div>
             <p>Centralize logs from all servers:</p>
             <pre><code class="bash-code"># Using ELK Stack (Elasticsearch, Logstash, Kibana)
 # Send Laravel logs to Logstash
@@ -2452,62 +2449,26 @@ datadog.trace.sample_rate=1.0</code></pre>
             </div>
 
             <div class="exercise-box">
-                <h4>Exercise: Complete Monitoring Setup</h4>
+                <div class="card-title">Exercise: Complete Monitoring Setup</div>
                 <p><strong>Task:</strong> Set up comprehensive monitoring: 1) Install Telescope and verify it captures requests/queries, 2) Detect and fix N+1 query, 3) Configure Sentry for error tracking, 4) Monitor a slow endpoint and optimize it, 5) Set up Debugbar to profile performance.</p>
             </div>
-        </section>
+        </div>
+</div><!-- /main -->
+</div><!-- /container -->
 
-        <footer>
-            <p>Testing & DevOps Knowledge Base for PHP/Laravel Backend Developers</p>
-            <p>Created for interview preparation and career mastery - Active Recall + Practical Exercises</p>
-            <p>Last Updated: 2026-04-08 | Build with confidence!</p>
-        </footer>
-    </div>
-
-    <script>
-
-        // Collapsible functionality
-        document.querySelectorAll('.collapsible').forEach(btn => {
-            btn.addEventListener('click', function() {
-                this.classList.toggle('active');
-                const content = this.nextElementSibling;
-                if (content.classList.contains('show')) {
-                    content.classList.remove('show');
-                    content.style.maxHeight = '0';
-                } else {
-                    content.classList.add('show');
-                    content.style.maxHeight = content.scrollHeight + 'px';
-                }
-            });
-        });
-
-        // Quiz answer reveal
-        document.querySelectorAll('.quiz-answer').forEach(answer => {
-            answer.addEventListener('click', function() {
-                this.style.borderLeft = '3px solid #3fb950';
-                this.style.backgroundColor = '#1b3a1f';
-                this.style.color = '#3fb950';
-            });
-        });
-
-        // Smooth scroll for TOC links
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({ behavior: 'smooth' });
-                }
-            });
-        });
-    
-</script>
-
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="https://unpkg.com/lucide@0.344.0/dist/umd/lucide.min.js"></script>
 <script>
 lucide.createIcons();
+function showSection(id, el) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const sec = document.getElementById('sec-' + id);
+  if (sec) sec.classList.add('active');
+  if (el) el.classList.add('active');
+  window.scrollTo(0, 0);
+  lucide.createIcons();
+}
 </script>
 </body>
 </html>
-
 @endverbatim

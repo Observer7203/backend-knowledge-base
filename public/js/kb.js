@@ -78,6 +78,31 @@
     });
   }
 
+  /* ---------- выездное меню на мобильных ---------- */
+  function wireDrawer(burger) {
+    var sidebar = document.querySelector('.sidebar');
+    if (!sidebar || !burger) return;
+
+    var backdrop = document.createElement('div');
+    backdrop.id = 'kb-backdrop';
+    document.body.appendChild(backdrop);
+
+    function close() { sidebar.classList.remove('open'); backdrop.classList.remove('open'); }
+    function toggle() {
+      var open = sidebar.classList.toggle('open');
+      backdrop.classList.toggle('open', open);
+    }
+
+    burger.addEventListener('click', toggle);
+    backdrop.addEventListener('click', close);
+    /* выбрали пункт — меню закрывается */
+    sidebar.addEventListener('click', function (e) {
+      if (e.target.closest('.nav-item, .nav-subitem, .sidebar-back')) close();
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') close(); });
+    window.addEventListener('resize', function () { if (window.innerWidth > 900) close(); });
+  }
+
   /* ---------- сборка плашки ---------- */
   function mount() {
     if (document.getElementById('kb-topbar')) return;
@@ -100,7 +125,11 @@
                'autocomplete="off" spellcheck="false">' +
         '<kbd>/</kbd>' +
       '</div>' +
-      '<button id="kb-theme" type="button"></button>';
+      '<button id="kb-theme" type="button"></button>' +
+      '<button id="kb-burger" type="button" aria-label="Меню">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+             'stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>' +
+      '</button>';
 
     bar.querySelector('.kb-brand-text').textContent = title.trim();
     document.body.insertBefore(bar, document.body.firstChild);
@@ -110,6 +139,7 @@
       applyTheme(current() === 'dark' ? 'light' : 'dark');
     });
 
+    wireDrawer(bar.querySelector('#kb-burger'));
     wireSearch(bar.querySelector('#kb-search-input'));
     applyTheme(current());
   }
