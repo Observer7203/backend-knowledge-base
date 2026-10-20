@@ -119,22 +119,22 @@
    Идёт после тёмной темы: у обоих селекторов одинаковая
    специфичность, поэтому порядок решает. */
 :root[data-accent="blue"] {
-  --primary:        #2563eb;
-  --primary-light:  #eef3ff;
-  --primary-dark:   #1d4ed8;
-  --primary-rgb:    37, 99, 235;
+  --primary:        #0d87a8;
+  --primary-light:  #e9f6fa;
+  --primary-dark:   #0a6c88;
+  --primary-rgb:    13, 135, 168;
 
-  --lava1: 37, 99, 235;
-  --lava2: 56, 189, 248;
-  --lava3: 129, 140, 248;
+  --lava1: 13, 135, 168;
+  --lava2: 34, 190, 210;
+  --lava3: 56, 150, 220;
   --lava4: 45, 212, 191;
 }
 
 :root[data-accent="blue"][data-theme="dark"] {
-  --primary:        #60a5fa;
-  --primary-light:  #0d1a2e;
-  --primary-dark:   #2563eb;
-  --primary-rgb:    96, 165, 250;
+  --primary:        #4ac7de;
+  --primary-light:  #082027;
+  --primary-dark:   #0d87a8;
+  --primary-rgb:    74, 199, 222;
 }
 
 /* ---------- База ---------- */
@@ -708,11 +708,16 @@ pre code {
 
 .kb-hero {
   position: sticky;
-  top: 0;
-  height: 100vh;
-  min-height: 100vh;
+  top: calc(var(--gap) * 2 + var(--topbar-h));
+  height: calc(100vh - var(--topbar-h) - var(--gap) * 3);
+  min-height: 0;
+  margin: calc(var(--gap) * 2 + var(--topbar-h)) var(--gap) 0;
   display: flex; align-items: center; justify-content: center;
-  padding: 90px 24px 60px;
+  padding: 48px 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
   overflow: hidden;
   isolation: isolate;
 }
@@ -893,7 +898,7 @@ pre code {
 }
 @media (max-width: 860px) {
   .kb-hero-stage { height: 165vh; }
-  .kb-hero { height: 100vh; min-height: 100vh; padding: 70px 18px 50px; }
+  .kb-hero { padding: 36px 18px; }
   .kb-lava { filter: blur(50px); }
   .kb-scroll-hint { display: none; }
 }
