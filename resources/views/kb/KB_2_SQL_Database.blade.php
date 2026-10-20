@@ -348,7 +348,7 @@ ul.bullets strong{color:var(--text);}
       <tr><td>Semantic search для LLM</td><td>pgvector / Pinecone / Weaviate</td></tr>
       <tr><td>Mobile app, embedded, KB, dev-локалка</td><td>SQLite</td></tr>
     </table>
-    <div class="remember-box"><strong>На собесе спросят:</strong> «SQL vs NoSQL когда что». Правильный ответ — <em>«зависит от паттерна доступа»</em>. NoSQL быстрее для конкретной модели, но реляционная гибче. Начинай с PostgreSQL — переходи на NoSQL только когда конкретный кейс требует.</div>
+    <div class="remember-box"><strong>Частый вопрос:</strong> «SQL vs NoSQL когда что». Правильный ответ — <em>«зависит от паттерна доступа»</em>. NoSQL быстрее для конкретной модели, но реляционная гибче. Начинай с PostgreSQL — переходи на NoSQL только когда конкретный кейс требует.</div>
   </div>
 </div>
 

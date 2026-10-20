@@ -804,7 +804,7 @@ ul.bullets strong{color:var(--text);}
       <tr><th></th><th>OSI</th><th>TCP/IP</th></tr>
       <tr><td><strong>Тип</strong></td><td>Теоретическая модель</td><td>Реальные протоколы</td></tr>
       <tr><td><strong>Уровней</strong></td><td>7</td><td>4 (или 5 в гибриде)</td></tr>
-      <tr><td><strong>Где используется</strong></td><td>Учебники, собеседования</td><td>Интернет, реальные системы</td></tr>
+      <tr><td><strong>Где используется</strong></td><td>Учебники, теория</td><td>Интернет, реальные системы</td></tr>
       <tr><td><strong>Кто придумал</strong></td><td>ISO (международный комитет)</td><td>DARPA + DoD (военные США)</td></tr>
     </table>
   </div>

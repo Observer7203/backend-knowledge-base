@@ -207,7 +207,7 @@ ol.numbered strong{color:var(--text);}
   <p class="text">Python — второй по популярности язык backend-мира после JavaScript/PHP. Для PHP-разработчика это <strong>дешёвая инвестиция</strong>: половина концепций (ООП, ассоциативные массивы, интерполяция строк, декораторы, замыкания) уже знакомы, различия в основном в синтаксисе. Дальнейшие 20% — асинхронность, type hints и pythonic-стиль — усваиваются за пару недель практики.</p>
 
   <div class="info-box primary">
-    <strong>Цель раздела:</strong> дать <em>рабочее</em> знание Python для backend-задач — не язык на собес по алгоритмам, а практический инструмент: развернул FastAPI, подключился к БД, положил в Docker, задеплоил. Плюс ориентирование в экосистеме: pip vs poetry, Django vs FastAPI, requests vs httpx.
+    <strong>Цель раздела:</strong> дать <em>рабочее</em> знание Python для backend-задач — не язык для алгоритмических задач, а практический инструмент: развернул FastAPI, подключился к БД, положил в Docker, задеплоил. Плюс ориентирование в экосистеме: pip vs poetry, Django vs FastAPI, requests vs httpx.
   </div>
 
   <div class="subsection">
@@ -4992,7 +4992,7 @@ groups = <span class="c-fn">defaultdict</span>(<span class="c-fn">list</span>)  
     <div class="pitfall"><strong>3. Целочисленное деление.</strong> <code>mid = (l + r) // 2</code> — <em>двойной</em> слэш. Одинарный <code>/</code> в Python 3 всегда float.</div>
     <div class="pitfall"><strong>4. Переполнение — нет.</strong> Python int безграничен. В отличие от C/Java <code>(l + r) / 2</code> не переполнится. Всё равно пиши <code>l + (r - l) // 2</code> для переноса кода на другие языки.</div>
     <div class="pitfall"><strong>5. Пустой массив.</strong> Всегда проверяй edge case: <code>if not nums: return</code>. Ошибки типа <code>max([])</code> = <code>ValueError</code>.</div>
-    <div class="pitfall"><strong>6. Комментировать сложность.</strong> На собесе в решении пиши <code># Time: O(n), Space: O(1)</code>. Показывает что понимаешь что написал.</div>
+    <div class="pitfall"><strong>6. Комментировать сложность.</strong> В решении пиши <code># Time: O(n), Space: O(1)</code>. Показывает что понимаешь что написал.</div>
   </div>
 
   <div class="remember-box">

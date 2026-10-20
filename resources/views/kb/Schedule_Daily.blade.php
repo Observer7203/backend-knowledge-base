@@ -180,10 +180,10 @@
   <a class="back-link" href="/"><i data-lucide="arrow-left"></i> На главную</a>
 
   <div class="header">
-    <h1>Расписание <span>под собес $2500-3000</span></h1>
+    <h1>Расписание <span>подготовки</span></h1>
     <p>13 недель · Пн-Пт без выходных · 1.5-2 часа/день · ~3 секции/день</p>
     <p style="font-size:0.8rem;color:var(--tx2);margin-top:6px;">Старт: 1 июня 2026 (понедельник). Каждая задача привязана к разделу в KB.</p>
-    <div class="target">🎯 Цель: <strong>Middle PHP/Laravel</strong> · $2500-3000 после 8-9 недели</div>
+    <div class="target">🎯 Цель: уровень <strong>Middle PHP/Laravel</strong> к 8–9 неделе</div>
   </div>
 
   <div class="progress-wrap">
@@ -297,7 +297,7 @@ const weeks = [
 
   // ───── НЕДЕЛЯ 4 ─────
   { title: "Неделя 4: SQL — часть 2 + Laravel старт", theme: "Транзакции, ACID, нормализация, PDO + начало Laravel", review: "Повтор: JOIN'ы, индексы (нед.3)",
-    milestone: "🎯 Конец Месяца 1: пробные собесы на $1800-2200 (junior+)",
+    milestone: "🎯 Конец Месяца 1: самопроверка по вопросникам уровня Junior+",
     goal: "Закрыть SQL полностью + начать Laravel. ACID — обязательно на собесе.",
     days: [
       { tasks: [
@@ -323,7 +323,7 @@ const weeks = [
       { tasks: [
         { t: "Контроллеры + Middleware basics", d: "KB_3 разд.3-4 — Resource controllers, invokable, middleware before/after.", file: "KB_3_Laravel.html", type: "read" },
         { t: "🔄 Повтор: SQL квизы все", d: "JOIN'ы, ACID, нормализация, индексы — без подглядывания.", type: "review" },
-        { t: "❓ Вопросник KB_1 — Уровень 1 (Junior+)", d: "KB_1 → раздел 'Вопросник для собеса'. Пройди 10 вопросов Уровня 1. Отвечай ВСЛУХ. Запиши слабые места.", file: "KB_1_PHP_Core.html", type: "quiz" },
+        { t: "❓ Вопросник KB_1 — Уровень 1 (Junior+)", d: "KB_1 → раздел 'Вопросник для самопроверки'. Пройди 10 вопросов Уровня 1. Отвечай ВСЛУХ. Запиши слабые места.", file: "KB_1_PHP_Core.html", type: "quiz" },
         { t: "Шпаргалка SQL", d: "JOIN'ы, ACID 4 буквы, нормализация 1-3NF, composite index, leftmost prefix.", type: "review" },
       ]},
     ]
@@ -363,7 +363,7 @@ const weeks = [
 
   // ───── НЕДЕЛЯ 6 ─────
   { title: "Неделя 6: Laravel Inheritance — что наследуешь и зачем", theme: "Базовые классы, интерфейсы, трейты, фасады, Contracts", review: "Повтор: Eloquent + N+1 (нед.5)",
-    goal: "KB_9 — 22 секции. Что даёт каждый родительский класс. На собесе спрашивают 'что наследует FormRequest' — после недели ответишь сходу.",
+    goal: "KB_9 — 22 секции. Что даёт каждый родительский класс. Часто спрашивают 'что наследует FormRequest' — после недели ответишь сходу.",
     days: [
       { tasks: [
         { t: "Controller + Model базовые", d: "KB_9 — что наследует Controller, что даёт Model (HasFactory, attributes, timestamps).", file: "KB_9_Laravel_Inheritance.html", type: "read" },
@@ -460,7 +460,7 @@ const weeks = [
 
   // ───── НЕДЕЛЯ 9 ─────
   { title: "Неделя 9: Security — Token Rotation, OAuth, JWT, XSS, CSRF", theme: "Аутентификация и веб-атаки", review: "Повтор: Sanctum + DI (нед.5,8)",
-    milestone: "🎯 Конец Месяца 2: РЕАЛЬНО ИДТИ НА СОБЕС $2500-3000",
+    milestone: "🎯 Конец Месяца 2: уровень Middle закрыт",
     goal: "KB_4 — 16 секций. Token Rotation, OAuth, JWT, XSS, CSRF, SQLi, CORS. Spectre на собесе.",
     days: [
       { tasks: [
@@ -486,7 +486,7 @@ const weeks = [
       { tasks: [
         { t: "HTTPS/TLS + Headers + Secrets + RBAC/ABAC", d: "KB_4 разд.11-16 — TLS handshake, HSTS, CSP/X-Frame, env management, role/attribute access.", file: "KB_4_Security.html", type: "read" },
         { t: "Финал KB_4: все квизы + INTERVIEW DRILL", d: "Ответь на все Security вопросы из Backend_Learning_Program вслух.", file: "Backend_Learning_Program.html", type: "quiz" },
-        { t: "❓ Вопросник KB_1 — Уровень 2 (Middle, $2500-3000)", d: "KB_1 → раздел 'Вопросник для собеса'. Пройди 20 вопросов Уровня 2 ВСЛУХ. Это ровно те вопросы что спросят на твоём собесе.", file: "KB_1_PHP_Core.html", type: "quiz" },
+        { t: "❓ Вопросник KB_1 — Уровень 2 (Middle)", d: "KB_1 → раздел 'Вопросник для самопроверки'. Пройди 20 вопросов Уровня 2 ВСЛУХ. Это ключевые вопросы уровня Middle.", file: "KB_1_PHP_Core.html", type: "quiz" },
         { t: "Шпаргалка Security", d: "Token Rotation flow, JWT structure, OAuth flows, CSRF/XSS/CORS — по 2 предложения.", type: "review" },
       ]},
     ]
@@ -589,9 +589,9 @@ const weeks = [
   },
 
   // ───── НЕДЕЛЯ 13 ─────
-  { title: "Неделя 13: Mock-собесы + слабые места + pet-project", theme: "FULL REVIEW, mock interviews, портфолио", review: "ВСЁ",
-    milestone: "🎯 Конец Месяца 3: Middle confident, готов на $3000+",
-    goal: "Собрать всё вместе. Mock-собеседования. Закрыть пробелы.",
+  { title: "Неделя 13: финальный прогон + слабые места + pet-project", theme: "FULL REVIEW, финальный прогон, портфолио", review: "ВСЁ",
+    milestone: "🎯 Конец Месяца 3: уверенный Middle",
+    goal: "Собрать всё вместе. Финальный прогон вопросников. Закрыть пробелы.",
     days: [
       { tasks: [
         { t: "🔄 FULL REVIEW: PHP Core + SQL", d: "Все квизы KB_1 + KB_2. Шпаргалки нед.2 и нед.4 — обнови. LeetCode 1 задача easy.", file: "KB_1_PHP_Core.html", type: "review" },
@@ -606,8 +606,8 @@ const weeks = [
         { t: "🔄 FULL REVIEW: Architecture + Testing + DevOps", d: "KB_5 + KB_14 + KB_6 квизы. SOLID наизусть, паттерны, TDD цикл, Docker.", file: "KB_5_Architecture.html", type: "review" },
       ]},
       { tasks: [
-        { t: "❓ Финальный прогон KB_1 Вопросник — все 45 вопросов", d: "KB_1 → 'Вопросник для собеса'. Уровни 1+2+3 подряд. Таймер 90 сек на вопрос. Запиши на диктофон. Слушай и оценивай.", file: "KB_1_PHP_Core.html", type: "quiz" },
-        { t: "🛠 Мини-проект на выбор", d: "KB_1 → 'Практика руками' → мини-проекты. Сделай 1 на выбор: Свой Collection / Validator / DI-контейнер / Mini-ORM. Это сильный аргумент на собесе.", file: "KB_1_PHP_Core.html", type: "project" },
+        { t: "❓ Финальный прогон KB_1 Вопросник — все 45 вопросов", d: "KB_1 → 'Вопросник для самопроверки'. Уровни 1+2+3 подряд. Таймер 90 сек на вопрос. Запиши на диктофон. Слушай и оценивай.", file: "KB_1_PHP_Core.html", type: "quiz" },
+        { t: "🛠 Мини-проект на выбор", d: "KB_1 → 'Практика руками' → мини-проекты. Сделай 1 на выбор: Свой Collection / Validator / DI-контейнер / Mini-ORM. Это сильный аргумент в портфолио.", file: "KB_1_PHP_Core.html", type: "project" },
         { t: "MOCK INTERVIEW: полный", d: "24 вопроса × 2 мин = 48 мин. Запиши на диктофон. Прослушай и оцени.", file: "Backend_Learning_Program.html", type: "quiz" },
         { t: "Финал: README портфолио + резюме", d: "am.eabr.org (SSO+MegaRega) + pet-project + KB как proof. Резюме с этим стеком.", type: "project" },
       ]},

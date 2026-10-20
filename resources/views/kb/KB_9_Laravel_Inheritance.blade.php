@@ -186,7 +186,7 @@ pre code{color:#ABB2BF;font-family:'JetBrains Mono','Fira Code',Consolas,monospa
      ════════════════════════════════════════════════════════════════ -->
 <div id="sec-overview" class="section active">
   <div class="section-title">Зачем этот раздел</div>
-  <p class="text">В Laravel ты <strong>почти никогда не пишешь с нуля</strong>. Ты наследуешь готовые родительские классы, подключаешь трейты, реализуешь интерфейсы — и получаешь кучу функционала бесплатно. Но на собеседовании спросят: <em>«Что именно даёт тебе FormRequest?»</em> или <em>«Зачем Model наследует HasFactory?»</em>.</p>
+  <p class="text">В Laravel ты <strong>почти никогда не пишешь с нуля</strong>. Ты наследуешь готовые родительские классы, подключаешь трейты, реализуешь интерфейсы — и получаешь кучу функционала бесплатно. Но закономерный вопрос: <em>«Что именно даёт тебе FormRequest?»</em> или <em>«Зачем Model наследует HasFactory?»</em>.</p>
 
   <div class="info-box purple">
     <strong>Паттерн Laravel:</strong> Ты создаёшь свой класс → наследуешь родителя → переопределяешь нужные методы → Laravel вызывает твой класс автоматически в нужный момент (через Service Container, Router, Queue Worker и т.д.)
@@ -1377,7 +1377,7 @@ pre code{color:#ABB2BF;font-family:'JetBrains Mono','Fira Code',Consolas,monospa
   </table>
 
   <div class="info-box success">
-    <strong>Правило:</strong> В <strong>бизнес-логике</strong> (сервисы, репозитории) — используй Contracts (DI через конструктор). В <strong>контроллерах, middleware, artisan commands</strong> — фасады допустимы для читаемости. На собеседовании скажи: «Я предпочитаю DI через интерфейсы для тестируемости, но фасады удобны в контроллерах».
+    <strong>Правило:</strong> В <strong>бизнес-логике</strong> (сервисы, репозитории) — используй Contracts (DI через конструктор). В <strong>контроллерах, middleware, artisan commands</strong> — фасады допустимы для читаемости. Формулировать так: «Я предпочитаю DI через интерфейсы для тестируемости, но фасады удобны в контроллерах».
   </div>
 </div>
 

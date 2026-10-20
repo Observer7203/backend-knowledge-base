@@ -513,7 +513,7 @@
 
   <div class="header">
     <h1>Backend <span>PHP / Laravel</span> — Полная Программа</h1>
-    <p>Обучение · Повторение · Подготовка к собеседованиям · База знаний</p>
+    <p>Обучение · Повторение · Самопроверка · База знаний</p>
     <p style="margin-top:6px; font-size:0.82rem; color:var(--text3);">Sanzhar · Обновлено: Апрель 2026</p>
   </div>
 
@@ -529,7 +529,7 @@
   <div class="tabs">
     <button class="tab active" onclick="switchTab('roadmap', this)"><i data-lucide="map"></i> Roadmap</button>
     <button class="tab" onclick="switchTab('schedule', this)"><i data-lucide="calendar"></i> Расписание</button>
-    <button class="tab" onclick="switchTab('interview', this)"><i data-lucide="message-circle"></i> Собеседование</button>
+    <button class="tab" onclick="switchTab('interview', this)"><i data-lucide="message-circle"></i> Вопросник</button>
     <button class="tab" onclick="switchTab('resources', this)"><i data-lucide="book-open"></i> Курсы & Ресурсы</button>
     <button class="tab" onclick="switchTab('obsidian', this)"><i data-lucide="notebook-pen"></i> Мои заметки</button>
   </div>
@@ -562,7 +562,7 @@
   <div class="section" id="sec-interview">
     <div class="note-box">
       <i data-lucide="target"></i>
-      Топ вопросов для собеседований на Backend PHP/Laravel разработчика. Кликните на вопрос чтобы увидеть ответ.
+      Топ вопросов по Backend PHP/Laravel для самопроверки. Кликните на вопрос чтобы увидеть ответ.
     </div>
     <div class="search-wrap">
       <span class="search-icon"><i data-lucide="search"></i></span>
@@ -824,7 +824,7 @@ const obsidianData = [
   { section: "JavaScript", level: "Basic", files: 6, topics: "Введение в JS, типы данных, функции, массивы, Ajax", gaps: "Базовый уровень, не связано с backend" },
   { section: "Docker", level: "Minimal", files: 1, topics: "docker-compose.yml файл", gaps: "Нужно полноценное изучение Docker для разработки" },
   { section: "Git", level: "Minimal", files: 1, topics: "Базовые команды", gaps: "Нужны branching strategies, rebase, CI/CD" },
-  { section: "Собеседования", level: "Started", files: 2, topics: "Вопросы Abelhost, общие вопросы", gaps: "Нужно значительно расширить" },
+  { section: "Вопросник", level: "Started", files: 2, topics: "Общие вопросы по стеку", gaps: "Нужно значительно расширить" },
 ];
 
 // ── RENDER ────────────────────────────────────────────────────────────────────

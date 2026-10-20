@@ -498,7 +498,7 @@
             <a class="nav-item" onclick="showSection('generators')">Генераторы</a>
             <a class="nav-item" onclick="showSection('closures')">Closures</a>
             <a class="nav-item" onclick="showSection('cheatsheet')" style="margin-top:18px;border-top:1px solid #E5E7EB;padding-top:14px">📋 Шпаргалка PHP</a>
-            <a class="nav-item" onclick="showSection('interview')">❓ Вопросник для собеса</a>
+            <a class="nav-item" onclick="showSection('interview')">❓ Вопросник для самопроверки</a>
             <a class="nav-item" onclick="showSection('practice')">🛠 Практика руками</a>
         </div>
 
@@ -1141,7 +1141,7 @@
                 <div class="subsection">
                     <h3 class="subsection-title">Тернарный, Elvis, null coalescing (<code>?:</code>, <code>??</code>, <code>?-&gt;</code>)</h3>
                     <div class="content-block">
-                        Группа коротких операторов для условных выражений. Все используют <code>?</code>, но семантика разная. На собесе часто путают — особенно тернарный vs <code>??</code>.
+                        Группа коротких операторов для условных выражений. Все используют <code>?</code>, но семантика разная. Часто путают — особенно тернарный vs <code>??</code>.
                     </div>
 
                     <div class="example-label">1. Тернарный <code>условие ? a : b</code></div>
@@ -1224,7 +1224,7 @@
                     </table>
 
                     <div class="remember-box">
-                        <strong>Главный вопрос на собесе:</strong> в чём разница <code>?:</code> и <code>??</code>?
+                        <strong>Главный вопрос по теме:</strong> в чём разница <code>?:</code> и <code>??</code>?
                         <ul style="margin:8px 0 0 20px;line-height:1.7">
                             <li><code>?:</code> срабатывает на <strong>любое falsy</strong> (<code>0</code>, <code>''</code>, <code>'0'</code>, <code>null</code>, <code>[]</code>).</li>
                             <li><code>??</code> срабатывает <strong>ТОЛЬКО на <code>null</code> или undefined ключ</strong>.</li>
@@ -1237,7 +1237,7 @@
                 <div class="subsection">
                     <h3 class="subsection-title">Двоеточие <code>:</code> — все контексты использования</h3>
                     <div class="content-block">
-                        Символ <code>:</code> встречается в PHP в <strong>5 разных контекстах</strong>. Главный — return type declaration в функциях. На собесе спрашивают «что значит <code>: float</code>» — точный ответ ниже.
+                        Символ <code>:</code> встречается в PHP в <strong>5 разных контекстах</strong>. Главный — return type declaration в функциях. Часто спрашивают «что значит <code>: float</code>» — точный ответ ниже.
                     </div>
 
                     <div class="example-label">1. Return type declaration — двоеточие перед типом</div>
@@ -3056,7 +3056,7 @@ enum Status: string {
                             <li>Через переменную (variable property): <code>$this-&gt;$x</code> → ДВА <code>$</code> — редко, обычно опечатка</li>
                             <li>Локальная переменная в методе: <code>$x</code> → <code>$</code> ЕСТЬ (это обычная переменная)</li>
                         </ul>
-                        <p style="margin:10px 0 0"><strong>На собесе спросят:</strong> «что значит <code>$this-&gt;$x</code> с двумя долларами?» — это variable property. 90% разработчиков забывают про это.</p>
+                        <p style="margin:10px 0 0"><strong>Частый вопрос:</strong> «что значит <code>$this-&gt;$x</code> с двумя долларами?» — это variable property. 90% разработчиков забывают про это.</p>
                     </div>
                 </div>
 
@@ -3775,7 +3775,7 @@ static::  → ПОЛИМОРФНО: берёт из класса, через к�
                             <li><strong>Commands vs Queries разделены</strong> (CQS): команды меняют состояние и возвращают <code>void</code>, queries только читают и возвращают данные.</li>
                             <li><strong>Инварианты защищены</strong> — проверки внутри команд (<code>count &lt; max</code>, валидация и т.п.), не дают создать «невалидное» состояние.</li>
                         </ul>
-                        <p style="margin:10px 0 0">На собесе на middle+ спросят «как ты защищаешь инварианты» — этот паттерн и есть ответ. См. также KB_5 Architecture → DDD basics.</p>
+                        <p style="margin:10px 0 0">На уровне middle+ часто спрашивают «как ты защищаешь инварианты» — этот паттерн и есть ответ. См. также KB_5 Architecture → DDD basics.</p>
                     </div>
 
                     <div class="example-label">Derived value: Cached vs Computed — два пути для <code>total()</code></div>
@@ -5628,7 +5628,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                         <ul style="margin:8px 0 0 20px;line-height:1.7">
                             <li><strong>throw</strong> — для аварийных ситуаций, которые не часть нормального выполнения.</li>
                             <li><strong>return false / null</strong> — для нормального «не нашлось»: <code>User::find($id)</code> при отсутствии возвращает <code>null</code>, это не повод для throw.</li>
-                            <li><strong>Имя класса исключения = тип проблемы</strong>. На собесе спрашивают разницу <code>InvalidArgumentException</code> vs <code>RuntimeException</code> — первое значит «программист передал плохие данные», второе значит «среда подвела (БД упала)».</li>
+                            <li><strong>Имя класса исключения = тип проблемы</strong>. Часто спрашивают разницу <code>InvalidArgumentException</code> vs <code>RuntimeException</code> — первое значит «программист передал плохие данные», второе значит «среда подвела (БД упала)».</li>
                             <li><strong>Не лови <code>Exception</code> огульно</strong> — лови конкретный тип. Иначе скроешь баги, которые надо чинить.</li>
                         </ul>
                     </div>
@@ -6246,7 +6246,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                 <h2 class="section-title">📋 Шпаргалка PHP — всё в одной таблице</h2>
 
                 <div class="content-block">
-                    Финальная распечатка перед собеседованием. Все ключевые темы в виде таблиц с примерами. Используй как Anki-колоду или как референс «один взгляд — освежил память».
+                    Финальная распечатка перед проверкой. Все ключевые темы в виде таблиц с примерами. Используй как Anki-колоду или как референс «один взгляд — освежил память».
                 </div>
 
                 <div class="subsection">
@@ -6302,7 +6302,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                         <ul style="margin:8px 0 0 20px;line-height:1.7">
                             <li><strong>Строка ЧИСЛОВАЯ + число</strong> → сравнение как числа (<code>"10" == 10</code> → true)</li>
                             <li><strong>Строка НЕчисловая + число</strong> → число приводится к строке (<code>"abc" == 0</code> → false)</li>
-                            <li><strong>Безопасное правило:</strong> в production-коде используй ТОЛЬКО <code>===</code>. На собесе говорить «всегда <code>===</code>, изменение PHP 8 знаю наизусть».</li>
+                            <li><strong>Безопасное правило:</strong> в production-коде используй ТОЛЬКО <code>===</code>. Формулировать так: «всегда <code>===</code>, изменение PHP 8 знаю наизусть».</li>
                         </ul>
                     </div>
                 </div>
@@ -6464,10 +6464,10 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 
             <!-- ═══════════ SECTION 14: INTERVIEW QUESTIONS ═══════════ -->
             <div id="interview" class="section">
-                <h2 class="section-title">❓ Вопросник для собеседования (PHP Core)</h2>
+                <h2 class="section-title">❓ Вопросник для самопроверки (PHP Core)</h2>
 
                 <div class="content-block">
-                    Реальные вопросы, которые задают на middle PHP / Laravel собеседованиях. <strong>Сначала отвечай вслух</strong>, потом кликни вопрос — увидишь развёрнутый ответ. Если запнулся — открой соответствующий раздел KB. На собесе важен не дословный ответ, а понимание сути.
+                    Реальные вопросы, которые закрывают уровень middle PHP / Laravel. <strong>Сначала отвечай вслух</strong>, потом кликни вопрос — увидишь развёрнутый ответ. Если запнулся — открой соответствующий раздел KB. Важен не дословный ответ, а понимание сути.
                 </div>
 
                 <div class="subsection">
@@ -6522,7 +6522,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                         <div class="qa-a">
                             <p>Включает <strong>строгую типизацию</strong> для скалярных type-hints в текущем файле. Должен быть первым оператором в файле.</p>
                             <p>Без него: <code>function add(int $a, int $b)</code> примет <code>add('5', 3)</code> — PHP приведёт строку к int. Со <code>strict_types=1</code> — выкинет <code>TypeError</code>.</p>
-                            <p>На собесе говорить: «использую <code>strict_types=1</code> во всех файлах, это требование PSR-12 для production-кода».</p>
+                            <p>Формулировать так:: «использую <code>strict_types=1</code> во всех файлах, это требование PSR-12 для production-кода».</p>
                         </div>
                     </div>
 
@@ -6897,7 +6897,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                     </div>
 
                     <div class="remember-box">
-                        <strong>💡 Тактика на собесе:</strong> если не знаешь точно — скажи «не помню точно, но логика была примерно такая...» и рассуждай. Лучше ошибиться рассуждая, чем молчать. На большинстве middle-собесов оценивают не только знание, но и способ думания.
+                        <strong>💡 Если тема не вспоминается:</strong> если не знаешь точно — скажи «не помню точно, но логика была примерно такая...» и рассуждай. Лучше ошибиться рассуждая, чем молчать. На уровне middle оценивают не только знание, но и способ думания.
                     </div>
                 </div>
             </div>
@@ -6953,7 +6953,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 }</code></pre>
 
                         <div class="practice-pitfalls">
-                            <strong>⚠ Подводные камни:</strong> <code>"0.0"</code>, <code>"false"</code>, <code>[0]</code> — НЕ false-y (это всегда вопрос на собесе). Не пиши свой список — <code>(bool)$x</code> точнее и короче.
+                            <strong>⚠ Подводные камни:</strong> <code>"0.0"</code>, <code>"false"</code>, <code>[0]</code> — НЕ false-y (это классическая ловушка). Не пиши свой список — <code>(bool)$x</code> точнее и короче.
                         </div>
                     </div>
 
@@ -7481,7 +7481,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
 <span class="function">assert</span>(<span class="function">my_array_reduce</span>([], <span class="keyword">fn</span>(<span class="variable">$a</span>,<span class="variable">$b</span>) => <span class="variable">$a</span>+<span class="variable">$b</span>, <span class="number">99</span>) === <span class="number">99</span>);</code></pre>
 
                         <div class="practice-pitfalls">
-                            <strong>⚠ Подводные камни:</strong> убедись что callback получает аккумулятор <strong>1-м аргументом</strong>. Если перевернёшь — все assert упадут. Это и есть ответ на собесе «как PHP понимает порядок»: <em>зашито в реализации функции</em>.
+                            <strong>⚠ Подводные камни:</strong> убедись что callback получает аккумулятор <strong>1-м аргументом</strong>. Если перевернёшь — все assert упадут. Это и есть правильный ответ «как PHP понимает порядок»: <em>зашито в реализации функции</em>.
                         </div>
                     </div>
 
@@ -7568,10 +7568,10 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                         <ul style="margin:8px 0 0 20px;line-height:1.8">
                             <li><strong>Неделя 1:</strong> Все 10 микро-задач (по 2/день) + готовые задания 1-2 (Cacheable + TransactionGuard).</li>
                             <li><strong>Неделя 2:</strong> Готовые задания 3-5 (Builder + PaymentInterface + BaseRepository) + Mini Project 2 (Collection).</li>
-                            <li><strong>За 3 дня до собеса:</strong> прогон 45 вопросов из «❓ Вопросник» вслух, таймер 90 сек.</li>
+                            <li><strong>За 3 дня до финальной проверки:</strong> прогон 45 вопросов из «❓ Вопросник» вслух, таймер 90 сек.</li>
                             <li><strong>День перед:</strong> распечатать Шпаргалку, ещё раз пробежать ключевые таблицы.</li>
                         </ul>
-                        <p style="margin:10px 0 0">Это задания напрямую отрабатывают то, что спросят. Mini Project 2 (Collection) — про неё спрашивают на собесе через Eloquent Collection: «как реализована filter?» — ты будешь знать на собственном коде.</p>
+                        <p style="margin:10px 0 0">Это задания напрямую отрабатывают то, что спросят. Mini Project 2 (Collection) — её часто разбирают через Eloquent Collection: «как реализована filter?» — ты будешь знать на собственном коде.</p>
                     </div>
                 </div>
             </div>

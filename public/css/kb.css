@@ -230,6 +230,12 @@ body {
   box-shadow: var(--shadow) !important;
   padding: 44px 52px 96px !important;
 }
+
+/* Страницы с контейнером .app вместо .main (Расписание, Программа обучения):
+   без этого контент уезжает под плавающую плашку. */
+.app {
+  margin-top: calc(var(--gap) + var(--topbar-h)) !important;
+}
 .main > * { max-width: none; }
 
 .section {
