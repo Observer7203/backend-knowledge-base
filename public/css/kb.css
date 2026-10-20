@@ -706,20 +706,48 @@ pre code {
   height: 210vh;            /* запас прокрутки, пока баннер стоит на месте */
 }
 
+/* Размеры и рамка — как у карточек на nestjs.com: скругление 24px
+   (16px на телефоне), высота в экран минус отступы, рамка в 1px,
+   нарисованная градиентом сверху вниз. */
 .kb-hero {
   position: sticky;
   top: calc(var(--gap) * 2 + var(--topbar-h));
-  height: calc(100vh - var(--topbar-h) - var(--gap) * 3);
+  height: calc(100vh - var(--topbar-h) - var(--gap) * 2);
   min-height: 0;
   margin: calc(var(--gap) * 2 + var(--topbar-h)) var(--gap) 0;
   display: flex; align-items: center; justify-content: center;
   padding: 48px 24px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border: 1px solid transparent;
+  border-radius: 24px;
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(180deg, var(--border-strong), var(--border)) border-box;
   box-shadow: var(--shadow);
   overflow: hidden;
   isolation: isolate;
+}
+
+/* Плёночное зерно: тот же fractalNoise, что у них, плюс дрожание кадра */
+.kb-hero::after {
+  content: '';
+  position: absolute;
+  inset: -150%;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .55;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.55'/%3E%3C/svg%3E");
+  animation: kb-grain .8s steps(6) infinite;
+}
+:root[data-theme="dark"] .kb-hero::after { opacity: .5; filter: invert(1); }
+
+@keyframes kb-grain {
+  0%   { transform: translate(0, 0); }
+  16%  { transform: translate(-3%, -5%); }
+  33%  { transform: translate(-8%, 3%); }
+  50%  { transform: translate(5%, -4%); }
+  66%  { transform: translate(-2%, 6%); }
+  83%  { transform: translate(4%, 2%); }
+  100% { transform: translate(0, 0); }
 }
 
 /* ---- лава ---- */
@@ -769,7 +797,7 @@ pre code {
 }
 
 /* ---- содержимое героя ---- */
-.kb-hero-inner { max-width: 880px; text-align: center; position: relative; }
+.kb-hero-inner { max-width: 880px; text-align: center; position: relative; z-index: 1; }
 .kb-hero-inner h1 {
   font-size: clamp(38px, 6.4vw, 76px) !important;
   font-weight: 800 !important; letter-spacing: -.035em;
@@ -893,12 +921,12 @@ pre code {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .kb-lava .blob, .kb-scroll-hint span { animation: none !important; }
+  .kb-lava .blob, .kb-scroll-hint span, .kb-hero::after { animation: none !important; }
   .kb-rise, .kb-reveal { opacity: 1 !important; transform: none !important; animation: none !important; transition: none !important; }
 }
 @media (max-width: 860px) {
   .kb-hero-stage { height: 165vh; }
-  .kb-hero { padding: 36px 18px; }
+  .kb-hero { padding: 36px 18px; border-radius: 16px; }
   .kb-lava { filter: blur(50px); }
   .kb-scroll-hint { display: none; }
 }
