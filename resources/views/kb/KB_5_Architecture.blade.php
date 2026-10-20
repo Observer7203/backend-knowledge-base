@@ -146,7 +146,7 @@ ul.bullets strong{color:var(--text);}
   <div class="nav-group-label">Применение</div>
   <a class="nav-item" onclick="showSection('practice',this)"><i data-lucide="hammer"></i> Рефакторинг bad→good</a>
   <a class="nav-item" onclick="showSection('pitfalls',this)"><i data-lucide="alert-octagon"></i> Подводные камни</a>
-  <a class="nav-item" onclick="showSection('interview',this)"><i data-lucide="brain"></i> На собеседование</a>
+  <a class="nav-item" onclick="showSection('interview',this)"><i data-lucide="brain"></i> Вопросник</a>
 </div>
 
 <div class="main">
@@ -1352,7 +1352,7 @@ ul.bullets strong{color:var(--text);}
 </div>
 
 <div id="sec-interview" class="section">
-  <div class="section-title">Вопросы на собеседование</div>
+  <div class="section-title">Вопросы для самопроверки</div>
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="shield-check"></i> SOLID и принципы</div>

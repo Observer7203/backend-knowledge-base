@@ -184,7 +184,7 @@ ol.numbered strong{color:var(--text);}
 
   <div class="nav-group-label">Для PHP-разработчика</div>
   <a class="nav-item" onclick="showSection('python-vs-php',this)"><i data-lucide="git-compare-arrows"></i> Python vs PHP — мосты</a>
-  <a class="nav-item" onclick="showSection('interview',this)"><i data-lucide="brain"></i> FAQ на собеседовании</a>
+  <a class="nav-item" onclick="showSection('interview',this)"><i data-lucide="brain"></i> Частые вопросы</a>
 </div>
 
 <div class="main">
@@ -219,7 +219,7 @@ ol.numbered strong{color:var(--text);}
       <tr><td><strong>Веб-фреймворки</strong></td><td>Django (батарейки в комплекте), FastAPI (современный async), Flask (микро), сравнение.</td></tr>
       <tr><td><strong>Данные и HTTP</strong></td><td>psycopg2 / SQLAlchemy, requests / httpx, Pandas базово.</td></tr>
       <tr><td><strong>Инструменты</strong></td><td>pytest, logging, ruff/black/mypy.</td></tr>
-      <tr><td><strong>Для PHP-разработчика</strong></td><td>Мосты Python ↔ PHP по типовым задачам, FAQ на собес.</td></tr>
+      <tr><td><strong>Для PHP-разработчика</strong></td><td>Мосты Python ↔ PHP по типовым задачам, частые вопросы.</td></tr>
     </table>
   </div>
 
@@ -4755,7 +4755,7 @@ score = model.<span class="c-fn">score</span>(X_test, y_test)
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="book-open"></i> Зачем это знать</div>
-    <p class="text">На собеседованиях (особенно ML/DS) и в тестах — <em>обязательный</em> навык. Задача: «найди пару чисел с суммой X», «максимальную подстроку без повторов», «скользящее окно из K чисел». Без знания паттернов пишешь O(n²) там, где нужен O(n).</p>
+    <p class="text">В алгоритмических задачах (особенно ML/DS) и в тестах — <em>обязательный</em> навык. Задача: «найди пару чисел с суммой X», «максимальную подстроку без повторов», «скользящее окно из K чисел». Без знания паттернов пишешь O(n²) там, где нужен O(n).</p>
 
     <div class="analogy">
       <strong>Ключевая идея:</strong> вместо вложенных циклов держи <em>дополнительное состояние</em> (индекс, сумму, счётчик, словарь) и обрабатывай массив за <em>один</em> проход.
@@ -5443,7 +5443,7 @@ jobs:
 </div>
 
 <div id="sec-interview" class="section">
-  <div class="section-title">FAQ на собеседовании — Python для backend</div>
+  <div class="section-title">Частые вопросы — Python для backend</div>
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="brain"></i> Топ-25 вопросов на middle/senior Python-backend</div>
@@ -5550,7 +5550,7 @@ jobs:
   </div>
 
   <div class="subsection">
-    <div class="subsection-title"><i data-lucide="lightbulb"></i> Общие советы на собес</div>
+    <div class="subsection-title"><i data-lucide="lightbulb"></i> Общие советы</div>
     <ul class="bullets">
       <li>«Как проверить» → всегда пишу тест на pytest, для API — <code>httpx.AsyncClient(app=app)</code>.</li>
       <li>«Как деплоить» → Docker с multi-stage build; runtime — Python slim, зависимости через uv.</li>

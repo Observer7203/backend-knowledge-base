@@ -2411,7 +2411,7 @@ enum Status: string {
                     </table>
 
                     <div class="remember-box">
-                        <strong>Правило для собеса:</strong> когда видишь задачу «свернуть массив в одно значение» — сначала проверь, есть ли встроенная функция. Если есть (<code>sum</code>/<code>product</code>/<code>max</code>/<code>min</code>/<code>count</code>) — используй её. <code>array_reduce</code> — это <strong>универсальный fallback</strong> для случаев когда встроенной нет или нужно несколько метрик за один проход.
+                        <strong>Правило:</strong> когда видишь задачу «свернуть массив в одно значение» — сначала проверь, есть ли встроенная функция. Если есть (<code>sum</code>/<code>product</code>/<code>max</code>/<code>min</code>/<code>count</code>) — используй её. <code>array_reduce</code> — это <strong>универсальный fallback</strong> для случаев когда встроенной нет или нужно несколько метрик за один проход.
                     </div>
                 </div>
 
@@ -3557,7 +3557,7 @@ static::  → ПОЛИМОРФНО: берёт из класса, через к�
 <span class="keyword">class</span> <span class="function">User</span> {}</code></pre>
 
                     <div class="remember-box">
-                        <strong>На собесе:</strong> если назовёшь метод PascalCase или класс lowercase — это **первый звоночек что код не пишешь в production**. Не сразу зарежут, но запомнят. Инструмент защиты — <strong>php-cs-fixer</strong> или <strong>laravel-pint</strong> автоматически приведёт к PSR-12 при коммите.
+                        <strong>Важно:</strong> если назовёшь метод PascalCase или класс lowercase — это **первый звоночек что код не пишешь в production**. Не сразу зарежут, но запомнят. Инструмент защиты — <strong>php-cs-fixer</strong> или <strong>laravel-pint</strong> автоматически приведёт к PSR-12 при коммите.
                     </div>
                 </div>
 
@@ -6421,7 +6421,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                 </div>
 
                 <div class="subsection">
-                    <h3 class="subsection-title">Top-30 тем — что спросят на собеседовании</h3>
+                    <h3 class="subsection-title">Top-30 тем — что нужно знать</h3>
                     <table class="data-table">
                         <thead>
                             <tr><th>#</th><th>Тема</th><th>Уровень</th><th>Раздел KB</th></tr>
@@ -6471,7 +6471,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                 </div>
 
                 <div class="subsection">
-                    <h3 class="subsection-title">Уровень 1 — Junior+ ($1500-2000) · 10 вопросов</h3>
+                    <h3 class="subsection-title">Уровень 1 — Junior+ · 10 вопросов</h3>
 
                     <div class="qa-item">
                         <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">1</span> В чём разница <code>==</code> и <code>===</code>? Приведи пример где результат отличается.</div>
@@ -6479,7 +6479,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                             <p><code>==</code> (loose) приводит типы перед сравнением — это <strong>type juggling</strong>. <code>===</code> (strict) сравнивает <strong>и тип, и значение</strong>.</p>
                             <p>Пример: <code>'0' == false</code> → <code>true</code> (PHP сначала привёл к bool, получил false, сравнил с false). Но <code>'0' === false</code> → <code>false</code> (тип строки и тип bool — разные).</p>
                             <p><strong>⚠ PHP 8.0 изменил правила:</strong> сравнение нечисловой строки с числом раньше было <code>"abc" == 0</code> → <code>true</code> (строка → 0). С PHP 8.0 наоборот — <strong>число приводится к строке</strong>, поэтому <code>"abc" == 0</code> → <code>false</code> (т.к. <code>"abc"</code> ≠ <code>"0"</code>). Подробнее — в Шпаргалке, раздел «Типы».</p>
-                            <p>На собесе <strong>всегда говори, что используешь <code>===</code></strong>. Loose-сравнение даёт неочевидные баги.</p>
+                            <p>Правило: <strong>всегда используй <code>===</code></strong>. Loose-сравнение даёт неочевидные баги.</p>
                         </div>
                     </div>
 
@@ -6563,7 +6563,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                 </div>
 
                 <div class="subsection">
-                    <h3 class="subsection-title">Уровень 2 — Middle ($2500-3000) · 20 вопросов</h3>
+                    <h3 class="subsection-title">Уровень 2 — Middle · 20 вопросов</h3>
 
                     <div class="qa-item">
                         <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">11</span> В чём разница abstract class и interface? Когда что?</div>
@@ -6758,7 +6758,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                 </div>
 
                 <div class="subsection">
-                    <h3 class="subsection-title">Уровень 3 — Middle+/Senior ($3000+) · 15 вопросов</h3>
+                    <h3 class="subsection-title">Уровень 3 — Middle+/Senior · 15 вопросов</h3>
 
                     <div class="qa-item">
                         <div class="qa-q" onclick="toggleQA(this)"><span class="q-num">31</span> Что такое attributes (PHP 8)? Приведи пример из Laravel/Symfony.</div>
@@ -7564,7 +7564,7 @@ var_dump(isset($user->name));// __isset('name') → false</pre>
                 <div class="subsection">
                     <h3 class="subsection-title">🎯 План применения на 2 недели</h3>
                     <div class="remember-box">
-                        <strong>Перед собесом на $2500-3000:</strong>
+                        <strong>Перед финальной проверкой:</strong>
                         <ul style="margin:8px 0 0 20px;line-height:1.8">
                             <li><strong>Неделя 1:</strong> Все 10 микро-задач (по 2/день) + готовые задания 1-2 (Cacheable + TransactionGuard).</li>
                             <li><strong>Неделя 2:</strong> Готовые задания 3-5 (Builder + PaymentInterface + BaseRepository) + Mini Project 2 (Collection).</li>

@@ -297,7 +297,7 @@ pre code{color:#ABB2BF;font-family:'JetBrains Mono','Fira Code',Consolas,monospa
   </div>
 
   <div class="info-box success">
-    <strong>Собеседование:</strong> «Можно ли контроллер без наследования?» — Да, в Laravel 11+ Controller может быть просто invokable class с <code>__invoke()</code>. Но тогда нет <code>$this->middleware()</code> и <code>$this->authorize()</code>.
+    <strong>Частый вопрос:</strong> «Можно ли контроллер без наследования?» — Да, в Laravel 11+ Controller может быть просто invokable class с <code>__invoke()</code>. Но тогда нет <code>$this->middleware()</code> и <code>$this->authorize()</code>.
   </div>
 </div>
 

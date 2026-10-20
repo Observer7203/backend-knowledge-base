@@ -166,7 +166,7 @@ ul.bullets strong{color:var(--text);}
   <div class="nav-group-label">Применение</div>
   <a class="nav-item" onclick="showSection('practice',this)"><i data-lucide="hammer"></i> Практика (5 задач)</a>
   <a class="nav-item" onclick="showSection('pitfalls',this)"><i data-lucide="alert-octagon"></i> Подводные камни</a>
-  <a class="nav-item" onclick="showSection('interview',this)"><i data-lucide="brain"></i> На собеседование</a>
+  <a class="nav-item" onclick="showSection('interview',this)"><i data-lucide="brain"></i> Вопросник</a>
 </div>
 
 <div class="main">
@@ -189,7 +189,7 @@ ul.bullets strong{color:var(--text);}
 
   <p class="text">Это <strong>не повторение</strong> KB_3 (там был обзор Eloquent на уровне «что такое»). Здесь — <strong>глубокий разбор</strong> с упором на:</p>
   <ul class="bullets">
-    <li>что реально спрашивают на собеседовании на middle/senior;</li>
+    <li>что реально требуется на уровне middle/senior;</li>
     <li>что встречается в продакшене и ломается без понимания;</li>
     <li>как избегать race conditions, N+1, мест где «оно работало, а потом перестало».</li>
   </ul>
@@ -5909,9 +5909,9 @@ php artisan db:show --views --types
      INTERVIEW
      ════════════════════════════════════════════════════════════════ -->
 <div id="sec-interview" class="section">
-  <div class="section-title">Вопросы на собеседование</div>
+  <div class="section-title">Вопросы для самопроверки</div>
 
-  <p class="text">Реальные вопросы для middle/senior PHP/Laravel. Попробуй ответить, не подглядывая.</p>
+  <p class="text">Вопросы уровня middle/senior PHP/Laravel. Попробуй ответить, не подглядывая.</p>
 
   <div class="card">
     <h3>1. В чём разница между <code>with()</code> и <code>load()</code>?</h3>

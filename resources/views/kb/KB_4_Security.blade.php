@@ -145,7 +145,7 @@ ul.bullets strong{color:var(--text);}
   <div class="nav-group-label">Применение</div>
   <a class="nav-item" onclick="showSection('practice',this)"><i data-lucide="hammer"></i> Практика: security review</a>
   <a class="nav-item" onclick="showSection('pitfalls',this)"><i data-lucide="alert-octagon"></i> Подводные камни</a>
-  <a class="nav-item" onclick="showSection('interview',this)"><i data-lucide="brain"></i> На собеседование</a>
+  <a class="nav-item" onclick="showSection('interview',this)"><i data-lucide="brain"></i> Вопросник</a>
 </div>
 
 <div class="main">
@@ -194,7 +194,7 @@ ul.bullets strong{color:var(--text);}
   <div class="section-title">OWASP Top 10 (2021)</div>
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="book-open"></i> Назначение</div>
-    <p class="text">OWASP Top 10 &mdash; индустриальный стандарт классификации самых критичных уязвимостей веб-приложений, обновляемый раз в 3-4 года. Это не исчерпывающий список (есть OWASP Top 10 API, OWASP ASVS), но это первый чек-лист, который должен проходить любой production-проект. Знание Top 10 на интервью &mdash; маст-хэв для middle и senior.</p>
+    <p class="text">OWASP Top 10 &mdash; индустриальный стандарт классификации самых критичных уязвимостей веб-приложений, обновляемый раз в 3-4 года. Это не исчерпывающий список (есть OWASP Top 10 API, OWASP ASVS), но это первый чек-лист, который должен проходить любой production-проект. Знание Top 10 &mdash; маст-хэв для middle и senior.</p>
   </div>
 
   <div class="subsection">
@@ -1044,7 +1044,7 @@ ul.bullets strong{color:var(--text);}
 </div>
 
 <div id="sec-interview" class="section">
-  <div class="section-title">Вопросы на собеседование</div>
+  <div class="section-title">Вопросы для самопроверки</div>
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="shield-alert"></i> Базовые</div>

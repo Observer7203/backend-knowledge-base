@@ -152,7 +152,7 @@ ul.bullets strong{color:var(--text);}
   <div class="nav-group-label">Применение</div>
   <a class="nav-item" onclick="showSection('practice',this)"><i data-lucide="hammer"></i> Практика</a>
   <a class="nav-item" onclick="showSection('pitfalls',this)"><i data-lucide="alert-octagon"></i> Подводные камни</a>
-  <a class="nav-item" onclick="showSection('interview',this)"><i data-lucide="brain"></i> На собеседование</a>
+  <a class="nav-item" onclick="showSection('interview',this)"><i data-lucide="brain"></i> Вопросник</a>
 </div>
 
 <div class="main">
@@ -1284,7 +1284,7 @@ Limit  (actual time=<span class="c-num">120.4</span>..<span class="c-num">120.5<
   <div class="section-title">Движки хранения и InnoDB-внутренности</div>
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="book-open"></i> Назначение</div>
-    <p class="text">MySQL уникальна тем, что позволяет хранить разные таблицы в одной БД через разные «движки» (storage engines). У каждого &mdash; свои свойства: транзакции или нет, row-level или table-level locks, indexing, durability. Для современного приложения дефолт &mdash; InnoDB; понимание других движков нужно для редких специальных задач и для интервью.</p>
+    <p class="text">MySQL уникальна тем, что позволяет хранить разные таблицы в одной БД через разные «движки» (storage engines). У каждого &mdash; свои свойства: транзакции или нет, row-level или table-level locks, indexing, durability. Для современного приложения дефолт &mdash; InnoDB; понимание других движков нужно для редких специальных задач и для кругозора.</p>
   </div>
 
   <div class="subsection">
@@ -1456,7 +1456,7 @@ Limit  (actual time=<span class="c-num">120.4</span>..<span class="c-num">120.5<
   <div class="section-title">MySQL vs PostgreSQL vs SQL Server</div>
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="book-open"></i> Назначение</div>
-    <p class="text">Три доминирующих СУБД в enterprise: MySQL, PostgreSQL, Microsoft SQL Server. На базовом SQL похожи; на уровне типов, продвинутых индексов, репликации и оптимизатора &mdash; разные. Понимание различий критично для интеграционных задач, миграций между СУБД, переносимых ORM-запросов и для интервью на senior-позиции.</p>
+    <p class="text">Три доминирующих СУБД в enterprise: MySQL, PostgreSQL, Microsoft SQL Server. На базовом SQL похожи; на уровне типов, продвинутых индексов, репликации и оптимизатора &mdash; разные. Понимание различий критично для интеграционных задач, миграций между СУБД, переносимых ORM-запросов и для senior-уровня.</p>
   </div>
 
   <div class="subsection">
@@ -1561,7 +1561,7 @@ Limit  (actual time=<span class="c-num">120.4</span>..<span class="c-num">120.5<
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="git-compare-arrows"></i> Partial index — путаница терминов MySQL vs PostgreSQL</div>
 
-    <p class="text">Одно слово «partial index» — <strong>две совсем разные фичи</strong> в MySQL и PostgreSQL. Классический источник недопонимания на собеседованиях и в переводимых статьях.</p>
+    <p class="text">Одно слово «partial index» — <strong>две совсем разные фичи</strong> в MySQL и PostgreSQL. Классический источник недопонимания и в переводимых статьях.</p>
 
     <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="filter" style="width:14px;height:14px"></i> PostgreSQL: partial index = индекс по подмножеству строк (<code>WHERE</code>)</div>
     <p class="text">PostgreSQL позволяет индексировать <em>не всю таблицу</em>, а только строки, удовлетворяющие условию:</p>
@@ -1611,7 +1611,7 @@ Limit  (actual time=<span class="c-num">120.4</span>..<span class="c-num">120.5<
       <li><strong>Отдельная таблица для «горячих» строк.</strong> <code>jobs</code> + <code>jobs_pending</code>, куда триггер переносит записи при смене статуса. Радикально, но иногда лечит production.</li>
     </ul>
 
-    <div class="pitfall"><strong>На собеседовании:</strong> если тебя спросят «какие бывают partial indexes» — уточни, о какой СУБД речь. В контексте PostgreSQL это <em>условные индексы</em>, в MySQL — <em>префиксные</em>. Смешивать нельзя.</div>
+    <div class="pitfall"><strong>Частый вопрос:</strong> если спросят «какие бывают partial indexes» — уточни, о какой СУБД речь. В контексте PostgreSQL это <em>условные индексы</em>, в MySQL — <em>префиксные</em>. Смешивать нельзя.</div>
 
     <div class="remember-box">
       <strong>Мнемоника:</strong> в PG «partial» = «частичная <em>выборка строк</em>» (WHERE). В MySQL «partial» = «частичное <em>значение колонки</em>» (первые N символов). Одно слово, две разные оптимизации.
@@ -1624,7 +1624,7 @@ Limit  (actual time=<span class="c-num">120.4</span>..<span class="c-num">120.5<
     <p class="text">Если новый Laravel-проект стартует с чистого листа и есть свобода выбора СУБД — <strong>PostgreSQL</strong> чаще всего выигрышный вариант. Не потому что «модно», а потому что для типичных бэкенд-задач (очереди, транзакции с побочками, атомарная выдача ресурсов, консистентность денежных операций) PG даёт из коробки несколько вещей, которых в MySQL просто нет.</p>
 
     <div class="info-box primary">
-      <strong>Аргумент на собеседовании:</strong> выбрать «MySQL, потому что я его знаю» — слабый сигнал. Выбрать «Postgres» и назвать 3 конкретных технических причины (RETURNING + SKIP LOCKED, предсказуемая изоляция, частичные индексы) — сильный.
+      <strong>Аргументация выбора:</strong> выбрать «MySQL, потому что я его знаю» — слабый сигнал. Выбрать «Postgres» и назвать 3 конкретных технических причины (RETURNING + SKIP LOCKED, предсказуемая изоляция, частичные индексы) — сильный.
     </div>
 
     <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="shield-check" style="width:14px;height:14px"></i> 1. Предсказуемая изоляция без «сюрпризов»</div>
@@ -1894,7 +1894,7 @@ $$;
   <div class="section-title">PDO в PHP</div>
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="book-open"></i> Назначение</div>
-    <p class="text">PDO &mdash; унифицированный интерфейс работы с реляционными БД, прозрачный между MySQL/PostgreSQL/SQLite/MSSQL. Laravel оборачивает PDO в Eloquent/Query Builder; знание PDO нужно для понимания, что происходит под капотом, безопасной обработки пограничных случаев и грамотных ответов на интервью.</p>
+    <p class="text">PDO &mdash; унифицированный интерфейс работы с реляционными БД, прозрачный между MySQL/PostgreSQL/SQLite/MSSQL. Laravel оборачивает PDO в Eloquent/Query Builder; знание PDO нужно для понимания, что происходит под капотом, безопасной обработки пограничных случаев и грамотных формулировок.</p>
   </div>
 
   <div class="subsection">
@@ -2030,7 +2030,7 @@ $$;
 </div>
 
 <div id="sec-interview" class="section">
-  <div class="section-title">Вопросы на собеседование (middle / senior)</div>
+  <div class="section-title">Вопросы для самопроверки (middle / senior)</div>
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="brain"></i> Основы и индексы</div>

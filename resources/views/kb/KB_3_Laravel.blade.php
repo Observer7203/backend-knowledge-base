@@ -315,7 +315,7 @@ ul.bullets strong{color:var(--text);}
   <div class="nav-group-label">Применение</div>
   <a class="nav-item" onclick="showSection('practice',this)"><i data-lucide="hammer"></i> Практика</a>
   <a class="nav-item" onclick="showSection('pitfalls',this)"><i data-lucide="alert-octagon"></i> Подводные камни</a>
-  <a class="nav-item" onclick="showSection('interview',this)"><i data-lucide="brain"></i> На собеседование</a>
+  <a class="nav-item" onclick="showSection('interview',this)"><i data-lucide="brain"></i> Вопросник</a>
 </div>
 
 <div class="main">
@@ -2564,7 +2564,7 @@ has no registered handler.</code></pre>
       </tbody>
     </table>
     <div class="remember-box">
-      <strong>Мнемоника (обычно заходит на собесе):</strong> <code>bootstrap/</code> отвечает на вопрос «<em>как собрать</em> приложение», <code>config/</code> — «<em>с какими параметрами</em> оно работает».
+      <strong>Мнемоника:</strong> <code>bootstrap/</code> отвечает на вопрос «<em>как собрать</em> приложение», <code>config/</code> — «<em>с какими параметрами</em> оно работает».
     </div>
   </div>
 
@@ -8973,7 +8973,7 @@ php artisan migrate</code></pre>
     </div>
 
     <div class="tip">
-      <strong>Часто на собесе:</strong> «Чем отличается Event от Job?». Короткий ответ: <em>Event — «случилось X», может быть 0..N слушателей, слабая связь. Job — «сделай Y», один обработчик, явный вызов. Event хорош когда одна причина → много следствий.</em>
+      <strong>Частый вопрос:</strong> «Чем отличается Event от Job?». Короткий ответ: <em>Event — «случилось X», может быть 0..N слушателей, слабая связь. Job — «сделай Y», один обработчик, явный вызов. Event хорош когда одна причина → много следствий.</em>
     </div>
 
     <div class="subsection-title" style="margin-top:14px;font-size:14px"><i data-lucide="help-circle" style="width:14px;height:14px"></i> Частые вопросы про Jobs / Events</div>
@@ -10743,7 +10743,7 @@ php artisan migrate
 @endverbatim
 @verbatim
 <div id="sec-interview" class="section">
-  <div class="section-title">Вопросы на собеседование (middle / senior)</div>
+  <div class="section-title">Вопросы для самопроверки (middle / senior)</div>
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="rotate-cw"></i> Lifecycle и Container</div>

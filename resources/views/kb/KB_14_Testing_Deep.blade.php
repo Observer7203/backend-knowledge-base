@@ -142,7 +142,7 @@ ul.bullets strong{color:var(--text);}
   <div class="nav-group-label">Применение</div>
   <a class="nav-item" onclick="showSection('practice',this)"><i data-lucide="hammer"></i> Практика</a>
   <a class="nav-item" onclick="showSection('pitfalls',this)"><i data-lucide="alert-octagon"></i> Подводные камни</a>
-  <a class="nav-item" onclick="showSection('interview',this)"><i data-lucide="brain"></i> На собеседование</a>
+  <a class="nav-item" onclick="showSection('interview',this)"><i data-lucide="brain"></i> Вопросник</a>
 </div>
 
 <div class="main">
@@ -1281,7 +1281,7 @@ php -d pcov.enabled=<span class="c-num">1</span> vendor/bin/phpunit --coverage-h
      INTERVIEW
      ════════════════════════════════════════════════════════════════ -->
 <div id="sec-interview" class="section">
-  <div class="section-title">Вопросы на собеседование (middle / senior)</div>
+  <div class="section-title">Вопросы для самопроверки (middle / senior)</div>
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="users"></i> Test doubles и дизайн</div>

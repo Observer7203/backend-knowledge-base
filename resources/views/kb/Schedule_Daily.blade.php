@@ -298,7 +298,7 @@ const weeks = [
   // ───── НЕДЕЛЯ 4 ─────
   { title: "Неделя 4: SQL — часть 2 + Laravel старт", theme: "Транзакции, ACID, нормализация, PDO + начало Laravel", review: "Повтор: JOIN'ы, индексы (нед.3)",
     milestone: "🎯 Конец Месяца 1: самопроверка по вопросникам уровня Junior+",
-    goal: "Закрыть SQL полностью + начать Laravel. ACID — обязательно на собесе.",
+    goal: "Закрыть SQL полностью + начать Laravel. ACID — обязательно.",
     days: [
       { tasks: [
         { t: "Транзакции и ACID", d: "KB_2 разд.11 — BEGIN/COMMIT/ROLLBACK, SAVEPOINT, deadlocks.", file: "KB_2_SQL_Database.html", type: "read" },
@@ -332,7 +332,7 @@ const weeks = [
   // ═══════════════════ МЕСЯЦ 2 — LARAVEL + DI + SECURITY ═══════════════════
   // ───── НЕДЕЛЯ 5 ─────
   { title: "Неделя 5: Laravel Core — Eloquent, Queues, Auth", theme: "Eloquent, N+1, Queues, Events, Sanctum, Policies", review: "Повтор: SQL JOIN (нед.3)",
-    goal: "KB_3 разделы 5-14. Главные темы для middle Laravel-собеса.",
+    goal: "KB_3 разделы 5-14. Главные темы уровня middle Laravel.",
     days: [
       { tasks: [
         { t: "Eloquent основы", d: "KB_3 разд.5 — модели, casts, accessors/mutators, scopes, observers.", file: "KB_3_Laravel.html", type: "read" },
@@ -461,7 +461,7 @@ const weeks = [
   // ───── НЕДЕЛЯ 9 ─────
   { title: "Неделя 9: Security — Token Rotation, OAuth, JWT, XSS, CSRF", theme: "Аутентификация и веб-атаки", review: "Повтор: Sanctum + DI (нед.5,8)",
     milestone: "🎯 Конец Месяца 2: уровень Middle закрыт",
-    goal: "KB_4 — 16 секций. Token Rotation, OAuth, JWT, XSS, CSRF, SQLi, CORS. Spectre на собесе.",
+    goal: "KB_4 — 16 секций. Token Rotation, OAuth, JWT, XSS, CSRF, SQLi, CORS. Spectre.",
     days: [
       { tasks: [
         { t: "Token Rotation (Access + Refresh)", d: "KB_4 разд.1 — flow, reuse detection, Laravel implementation. ЧАСТО СПРАШИВАЮТ.", file: "KB_4_Security.html", type: "read" },
@@ -526,7 +526,7 @@ const weeks = [
 
   // ───── НЕДЕЛЯ 11 ─────
   { title: "Неделя 11: Testing Deep — PHPUnit, Pest, Mocks, TDD", theme: "Test doubles, design тестов, DB strategies, mutation testing", review: "Повтор: SOLID + паттерны (нед.10)",
-    goal: "KB_14 (13 секций) + KB_6 testing-часть. На собесе должен уверенно сказать 'пишу тесты'.",
+    goal: "KB_14 (13 секций) + KB_6 testing-часть. Должен уверенно сказать 'пишу тесты'.",
     days: [
       { tasks: [
         { t: "PHPUnit + Pest синтаксис", d: "KB_6 разд.1-2 — assertions, setUp/tearDown, data providers, Pest expectation API.", file: "KB_6_Testing_DevOps.html", type: "read" },
@@ -559,7 +559,7 @@ const weeks = [
 
   // ───── НЕДЕЛЯ 12 ─────
   { title: "Неделя 12: DevOps + Helpers + Networking", theme: "Docker, Git, CI/CD, Nginx, Linux, Laravel Helpers, Networking", review: "Повтор: Testing (нед.11)",
-    goal: "KB_6 devops + KB_10 Helpers + KB_11 обзор. Docker и CI/CD спрашивают на каждом 2-м собесе.",
+    goal: "KB_6 devops + KB_10 Helpers + KB_11 обзор. Docker и CI/CD спрашивают повсеместно.",
     days: [
       { tasks: [
         { t: "Docker Fundamentals", d: "KB_6 разд.8 — images, containers, Dockerfile, layers, multi-stage.", file: "KB_6_Testing_DevOps.html", type: "read" },
