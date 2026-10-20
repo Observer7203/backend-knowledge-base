@@ -166,7 +166,7 @@
 
   /* ---------- появление блоков при скролле ---------- */
   function revealOnScroll() {
-    var targets = [].slice.call(document.querySelectorAll('.hub .card, .hub .stat, .hub .section-title, .hub .method, .hub .academic, .hub .inst'));
+    var targets = [].slice.call(document.querySelectorAll('.hub .card, .hub .stat, .hub .feature, .hub .section-title, .hub .method, .hub .academic, .hub .inst'));
     if (!targets.length) return;
     if (!('IntersectionObserver' in window)) return;
 

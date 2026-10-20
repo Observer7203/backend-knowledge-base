@@ -341,13 +341,49 @@
 <div class="hub">
 
   <!-- ── Stats ── -->
+  <!-- Пересчитать: скрипт считает nav-item / subsection-title / <pre><code> / data-table
+       по публичным модулям (без KB_7, KB_8, KB_15). -->
   <div class="stats-row">
-    <div class="stat"><span class="n">7</span><span class="l">Модулей</span></div>
-    <div class="stat"><span class="n">117</span><span class="l">Тем</span></div>
-    <div class="stat"><span class="n">90+</span><span class="l">Примеров кода</span></div>
-    <div class="stat"><span class="n">50+</span><span class="l">Квизов</span></div>
-    <div class="stat"><span class="n">24</span><span class="l">Interview Q&A</span></div>
-    <div class="stat"><span class="n">19</span><span class="l">Курсов</span></div>
+    <div class="stat"><span class="n">19</span><span class="l">Модулей</span></div>
+    <div class="stat"><span class="n">399</span><span class="l">Разделов</span></div>
+    <div class="stat"><span class="n">1805</span><span class="l">Тем</span></div>
+    <div class="stat"><span class="n">1600</span><span class="l">Примеров кода</span></div>
+    <div class="stat"><span class="n">434</span><span class="l">Таблиц</span></div>
+  </div>
+
+  <!-- ── Как устроена база ── -->
+  <div class="section-title" id="features">Как устроена база</div>
+  <div class="feature-grid">
+    <div class="feature">
+      <div class="feature-icon"><i data-lucide="layers"></i></div>
+      <h3>Разбито на модули</h3>
+      <p>19 модулей от основ PHP до Node.js и React. Внутри каждого — боковая навигация по разделам, чтобы можно было вернуться к одной теме, а не листать всё подряд.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon"><i data-lucide="code-2"></i></div>
+      <h3>Код, а не пересказ</h3>
+      <p>1600 примеров. Везде рабочий фрагмент с комментариями, который объясняет, что происходит под капотом, — вместо псевдокода и общих слов.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon"><i data-lucide="alert-triangle"></i></div>
+      <h3>Подводные камни</h3>
+      <p>У каждой темы — отдельный блок с типичными ошибками и заблуждениями. То, обо что спотыкаются на практике, вынесено явно, а не спрятано в тексте.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon"><i data-lucide="table-2"></i></div>
+      <h3>Сравнительные таблицы</h3>
+      <p>434 таблицы: что выбрать и когда. Типы связывания в контейнере, уровни изоляции, форматы индексов — рядом, в одном месте, а не по разным статьям.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon"><i data-lucide="help-circle"></i></div>
+      <h3>Вопросы для самопроверки</h3>
+      <p>Вопросники по уровням от Junior+ до Senior. Отвечать вслух, затем сверяться с разделом — так видно, что действительно понято, а что только узнаётся.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon"><i data-lucide="search"></i></div>
+      <h3>Поиск и тёмная тема</h3>
+      <p>Поиск по разделу открывается клавишей <code>/</code>. Тема переключается в шапке и запоминается. На телефоне навигация убирается в выдвижную панель.</p>
+    </div>
   </div>
 
   @endverbatim

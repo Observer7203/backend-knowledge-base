@@ -708,6 +708,56 @@ pre code {
 .hub .card { transition: transform .2s, box-shadow .2s, border-color .2s; }
 .hub .card:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); border-color: var(--primary) !important; }
 
+/* ---------- Блок «Как устроена база» ---------- */
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 14px;
+  margin: 0 0 44px;
+}
+.feature {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 26px 24px 24px;
+  overflow: hidden;
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+}
+/* мягкий ореол в фирменном цвете — проявляется при наведении */
+.feature::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(420px circle at 0% 0%, rgba(234, 40, 69, .07), transparent 62%);
+  opacity: 0;
+  transition: opacity .25s ease;
+  pointer-events: none;
+}
+.feature:hover { transform: translateY(-4px); border-color: var(--primary); box-shadow: var(--shadow-hover); }
+.feature:hover::before { opacity: 1; }
+.feature-icon {
+  width: 42px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 11px;
+  margin-bottom: 15px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+}
+.feature-icon svg { width: 20px; height: 20px; stroke-width: 1.8; }
+.feature h3 { font-size: 15px; font-weight: 700; margin: 0 0 8px; color: var(--text); letter-spacing: -.01em; }
+.feature p  { margin: 0; font-size: 13.5px; line-height: 1.72; color: var(--text2); }
+.feature code {
+  font-size: 12.5px !important;
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--surface2);
+}
+@media (max-width: 760px) {
+  .feature-grid { grid-template-columns: 1fr; gap: 12px; }
+  .feature { padding: 22px 20px; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .kb-lava .blob, .kb-scroll-hint span { animation: none !important; }
   .kb-rise, .kb-reveal { opacity: 1 !important; transform: none !important; animation: none !important; transition: none !important; }
