@@ -793,6 +793,31 @@ pre code {
   background: color-mix(in srgb, var(--primary) 10%, transparent);
 }
 .feature-icon svg { width: 20px; height: 20px; stroke-width: 1.8; }
+
+/* ---------- Иконки карточек модулей ----------
+   Классы вида .ic-green, .ic-gray приходят из БД и не все описаны
+   в теме страницы — такие иконки оставались без подложки. Стилизуем
+   сам .card-icon, поэтому вид одинаковый независимо от класса. */
+.hub .card-icon {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 11px !important;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary) !important;
+  background: color-mix(in srgb, var(--primary) 10%, transparent) !important;
+  transition: background .18s ease, color .18s ease;
+}
+.hub .card-icon svg { width: 20px !important; height: 20px !important; stroke-width: 1.8 !important; }
+.hub .card:hover .card-icon { background: color-mix(in srgb, var(--primary) 16%, transparent) !important; }
+
+/* Бейдж карточки — тоже единый вид для всех вариантов класса */
+.hub .card .badge {
+  background: var(--surface2) !important;
+  color: var(--text3) !important;
+  border: 1px solid var(--border) !important;
+}
 .feature h3 { font-size: 15px; font-weight: 700; margin: 0 0 8px; color: var(--text); letter-spacing: -.01em; }
 .feature p  { margin: 0; font-size: 13.5px; line-height: 1.72; color: var(--text2); }
 .feature code {
