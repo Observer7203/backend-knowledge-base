@@ -150,6 +150,7 @@ ol.numbered strong{color:var(--text);}
   <a class="nav-item" onclick="showSection('node-npm',this)"><i data-lucide="file-json"></i> package.json и npm</a>
 
   <div class="nav-group-label">Node.js — ядро</div>
+  <a class="nav-item" onclick="showSection('io',this)"><i data-lucide="arrow-left-right"></i> I/O и libuv</a>
   <a class="nav-item" onclick="showSection('event-loop',this)"><i data-lucide="repeat"></i> Event loop и фазы</a>
   <a class="nav-item" onclick="showSection('threadpool',this)"><i data-lucide="cpu"></i> Thread pool и блокировка</a>
   <a class="nav-item" onclick="showSection('async-errors',this)"><i data-lucide="alert-triangle"></i> Ошибки в async-коде</a>
@@ -571,6 +572,122 @@ npx tsc --init               <span class="c-comment"># выполнить пак
     <div class="remember-box"><code>npx</code> — запуск бинарника пакета без глобальной установки. Именно так создают проекты: <code>npx @nestjs/cli new my-app</code>.</div>
   </div>
 </div>
+@endverbatim
+@verbatim
+<div id="sec-io" class="section">
+  <div class="section-title">I/O: что это и почему вокруг него построен Node</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="arrow-left-right"></i> Что считается вводом-выводом</div>
+    <p class="text">I/O (input/output) — любой обмен данными с внешним миром относительно процесса: чтение и запись файлов, сетевые запросы, сокеты, работа с базой, <code>stdin</code>/<code>stdout</code>, DNS-запросы. Общее у них одно: нужно <strong>ждать</strong> ответа от диска, сети или другого процесса, и это ожидание программа не контролирует.</p>
+    <div class="remember-box"><strong>Ключевая мысль.</strong> I/O — это медленно, и его нельзя блокировать. Пока один запрос ждёт диск или сеть, Node обязан обслуживать остальные. Ровно этим занимается libuv.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="timer"></i> Почему ожидание — это проблема</div>
+    <p class="text">Процессор работает на порядки быстрее внешних устройств. Отсюда и вся асинхронная модель:</p>
+    <table class="data-table">
+      <thead><tr><th>Операция</th><th>Примерное время</th><th>Во сколько раз медленнее инструкции CPU</th></tr></thead>
+      <tbody>
+        <tr><td>Выполнить инструкцию CPU</td><td>~0.3 нс</td><td>1×</td></tr>
+        <tr><td>Прочитать из RAM</td><td>~100 нс</td><td>~300×</td></tr>
+        <tr><td>Прочитать с SSD</td><td>~100 000 нс (0.1 мс)</td><td>~300 000×</td></tr>
+        <tr><td>Сетевой запрос внутри дата-центра</td><td>~0.5–1 мс</td><td>~2 000 000×</td></tr>
+        <tr><td>Запрос к БД</td><td>~1–50 мс</td><td>до ~150 000 000×</td></tr>
+        <tr><td>Сеть через интернет</td><td>~50–500 мс</td><td>до ~1 500 000 000×</td></tr>
+      </tbody>
+    </table>
+    <p class="text">Если программа «встаёт и ждёт» диск или сеть — процессор простаивает. Классический сервер на потоках решает это так: на каждый запрос отдельный поток, и потоки просто спят в ожидании I/O. При тысячах соединений это дорого и по памяти, и по переключениям контекста.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="split"></i> Блокирующий против неблокирующего</div>
+    <p class="text">Одно и то же чтение файла двумя способами:</p>
+<pre><code><span class="c-comment">// ❌ Блокирующий: поток Node замирает, пока файл читается</span>
+<span class="c-key">const</span> fs = <span class="c-fn">require</span>(<span class="c-str">'node:fs'</span>);
+<span class="c-key">const</span> data = fs.<span class="c-fn">readFileSync</span>(<span class="c-str">'big.txt'</span>, <span class="c-str">'utf8'</span>);
+<span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'прочитано'</span>, data.length);
+<span class="c-comment">// следующие строки не выполнятся, пока чтение не закончится</span>
+
+<span class="c-comment">// ✅ Неблокирующий: Node работает дальше, результат придёт позже</span>
+<span class="c-key">const</span> fs = <span class="c-fn">require</span>(<span class="c-str">'node:fs'</span>);
+fs.<span class="c-fn">readFile</span>(<span class="c-str">'big.txt'</span>, <span class="c-str">'utf8'</span>, (err, data) =&gt; {
+  <span class="c-key">if</span> (err) <span class="c-key">throw</span> err;
+  <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'прочитано'</span>, data.length);
+});
+<span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'эта строка выполнится сразу, не дожидаясь файла'</span>);</code></pre>
+    <p class="text">В асинхронном варианте Node отдаёт чтение системе через libuv, а сам возвращается в event loop и обслуживает другие запросы. Когда данные готовы — вызывается колбэк или резолвится промис.</p>
+    <p class="text"><code>async/await</code> — тот же механизм, просто записанный линейно:</p>
+<pre><code><span class="c-key">const</span> fs = <span class="c-fn">require</span>(<span class="c-str">'node:fs/promises'</span>);
+
+<span class="c-key">async function</span> <span class="c-fn">main</span>() {
+  <span class="c-key">const</span> data = <span class="c-key">await</span> fs.<span class="c-fn">readFile</span>(<span class="c-str">'big.txt'</span>, <span class="c-str">'utf8'</span>); <span class="c-comment">// event loop не блокируется</span>
+  <span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'прочитано'</span>, data.length);
+}
+<span class="c-fn">main</span>();</code></pre>
+    <div class="pitfall"><strong>Частая ошибка.</strong> <code>await</code> не делает код «параллельным» — он лишь не блокирует event loop на время ожидания. Два последовательных <code>await</code> выполнятся один за другим; чтобы они шли одновременно, нужен <code>Promise.all</code>.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="cog"></i> Две части libuv</div>
+    <p class="text">libuv — C-библиотека, дающая Node кроссплатформенный неблокирующий I/O. В ней две ключевые части.</p>
+    <p class="text"><strong>1. Event loop — диспетчер.</strong> Бесконечный цикл, который забирает у ОС готовые события («пришли данные по сокету», «сработал таймер», «файл прочитан»), вызывает соответствующие JS-колбэки, проверяет отложенные задачи, а если делать нечего — засыпает и просыпается на новом событии. Именно поэтому один поток JS обслуживает тысячи соединений: он не ждёт каждое, а реагирует на события. Подробный разбор фаз — в разделе <strong>Event loop и фазы</strong>.</p>
+    <p class="text"><strong>2. Пул потоков.</strong> Некоторые операции ОС не умеет делать асинхронно — например, чтение файлов на Linux. Для них libuv держит пул фоновых потоков (по умолчанию 4, меняется через <code>UV_THREADPOOL_SIZE</code>): они выполняют блокирующую работу, а event loop получает только результат. Что именно уходит в пул, а что обрабатывается ОС напрямую через <code>epoll</code>/<code>kqueue</code>/<code>IOCP</code> — разобрано в разделе <strong>Thread pool и блокировка</strong>.</p>
+    <div class="pitfall"><strong>Следствие, о которое спотыкаются.</strong> Запустите пять тяжёлых <code>fs.readFile</code> одновременно при пуле из четырёх потоков — пятый будет ждать освобождения. Это частая причина «загадочных» задержек, которые не объясняются ни сетью, ни базой.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="route"></i> Путь одного HTTP-запроса через слои</div>
+    <p class="text">Как части схемы из раздела «Из чего состоит» работают вместе:</p>
+    <div class="diagram">1. Запрос приходит по сети
+   └─ ОС сообщает libuv через epoll / kqueue / IOCP
+
+2. Event loop видит событие «данные на сокете»
+   └─ вызывает JS-колбэк через Bindings (мост JS ↔ C++)
+
+3. V8 исполняет твой обработчик (роут Express или Nest)
+
+4. Обработчик читает файл:
+   ├─ fs.readFile → libuv кладёт задачу в пул потоков
+   └─ event loop свободен и обслуживает другие запросы
+
+5. Пул потоков прочитал файл → событие в event loop
+   └─ вызывается колбэк / резолвится промис → формируется ответ
+
+6. Ответ уходит в сокет через libuv → ОС → сеть</div>
+    <p class="text">Нижние слои схемы — конкретные C-библиотеки, на которых стоят встроенные модули: <strong>OpenSSL</strong> (<code>node:crypto</code>, HTTPS/TLS), <strong>zlib</strong> (сжатие, gzip в HTTP), <strong>c-ares</strong> (асинхронный DNS в <code>dns.resolve*</code>), <strong>llhttp</strong> (парсер HTTP), <strong>undici</strong> (HTTP-клиент, на котором работает глобальный <code>fetch</code>).</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="scale"></i> I/O-bound против CPU-bound</div>
+    <p class="text">Node оптимизирован под <strong>I/O-bound</strong> задачи — где время уходит на ожидание сети и диска, а не на вычисления: API-серверы, прокси, real-time, чаты, стриминг. Здесь он силён.</p>
+    <p class="text">Но JS исполняется в одном потоке V8. Тяжёлые вычисления — сортировка гигантского массива, обработка изображений, криптография на чистом JS — останавливают event loop, и все соединения ждут, хотя никакого I/O нет:</p>
+<pre><code><span class="c-comment">// ❌ Блокирует event loop на секунды — все запросы повиснут</span>
+<span class="c-key">function</span> <span class="c-fn">heavyCpu</span>() {
+  <span class="c-key">let</span> sum = <span class="c-num">0</span>;
+  <span class="c-key">for</span> (<span class="c-key">let</span> i = <span class="c-num">0</span>; i &lt; <span class="c-num">1e10</span>; i++) sum += i;
+  <span class="c-key">return</span> sum;
+}
+
+<span class="c-comment">// ✅ Уводим в worker thread — event loop свободен</span>
+<span class="c-key">const</span> { Worker } = <span class="c-fn">require</span>(<span class="c-str">'node:worker_threads'</span>);
+<span class="c-key">new</span> <span class="c-type">Worker</span>(<span class="c-str">'./heavy-worker.js'</span>);</code></pre>
+    <table class="data-table">
+      <thead><tr><th>Куда выносить CPU-работу</th><th>Когда это правильный выбор</th></tr></thead>
+      <tbody>
+        <tr><td><code>node:worker_threads</code></td><td>Настоящие потоки внутри процесса, есть общая память через <code>SharedArrayBuffer</code></td></tr>
+        <tr><td><code>node:child_process</code></td><td>Отдельный процесс — изоляция памяти, можно запускать не-JS</td></tr>
+        <tr><td>Нативные асинхронные реализации</td><td><code>crypto</code> и <code>zlib</code> уже уходят в пул потоков — не пишите своё на чистом JS</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="check-circle"></i> Короткая формула</div>
+    <div class="remember-box">I/O — это ожидание внешнего мира. Неблокирующий I/O — способ ждать, не останавливая программу. libuv организует это ожидание: event loop реагирует на события, пул потоков выполняет блокирующую часть, а V8 тем временем спокойно исполняет JavaScript.<br><br>Поэтому Node и называют <strong>однопоточным, но конкурентным</strong>: один поток JS — и множество одновременных I/O-операций.</div>
+  </div>
+</div>
+
 @endverbatim
 @verbatim
 <div id="sec-event-loop" class="section">
