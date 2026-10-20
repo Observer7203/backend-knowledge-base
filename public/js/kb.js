@@ -1,13 +1,28 @@
-/* KB: верхняя плашка (лого + поиск), переключатель темы.
+/* KB: верхняя плашка (лого + поиск), переключатели темы и акцента.
    Тема применяется инлайн-скриптом в <head>, здесь — UI. */
 (function () {
   'use strict';
 
   var KEY = 'kb-theme';
+  var ACCENT_KEY = 'kb-accent';
   var root = document.documentElement;
 
   /* ---------- тема ---------- */
   function current() { return root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
+
+  /* ---------- акцент: красный / синий ---------- */
+  function currentAccent() { return root.getAttribute('data-accent') === 'blue' ? 'blue' : 'red'; }
+
+  function applyAccent(accent) {
+    if (accent === 'blue') root.setAttribute('data-accent', 'blue');
+    else root.removeAttribute('data-accent');
+    try { localStorage.setItem(ACCENT_KEY, accent); } catch (e) {}
+    var btn = document.getElementById('kb-accent');
+    if (btn) {
+      btn.title = accent === 'blue' ? 'Красный акцент' : 'Синий акцент';
+      btn.setAttribute('aria-label', btn.title);
+    }
+  }
 
   function applyTheme(theme) {
     root.setAttribute('data-theme', theme);
@@ -206,6 +221,7 @@
                'autocomplete="off" spellcheck="false">' +
         '<kbd>/</kbd>' +
       '</div>' +
+      '<button id="kb-accent" type="button"><span class="kb-dot"></span></button>' +
       '<button id="kb-theme" type="button"></button>' +
       '<button id="kb-burger" type="button" aria-label="Меню">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
@@ -220,12 +236,17 @@
       applyTheme(current() === 'dark' ? 'light' : 'dark');
     });
 
+    bar.querySelector('#kb-accent').addEventListener('click', function () {
+      applyAccent(currentAccent() === 'blue' ? 'red' : 'blue');
+    });
+
     wireDrawer(bar.querySelector('#kb-burger'));
     buildToc();
     watchSections();
     revealOnScroll();
     wireSearch(bar.querySelector('#kb-search-input'));
     applyTheme(current());
+    applyAccent(currentAccent());
   }
 
   if (document.readyState === 'loading') {
