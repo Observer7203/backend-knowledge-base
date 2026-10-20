@@ -136,6 +136,7 @@ ul.bullets strong{color:var(--text);}
   <div class="nav-group-label">Большая архитектура</div>
   <a class="nav-item" onclick="showSection('ddd',this)"><i data-lucide="boxes"></i> DDD тактика</a>
   <a class="nav-item" onclick="showSection('clean',this)"><i data-lucide="cuboid"></i> Clean / Hexagonal</a>
+  <a class="nav-item" onclick="showSection('microservices',this)"><i data-lucide="layout-grid"></i> Микросервисы и монолит</a>
   <a class="nav-item" onclick="showSection('outbox',this)"><i data-lucide="mailbox"></i> Transactional Outbox</a>
   <a class="nav-item" onclick="showSection('tenancy',this)"><i data-lucide="building-2"></i> Мультитенантность</a>
 
@@ -724,6 +725,107 @@ ul.bullets strong{color:var(--text);}
     <div class="pitfall"><strong>6. Тестирование Use Case моками.</strong> Use Case с 5 моков &mdash; тест проверяет реализацию. Используйте in-memory implementations.</div>
     <div class="pitfall"><strong>7. Hexagonal без портов.</strong> «У нас Hexagonal» &mdash; но интерфейсы Repository отсутствуют. Это не Hexagonal.</div>
     <div class="pitfall"><strong>8. Postel's Law нарушение.</strong> Принимать строгие типы, возвращать лояльные. Часто наоборот &mdash; контракт асимметричен.</div>
+  </div>
+</div>
+
+<div id="sec-microservices" class="section">
+  <div class="section-title">Микросервисы и монолит</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="help-circle"></i> Определения</div>
+    <p class="text"><strong>Микросервис</strong> — небольшая автономная программа, отвечающая за одну бизнес-возможность и общающаяся с остальными по сети: HTTP/REST, gRPC или сообщения.</p>
+    <p class="text"><strong>Микросервисная архитектура</strong> — построение приложения как набора таких независимых сервисов вместо одного большого.</p>
+    <div class="analogy"><strong>Аналогия.</strong> Монолит — один большой завод, где всё производство в одном здании. Микросервисы — сеть небольших цехов: каждый делает свою деталь и общается с остальными по договорённостям.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> Чем микросервис отличается от модуля</div>
+    <p class="text">Модуль внутри монолита — часть одного процесса и одной кодовой базы. Микросервис — <strong>отдельно развёртываемый компонент</strong>.</p>
+    <table class="data-table">
+      <tr><th>Критерий</th><th>Монолит</th><th>Микросервисы</th></tr>
+      <tr><td><strong>Развёртывание</strong></td><td>Всё приложение целиком</td><td>Каждый сервис отдельно</td></tr>
+      <tr><td><strong>База данных</strong></td><td>Обычно общая</td><td>У каждого своя</td></tr>
+      <tr><td><strong>Масштабирование</strong></td><td>Масштабируется всё</td><td>Только нагруженный сервис</td></tr>
+      <tr><td><strong>Технологии</strong></td><td>Один стек</td><td>Можно разные языки и БД</td></tr>
+      <tr><td><strong>Сбои</strong></td><td>Падение может уронить всё</td><td>Изолируются, но появляются сетевые отказы</td></tr>
+      <tr><td><strong>Сложность</strong></td><td>Проще разрабатывать и отлаживать</td><td>Сложнее инфраструктура и наблюдаемость</td></tr>
+      <tr><td><strong>Транзакции</strong></td><td>Обычные транзакции БД</td><td>Саги и eventual consistency</td></tr>
+    </table>
+    <div class="info-box danger"><strong>Главное заблуждение.</strong> Микросервисы — это <em>не</em> «разбить код на папки» и <em>не</em> «поставить Docker и Kubernetes». Это архитектурный выбор, который повышает гибкость <strong>ценой роста операционной сложности</strong>. Docker и K8s лишь помогают эту сложность обслуживать, но сами микросервисами не делают.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="list-checks"></i> Ключевые принципы</div>
+    <table class="data-table">
+      <tr><th>Принцип</th><th>Что означает на практике</th></tr>
+      <tr><td><strong>Одна бизнес-возможность</strong></td><td>Корзина, оплата, каталог, уведомления, аутентификация — по одному сервису</td></tr>
+      <tr><td><strong>Независимое развёртывание</strong></td><td>Обновить оплату, не пересобирая весь сайт</td></tr>
+      <tr><td><strong>Изоляция данных</strong></td><td>У сервиса заказов своя БД. В чужие таблицы напрямую не лезут <em>никогда</em></td></tr>
+      <tr><td><strong>Связь по сети</strong></td><td>API или сообщения. Слабая связанность ценой задержек и отказов</td></tr>
+      <tr><td><strong>Автономность команд</strong></td><td>Команда владеет сервисом целиком: код, деплой, база, мониторинг</td></tr>
+      <tr><td><strong>Отказоустойчивость</strong></td><td>Таймауты, ретраи, circuit breaker, очереди, health checks</td></tr>
+      <tr><td><strong>Наблюдаемость</strong></td><td>Логи, метрики, распределённые трассировки</td></tr>
+    </table>
+    <div class="info-box warning"><strong>Изоляция данных — самый нарушаемый принцип.</strong> Соблазн сходить в чужую таблицу напрямую велик: это быстрее и проще, чем звать API. Но ровно в этот момент независимое развёртывание кончается — теперь схема чужой БД стала твоим контрактом, и её нельзя поменять без согласования. Получается распределённый монолит: сложность микросервисов без их преимуществ.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layout-grid"></i> Пример разбиения</div>
+    <div class="diagram">                    ┌─────────────┐
+   Клиент ────────→ │ API Gateway │
+                    └──────┬──────┘
+        ┌──────────┬───────┼───────┬──────────┐
+        ▼          ▼       ▼       ▼          ▼
+    ┌───────┐ ┌────────┐ ┌────┐ ┌──────┐ ┌─────────┐
+    │ Users │ │Catalog │ │Cart│ │Orders│ │Payments │
+    └───┬───┘ └───┬────┘ └─┬──┘ └──┬───┘ └────┬────┘
+        │         │        │       │          │
+       БД        БД       БД      БД         БД      ← у каждого своя
+                                   │
+                                   │ асинхронно, через очередь
+                                   ▼
+                          ┌────────────────┐
+                          │ Notifications  │
+                          └────────────────┘</div>
+    <p class="text">Сервис заказов при оформлении может <strong>синхронно</strong> спросить оплату — ответ нужен сразу. А уведомление отправить <strong>асинхронно</strong> через очередь: пользователь не должен ждать, пока уйдёт письмо.</p>
+    <div class="remember-box"><strong>Правило выбора связи.</strong> Синхронно — когда без ответа нельзя продолжать. Асинхронно — во всех остальных случаях. Каждый лишний синхронный вызов складывает задержки и превращает чужую недоступность в твою.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="scale"></i> Плюсы и минусы</div>
+    <table class="data-table">
+      <tr><th>Плюсы</th><th>Минусы</th></tr>
+      <tr><td>Независимые деплои и релизы</td><td>Сложная инфраструктура: оркестрация, service discovery, gateway</td></tr>
+      <tr><td>Точечное масштабирование</td><td>Сетевые задержки и частичные отказы</td></tr>
+      <tr><td>Изоляция сбоев</td><td>Отладка и трассировка через несколько сервисов</td></tr>
+      <tr><td>Технология под задачу</td><td>Согласованность данных: саги вместо транзакций</td></tr>
+      <tr><td>Команды меньше зависят друг от друга</td><td>Дорого на старте и для маленьких команд</td></tr>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="check-circle-2"></i> Когда оправданы, а когда нет</div>
+    <table class="data-table">
+      <tr><th>Оправданы, если есть</th><th>Не стоит, если</th></tr>
+      <tr><td>Несколько команд</td><td>Команда из двух-трёх человек</td></tr>
+      <tr><td>Высокая нагрузка на отдельные части</td><td>Нагрузка равномерная и небольшая</td></tr>
+      <tr><td>Нужны частые независимые релизы</td><td>Релизы и так редкие</td></tr>
+      <tr><td>Зрелая DevOps-культура</td><td>Нет мониторинга и автодеплоя</td></tr>
+      <tr><td>Понятные границы домена</td><td>Домен ещё не устоялся и меняется</td></tr>
+    </table>
+    <div class="info-box success"><strong>Практический совет.</strong> Новый небольшой проект не начинают с микросервисов. Разумнее начать с <strong>модульного монолита</strong> — одно развёртывание, но чёткие границы модулей и запрет на обращение к чужим таблицам. Когда границы подтвердятся практикой, нужный модуль выносится в сервис почти механически. Обратный путь — собрать монолит из преждевременно нарезанных сервисов — гораздо больнее.</div>
+    <div class="pitfall"><strong>Границы режут по домену, а не по слоям.</strong> Сервисы «контроллеры», «сервисы», «репозитории» — это не микросервисы, а монолит, разорванный по сети: любое изменение задевает все три. Резать надо по бизнес-возможностям — «оплата», «каталог», — чтобы изменение укладывалось в один сервис.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="link"></i> Связь с другими разделами</div>
+    <table class="data-table">
+      <tr><th>Тема</th><th>Где разобрано</th></tr>
+      <tr><td>Надёжная публикация событий между сервисами</td><td><strong>Transactional Outbox</strong> — следующий раздел</td></tr>
+      <tr><td>Границы домена и контексты</td><td><strong>DDD тактика</strong></td></tr>
+      <tr><td>Изоляция данных между клиентами</td><td><strong>Мультитенантность</strong></td></tr>
+      <tr><td>Таймауты, идемпотентность, ретраи</td><td><strong>Node.js и NestJS → Паттерны надёжности</strong></td></tr>
+    </table>
   </div>
 </div>
 

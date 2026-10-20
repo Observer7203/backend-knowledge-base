@@ -140,6 +140,7 @@ ol.numbered strong{color:var(--text);}
 
   <div class="nav-group-label">Знакомство</div>
   <a class="nav-item" onclick="showSection('node-what',this)"><i data-lucide="help-circle"></i> Что такое Node.js</a>
+  <a class="nav-item" onclick="showSection('node-install',this)"><i data-lucide="download"></i> Установка и версии</a>
   <a class="nav-item" onclick="showSection('node-inside',this)"><i data-lucide="layers"></i> Из чего состоит</a>
   <a class="nav-item" onclick="showSection('node-vs-php',this)"><i data-lucide="git-compare"></i> Модель процесса: vs PHP</a>
   <a class="nav-item" onclick="showSection('node-start',this)"><i data-lucide="play"></i> Первая программа и модули</a>
@@ -225,6 +226,83 @@ ol.numbered strong{color:var(--text);}
       </tbody>
     </table>
     <div class="why-box"><strong>Откуда растут и плюсы, и минусы.</strong> Из одной архитектурной идеи: один поток для кода плюс неблокирующий ввод-вывод. Пока программа ждёт БД или сеть, процесс занимается другими запросами — отсюда тысячи соединений на одном процессе. Но если программа <em>считает</em>, а не ждёт, этот же поток занят, и ждут уже все остальные.</div>
+  </div>
+</div>
+@endverbatim
+@verbatim
+<div id="sec-node-install" class="section">
+  <div class="section-title">Установка Node.js</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> JavaScript и Node.js — в чём разница</div>
+    <table class="data-table">
+      <thead><tr><th>Аспект</th><th>JavaScript — язык</th><th>Node.js — среда выполнения</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Что это</strong></td><td>Язык программирования, стандарт ECMAScript</td><td>Платформа, исполняющая JS вне браузера</td></tr>
+        <tr><td><strong>Где работает</strong></td><td>В браузере</td><td>На сервере или локально, отдельным процессом</td></tr>
+        <tr><td><strong>Движок</strong></td><td>Движок конкретного браузера: V8, SpiderMonkey, JavaScriptCore</td><td>V8 из Chrome плюс libuv и системные библиотеки</td></tr>
+        <tr><td><strong>Доступные API</strong></td><td>Браузерные: DOM, <code>window</code>, <code>localStorage</code>, <code>fetch</code></td><td>Серверные: <code>fs</code>, <code>http</code>, <code>net</code>, <code>stream</code>, <code>child_process</code></td></tr>
+        <tr><td><strong>Глобальный объект</strong></td><td><code>window</code></td><td><code>global</code> (и <code>globalThis</code> в обоих)</td></tr>
+        <tr><td><strong>Применение</strong></td><td>Интерактивные страницы, фронтенд</td><td>Бэкенд, API, CLI-инструменты, десктоп через Electron</td></tr>
+      </tbody>
+    </table>
+    <div class="analogy"><strong>Аналогия.</strong> JavaScript — мотор, Node.js — шасси, на которое этот мотор ставят, чтобы он работал не только в браузере. Node даёт коду доступ к системным ресурсам, которых в браузере нет по соображениям безопасности.</div>
+    <div class="remember-box"><strong>Node.js не версия и не замена JavaScript.</strong> Это инструмент, расширяющий сферу применения языка. Один и тот же <code>Array.map</code> работает и там, и там — различается только окружение вокруг.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="download"></i> Установка</div>
+<pre><code><span class="c-comment"># macOS — через Homebrew, стандартный путь</span>
+brew install node              <span class="c-comment"># последняя версия</span>
+brew install node@22           <span class="c-comment"># конкретная major-версия</span>
+
+<span class="c-comment"># Windows</span>
+winget install OpenJS.NodeJS.LTS
+<span class="c-comment"># либо .msi-установщик с nodejs.org</span>
+
+<span class="c-comment"># Ubuntu/Debian — в репозитории обычно устаревшая версия,
+# поэтому ставят из NodeSource</span>
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs</code></pre>
+<pre><code><span class="c-comment"># Проверка — npm ставится вместе с Node</span>
+node --version
+npm --version</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layers"></i> Менеджеры версий</div>
+    <p class="text">На разных проектах нужны разные версии Node. Менеджер версий держит их рядом и переключает одной командой — примерно как <code>brew link</code> для PHP.</p>
+<pre><code><span class="c-comment"># nvm — самый распространённый (macOS, Linux)</span>
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
+
+nvm install --lts      <span class="c-comment"># поставить последнюю LTS</span>
+nvm install 22         <span class="c-comment"># конкретную major</span>
+nvm use 22             <span class="c-comment"># переключиться</span>
+nvm ls                 <span class="c-comment"># что установлено</span>
+nvm alias default 22   <span class="c-comment"># версия по умолчанию в новых сессиях</span></code></pre>
+    <table class="data-table">
+      <thead><tr><th>Менеджер</th><th>Особенность</th></tr></thead>
+      <tbody>
+        <tr><td><strong>nvm</strong></td><td>Стандарт де-факто. Shell-функция, поэтому <code>which nvm</code> ничего не покажет</td></tr>
+        <tr><td><strong>fnm</strong></td><td>То же самое, но на Rust — заметно быстрее при старте оболочки</td></tr>
+        <tr><td><strong>volta</strong></td><td>Прибивает версию к проекту: заходишь в папку — версия переключается сама</td></tr>
+        <tr><td><strong>Homebrew</strong></td><td>Не менеджер версий. Держит одну версию, переключение через <code>brew unlink</code> / <code>brew link</code></td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box">Файл <code>.nvmrc</code> в корне проекта с номером версии плюс <code>nvm use</code> — способ зафиксировать версию для всей команды. Аналог <code>"engines"</code> в <code>package.json</code>, только исполняемый.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="calendar"></i> LTS против Current — что ставить</div>
+    <table class="data-table">
+      <thead><tr><th>Линия</th><th>Номер версии</th><th>Поддержка</th><th>Для чего</th></tr></thead>
+      <tbody>
+        <tr><td><strong>LTS</strong></td><td><strong>Чётный</strong>: 20, 22, 24</td><td>~30 месяцев</td><td>Прод и всё, что должно работать долго</td></tr>
+        <tr><td><strong>Current</strong></td><td><strong>Нечётный</strong>: 21, 23, 25</td><td>~6 месяцев</td><td>Посмотреть новые возможности</td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong>Нечётная версия в проде — мина замедленного действия.</strong> Поддержка кончается примерно через полгода, дальше нет даже патчей безопасности. Плюс часть пакетов просто не заявляет совместимость с Current-линией. Правило простое: <strong>чётный номер — ставим, нечётный — только поэкспериментировать.</strong></div>
+    <div class="remember-box">Проверить, на чём работаешь сейчас: <code>node -v</code>. Зафиксировать требование в проекте: <code>"engines": { "node": "&gt;=22" }</code> в <code>package.json</code> — npm предупредит при несовпадении.</div>
   </div>
 </div>
 @endverbatim
