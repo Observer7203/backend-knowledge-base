@@ -141,12 +141,13 @@ ol.numbered strong{color:var(--text);}
   <div class="sidebar-title">Node.js &amp; NestJS</div>
   <a class="nav-item active" onclick="showSection('overview',this)"><i data-lucide="info"></i> О разделе</a>
 
+  <a class="nav-item" onclick="showSection('big-picture',this)"><i data-lucide="map"></i> Общая картина</a>
+
   <div class="nav-group-label">Знакомство</div>
   <a class="nav-item" onclick="showSection('node-what',this)"><i data-lucide="help-circle"></i> Что такое Node.js</a>
   <a class="nav-item" onclick="showSection('node-install',this)"><i data-lucide="download"></i> Установка и версии</a>
   <a class="nav-item" onclick="showSection('node-inside',this)"><i data-lucide="layers"></i> Из чего состоит</a>
-  <a class="nav-item" onclick="showSection('node-lifecycle',this)"><i data-lucide="play-circle"></i> Жизненный цикл процесса</a>
-  <a class="nav-item" onclick="showSection('node-vs-php',this)"><i data-lucide="git-compare"></i> Модель процесса: vs PHP</a>
+  <a class="nav-item" onclick="showSection('node-vs-php',this)"><i data-lucide="git-compare"></i> Состояние между запросами</a>
   <a class="nav-item" onclick="showSection('node-start',this)"><i data-lucide="play"></i> Первая программа и модули</a>
   <a class="nav-item" onclick="showSection('node-npm',this)"><i data-lucide="file-json"></i> package.json и npm</a>
 
@@ -164,6 +165,7 @@ ol.numbered strong{color:var(--text);}
   <a class="nav-item" onclick="showSection('realtime',this)"><i data-lucide="radio"></i> Реальное время: WS, SSE, polling</a>
 
   <div class="nav-group-label">NestJS</div>
+  <a class="nav-item" onclick="showSection('nest-walkthrough',this)"><i data-lucide="play"></i> Сквозной пример: заказы</a>
   <a class="nav-item" onclick="showSection('nest-arch',this)"><i data-lucide="boxes"></i> Строительные блоки</a>
   <a class="nav-item" onclick="showSection('nest-lifecycle',this)"><i data-lucide="list-ordered"></i> Жизненный цикл запроса</a>
   <a class="nav-item" onclick="showSection('nest-di',this)"><i data-lucide="box"></i> DI и scope</a>
@@ -202,6 +204,90 @@ ol.numbered strong{color:var(--text);}
   </div>
 </div>
 
+@endverbatim
+@verbatim
+<div id="sec-big-picture" class="section">
+  <div class="section-title">Общая картина: как живёт процесс Node</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="map"></i> Одна схема, из которой следует весь раздел</div>
+    <p class="text">Если вы пришли из PHP, самое важное отличие Node не в синтаксисе и не в пакетах. Оно в том, <strong>кто живёт между запросами</strong>. В привычной связке Nginx и PHP-FPM на каждый запрос берётся отдельный процесс-воркер: он поднимает фреймворк, собирает ответ, отдаёт его и умирает. Всё, что он успел положить в переменные, исчезает вместе с ним — именно поэтому в Laravel вы не задумываетесь, не утечёт ли память и не увидит ли следующий посетитель чужие данные. Каждый запрос начинается с чистого листа.</p>
+    <p class="text">Node устроен наоборот. Процесс запускается <strong>один раз</strong> и дальше работает неделями, обслуживая все запросы подряд. Ваш файл выполняется не на каждый запрос, а однократно при старте — он лишь расставляет обработчики и говорит: «вот что делать, когда придёт событие». После этого управление уходит в бесконечный цикл, который принимает события и вызывает ваши функции. Код внутри этих функций выполняется в <strong>одном-единственном потоке</strong>.</p>
+    <div class="diagram">PHP-FPM                             Node.js
+
+запрос  → свой процесс              запрос ─┐
+            ↓                       запрос ─┼→  ОДИН процесс,
+         выполнение                 запрос ─┤   живёт неделями
+            ↓                       запрос ─┘
+         ответ → процесс умер                ↓
+         переменные исчезли               ответ
+                                    переменные остались</div>
+    <p class="text">Из этих двух абзацев вырастает всё остальное в разделе, поэтому к ним стоит возвращаться. Разберём, что именно следует.</p>
+    <table class="data-table">
+      <thead><tr><th>Следствие</th><th>Почему так</th><th>Где об этом подробно</th></tr></thead>
+      <tbody>
+        <tr><td>Нельзя делать долгие вычисления прямо в обработчике</td><td>Поток один. Пока он занят вашим циклом, он не обслуживает <em>никого</em> — ни один из тысяч открытых запросов</td><td>Event loop, Thread pool</td></tr>
+        <tr><td>Ожидание сети и диска не тормозит сервер</td><td>Ждёт не ваш поток, а операционная система. Поток в это время обслуживает других</td><td>Ввод-вывод и libuv</td></tr>
+        <tr><td>Данные в переменных переживают запрос</td><td>Процесс не умирает. Это даёт бесплатный кэш в памяти — и утечки, если складывать туда лишнее</td><td>Утечки памяти</td></tr>
+        <tr><td>Процесс нужно гасить аккуратно</td><td>В момент остановки внутри него могут быть недообработанные запросы, которых в PHP просто не бывает</td><td>Graceful shutdown</td></tr>
+        <tr><td>Ошибка способна уронить весь сервер</td><td>Необработанное исключение валит процесс, а с ним — все текущие соединения, а не один запрос</td><td>Ошибки в async-коде</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Короткая формула, которую стоит запомнить.</strong> PHP-процесс — одноразовая посуда: взяли, использовали, выбросили. Node-процесс — рабочее место, за которым сидит один сотрудник и очень быстро переключается между задачами. Он успевает обслужить сотни посетителей, но если дать ему одну долгую задачу, очередь встанет целиком.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="play-circle"></i> Что происходит при запуске</div>
+    <p class="text">Команда <code>node app.js</code> запускает процесс операционной системы, внутри которого поднимаются две части рантайма: <strong>V8</strong> — тот самый движок из Chrome, он исполняет ваш JavaScript, и <strong>libuv</strong> — библиотека на C, которая умеет работать с сетью, файлами и таймерами, не блокируя поток. Дальше Node выполняет служебную подготовку, загружает ваш файл и проходит его сверху вниз ровно один раз.</p>
+    <p class="text">Вот место, где у людей из мира PHP чаще всего ломается модель. Строка <code>app.listen(3000)</code> не начинает обрабатывать запросы и не блокирует программу — она лишь регистрирует намерение и немедленно возвращает управление. Когда ваш файл дочитан до конца, Node переходит в цикл ожидания событий, и только там начинается настоящая работа. Поэтому код, написанный «после сервера», выполнится сразу же, а не после первого запроса.</p>
+    <div class="diagram">node app.js
+   │
+   ├─ 1. Поднимаются V8 и libuv
+   │
+   ├─ 2. Служебная подготовка: process, console, загрузчик модулей
+   │
+   ├─ 3. Ваш файл выполняется сверху вниз — ОДИН раз.
+   │        Здесь только регистрация обработчиков:
+   │        «создать сервер», «подписаться», «завести таймер»
+   │
+   ├─ 4. Файл кончился. Управление уходит в цикл ожидания событий
+   │
+   ├─ 5. Цикл крутится, пока есть незакрытые дела:
+   │        открытый сервер, таймер, запрос к базе
+   │
+   └─ 6. Дел не осталось → процесс завершается сам</div>
+    <p class="text">Отсюда же ответ на вопрос «почему мой скрипт не завершается». Пока у libuv есть хотя бы одно незакрытое дело — слушающий сокет, живой интервал, незавершённый запрос — цикл продолжает работать. Как только их не остаётся, процесс выходит самостоятельно, без всякого <code>exit</code>.</p>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> Аналогия с Laravel: где здесь ядро</div>
+    <p class="text">В Laravel путь запроса понятен и неизменен: <code>public/index.php</code> поднимает приложение через <code>bootstrap/app.php</code>, создаётся ядро, и <code>Kernel::handle($request)</code> прогоняет запрос через конвейер middleware к контроллеру. Этот путь повторяется для <em>каждого</em> запроса с самого начала.</p>
+    <p class="text">В Node ядра в этом смысле нет. Роль диспетчера играет цикл ожидания событий: он получает событие «пришёл HTTP-запрос» и вызывает ту функцию, которую вы зарегистрировали при старте. Разница в том, что конвейер Laravel собирается заново на каждый запрос, а цикл поднимается однажды и живёт, пока жив процесс.</p>
+    <table class="data-table">
+      <thead><tr><th></th><th>Laravel на PHP-FPM</th><th>Node.js</th></tr></thead>
+      <tbody>
+        <tr><td>Точка входа</td><td><code>public/index.php</code> — заново на каждый запрос</td><td><code>app.js</code> — один раз при старте</td></tr>
+        <tr><td>Сборка приложения</td><td><code>bootstrap/app.php</code>: контейнер, провайдеры</td><td>Ваш код верхнего уровня, один проход</td></tr>
+        <tr><td>Кто вызывает ваш код</td><td>Ядро: <code>Kernel::handle()</code></td><td>Цикл ожидания событий</td></tr>
+        <tr><td>Состояние между запросами</td><td>Не сохраняется</td><td>Сохраняется</td></tr>
+        <tr><td>Цена утечки памяти</td><td>Почти нулевая: процесс всё равно умрёт</td><td>Накапливается неделями, пока не придёт OOM</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="message-circle-question"></i> Что спросят по этой теме</div>
+    <table class="data-table">
+      <thead><tr><th>Вопрос</th><th>Короткий ответ</th></tr></thead>
+      <tbody>
+        <tr><td>Чем модель Node отличается от PHP-FPM?</td><td>Один долгоживущий процесс с одним потоком JS против процесса на каждый запрос. Отсюда общее состояние, кэш в памяти, утечки и необходимость аккуратного завершения</td></tr>
+        <tr><td>Почему Node называют однопоточным, если он держит тысячи соединений?</td><td>В одном потоке выполняется только ваш JavaScript. Само ожидание сети и диска происходит вне его, поэтому поток не простаивает</td></tr>
+        <tr><td>Что будет, если в обработчике посчитать что-то тяжёлое?</td><td>Встанут все запросы процесса, а не только текущий</td></tr>
+        <tr><td>Почему процесс не завершается после выполнения скрипта?</td><td>У libuv остались незакрытые дела: сервер, таймер или незавершённая операция</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
 @endverbatim
 @verbatim
 <div id="sec-node-what" class="section">
@@ -354,118 +440,13 @@ node -p <span class="c-str">"process.versions"</span>
   </div>
 </div>
 @endverbatim
-@verbatim
-<div id="sec-node-lifecycle" class="section">
-  <div class="section-title">Жизненный цикл процесса: от запуска до выхода</div>
 
-  <div class="subsection">
-    <div class="subsection-title"><i data-lucide="play-circle"></i> Что происходит, когда вы набрали node app.js</div>
-    <p class="text">Это отправная точка, к которой привязано всё остальное в разделе. Пока не видно, кто кого запускает, фазы, пул потоков и очереди выглядят набором разрозненных понятий.</p>
-    <div class="diagram">node app.js
-   │
-   ├─ 1. Запускается процесс ОС. Node создаёт два движка:
-   │       V8    — исполняет JavaScript
-   │       libuv — работа с сетью, файлами, таймерами
-   │
-   ├─ 2. Внутренний bootstrap самого Node (его код на JS и C++):
-   │       поднимаются process, console, Buffer,
-   │       готовится загрузчик модулей (require / import)
-   │
-   ├─ 3. Загружается и выполняется ВАШ файл — сверху вниз, синхронно.
-   │       Здесь обычно только регистрация: создать сервер,
-   │       подписаться на события, завести таймеры.
-   │       Сам по себе этот проход ничего не обслуживает.
-   │
-   ├─ 4. Ваш файл дочитан до конца. Управление уходит в event loop.
-   │       Вот тут начинаются фазы — они живут только здесь.
-   │
-   ├─ 5. Цикл крутится, пока есть незакрытые дела:
-   │       открытый сервер, таймер, незавершённый запрос к базе.
-   │       На каждом обороте проходит фазы и вызывает ваши колбэки.
-   │
-   └─ 6. Дел не осталось → цикл завершается → процесс выходит с кодом 0.</div>
-    <div class="remember-box"><strong>Ключевой переход — между шагами 3 и 4.</strong> Код верхнего уровня выполняется один раз и только расставляет обработчики. Дальше ваши функции вызывает не ваш код, а event loop. Поэтому «после сервера» ничего не пишут: строка <code>app.listen(3000)</code> возвращает управление сразу, а не блокирует процесс.</div>
-  </div>
-
-  <div class="subsection">
-    <div class="subsection-title"><i data-lucide="git-compare"></i> Чем это отличается от Laravel</div>
-    <p class="text">В Laravel есть точка входа и ядро, которые на <em>каждый</em> запрос прогоняют его через конвейер. В Node такого ядра нет: запуск происходит один раз, а запросы приходят в уже работающий процесс.</p>
-    <table class="data-table">
-      <thead><tr><th></th><th>Laravel (PHP-FPM)</th><th>Node.js</th></tr></thead>
-      <tbody>
-        <tr><td>Точка входа</td><td><code>public/index.php</code> — на каждый запрос заново</td><td><code>app.js</code> — один раз при старте</td></tr>
-        <tr><td>Сборка приложения</td><td><code>bootstrap/app.php</code>: контейнер, провайдеры</td><td>Ваш код верхнего уровня плюс внутренний bootstrap Node</td></tr>
-        <tr><td>Кто вызывает ваш код</td><td>Ядро: <code>Kernel::handle($request)</code></td><td>Event loop — когда наступает событие</td></tr>
-        <tr><td>Что обрабатывает запрос</td><td>Конвейер middleware → маршрут → контроллер</td><td>Колбэк, который вы зарегистрировали при старте</td></tr>
-        <tr><td>Конец запроса</td><td>Ответ отправлен, процесс умирает</td><td>Ответ отправлен, процесс продолжает жить</td></tr>
-        <tr><td>Состояние между запросами</td><td>Не сохраняется</td><td>Сохраняется — отсюда и кэш в памяти, и утечки</td></tr>
-      </tbody>
-    </table>
-    <div class="remember-box"><strong>Перевод на привычные понятия.</strong> Event loop занимает то же место, что <code>Kernel::handle()</code> в Laravel: это диспетчер, который получает событие и зовёт нужный обработчик. Разница в том, что ядро Laravel поднимается заново на каждый запрос, а event loop поднимается один раз и крутится, пока жив процесс.</div>
-  </div>
-
-  <div class="subsection">
-    <div class="subsection-title"><i data-lucide="layers"></i> Кто внутри кого: карта понятий</div>
-    <p class="text">Короткая иерархия, к которой можно возвращаться при чтении дальнейших разделов:</p>
-    <div class="diagram">процесс Node.js
-└── рантайм
-    ├── V8 ──────────── исполняет ваш JavaScript, держит память и сборщик мусора
-    └── libuv ───────── вся асинхронность
-        ├── event loop ──── бесконечный цикл; обходит фазы по кругу
-        │   └── фазы ────── timers, pending, poll, check, close
-        │       └── очереди колбэков внутри каждой фазы
-        ├── пул потоков ─── 4 потока для файлов, DNS, crypto, zlib
-        └── опрос ОС ────── epoll (Linux), kqueue (macOS), IOCP (Windows)
-
-Отдельно от фаз, поверх них:
-    очередь process.nextTick   ─┐  опустошаются полностью
-    очередь промисов           ─┘  после КАЖДОГО колбэка</div>
-    <table class="data-table">
-      <thead><tr><th>Понятие</th><th>Частью чего является</th><th>Кто это запускает</th></tr></thead>
-      <tbody>
-        <tr><td>Фаза</td><td>Event loop</td><td>Сам цикл, по кругу</td></tr>
-        <tr><td>Event loop</td><td>libuv</td><td>Node — после того, как выполнил ваш файл</td></tr>
-        <tr><td>Пул потоков</td><td>libuv</td><td>libuv, когда операцию нельзя сделать асинхронно</td></tr>
-        <tr><td>Микрозадачи</td><td>V8 (промисы) и Node (<code>nextTick</code>)</td><td>Сливаются после каждого колбэка</td></tr>
-        <tr><td>Ваш колбэк</td><td>Очередь внутри фазы</td><td>Event loop, когда дошёл до этой фазы</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="subsection">
-    <div class="subsection-title"><i data-lucide="power-off"></i> Почему процесс не завершается — и когда завершается</div>
-    <p class="text">Цикл работает, пока у libuv есть <strong>незакрытые дела</strong>: открытый сокет сервера, живой таймер, незавершённая операция с файлом. Как только счётчик таких дел обнуляется, цикл выходит и процесс завершается сам.</p>
-<pre><code><span class="c-comment">// Скрипт завершится сразу: дел не осталось</span>
-<span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'привет'</span>);
-
-<span class="c-comment">// А этот будет жить: открытый сервер — незакрытое дело</span>
-http.<span class="c-fn">createServer</span>(handler).<span class="c-fn">listen</span>(<span class="c-num">3000</span>);
-
-<span class="c-comment">// И этот: интервал держит цикл вечно</span>
-<span class="c-fn">setInterval</span>(() =&gt; {}, <span class="c-num">1000</span>);
-
-<span class="c-comment">// unref() снимает удержание: таймер сработает, но держать цикл не будет</span>
-<span class="c-key">const</span> t = <span class="c-fn">setInterval</span>(tick, <span class="c-num">1000</span>);
-t.<span class="c-fn">unref</span>();</code></pre>
-    <div class="pitfall"><strong>Частый симптом.</strong> Скрипт отработал, а процесс висит и не отдаёт терминал. Значит что-то осталось незакрытым: подключение к базе, пул соединений, интервал. Найти можно через <code>process.getActiveResourcesInfo()</code> — он покажет, что именно удерживает цикл.</div>
-    <div class="remember-box"><strong>Связь с остальными разделами.</strong> Из этого свойства растут сразу две темы: <strong>Graceful shutdown</strong> — как закрыть дела правильно, чтобы не оборвать запросы на полуслове, и <strong>Утечки памяти</strong> — почему оставленное состояние живёт неделями, а не умирает с запросом, как в PHP.</div>
-  </div>
-</div>
-@endverbatim
 @verbatim
 <div id="sec-node-vs-php" class="section">
-  <div class="section-title">Модель процесса: Node против PHP</div>
+  <div class="section-title">Состояние между запросами</div>
+  <div class="info-box primary"><strong>Продолжение общей картины.</strong> Там мы увидели, что процесс Node живёт неделями, а переменные переживают запрос. Здесь — что из этого следует на практике и какой код начинает вести себя иначе.</div>
   <div class="subsection">
-    <div class="subsection-title"><i data-lucide="git-compare"></i> Главное отличие, из которого следует всё остальное</div>
-    <div class="diagram">PHP-FPM                              Node.js
-
-запрос → форкнутый процесс           запрос ─┐
-         ↓                           запрос ─┼→ ОДИН процесс
-      выполнение                     запрос ─┤   живёт неделями
-         ↓                           запрос ─┘
-      ответ → процесс очищен                 ↓
-      переменные умерли                   ответ
-                                   переменные остались</div>
+    <div class="subsection-title"><i data-lucide="git-compare"></i> Что меняется в сравнении с PHP</div>
     <table class="data-table">
       <thead><tr><th></th><th>PHP-FPM</th><th>Node.js</th></tr></thead>
       <tbody>
@@ -582,7 +563,19 @@ path.<span class="c-fn">parse</span>(<span class="c-str">'/home/user/file.txt'</
 <span class="c-comment">// { root: '/', dir: '/home/user', base: 'file.txt',
 //   ext: '.txt', name: 'file' }</span></code></pre>
     <div class="why-box"><strong><code>join</code> против <code>resolve</code>.</strong> <code>join</code> просто склеивает куски и нормализует разделители. <code>resolve</code> строит <em>абсолютный</em> путь, идя справа налево до первого абсолютного сегмента, и достраивает остальное от текущей рабочей директории. Для «файл рядом со скриптом» нужен <code>resolve</code> или <code>import.meta.dirname</code>, потому что рабочая директория зависит от того, откуда запустили процесс.</div>
-    <div class="pitfall"><strong>Путь из пользовательского ввода — дыра обхода каталога.</strong> <code>path.join(uploadDir, req.query.name)</code> при <code>name=../../etc/passwd</code> выведет за пределы папки. Проверять надо после нормализации: собрать через <code>resolve</code> и убедиться, что результат начинается с разрешённой директории.</div>
+    <div class="pitfall"><strong>Путь из пользовательского ввода — дыра обхода каталога.</strong> <code>path.join(uploadDir, req.query.name)</code> при <code>name=../../etc/passwd</code> выведет за пределы папки. Проверять надо после нормализации — и сравнивать не с самой папкой, а с папкой плюс разделитель, иначе проверку пройдёт соседний каталог с похожим именем.</div>
+<pre><code><span class="c-key">import</span> path <span class="c-key">from</span> <span class="c-str">'node:path'</span>;
+
+<span class="c-key">const</span> uploadDir = path.<span class="c-fn">resolve</span>(<span class="c-str">'/var/www/uploads'</span>);
+<span class="c-key">const</span> target    = path.<span class="c-fn">resolve</span>(uploadDir, req.query.name);
+
+<span class="c-comment">// так нельзя: '/var/www/uploads-secret/key' тоже начинается с uploadDir</span>
+<span class="c-key">if</span> (target.<span class="c-fn">startsWith</span>(uploadDir)) { <span class="c-comment">/* ... */</span> }
+
+<span class="c-comment">// правильно: добавляем разделитель, тогда совпадёт только вложенное</span>
+<span class="c-key">if</span> (target.<span class="c-fn">startsWith</span>(uploadDir + path.sep)) {
+  <span class="c-comment">// путь точно внутри uploadDir</span>
+}</code></pre>
   </div>
 
   <div class="subsection">
@@ -732,7 +725,7 @@ fs.<span class="c-fn">readFile</span>(<span class="c-str">'big.txt'</span>, <spa
     <div class="subsection-title"><i data-lucide="cog"></i> Две части libuv</div>
     <p class="text">libuv — C-библиотека, дающая Node кроссплатформенный неблокирующий I/O. В ней две ключевые части.</p>
     <p class="text"><strong>1. Event loop — диспетчер.</strong> Бесконечный цикл, который забирает у ОС готовые события («пришли данные по сокету», «сработал таймер», «файл прочитан»), вызывает соответствующие JS-колбэки, проверяет отложенные задачи, а если делать нечего — засыпает и просыпается на новом событии. Именно поэтому один поток JS обслуживает тысячи соединений: он не ждёт каждое, а реагирует на события. Подробный разбор фаз — в разделе <strong>Event loop и фазы</strong>.</p>
-    <p class="text"><strong>2. Пул потоков.</strong> Некоторые операции ОС не умеет делать асинхронно — например, чтение файлов на Linux. Для них libuv держит пул фоновых потоков (по умолчанию 4, меняется через <code>UV_THREADPOOL_SIZE</code>): они выполняют блокирующую работу, а event loop получает только результат. Что именно уходит в пул, а что обрабатывается ОС напрямую через <code>epoll</code>/<code>kqueue</code>/<code>IOCP</code> — разобрано в разделе <strong>Thread pool и блокировка</strong>.</p>
+    <p class="text"><strong>2. Пул потоков.</strong> Некоторые операции ОС не умеет делать асинхронно — например, чтение файлов на Linux. Для них libuv держит пул фоновых потоков (по умолчанию 4, меняется через <code>UV_THREADPOOL_SIZE</code>): они выполняют блокирующую работу, а event loop получает только результат. Что именно уходит в пул, а что операционная система умеет делать сама — разобрано в разделе <strong>Thread pool и блокировка</strong>.</p>
     <div class="pitfall"><strong>Следствие, о которое спотыкаются.</strong> Запустите пять тяжёлых <code>fs.readFile</code> одновременно при пуле из четырёх потоков — пятый будет ждать освобождения. Это частая причина «загадочных» задержек, которые не объясняются ни сетью, ни базой.</div>
   </div>
 
@@ -794,6 +787,52 @@ fs.<span class="c-fn">readFile</span>(<span class="c-str">'big.txt'</span>, <spa
   <div class="section-title">Event loop и фазы</div>
   <div class="info-box primary"><strong>Где мы находимся.</strong> Event loop — цикл внутри libuv, одной из двух опор рантайма. Node входит в него после того, как выполнил ваш файл сверху вниз, и крутит, пока есть незакрытые дела. Фазы — очереди внутри этого цикла, отдельно от него они не существуют.</div>
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layers"></i> Кто внутри кого: карта понятий</div>
+    <p class="text">Короткая иерархия, к которой можно возвращаться при чтении дальнейших разделов:</p>
+    <div class="diagram">процесс Node.js
+└── рантайм
+    ├── V8 ──────────── исполняет ваш JavaScript, держит память и сборщик мусора
+    └── libuv ───────── вся асинхронность
+        ├── event loop ──── бесконечный цикл; обходит фазы по кругу
+        │   └── фазы ────── timers, pending, poll, check, close
+        │       └── очереди колбэков внутри каждой фазы
+        ├── пул потоков ─── 4 потока для файлов, DNS, crypto, zlib
+        └── опрос ОС ────── epoll (Linux), kqueue (macOS), IOCP (Windows)
+
+Отдельно от фаз, поверх них:
+    очередь process.nextTick   ─┐  опустошаются полностью
+    очередь промисов           ─┘  после КАЖДОГО колбэка</div>
+    <table class="data-table">
+      <thead><tr><th>Понятие</th><th>Частью чего является</th><th>Кто это запускает</th></tr></thead>
+      <tbody>
+        <tr><td>Фаза</td><td>Event loop</td><td>Сам цикл, по кругу</td></tr>
+        <tr><td>Event loop</td><td>libuv</td><td>Node — после того, как выполнил ваш файл</td></tr>
+        <tr><td>Пул потоков</td><td>libuv</td><td>libuv, когда операцию нельзя сделать асинхронно</td></tr>
+        <tr><td>Микрозадачи</td><td>V8 (промисы) и Node (<code>nextTick</code>)</td><td>Сливаются после каждого колбэка</td></tr>
+        <tr><td>Ваш колбэк</td><td>Очередь внутри фазы</td><td>Event loop, когда дошёл до этой фазы</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="power-off"></i> Почему процесс не завершается — и когда завершается</div>
+    <p class="text">Цикл работает, пока у libuv есть <strong>незакрытые дела</strong>: открытый сокет сервера, живой таймер, незавершённая операция с файлом. Как только счётчик таких дел обнуляется, цикл выходит и процесс завершается сам.</p>
+<pre><code><span class="c-comment">// Скрипт завершится сразу: дел не осталось</span>
+<span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'привет'</span>);
+
+<span class="c-comment">// А этот будет жить: открытый сервер — незакрытое дело</span>
+http.<span class="c-fn">createServer</span>(handler).<span class="c-fn">listen</span>(<span class="c-num">3000</span>);
+
+<span class="c-comment">// И этот: интервал держит цикл вечно</span>
+<span class="c-fn">setInterval</span>(() =&gt; {}, <span class="c-num">1000</span>);
+
+<span class="c-comment">// unref() снимает удержание: таймер сработает, но держать цикл не будет</span>
+<span class="c-key">const</span> t = <span class="c-fn">setInterval</span>(tick, <span class="c-num">1000</span>);
+t.<span class="c-fn">unref</span>();</code></pre>
+    <div class="pitfall"><strong>Частый симптом.</strong> Скрипт отработал, а процесс висит и не отдаёт терминал. Значит что-то осталось незакрытым: подключение к базе, пул соединений, интервал. Найти можно через <code>process.getActiveResourcesInfo()</code> — он покажет, что именно удерживает цикл.</div>
+    <div class="remember-box"><strong>Связь с остальными разделами.</strong> Из этого свойства растут сразу две темы: <strong>Graceful shutdown</strong> — как закрыть дела правильно, чтобы не оборвать запросы на полуслове, и <strong>Утечки памяти</strong> — почему оставленное состояние живёт неделями, а не умирает с запросом, как в PHP.</div>
+  </div>
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="repeat"></i> Почему Node однопоточный, но держит тысячи соединений</div>
     <p class="text">JS-код выполняется в <strong>одном потоке</strong>. Ввод-вывод — сеть, сокеты — отдаётся операционной системе через libuv неблокирующе. Когда операция завершается, её колбэк ставится в очередь, и event loop его подбирает.</p>
     <div class="diagram">     ┌───────────────────────────┐
@@ -853,7 +892,7 @@ process.<span class="c-fn">nextTick</span>(() =&gt; <span class="c-fn">console</
         <tr><td><strong>pending callbacks</strong></td><td>Системные колбэки, отложенные ОС на следующий проход — в документации приведены «некоторые типы ошибок TCP»</td><td>В прикладном коде встречается редко</td></tr>
         <tr><td><strong>idle, prepare</strong></td><td>Служебная фаза</td><td>В документации помечена «used only internally» — вашего кода здесь не бывает</td></tr>
         <tr><td><strong>poll</strong></td><td>Забирает готовые события ввода-вывода и выполняет их колбэки — все, кроме close-колбэков, таймеров и <code>setImmediate</code></td><td>Сердце цикла. Именно здесь процесс «спит», не тратя процессор, пока ждёт сеть или диск</td></tr>
-        <tr><td><strong>check</strong></td><td>Колбэки <code>setImmediate</code></td><td>Идёт сразу после poll — отсюда вся разница с <code>setTimeout(fn, 0)</code></td></tr>
+        <tr><td><strong>check</strong></td><td>Колбэки <code>setImmediate</code></td><td>Следующая фаза после poll — отсюда вся разница с <code>setTimeout(fn, 0)</code></td></tr>
         <tr><td><strong>timers</strong></td><td>Колбэки <code>setTimeout</code> и <code>setInterval</code>, у которых истёк срок</td><td>Таймер задаёт <strong>порог</strong>, после которого колбэк <em>может</em> выполниться, а не точное время</td></tr>
         <tr><td><strong>close callbacks</strong></td><td>События закрытия: <code>socket.on('close')</code></td><td>Замыкает круг, дальше цикл начинается заново</td></tr>
       </tbody>
@@ -962,7 +1001,7 @@ process.<span class="c-fn">nextTick</span>(() =&gt; <span class="c-fn">console</
         <tr><td><code>.then</code>, <code>await</code>, <code>queueMicrotask</code></td><td>После очереди <code>nextTick</code></td><td>Микрозадачи, приоритет 2</td></tr>
         <tr><td><code>setTimeout</code>, <code>setInterval</code></td><td>Фаза timers</td><td>Макрозадачи</td></tr>
         <tr><td>Колбэки ввода-вывода (<code>fs</code>, сеть)</td><td>Фаза poll</td><td>Макрозадачи</td></tr>
-        <tr><td><code>setImmediate</code></td><td>Фаза check, сразу после poll</td><td>Макрозадачи</td></tr>
+        <tr><td><code>setImmediate</code></td><td>Фаза check — следующая после poll</td><td>Макрозадачи</td></tr>
         <tr><td>События закрытия</td><td>Фаза close callbacks</td><td>Макрозадачи</td></tr>
       </tbody>
     </table>
@@ -987,7 +1026,7 @@ process.<span class="c-fn">nextTick</span>(() =&gt; <span class="c-fn">console</
         <tr><td>Нативные дополнения</td><td>Модули на C++ могут отправлять в пул собственные задачи</td></tr>
       </tbody>
     </table>
-    <p class="text"><strong>Сеть в пул не идёт.</strong> TCP, HTTP и сокеты обслуживаются самой операционной системой через <code>epoll</code> (Linux), <code>kqueue</code> (macOS), event ports (Solaris) или <code>IOCP</code> (Windows) — поток для этого не нужен.</p>
+    <p class="text"><strong>Сеть в пул не идёт.</strong> TCP, HTTP и сокеты операционная система умеет обслуживать сама: она сообщает процессу, когда на сокете появились данные, и отдельный поток для ожидания не нужен. Поэтому тысячи открытых соединений не стоят Node почти ничего, а вот сотня одновременных чтений файлов упирается в четыре потока пула.<br><span style="opacity:.7">Механизмы, которыми это сделано, называются epoll в Linux, kqueue в macOS и IOCP в Windows — знать их названия для работы не нужно.</span></p>
     <p class="text">По умолчанию в пуле <strong>4 потока</strong>, меняется переменной окружения <code>UV_THREADPOOL_SIZE</code>.</p>
 <pre><code><span class="c-comment"># так — работает</span>
 UV_THREADPOOL_SIZE=8 node app.js</code></pre>
@@ -1186,7 +1225,7 @@ Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
 HTTP/1.1 101 Switching Protocols
 Upgrade: websocket
 Connection: Upgrade</code></pre>
-<pre><code><span class="c-key">import</span> { <span class="c-type">WebSocketServer</span> } <span class="c-key">from</span> <span class="c-str">'ws'</span>;
+<pre><code><span class="c-key">import</span> { <span class="c-type">WebSocketServer</span>, <span class="c-type">WebSocket</span> } <span class="c-key">from</span> <span class="c-str">'ws'</span>;  <span class="c-comment">// WebSocket нужен ради константы OPEN</span>
 
 <span class="c-key">const</span> wss = <span class="c-key">new</span> <span class="c-type">WebSocketServer</span>({ port: <span class="c-num">8080</span> });
 
@@ -1216,13 +1255,18 @@ ws.onclose   = () =&gt; <span class="c-comment">/* переподключени�
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="radio"></i> SSE — поток событий от сервера</div>
     <p class="text">Сервер открывает один долгоживущий HTTP-ответ и пишет в него текстовые события. Клиент только слушает.</p>
-<pre><code><span class="c-key">import</span> express <span class="c-key">from</span> <span class="c-str">'express'</span>;
+<pre><code><span class="c-comment">// Примеры ниже используют import, поэтому в package.json нужно
+// "type": "module". Без этой строки Node ждёт CommonJS и упадёт
+// с «Cannot use import statement outside a module».</span>
+<span class="c-key">import</span> express <span class="c-key">from</span> <span class="c-str">'express'</span>;
 <span class="c-key">const</span> app = <span class="c-fn">express</span>();
 
 app.<span class="c-fn">get</span>(<span class="c-str">'/events'</span>, (req, res) =&gt; {
   res.<span class="c-fn">setHeader</span>(<span class="c-str">'Content-Type'</span>,  <span class="c-str">'text/event-stream'</span>);
   res.<span class="c-fn">setHeader</span>(<span class="c-str">'Cache-Control'</span>, <span class="c-str">'no-cache'</span>);
-  res.<span class="c-fn">setHeader</span>(<span class="c-str">'Connection'</span>,    <span class="c-str">'keep-alive'</span>);
+  <span class="c-comment">// Connection здесь только для HTTP/1.1. В HTTP/2 этот заголовок запрещён</span>
+  <span class="c-key">if</span> (req.httpVersionMajor === <span class="c-num">1</span>) res.<span class="c-fn">setHeader</span>(<span class="c-str">'Connection'</span>, <span class="c-str">'keep-alive'</span>);
+  res.<span class="c-fn">setHeader</span>(<span class="c-str">'X-Accel-Buffering'</span>, <span class="c-str">'no'</span>);  <span class="c-comment">// чтобы Nginx не копил ответ в буфере</span>
   res.<span class="c-fn">flushHeaders</span>();
 
   <span class="c-key">const</span> timer = <span class="c-fn">setInterval</span>(() =&gt; {
@@ -1256,7 +1300,7 @@ es.onerror   = () =&gt; <span class="c-comment">/* браузер перепод
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="hourglass"></i> Long Polling — ожидание на обычном HTTP</div>
     <p class="text">Клиент шлёт обычный запрос, сервер не отвечает сразу, а держит его открытым, пока не появятся данные или не истечёт таймаут. Получив ответ, клиент немедленно шлёт следующий.</p>
-<pre><code><span class="c-key">const</span> waiting = <span class="c-key">new</span> <span class="c-type">Set</span>();
+<pre><code><span class="c-key">const</span> waiting = <span class="c-key">new</span> <span class="c-type">Map</span>();   <span class="c-comment">// res -> timer</span>
 
 app.<span class="c-fn">get</span>(<span class="c-str">'/poll'</span>, (req, res) =&gt; {
   <span class="c-key">const</span> since = <span class="c-type">Number</span>(req.query.since ?? <span class="c-num">0</span>);
@@ -1265,22 +1309,27 @@ app.<span class="c-fn">get</span>(<span class="c-str">'/poll'</span>, (req, res)
   <span class="c-comment">// Если что-то уже накопилось — отдаём сразу, без ожидания</span>
   <span class="c-key">if</span> (missed.length) <span class="c-key">return</span> res.<span class="c-fn">json</span>(missed);
 
-  waiting.<span class="c-fn">add</span>(res);
-
   <span class="c-comment">// Таймаут обязателен: иначе прокси оборвёт соединение сам</span>
   <span class="c-key">const</span> timer = <span class="c-fn">setTimeout</span>(() =&gt; {
     waiting.<span class="c-fn">delete</span>(res);
     res.<span class="c-fn">json</span>([]);          <span class="c-comment">// пустой ответ — клиент сразу спросит снова</span>
   }, <span class="c-num">25_000</span>);
 
+  <span class="c-comment">// Храним ответ ВМЕСТЕ с его таймером, иначе погасить его потом нечем</span>
+  waiting.<span class="c-fn">set</span>(res, timer);
+
   req.<span class="c-fn">on</span>(<span class="c-str">'close'</span>, () =&gt; { <span class="c-fn">clearTimeout</span>(timer); waiting.<span class="c-fn">delete</span>(res); });
 });
 
 <span class="c-key">function</span> <span class="c-fn">publish</span>(event) {
   <span class="c-fn">store</span>(event);
-  <span class="c-key">for</span> (<span class="c-key">const</span> res <span class="c-key">of</span> waiting) res.<span class="c-fn">json</span>([event]);
+  <span class="c-key">for</span> (<span class="c-key">const</span> [res, timer] <span class="c-key">of</span> waiting) {
+    <span class="c-fn">clearTimeout</span>(timer);   <span class="c-comment">// иначе через 25 с сработает res.json([]) на уже отвеченном ответе</span>
+    res.<span class="c-fn">json</span>([event]);
+  }
   waiting.<span class="c-fn">clear</span>();
 }</code></pre>
+    <div class="pitfall"><strong>Таймер надо гасить при ответе.</strong> Если в <code>publish()</code> просто ответить и очистить список, запланированные <code>setTimeout</code> останутся жить. Через 25 секунд каждый из них попытается ответить второй раз — и Express упадёт с <code>Cannot set headers after they are sent</code>. Поэтому <code>waiting</code> здесь <code>Map</code>, а не <code>Set</code>: ответ хранится вместе со своим таймером.</div>
     <div class="pitfall"><strong>Между ответом и следующим запросом есть окно.</strong> Событие, случившееся в этот момент, потеряется, если хранить «последнее значение» в переменной. Поэтому клиент передаёт курсор (<code>since</code> / <code>last_event_id</code>), а сервер отдаёт <em>всё, что после него</em> — а не только свежее.</div>
     <div class="pitfall"><strong>Каждый висящий запрос занимает ресурс.</strong> В Node это дёшево — соединение не держит поток. В PHP-FPM тот же приём съедает воркер целиком, поэтому там long polling почти не применяют.</div>
   </div>
@@ -1305,6 +1354,289 @@ app.<span class="c-fn">get</span>(<span class="c-str">'/poll'</span>, (req, res)
       </tbody>
     </table>
     <div class="remember-box">Частая ошибка — взять WebSocket там, где хватало SSE. Двусторонний канал приносит с собой переподключение, heartbeat, синхронизацию между инстансами и отслеживание состояния. Если клиенту нужно только <em>получать</em>, всё это лишняя работа.</div>
+  </div>
+</div>
+@endverbatim
+@verbatim
+<div id="sec-nest-walkthrough" class="section">
+  <div class="section-title">Сквозной пример: модуль заказов с нуля</div>
+  <div class="info-box primary"><strong>Зачем этот раздел.</strong> Отдельные понятия Nest по одному выглядят как набор декораторов. Здесь они собираются в один рабочий модуль: приходит запрос на создание заказа, проходит проверку доступа, валидацию тела, попадает в сервис и списывает деньги в транзакции. Весь код приведён целиком и запускается.</p></div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="terminal"></i> Шаг 0. Создаём проект</div>
+    <p class="text">Nest CLI создаёт каркас и умеет генерировать части модуля. Для примера понадобятся сам Nest, валидация и TypeORM с драйвером PostgreSQL.</p>
+<pre><code>npm i -g @nestjs/cli
+nest new shop            <span class="c-comment"># каркас приложения</span>
+cd shop
+
+npm i @nestjs/typeorm typeorm pg
+npm i class-validator class-transformer
+
+nest g module orders     <span class="c-comment"># создаст orders.module.ts и подключит его к AppModule</span>
+nest g controller orders
+nest g service orders</code></pre>
+    <div class="remember-box"><strong>Аналогия с Laravel.</strong> <code>nest g module orders</code> — это примерно <code>php artisan make:provider</code> плюс создание папки под фичу. Разница в том, что в Laravel сервис-провайдер лишь регистрирует связки в общем контейнере, а модуль Nest ещё и задаёт <em>границу видимости</em>: что он берёт извне и что отдаёт наружу.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="file-code"></i> Шаг 1. Сущности базы</div>
+    <p class="text">Две таблицы: счёт пользователя и заказ. На них мы потом покажем транзакцию — списание денег и создание заказа должны происходить вместе или не происходить вовсе.</p>
+<pre><code><span class="c-comment">// src/orders/account.entity.ts</span>
+<span class="c-key">import</span> { Entity, PrimaryGeneratedColumn, Column } <span class="c-key">from</span> <span class="c-str">'typeorm'</span>;
+
+<span class="c-key">@Entity</span>()
+<span class="c-key">export class</span> <span class="c-type">Account</span> {
+  <span class="c-key">@PrimaryGeneratedColumn</span>()
+  id: <span class="c-type">number</span>;
+
+  <span class="c-comment">// numeric вместо float: деньги нельзя хранить в плавающей точке</span>
+  <span class="c-key">@Column</span>({ type: <span class="c-str">'numeric'</span>, precision: <span class="c-num">12</span>, scale: <span class="c-num">2</span> })
+  balance: <span class="c-type">string</span>;
+}</code></pre>
+<pre><code><span class="c-comment">// src/orders/order.entity.ts</span>
+<span class="c-key">import</span> { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } <span class="c-key">from</span> <span class="c-str">'typeorm'</span>;
+
+<span class="c-key">@Entity</span>()
+<span class="c-key">export class</span> <span class="c-type">Order</span> {
+  <span class="c-key">@PrimaryGeneratedColumn</span>()
+  id: <span class="c-type">number</span>;
+
+  <span class="c-key">@Column</span>()
+  accountId: <span class="c-type">number</span>;
+
+  <span class="c-key">@Column</span>({ type: <span class="c-str">'numeric'</span>, precision: <span class="c-num">12</span>, scale: <span class="c-num">2</span> })
+  total: <span class="c-type">string</span>;
+
+  <span class="c-comment">// ключ идемпотентности: повторный запрос не создаст второй заказ</span>
+  <span class="c-key">@Column</span>({ unique: <span class="c-key">true</span> })
+  requestId: <span class="c-type">string</span>;
+
+  <span class="c-key">@CreateDateColumn</span>()
+  createdAt: <span class="c-type">Date</span>;
+}</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="check-circle"></i> Шаг 2. DTO — описание тела запроса</div>
+    <p class="text">DTO здесь ровно то же, что <code>FormRequest</code> в Laravel: описание того, что мы согласны принять. Разница в том, что правила пишутся декораторами прямо над полями, а не массивом в методе <code>rules()</code>.</p>
+<pre><code><span class="c-comment">// src/orders/dto/create-order.dto.ts</span>
+<span class="c-key">import</span> { IsInt, IsPositive, IsNumberString, IsUUID } <span class="c-key">from</span> <span class="c-str">'class-validator'</span>;
+
+<span class="c-key">export class</span> <span class="c-type">CreateOrderDto</span> {
+  <span class="c-key">@IsInt</span>()
+  <span class="c-key">@IsPositive</span>()
+  accountId: <span class="c-type">number</span>;
+
+  <span class="c-comment">// строка, а не number: иначе float испортит копейки</span>
+  <span class="c-key">@IsNumberString</span>()
+  total: <span class="c-type">string</span>;
+
+  <span class="c-key">@IsUUID</span>()
+  requestId: <span class="c-type">string</span>;
+}</code></pre>
+    <p class="text">Чтобы декораторы начали работать, валидацию включают глобально. Заодно просим отсекать лишние поля — иначе клиент пришлёт <code>isAdmin: true</code>, и оно доедет до сервиса.</p>
+<pre><code><span class="c-comment">// src/main.ts</span>
+<span class="c-key">import</span> { NestFactory } <span class="c-key">from</span> <span class="c-str">'@nestjs/core'</span>;
+<span class="c-key">import</span> { ValidationPipe } <span class="c-key">from</span> <span class="c-str">'@nestjs/common'</span>;
+<span class="c-key">import</span> { AppModule } <span class="c-key">from</span> <span class="c-str">'./app.module'</span>;
+
+<span class="c-key">async function</span> <span class="c-fn">bootstrap</span>() {
+  <span class="c-key">const</span> app = <span class="c-key">await</span> <span class="c-type">NestFactory</span>.<span class="c-fn">create</span>(<span class="c-type">AppModule</span>);
+
+  app.<span class="c-fn">useGlobalPipes</span>(<span class="c-key">new</span> <span class="c-type">ValidationPipe</span>({
+    whitelist: <span class="c-key">true</span>,             <span class="c-comment">// выкинуть поля, которых нет в DTO</span>
+    forbidNonWhitelisted: <span class="c-key">true</span>,  <span class="c-comment">// и вернуть 400, если такие были</span>
+    transform: <span class="c-key">true</span>,             <span class="c-comment">// привести типы: '5' из params станет number</span>
+  }));
+
+  app.<span class="c-fn">enableShutdownHooks</span>();     <span class="c-comment">// без этого SIGTERM не доедет до onModuleDestroy</span>
+  <span class="c-key">await</span> app.<span class="c-fn">listen</span>(<span class="c-num">3000</span>);
+}
+<span class="c-fn">bootstrap</span>();</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="shield"></i> Шаг 3. Guard — пускать или нет</div>
+    <p class="text">Guard отвечает на один вопрос: продолжать обработку или отказать. Он срабатывает <strong>до</strong> валидации — нет смысла разбирать тело запроса от того, кого мы всё равно не пустим.</p>
+<pre><code><span class="c-comment">// src/orders/api-key.guard.ts</span>
+<span class="c-key">import</span> { CanActivate, ExecutionContext, Injectable, UnauthorizedException } <span class="c-key">from</span> <span class="c-str">'@nestjs/common'</span>;
+
+<span class="c-key">@Injectable</span>()
+<span class="c-key">export class</span> <span class="c-type">ApiKeyGuard</span> <span class="c-key">implements</span> <span class="c-type">CanActivate</span> {
+  <span class="c-fn">canActivate</span>(context: <span class="c-type">ExecutionContext</span>): <span class="c-type">boolean</span> {
+    <span class="c-key">const</span> request = context.<span class="c-fn">switchToHttp</span>().<span class="c-fn">getRequest</span>();
+    <span class="c-key">const</span> key = request.headers[<span class="c-str">'x-api-key'</span>];
+
+    <span class="c-key">if</span> (key !== process.env.<span class="c-type">API_KEY</span>) {
+      <span class="c-key">throw new</span> <span class="c-type">UnauthorizedException</span>(<span class="c-str">'Неверный ключ'</span>);
+    }
+    <span class="c-key">return true</span>;
+  }
+}</code></pre>
+    <div class="remember-box"><strong>Аналогия с Laravel.</strong> Guard — это <code>Gate</code> или middleware авторизации. Ключевое отличие от middleware Express: guard получает <code>ExecutionContext</code> и потому знает, какой контроллер и какой метод сейчас вызывается. Обычный middleware этого не знает, поэтому проверки прав на нём не делают.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="route"></i> Шаг 4. Контроллер — только маршруты</div>
+    <p class="text">В контроллере не должно быть бизнес-логики. Его работа — принять запрос, передать данные в сервис и вернуть результат. Ровно как тонкий контроллер в Laravel.</p>
+<pre><code><span class="c-comment">// src/orders/orders.controller.ts</span>
+<span class="c-key">import</span> { Body, Controller, Get, Param, Post, UseGuards } <span class="c-key">from</span> <span class="c-str">'@nestjs/common'</span>;
+<span class="c-key">import</span> { OrdersService } <span class="c-key">from</span> <span class="c-str">'./orders.service'</span>;
+<span class="c-key">import</span> { CreateOrderDto } <span class="c-key">from</span> <span class="c-str">'./dto/create-order.dto'</span>;
+<span class="c-key">import</span> { ApiKeyGuard } <span class="c-key">from</span> <span class="c-str">'./api-key.guard'</span>;
+
+<span class="c-key">@Controller</span>(<span class="c-str">'orders'</span>)
+<span class="c-key">export class</span> <span class="c-type">OrdersController</span> {
+  <span class="c-comment">// зависимость объявляется в конструкторе — Nest подставит её сам</span>
+  <span class="c-key">constructor</span>(<span class="c-key">private readonly</span> orders: <span class="c-type">OrdersService</span>) {}
+
+  <span class="c-key">@Post</span>()
+  <span class="c-key">@UseGuards</span>(<span class="c-type">ApiKeyGuard</span>)
+  <span class="c-fn">create</span>(<span class="c-key">@Body</span>() dto: <span class="c-type">CreateOrderDto</span>) {
+    <span class="c-key">return this</span>.orders.<span class="c-fn">create</span>(dto);
+  }
+
+  <span class="c-key">@Get</span>(<span class="c-str">':id'</span>)
+  <span class="c-fn">findOne</span>(<span class="c-key">@Param</span>(<span class="c-str">'id'</span>) id: <span class="c-type">number</span>) {
+    <span class="c-key">return this</span>.orders.<span class="c-fn">findOne</span>(id);
+  }
+}</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="database"></i> Шаг 5. Сервис и транзакция</div>
+    <p class="text">Здесь живёт логика. Списание денег и создание заказа обязаны быть атомарными: если заказ не создался, деньги должны вернуться. В TypeORM это делают через <code>DataSource.transaction</code> — аналог <code>DB::transaction()</code> в Laravel.</p>
+<pre><code><span class="c-comment">// src/orders/orders.service.ts</span>
+<span class="c-key">import</span> { Injectable, BadRequestException, ConflictException, NotFoundException } <span class="c-key">from</span> <span class="c-str">'@nestjs/common'</span>;
+<span class="c-key">import</span> { InjectDataSource } <span class="c-key">from</span> <span class="c-str">'@nestjs/typeorm'</span>;
+<span class="c-key">import</span> { DataSource } <span class="c-key">from</span> <span class="c-str">'typeorm'</span>;
+<span class="c-key">import</span> { Account } <span class="c-key">from</span> <span class="c-str">'./account.entity'</span>;
+<span class="c-key">import</span> { Order } <span class="c-key">from</span> <span class="c-str">'./order.entity'</span>;
+<span class="c-key">import</span> { CreateOrderDto } <span class="c-key">from</span> <span class="c-str">'./dto/create-order.dto'</span>;
+
+<span class="c-key">@Injectable</span>()
+<span class="c-key">export class</span> <span class="c-type">OrdersService</span> {
+  <span class="c-key">constructor</span>(<span class="c-key">@InjectDataSource</span>() <span class="c-key">private readonly</span> dataSource: <span class="c-type">DataSource</span>) {}
+
+  <span class="c-key">async</span> <span class="c-fn">create</span>(dto: <span class="c-type">CreateOrderDto</span>) {
+    <span class="c-key">return this</span>.dataSource.<span class="c-fn">transaction</span>(<span class="c-key">async</span> (manager) =&gt; {
+
+      <span class="c-comment">// Блокируем строку счёта до конца транзакции.
+      // Без этого два одновременных запроса прочитают один и тот же
+      // баланс и спишут дважды — классическая гонка.</span>
+      <span class="c-key">const</span> account = <span class="c-key">await</span> manager.<span class="c-fn">findOne</span>(<span class="c-type">Account</span>, {
+        where: { id: dto.accountId },
+        lock: { mode: <span class="c-str">'pessimistic_write'</span> },
+      });
+
+      <span class="c-key">if</span> (!account) <span class="c-key">throw new</span> <span class="c-type">NotFoundException</span>(<span class="c-str">'Счёт не найден'</span>);
+
+      <span class="c-key">const</span> balance = <span class="c-type">Number</span>(account.balance);
+      <span class="c-key">const</span> total   = <span class="c-type">Number</span>(dto.total);
+      <span class="c-key">if</span> (balance &lt; total) <span class="c-key">throw new</span> <span class="c-type">BadRequestException</span>(<span class="c-str">'Недостаточно средств'</span>);
+
+      account.balance = (balance - total).<span class="c-fn">toFixed</span>(<span class="c-num">2</span>);
+      <span class="c-key">await</span> manager.<span class="c-fn">save</span>(account);
+
+      <span class="c-key">try</span> {
+        <span class="c-key">return await</span> manager.<span class="c-fn">save</span>(<span class="c-type">Order</span>, {
+          accountId: dto.accountId,
+          total: dto.total,
+          requestId: dto.requestId,
+        });
+      } <span class="c-key">catch</span> (e: <span class="c-type">any</span>) {
+        <span class="c-comment">// 23505 — нарушение уникальности: такой requestId уже был.
+        // Значит это повтор, а не новая покупка.</span>
+        <span class="c-key">if</span> (e.code === <span class="c-str">'23505'</span>) <span class="c-key">throw new</span> <span class="c-type">ConflictException</span>(<span class="c-str">'Заказ уже создан'</span>);
+        <span class="c-key">throw</span> e;
+      }
+    });
+  }
+
+  <span class="c-key">async</span> <span class="c-fn">findOne</span>(id: <span class="c-type">number</span>) {
+    <span class="c-key">const</span> order = <span class="c-key">await this</span>.dataSource.<span class="c-fn">getRepository</span>(<span class="c-type">Order</span>).<span class="c-fn">findOneBy</span>({ id });
+    <span class="c-key">if</span> (!order) <span class="c-key">throw new</span> <span class="c-type">NotFoundException</span>();
+    <span class="c-key">return</span> order;
+  }
+}</code></pre>
+    <div class="pitfall"><strong>Три вещи, которые ломают такой код в проде.</strong> Первая: деньги в <code>float</code> — копейки начнут теряться, поэтому колонка <code>numeric</code>, а в коде строка. Вторая: чтение баланса без блокировки — два параллельных запроса спишут с одного остатка дважды, спасает <code>pessimistic_write</code>. Третья: отсутствие ключа идемпотентности — клиент повторит запрос по таймауту и купит дважды, поэтому <code>requestId</code> с уникальным индексом.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="boxes"></i> Шаг 6. Собираем модуль</div>
+    <p class="text">Модуль перечисляет, из чего состоит фича и что она отдаёт наружу. Всё, чего нет в <code>exports</code>, остаётся внутренним — это и есть граница, которой нет у сервис-провайдера Laravel.</p>
+<pre><code><span class="c-comment">// src/orders/orders.module.ts</span>
+<span class="c-key">import</span> { Module } <span class="c-key">from</span> <span class="c-str">'@nestjs/common'</span>;
+<span class="c-key">import</span> { TypeOrmModule } <span class="c-key">from</span> <span class="c-str">'@nestjs/typeorm'</span>;
+<span class="c-key">import</span> { OrdersController } <span class="c-key">from</span> <span class="c-str">'./orders.controller'</span>;
+<span class="c-key">import</span> { OrdersService } <span class="c-key">from</span> <span class="c-str">'./orders.service'</span>;
+<span class="c-key">import</span> { Order } <span class="c-key">from</span> <span class="c-str">'./order.entity'</span>;
+<span class="c-key">import</span> { Account } <span class="c-key">from</span> <span class="c-str">'./account.entity'</span>;
+
+<span class="c-key">@Module</span>({
+  imports: [<span class="c-type">TypeOrmModule</span>.<span class="c-fn">forFeature</span>([<span class="c-type">Order</span>, <span class="c-type">Account</span>])],
+  controllers: [<span class="c-type">OrdersController</span>],
+  providers: [<span class="c-type">OrdersService</span>],
+  exports: [<span class="c-type">OrdersService</span>],   <span class="c-comment">// другие модули смогут его внедрить</span>
+})
+<span class="c-key">export class</span> <span class="c-type">OrdersModule</span> {}</code></pre>
+<pre><code><span class="c-comment">// src/app.module.ts — подключение базы и нашего модуля</span>
+<span class="c-key">import</span> { Module } <span class="c-key">from</span> <span class="c-str">'@nestjs/common'</span>;
+<span class="c-key">import</span> { TypeOrmModule } <span class="c-key">from</span> <span class="c-str">'@nestjs/typeorm'</span>;
+<span class="c-key">import</span> { OrdersModule } <span class="c-key">from</span> <span class="c-str">'./orders/orders.module'</span>;
+
+<span class="c-key">@Module</span>({
+  imports: [
+    <span class="c-type">TypeOrmModule</span>.<span class="c-fn">forRoot</span>({
+      type: <span class="c-str">'postgres'</span>,
+      host: <span class="c-str">'localhost'</span>,
+      port: <span class="c-num">5432</span>,
+      username: <span class="c-str">'postgres'</span>,
+      password: <span class="c-str">'postgres'</span>,
+      database: <span class="c-str">'shop'</span>,
+      autoLoadEntities: <span class="c-key">true</span>,
+      synchronize: <span class="c-key">true</span>,   <span class="c-comment">// только для разработки: в проде — миграции</span>
+    }),
+    <span class="c-type">OrdersModule</span>,
+  ],
+})
+<span class="c-key">export class</span> <span class="c-type">AppModule</span> {}</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="play"></i> Шаг 7. Запускаем и проверяем</div>
+<pre><code>npm run start:dev
+
+<span class="c-comment"># без ключа — 401 от guard</span>
+curl -X POST localhost:3000/orders \
+  -H <span class="c-str">'Content-Type: application/json'</span> \
+  -d <span class="c-str">'{"accountId":1,"total":"100.00","requestId":"3f1a..."}'</span>
+
+<span class="c-comment"># с ключом, но с лишним полем — 400 от ValidationPipe (forbidNonWhitelisted)</span>
+curl -X POST localhost:3000/orders \
+  -H <span class="c-str">'x-api-key: secret'</span> -H <span class="c-str">'Content-Type: application/json'</span> \
+  -d <span class="c-str">'{"accountId":1,"total":"100.00","requestId":"3f1a...","isAdmin":true}'</span>
+
+<span class="c-comment"># корректный запрос — 201 и созданный заказ</span>
+curl -X POST localhost:3000/orders \
+  -H <span class="c-str">'x-api-key: secret'</span> -H <span class="c-str">'Content-Type: application/json'</span> \
+  -d <span class="c-str">'{"accountId":1,"total":"100.00","requestId":"3f1a..."}'</span>
+
+<span class="c-comment"># тот же requestId ещё раз — 409, второй заказ не создан</span></code></pre>
+    <div class="remember-box"><strong>Что здесь произошло по шагам.</strong> Запрос попал в guard, тот проверил ключ. Дальше <code>ValidationPipe</code> разобрал тело по DTO и отсёк лишние поля. Контроллер передал готовый объект в сервис, не зная ничего о базе. Сервис открыл транзакцию, заблокировал строку счёта, списал деньги и создал заказ — либо откатил всё целиком. Это ровно тот порядок, который описан в разделе <strong>Жизненный цикл запроса</strong>.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="message-circle-question"></i> Что спросят по этой теме</div>
+    <table class="data-table">
+      <thead><tr><th>Вопрос</th><th>Короткий ответ</th></tr></thead>
+      <tbody>
+        <tr><td>Чем модуль Nest отличается от сервис-провайдера Laravel?</td><td>Провайдер только регистрирует связки в общем контейнере, модуль дополнительно задаёт границу: что импортирует и что экспортирует</td></tr>
+        <tr><td>Почему guard срабатывает раньше pipe?</td><td>Чтобы не тратить разбор и валидацию тела на запрос, который всё равно будет отклонён</td></tr>
+        <tr><td>Как не списать деньги дважды?</td><td>Блокировка строки счёта в транзакции плюс ключ идемпотентности с уникальным индексом</td></tr>
+        <tr><td>Зачем whitelist в ValidationPipe?</td><td>Отсекает поля, которых нет в DTO, иначе лишние данные из запроса доедут до сервиса</td></tr>
+      </tbody>
+    </table>
   </div>
 </div>
 @endverbatim
