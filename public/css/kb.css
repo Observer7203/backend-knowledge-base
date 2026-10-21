@@ -119,22 +119,23 @@
    Идёт после тёмной темы: у обоих селекторов одинаковая
    специфичность, поэтому порядок решает. */
 :root[data-accent="blue"] {
-  --primary:        #068c8e;
-  --primary-light:  #e6f6f6;
-  --primary-dark:   #056f71;
-  --primary-rgb:    6, 140, 142;
+  --primary:        #3c8772;
+  --primary-light:  #ebf7f2;
+  --primary-dark:   #2f6b5a;
+  --primary-rgb:    60, 135, 114;
 
-  --lava1: 6, 160, 158;
-  --lava2: 34, 205, 200;
-  --lava3: 20, 170, 200;
-  --lava4: 64, 224, 208;
+  /* блобы — по градиенту vuejs.org: #42d392 -> #647eff */
+  --lava1: 66, 211, 146;
+  --lava2: 78, 182, 183;
+  --lava3: 89, 154, 219;
+  --lava4: 100, 126, 255;
 }
 
 :root[data-accent="blue"][data-theme="dark"] {
-  --primary:        #34cfcf;
-  --primary-light:  #06282a;
-  --primary-dark:   #068c8e;
-  --primary-rgb:    52, 207, 207;
+  --primary:        #42d392;
+  --primary-light:  #0c241b;
+  --primary-dark:   #3c8772;
+  --primary-rgb:    66, 211, 146;
 }
 
 /* ---------- База ---------- */
