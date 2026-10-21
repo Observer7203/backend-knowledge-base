@@ -1385,6 +1385,66 @@ user[<span class="c-type">Symbol</span>.iterator];    <span class="c-comment">//
   </div>
 
   <div class="subsection">
+    <h3 class="subsection-title">console.log или return — зачем в обработчике логи</h3>
+    <p class="text">Это две разные задачи, и их легко спутать. <code>console.log</code> <strong>показывает</strong> значение человеку в консоли. <code>return</code> <strong>отдаёт</strong> значение тому месту, откуда функцию вызвали.</p>
+    <table class="data-table">
+      <thead><tr><th></th><th><code>console.log(x)</code></th><th><code>return x</code></th></tr></thead>
+      <tbody>
+        <tr><td>Кому предназначено</td><td>Разработчику, в консоль</td><td>Коду, который вызвал функцию</td></tr>
+        <tr><td>Влияет на программу</td><td>Нет</td><td>Да — это результат вызова</td></tr>
+        <tr><td>Выполнение функции</td><td>Продолжается</td><td>Прерывается на этой строке</td></tr>
+        <tr><td>Где уместно</td><td>Отладка, проверка данных</td><td>Функция вызвана ради результата</td></tr>
+      </tbody>
+    </table>
+<pre><code><span class="c-comment">// Функцию вызвали, чтобы получить результат — нужен return</span>
+<span class="c-key">function</span> <span class="c-fn">sum</span>(a, b) {
+  <span class="c-key">return</span> a + b;        <span class="c-comment">// без return вернётся undefined</span>
+}
+
+<span class="c-key">const</span> result = <span class="c-fn">sum</span>(<span class="c-num">2</span>, <span class="c-num">3</span>);  <span class="c-comment">// 5 — значение попало в переменную</span>
+<span class="c-fn">console</span>.<span class="c-fn">log</span>(result);      <span class="c-comment">// а здесь лог нужен, чтобы увидеть это число</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <h3 class="subsection-title">Почему return в обработчике бесполезен</h3>
+    <p class="text">Обработчик вызывает <strong>браузер</strong>, а не ваш код. Браузеру некуда девать возвращённое значение — он его просто отбрасывает.</p>
+<pre><code>btn.<span class="c-fn">addEventListener</span>(<span class="c-str">'click'</span>, (event) =&gt; {
+  <span class="c-key">return</span> event.target;   <span class="c-comment">// значение никуда не попадёт: его некому принять</span>
+});</code></pre>
+    <p class="text">Поэтому в обработчике либо смотрят данные логом, либо <strong>передают их дальше</strong> — вызовом другой функции или изменением состояния:</p>
+<pre><code><span class="c-key">function</span> <span class="c-fn">showUserProfile</span>(element) {
+  <span class="c-comment">// открыть модальное окно, подгрузить данные и так далее</span>
+}
+
+btn.<span class="c-fn">addEventListener</span>(<span class="c-str">'click'</span>, (event) =&gt; {
+  <span class="c-fn">showUserProfile</span>(event.target);   <span class="c-comment">// не возвращаем, а передаём</span>
+});</code></pre>
+    <div class="remember-box"><strong>Правило.</strong> Возвращают значение туда, откуда функцию позвали. Обработчик зовёт браузер — значит возвращать некому. Результат работы обработчика выражается в действиях: вызвать функцию, записать состояние, изменить страницу.</div>
+  </div>
+
+  <div class="subsection">
+    <h3 class="subsection-title">Когда return в обработчике всё-таки нужен</h3>
+    <p class="text">В одном случае — как досрочный выход, чтобы не выполнять остальной код. Значение при этом не важно, важна сама остановка.</p>
+<pre><code>btn.<span class="c-fn">addEventListener</span>(<span class="c-str">'click'</span>, (event) =&gt; {
+  <span class="c-key">if</span> (!event.target.<span class="c-fn">matches</span>(<span class="c-str">'.active'</span>)) {
+    <span class="c-key">return</span>;                <span class="c-comment">// кнопка неактивна — дальше не идём</span>
+  }
+  <span class="c-fn">doWork</span>(event.target);     <span class="c-comment">// выполнится только для активной кнопки</span>
+});</code></pre>
+    <p class="text">Такой приём называют ранним выходом: он избавляет от вложенных <code>if</code> и держит основной сценарий слева, без лишних отступов.</p>
+    <div class="pitfall"><strong>Важное отличие от jQuery.</strong> В jQuery <code>return false</code> внутри обработчика отменяет действие по умолчанию <em>и</em> останавливает всплытие — то есть работает как <code>preventDefault()</code> плюс <code>stopPropagation()</code>. В обычном <code>addEventListener</code> такого эффекта нет: <code>return false</code> там равносилен простому выходу, и форма всё равно отправится. Отменять нужно явно.</div>
+<pre><code><span class="c-comment">// jQuery: одно значение отменяет и отправку, и всплытие</span>
+$(<span class="c-str">'form'</span>).<span class="c-fn">on</span>(<span class="c-str">'submit'</span>, <span class="c-key">function</span> () {
+  <span class="c-key">return</span> <span class="c-key">false</span>;
+});
+
+<span class="c-comment">// addEventListener: return false ничего не отменит</span>
+form.<span class="c-fn">addEventListener</span>(<span class="c-str">'submit'</span>, (e) =&gt; {
+  e.<span class="c-fn">preventDefault</span>();      <span class="c-comment">// только так</span>
+});</code></pre>
+  </div>
+
+  <div class="subsection">
     <h3 class="subsection-title">Ключевые события</h3>
     <table class="data-table">
       <thead><tr><th>Событие</th><th>Когда</th></tr></thead>
