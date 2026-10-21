@@ -145,6 +145,7 @@ ol.numbered strong{color:var(--text);}
   <a class="nav-item" onclick="showSection('node-what',this)"><i data-lucide="help-circle"></i> Что такое Node.js</a>
   <a class="nav-item" onclick="showSection('node-install',this)"><i data-lucide="download"></i> Установка и версии</a>
   <a class="nav-item" onclick="showSection('node-inside',this)"><i data-lucide="layers"></i> Из чего состоит</a>
+  <a class="nav-item" onclick="showSection('node-lifecycle',this)"><i data-lucide="play-circle"></i> Жизненный цикл процесса</a>
   <a class="nav-item" onclick="showSection('node-vs-php',this)"><i data-lucide="git-compare"></i> Модель процесса: vs PHP</a>
   <a class="nav-item" onclick="showSection('node-start',this)"><i data-lucide="play"></i> Первая программа и модули</a>
   <a class="nav-item" onclick="showSection('node-npm',this)"><i data-lucide="file-json"></i> package.json и npm</a>
@@ -350,6 +351,104 @@ node -p <span class="c-str">"process.versions"</span>
 # node: '25.2.1', v8: '14.1.146', uv: '1.51.0',
 # openssl: '3.6.2', undici: '7.16.0', zlib: '1.2.12', ...</span></code></pre>
     <div class="remember-box"><strong>Ключевая мысль.</strong> V8 умеет только исполнять JavaScript — он ничего не знает ни о файлах, ни о сокетах. Всё, что делает Node серверной платформой, даёт <strong>libuv</strong> и остальные C-библиотеки. Поэтому event loop — это не часть языка, а часть рантайма.</div>
+  </div>
+</div>
+@endverbatim
+@verbatim
+<div id="sec-node-lifecycle" class="section">
+  <div class="section-title">Жизненный цикл процесса: от запуска до выхода</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="play-circle"></i> Что происходит, когда вы набрали node app.js</div>
+    <p class="text">Это отправная точка, к которой привязано всё остальное в разделе. Пока не видно, кто кого запускает, фазы, пул потоков и очереди выглядят набором разрозненных понятий.</p>
+    <div class="diagram">node app.js
+   │
+   ├─ 1. Запускается процесс ОС. Node создаёт два движка:
+   │       V8    — исполняет JavaScript
+   │       libuv — работа с сетью, файлами, таймерами
+   │
+   ├─ 2. Внутренний bootstrap самого Node (его код на JS и C++):
+   │       поднимаются process, console, Buffer,
+   │       готовится загрузчик модулей (require / import)
+   │
+   ├─ 3. Загружается и выполняется ВАШ файл — сверху вниз, синхронно.
+   │       Здесь обычно только регистрация: создать сервер,
+   │       подписаться на события, завести таймеры.
+   │       Сам по себе этот проход ничего не обслуживает.
+   │
+   ├─ 4. Ваш файл дочитан до конца. Управление уходит в event loop.
+   │       Вот тут начинаются фазы — они живут только здесь.
+   │
+   ├─ 5. Цикл крутится, пока есть незакрытые дела:
+   │       открытый сервер, таймер, незавершённый запрос к базе.
+   │       На каждом обороте проходит фазы и вызывает ваши колбэки.
+   │
+   └─ 6. Дел не осталось → цикл завершается → процесс выходит с кодом 0.</div>
+    <div class="remember-box"><strong>Ключевой переход — между шагами 3 и 4.</strong> Код верхнего уровня выполняется один раз и только расставляет обработчики. Дальше ваши функции вызывает не ваш код, а event loop. Поэтому «после сервера» ничего не пишут: строка <code>app.listen(3000)</code> возвращает управление сразу, а не блокирует процесс.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> Чем это отличается от Laravel</div>
+    <p class="text">В Laravel есть точка входа и ядро, которые на <em>каждый</em> запрос прогоняют его через конвейер. В Node такого ядра нет: запуск происходит один раз, а запросы приходят в уже работающий процесс.</p>
+    <table class="data-table">
+      <thead><tr><th></th><th>Laravel (PHP-FPM)</th><th>Node.js</th></tr></thead>
+      <tbody>
+        <tr><td>Точка входа</td><td><code>public/index.php</code> — на каждый запрос заново</td><td><code>app.js</code> — один раз при старте</td></tr>
+        <tr><td>Сборка приложения</td><td><code>bootstrap/app.php</code>: контейнер, провайдеры</td><td>Ваш код верхнего уровня плюс внутренний bootstrap Node</td></tr>
+        <tr><td>Кто вызывает ваш код</td><td>Ядро: <code>Kernel::handle($request)</code></td><td>Event loop — когда наступает событие</td></tr>
+        <tr><td>Что обрабатывает запрос</td><td>Конвейер middleware → маршрут → контроллер</td><td>Колбэк, который вы зарегистрировали при старте</td></tr>
+        <tr><td>Конец запроса</td><td>Ответ отправлен, процесс умирает</td><td>Ответ отправлен, процесс продолжает жить</td></tr>
+        <tr><td>Состояние между запросами</td><td>Не сохраняется</td><td>Сохраняется — отсюда и кэш в памяти, и утечки</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Перевод на привычные понятия.</strong> Event loop занимает то же место, что <code>Kernel::handle()</code> в Laravel: это диспетчер, который получает событие и зовёт нужный обработчик. Разница в том, что ядро Laravel поднимается заново на каждый запрос, а event loop поднимается один раз и крутится, пока жив процесс.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="layers"></i> Кто внутри кого: карта понятий</div>
+    <p class="text">Короткая иерархия, к которой можно возвращаться при чтении дальнейших разделов:</p>
+    <div class="diagram">процесс Node.js
+└── рантайм
+    ├── V8 ──────────── исполняет ваш JavaScript, держит память и сборщик мусора
+    └── libuv ───────── вся асинхронность
+        ├── event loop ──── бесконечный цикл; обходит фазы по кругу
+        │   └── фазы ────── timers, pending, poll, check, close
+        │       └── очереди колбэков внутри каждой фазы
+        ├── пул потоков ─── 4 потока для файлов, DNS, crypto, zlib
+        └── опрос ОС ────── epoll (Linux), kqueue (macOS), IOCP (Windows)
+
+Отдельно от фаз, поверх них:
+    очередь process.nextTick   ─┐  опустошаются полностью
+    очередь промисов           ─┘  после КАЖДОГО колбэка</div>
+    <table class="data-table">
+      <thead><tr><th>Понятие</th><th>Частью чего является</th><th>Кто это запускает</th></tr></thead>
+      <tbody>
+        <tr><td>Фаза</td><td>Event loop</td><td>Сам цикл, по кругу</td></tr>
+        <tr><td>Event loop</td><td>libuv</td><td>Node — после того, как выполнил ваш файл</td></tr>
+        <tr><td>Пул потоков</td><td>libuv</td><td>libuv, когда операцию нельзя сделать асинхронно</td></tr>
+        <tr><td>Микрозадачи</td><td>V8 (промисы) и Node (<code>nextTick</code>)</td><td>Сливаются после каждого колбэка</td></tr>
+        <tr><td>Ваш колбэк</td><td>Очередь внутри фазы</td><td>Event loop, когда дошёл до этой фазы</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="power-off"></i> Почему процесс не завершается — и когда завершается</div>
+    <p class="text">Цикл работает, пока у libuv есть <strong>незакрытые дела</strong>: открытый сокет сервера, живой таймер, незавершённая операция с файлом. Как только счётчик таких дел обнуляется, цикл выходит и процесс завершается сам.</p>
+<pre><code><span class="c-comment">// Скрипт завершится сразу: дел не осталось</span>
+<span class="c-fn">console</span>.<span class="c-fn">log</span>(<span class="c-str">'привет'</span>);
+
+<span class="c-comment">// А этот будет жить: открытый сервер — незакрытое дело</span>
+http.<span class="c-fn">createServer</span>(handler).<span class="c-fn">listen</span>(<span class="c-num">3000</span>);
+
+<span class="c-comment">// И этот: интервал держит цикл вечно</span>
+<span class="c-fn">setInterval</span>(() =&gt; {}, <span class="c-num">1000</span>);
+
+<span class="c-comment">// unref() снимает удержание: таймер сработает, но держать цикл не будет</span>
+<span class="c-key">const</span> t = <span class="c-fn">setInterval</span>(tick, <span class="c-num">1000</span>);
+t.<span class="c-fn">unref</span>();</code></pre>
+    <div class="pitfall"><strong>Частый симптом.</strong> Скрипт отработал, а процесс висит и не отдаёт терминал. Значит что-то осталось незакрытым: подключение к базе, пул соединений, интервал. Найти можно через <code>process.getActiveResourcesInfo()</code> — он покажет, что именно удерживает цикл.</div>
+    <div class="remember-box"><strong>Связь с остальными разделами.</strong> Из этого свойства растут сразу две темы: <strong>Graceful shutdown</strong> — как закрыть дела правильно, чтобы не оборвать запросы на полуслове, и <strong>Утечки памяти</strong> — почему оставленное состояние живёт неделями, а не умирает с запросом, как в PHP.</div>
   </div>
 </div>
 @endverbatim
@@ -576,6 +675,7 @@ npx tsc --init               <span class="c-comment"># выполнить пак
 @verbatim
 <div id="sec-io" class="section">
   <div class="section-title">I/O: что это и почему вокруг него построен Node</div>
+  <div class="info-box primary"><strong>Где мы находимся.</strong> Ввод-вывод — то, ради чего в рантайме вообще есть libuv. Этот раздел объясняет, почему ожидание нельзя блокировать; как устроен сам цикл — в разделе «Event loop и фазы».</div>
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="arrow-left-right"></i> Что считается вводом-выводом</div>
@@ -692,6 +792,7 @@ fs.<span class="c-fn">readFile</span>(<span class="c-str">'big.txt'</span>, <spa
 @verbatim
 <div id="sec-event-loop" class="section">
   <div class="section-title">Event loop и фазы</div>
+  <div class="info-box primary"><strong>Где мы находимся.</strong> Event loop — цикл внутри libuv, одной из двух опор рантайма. Node входит в него после того, как выполнил ваш файл сверху вниз, и крутит, пока есть незакрытые дела. Фазы — очереди внутри этого цикла, отдельно от него они не существуют.</div>
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="repeat"></i> Почему Node однопоточный, но держит тысячи соединений</div>
     <p class="text">JS-код выполняется в <strong>одном потоке</strong>. Ввод-вывод — сеть, сокеты — отдаётся операционной системе через libuv неблокирующе. Когда операция завершается, её колбэк ставится в очередь, и event loop его подбирает.</p>
@@ -853,6 +954,7 @@ process.<span class="c-fn">nextTick</span>(() =&gt; <span class="c-fn">console</
 @verbatim
 <div id="sec-threadpool" class="section">
   <div class="section-title">Thread pool и блокировка</div>
+  <div class="info-box primary"><strong>Где мы находимся.</strong> Пул потоков — вторая часть libuv, рядом с event loop. Сам цикл однопоточный; в пул уходят операции, которые операционная система не умеет делать асинхронно. Результат возвращается в цикл обычным событием.</div>
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="cpu"></i> Что уходит в пул потоков libuv</div>
     <table class="data-table">
@@ -893,6 +995,7 @@ process.<span class="c-fn">nextTick</span>(() =&gt; <span class="c-fn">console</
 @verbatim
 <div id="sec-async-errors" class="section">
   <div class="section-title">Ошибки в async-коде</div>
+  <div class="info-box primary"><strong>Где мы находимся.</strong> Исключение внутри колбэка всплывает не к вашему коду, а к event loop — вызвал-то обработчик он. Отсюда и правила, где ставить try/catch и зачем нужны обработчики на уровне процесса.</div>
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="alert-triangle"></i> Где ловить</div>
 <pre><code><span class="c-comment">// Основной способ — try/catch вокруг await</span>
@@ -936,6 +1039,7 @@ process.<span class="c-fn">nextTick</span>(() =&gt; <span class="c-fn">console</
 @verbatim
 <div id="sec-streams" class="section">
   <div class="section-title">Streams и backpressure</div>
+  <div class="info-box primary"><strong>Где мы находимся.</strong> Потоки — надстройка стандартной библиотеки над тем же вводом-выводом. Под капотом те же события libuv, просто с удобным интерфейсом и встроенным контролем переполнения.</div>
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="waves"></i> Зачем потоки</div>
     <p class="text">Поток отдаёт данные кусками и не держит всё в памяти. Отдать CSV-отчёт на гигабайт без потоков — значит сначала собрать этот гигабайт в память процесса.</p>
@@ -956,6 +1060,7 @@ process.<span class="c-fn">nextTick</span>(() =&gt; <span class="c-fn">console</
 @verbatim
 <div id="sec-memory" class="section">
   <div class="section-title">Утечки памяти</div>
+  <div class="info-box primary"><strong>Где мы находимся.</strong> Память принадлежит V8 — второй опоре рантайма. Тема существует именно потому, что процесс живёт неделями: состояние не умирает с запросом, как в PHP-FPM.</div>
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="activity"></i> Откуда берутся</div>
     <table class="data-table">
@@ -982,6 +1087,7 @@ node --inspect app.js
 @verbatim
 <div id="sec-modules" class="section">
   <div class="section-title">CommonJS и ESM</div>
+  <div class="info-box primary"><strong>Где мы находимся.</strong> Загрузчик модулей поднимается на этапе внутреннего bootstrap, до выполнения вашего файла. Поэтому выбор между CommonJS и ESM влияет на то, как ваш код вообще попадёт в процесс.</div>
   <div class="subsection">
     <table class="data-table">
       <thead><tr><th></th><th>CommonJS</th><th>ES Modules</th></tr></thead>
@@ -1000,6 +1106,7 @@ node --inspect app.js
 @verbatim
 <div id="sec-shutdown" class="section">
   <div class="section-title">Graceful shutdown</div>
+  <div class="info-box primary"><strong>Где мы находимся.</strong> Прямое следствие того, что цикл работает, пока есть незакрытые дела. Корректное завершение — это закрыть их в правильном порядке, не оборвав запросы на полуслове.</div>
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="power"></i> Порядок завершения</div>
     <ol style="margin:8px 0 14px 22px;color:var(--text2);font-size:13px;line-height:1.85">
@@ -1179,6 +1286,7 @@ app.<span class="c-fn">get</span>(<span class="c-str">'/poll'</span>, (req, res)
 @verbatim
 <div id="sec-nest-arch" class="section">
   <div class="section-title">NestJS: строительные блоки</div>
+  <div class="info-box primary"><strong>Где мы находимся.</strong> NestJS — фреймворк поверх рантайма, а не замена ему. Всё, что было сказано про event loop, пул потоков и память, продолжает действовать под ним без изменений.</div>
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="boxes"></i> Что чему соответствует в Laravel</div>
     <table class="data-table">
@@ -1201,6 +1309,7 @@ app.<span class="c-fn">get</span>(<span class="c-str">'/poll'</span>, (req, res)
 @verbatim
 <div id="sec-nest-lifecycle" class="section">
   <div class="section-title">NestJS: жизненный цикл запроса</div>
+  <div class="info-box primary"><strong>Где мы находимся.</strong> Жизненный цикл запроса в NestJS — это то, что происходит внутри одного колбэка event loop. Ближайший аналог — конвейер Kernel::handle() в Laravel, только поднятый один раз при старте, а не на каждый запрос.</div>
   <div class="subsection">
     <div class="diagram">Middleware
     ↓
