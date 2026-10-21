@@ -797,21 +797,25 @@ fs.<span class="c-fn">readFile</span>(<span class="c-str">'big.txt'</span>, <spa
     <div class="subsection-title"><i data-lucide="repeat"></i> Почему Node однопоточный, но держит тысячи соединений</div>
     <p class="text">JS-код выполняется в <strong>одном потоке</strong>. Ввод-вывод — сеть, сокеты — отдаётся операционной системе через libuv неблокирующе. Когда операция завершается, её колбэк ставится в очередь, и event loop его подбирает.</p>
     <div class="diagram">     ┌───────────────────────────┐
-  ┌─→│  timers                   │  setTimeout, setInterval
+  ┌─→│  pending callbacks        │  отложенные системные колбэки
   │  ├───────────────────────────┤
-  │  │  pending callbacks        │  отложенные системные колбэки
+  │  │  idle, prepare            │  служебная, используется самим Node
   │  ├───────────────────────────┤
   │  │  poll                     │  ждёт I/O, исполняет его колбэки
   │  ├───────────────────────────┤
   │  │  check                    │  setImmediate
   │  ├───────────────────────────┤
+  │  │  timers                   │  setTimeout, setInterval
+  │  ├───────────────────────────┤
   │  │  close callbacks          │  socket.on('close')
   │  └───────────────────────────┘
   └──────────────┘
 
-  Между КАЖДЫМ колбэком выполняются микрозадачи:
+  Очереди микрозадач НЕ являются фазами. Они стоят поверх цикла
+  и опустошаются после каждой операции, в любой фазе:
      1) очередь process.nextTick
      2) очередь промисов</div>
+    <div class="info-box warning"><strong>Порядок фаз изменился в Node 20.</strong> Раньше цикл начинался с <code>timers</code>. Начиная с libuv 1.45.0, который вошёл в Node 20, таймеры выполняются <strong>после фазы poll</strong> на каждом обороте. Схемы в старых статьях показывают прежний порядок — на Node 20 и новее они устарели.</div>
     <div class="pitfall"><strong>Пока один колбэк работает, всё остальное ждёт.</strong> Тяжёлая синхронная работа блокирует весь сервер — не «этот запрос», а <em>все</em> соединения процесса.</div>
   </div>
 
@@ -846,14 +850,29 @@ process.<span class="c-fn">nextTick</span>(() =&gt; <span class="c-fn">console</
     <table class="data-table">
       <thead><tr><th>Фаза</th><th>Что выполняет</th><th>Чем важна</th></tr></thead>
       <tbody>
-        <tr><td><strong>timers</strong></td><td>Колбэки <code>setTimeout</code> и <code>setInterval</code>, у которых истёк срок</td><td>Таймер срабатывает не «ровно через N мс», а при первом заходе в эту фазу после истечения N мс</td></tr>
-        <tr><td><strong>pending callbacks</strong></td><td>Системные колбэки, отложенные ОС на следующий проход — например, часть ошибок TCP на некоторых платформах</td><td>В прикладном коде встречается редко</td></tr>
-        <tr><td><strong>poll</strong></td><td>Забирает готовые события ввода-вывода и выполняет их колбэки; если событий нет — блокируется и ждёт</td><td>Сердце цикла. Именно здесь процесс «спит», не тратя процессор, пока ждёт сеть или диск</td></tr>
+        <tr><td><strong>pending callbacks</strong></td><td>Системные колбэки, отложенные ОС на следующий проход — в документации приведены «некоторые типы ошибок TCP»</td><td>В прикладном коде встречается редко</td></tr>
+        <tr><td><strong>idle, prepare</strong></td><td>Служебная фаза</td><td>В документации помечена «used only internally» — вашего кода здесь не бывает</td></tr>
+        <tr><td><strong>poll</strong></td><td>Забирает готовые события ввода-вывода и выполняет их колбэки — все, кроме close-колбэков, таймеров и <code>setImmediate</code></td><td>Сердце цикла. Именно здесь процесс «спит», не тратя процессор, пока ждёт сеть или диск</td></tr>
         <tr><td><strong>check</strong></td><td>Колбэки <code>setImmediate</code></td><td>Идёт сразу после poll — отсюда вся разница с <code>setTimeout(fn, 0)</code></td></tr>
-        <tr><td><strong>close callbacks</strong></td><td>События закрытия: <code>socket.on('close')</code>, <code>stream.on('close')</code></td><td>Замыкает круг, после чего цикл начинается заново с timers</td></tr>
+        <tr><td><strong>timers</strong></td><td>Колбэки <code>setTimeout</code> и <code>setInterval</code>, у которых истёк срок</td><td>Таймер задаёт <strong>порог</strong>, после которого колбэк <em>может</em> выполниться, а не точное время</td></tr>
+        <tr><td><strong>close callbacks</strong></td><td>События закрытия: <code>socket.on('close')</code></td><td>Замыкает круг, дальше цикл начинается заново</td></tr>
       </tbody>
     </table>
-    <p class="text">Если в очереди таймеров есть готовые к исполнению, фаза poll не станет блокироваться надолго, а быстро передаст управление дальше по кругу.</p>
+    <p class="text">Фаз на самом деле семь или восемь; в документации разбирают те, которые реально использует Node — они перечислены выше.</p>
+
+    <p class="text"><strong>Как фаза poll решает, ждать ли.</strong> У неё две работы: посчитать, сколько времени блокироваться на ожидании ввода-вывода, и обработать события из своей очереди. Дальше поведение зависит от того, что её ждёт:</p>
+    <div class="diagram">очередь poll не пуста
+   └─ выполняет колбэки по очереди, пока она не кончится
+      или пока не упрётся в системный лимит
+
+очередь poll пуста
+   ├─ есть запланированные setImmediate
+   │     └─ poll завершается немедленно, цикл идёт в check
+   │
+   └─ setImmediate нет
+         └─ цикл ждёт здесь, пока не придут новые события
+            (но не дольше, чем до срабатывания ближайшего таймера)</div>
+    <div class="remember-box"><strong>Почему таймеры «неточные».</strong> В документации сказано прямо: таймер задаёт порог, <em>после</em> которого колбэк может быть выполнен. Если в момент истечения порога цикл занят колбэком ввода-вывода, таймер подождёт. Пример из документации: таймер на 100 мс при чтении файла, занявшем 95 мс, срабатывает примерно через 105 мс.</div>
     <div class="pitfall"><strong><code>setTimeout(fn, 0)</code> — это не «немедленно».</strong> Минимальная задержка в Node фактически равна 1 мс, и колбэк всё равно ждёт захода в фазу timers. Если нужно «как можно скорее, но после текущего ввода-вывода» — это <code>setImmediate</code>.</div>
   </div>
 
@@ -878,7 +897,8 @@ fs.<span class="c-fn">readFile</span>(__filename, () =&gt; {
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="zap"></i> Микрозадачи: две очереди между колбэками</div>
-    <p class="text">Это самое важное для практики. Микрозадачи — очереди, которые опустошаются <strong>полностью</strong> после каждого колбэка, прежде чем цикл пойдёт дальше. Очередей две, и порядок между ними строгий:</p>
+    <p class="text">Это самое важное для практики. Микрозадачи — очереди, которые опустошаются <strong>полностью</strong>, прежде чем цикл пойдёт дальше. Очередей две, и порядок между ними строгий:</p>
+    <div class="info-box primary"><strong>Важная оговорка из документации.</strong> <code>process.nextTick()</code> формально <em>не является частью event loop</em>. Его очередь обрабатывается после завершения текущей операции, независимо от того, в какой фазе цикл сейчас находится. Операцией здесь называют переход от обработчика на C/C++ к исполнению связанного с ним JavaScript. Поэтому на схеме цикла обе очереди микрозадач стоят отдельно, а не внутри фаз.</div>
     <table class="data-table">
       <thead><tr><th>Очередь</th><th>Что попадает</th><th>Приоритет</th></tr></thead>
       <tbody>
@@ -958,15 +978,20 @@ process.<span class="c-fn">nextTick</span>(() =&gt; <span class="c-fn">console</
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="cpu"></i> Что уходит в пул потоков libuv</div>
     <table class="data-table">
-      <thead><tr><th>Идёт в thread pool</th><th>Не идёт — работает через epoll/kqueue</th></tr></thead>
+      <thead><tr><th>Идёт в пул потоков</th><th>Что именно, по документации</th></tr></thead>
       <tbody>
-        <tr><td><code>fs</code> — файловая система</td><td rowspan="4">Сеть: TCP, HTTP, сокеты</td></tr>
-        <tr><td><code>crypto</code>: <code>pbkdf2</code>, <code>scrypt</code></td></tr>
-        <tr><td><code>zlib</code> — сжатие</td></tr>
-        <tr><td><code>dns.lookup</code></td></tr>
+        <tr><td><code>fs</code></td><td>Все файловые операции, <strong>кроме</strong> <code>fs.FSWatcher()</code> и явно синхронных (<code>*Sync</code>)</td></tr>
+        <tr><td><code>dns</code></td><td><code>dns.lookup()</code> и <code>dns.lookupService()</code> — они идут через системный резолвер. Остальные <code>dns.resolve*</code> работают через c-ares и пул не занимают</td></tr>
+        <tr><td><code>crypto</code></td><td><code>pbkdf2</code>, <code>scrypt</code>, <code>randomBytes</code>, <code>randomFill</code>, <code>generateKeyPair</code></td></tr>
+        <tr><td><code>zlib</code></td><td>Все операции сжатия, кроме явно синхронных</td></tr>
+        <tr><td>Нативные дополнения</td><td>Модули на C++ могут отправлять в пул собственные задачи</td></tr>
       </tbody>
     </table>
-    <p class="text">По умолчанию в пуле <strong>4 потока</strong>, меняется переменной <code>UV_THREADPOOL_SIZE</code>.</p>
+    <p class="text"><strong>Сеть в пул не идёт.</strong> TCP, HTTP и сокеты обслуживаются самой операционной системой через <code>epoll</code> (Linux), <code>kqueue</code> (macOS), event ports (Solaris) или <code>IOCP</code> (Windows) — поток для этого не нужен.</p>
+    <p class="text">По умолчанию в пуле <strong>4 потока</strong>, меняется переменной окружения <code>UV_THREADPOOL_SIZE</code>.</p>
+<pre><code><span class="c-comment"># так — работает</span>
+UV_THREADPOOL_SIZE=8 node app.js</code></pre>
+    <div class="pitfall"><strong>Изнутри процесса переменную менять бесполезно.</strong> В документации прямо сказано: присваивание <code>process.env.UV_THREADPOOL_SIZE</code> в коде не гарантирует эффекта, потому что пул создаётся при инициализации рантайма — задолго до того, как начнёт выполняться ваш файл. Задавать нужно при запуске процесса.</div>
     <div class="pitfall"><strong>Распространённое заблуждение.</strong> «Node асинхронный, значит всё параллельно». Нет: сеть действительно обрабатывается ОС, а вот файловые и crypto-операции делят между собой 4 потока. Пять одновременных <code>pbkdf2</code> — и пятый ждёт.</div>
   </div>
 
@@ -1292,7 +1317,7 @@ app.<span class="c-fn">get</span>(<span class="c-str">'/poll'</span>, (req, res)
     <table class="data-table">
       <thead><tr><th>NestJS</th><th>Аналог в Laravel</th><th>Что делает</th></tr></thead>
       <tbody>
-        <tr><td><code>@Module</code></td><td>Service Provider</td><td>Группирует контроллеры и провайдеры, задаёт <code>imports</code> и <code>exports</code></td></tr>
+        <tr><td><code>@Module</code></td><td>Service Provider</td><td>Четыре поля: <code>providers</code> — что создаёт инжектор, <code>controllers</code> — какие контроллеры поднять, <code>imports</code> — чужие модули, чьи провайдеры нужны здесь, <code>exports</code> — то из своих провайдеров, что отдаётся наружу</td></tr>
         <tr><td><code>@Injectable</code> провайдер</td><td>Класс в контейнере</td><td>Сервис, который DI создаёт и внедряет через конструктор</td></tr>
         <tr><td>Controller</td><td>Controller</td><td>Маршруты: <code>@Get</code>, <code>@Post</code>, <code>@Param</code>, <code>@Body</code></td></tr>
         <tr><td>DTO + ValidationPipe</td><td>FormRequest</td><td>Валидация входа через class-validator</td></tr>
@@ -1303,6 +1328,29 @@ app.<span class="c-fn">get</span>(<span class="c-str">'/poll'</span>, (req, res)
       </tbody>
     </table>
   </div>
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="power"></i> События жизненного цикла приложения</div>
+    <p class="text">Кроме цикла запроса у Nest есть цикл <strong>самого приложения</strong>: поднятие при старте и остановка при сигнале. Это то место, где подключают пулы соединений и где их корректно закрывают.</p>
+    <table class="data-table">
+      <thead><tr><th>Хук</th><th>Когда срабатывает</th></tr></thead>
+      <tbody>
+        <tr><td><code>onModuleInit</code></td><td>Зависимости конкретного модуля разрешены. Nest идёт по модулям снизу вверх — от самых глубоких в графе импортов к корневому</td></tr>
+        <tr><td><code>onApplicationBootstrap</code></td><td>Все модули проинициализированы, но сервер ещё не начал принимать соединения</td></tr>
+        <tr><td><code>onModuleDestroy</code></td><td>Получен сигнал завершения, например <code>SIGTERM</code></td></tr>
+        <tr><td><code>beforeApplicationShutdown</code></td><td>Все <code>onModuleDestroy</code> отработали, соединения ещё не закрыты. Получает имя сигнала</td></tr>
+        <tr><td><code>onApplicationShutdown</code></td><td>Соединения закрыты — последний шаг <code>app.close()</code>. Получает имя сигнала</td></tr>
+      </tbody>
+    </table>
+    <p class="text">Если хук вернул промис, Nest дождётся его перед переходом к следующему шагу — поэтому в них можно спокойно делать асинхронную работу.</p>
+<pre><code><span class="c-key">const</span> app = <span class="c-key">await</span> <span class="c-type">NestFactory</span>.<span class="c-fn">create</span>(<span class="c-type">AppModule</span>);
+
+<span class="c-comment">// без этой строки хуки по сигналам не сработают</span>
+app.<span class="c-fn">enableShutdownHooks</span>();
+
+<span class="c-key">await</span> app.<span class="c-fn">listen</span>(<span class="c-num">3000</span>);</code></pre>
+    <div class="pitfall"><strong>Слушатели сигналов выключены по умолчанию.</strong> В документации сказано прямо: они потребляют системные ресурсы, поэтому не включены. Без <code>enableShutdownHooks()</code> хуки отработают только при явном <code>app.close()</code>, а на <code>SIGTERM</code> от Docker или Kubernetes — нет. Контейнер будет убит по таймауту вместе с незавершёнными запросами. На Windows <code>SIGTERM</code> не работает в принципе, <code>SIGINT</code> — работает.</div>
+    <div class="remember-box"><strong>Связь с разделом «Graceful shutdown».</strong> Там описано, почему процесс обязан закрывать дела сам; эти пять хуков — готовые точки, куда такую логику вешают в Nest, не изобретая своих обработчиков сигналов.</div>
+  </div>
 </div>
 
 @endverbatim
@@ -1311,21 +1359,58 @@ app.<span class="c-fn">get</span>(<span class="c-str">'/poll'</span>, (req, res)
   <div class="section-title">NestJS: жизненный цикл запроса</div>
   <div class="info-box primary"><strong>Где мы находимся.</strong> Жизненный цикл запроса в NestJS — это то, что происходит внутри одного колбэка event loop. Ближайший аналог — конвейер Kernel::handle() в Laravel, только поднятый один раз при старте, а не на каждый запрос.</div>
   <div class="subsection">
-    <div class="diagram">Middleware
-    ↓
-Guards              ← пускать или нет
-    ↓
-Interceptors (до)   ← обёртка: логи, таймаут
-    ↓
-Pipes               ← валидация и преобразование
-    ↓
-Handler             ← метод контроллера
-    ↓
-Interceptors (после)
-    ↓
-Exception filters   ← если было исключение</div>
-    <div class="remember-box"><strong>Как запомнить порядок:</strong> сначала решаем, <em>пускать ли</em> (guard), потом <em>оборачиваем</em> (interceptor), потом <em>проверяем данные</em> (pipe).</div>
-    <div class="why-box"><strong>Почему guard раньше pipe.</strong> Нет смысла валидировать тело запроса от того, кого мы всё равно не пустим. Сначала отсекается неавторизованный трафик, и только потом тратится время на разбор данных.</div>
+    <div class="subsection-title"><i data-lucide="list-ordered"></i> Полный порядок по документации</div>
+    <p class="text">Запрос проходит фиксированную последовательность. У каждого типа обработчиков есть три уровня — глобальный, контроллера и маршрута, — и они тоже идут в строгом порядке.</p>
+    <div class="diagram">входящий запрос
+   │
+   1. Middleware          глобальные → модульные (по пути)
+   │
+   2. Guards              глобальные → контроллера → маршрута
+   │
+   3. Interceptors (до)   глобальные → контроллера → маршрута
+   │
+   4. Pipes               глобальные → контроллера → маршрута → параметров
+   │
+   5. Controller          метод-обработчик маршрута
+   │
+   6. Service             то, что вызывает обработчик
+   │
+   7. Interceptors (после)   маршрута → контроллера → глобальные
+   │                         порядок обратный пункту 3
+   │
+   8. Exception filters   маршрута → контроллера → глобальные
+   │                      только если возникло необработанное исключение
+   │
+   9. Ответ клиенту</div>
+    <div class="remember-box"><strong>Обратите внимание на пункт 7.</strong> На пути «туда» перехватчики идут от глобальных к маршруту, на пути «обратно» — в обратном порядке. Это и делает их обёрткой: глобальный перехватчик начинает работу первым и заканчивает последним, как внешний слой у матрёшки.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-branch"></i> Тонкости порядка, о которые спотыкаются</div>
+    <table class="data-table">
+      <thead><tr><th>Что</th><th>Правило из документации</th></tr></thead>
+      <tbody>
+        <tr><td>Middleware между модулями</td><td>Сначала middleware глобального модуля, затем корневого, затем остальных — в порядке удалённости от корня</td></tr>
+        <tr><td>Пайпы параметров</td><td>Если пайпы стоят у нескольких параметров, <strong>последний параметр обрабатывается первым</strong></td></tr>
+        <tr><td>Фильтры исключений</td><td>Разрешаются снизу вверх: от маршрута к глобальному. Исключение, пойманное на одном уровне, <strong>дальше не передаётся</strong></td></tr>
+        <tr><td>Фильтры и успешный запрос</td><td>Запускаются только при необработанном исключении — в обычном сценарии их в цепочке нет</td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong>Middleware — не Nest-сущность.</strong> Это обычный механизм Express или Fastify, поэтому middleware ничего не знает о контексте выполнения: ему недоступны <code>ExecutionContext</code>, класс контроллера и метод-обработчик. Всё, что опирается на эти данные — проверка ролей по декоратору, кеш по маршруту — должно быть guard или interceptor, а не middleware.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="help-circle"></i> Почему порядок именно такой</div>
+    <table class="data-table">
+      <thead><tr><th>Пара</th><th>Почему в этом порядке</th></tr></thead>
+      <tbody>
+        <tr><td>Guard раньше Pipe</td><td>Нет смысла разбирать и валидировать тело запроса от того, кого мы не пустим. Сначала отсекаем, потом тратим время на данные</td></tr>
+        <tr><td>Interceptor раньше Pipe</td><td>Перехватчик должен охватывать <em>весь</em> вызов, включая валидацию: иначе таймаут или замер времени не учтут разбор входных данных</td></tr>
+        <tr><td>Middleware раньше Guard</td><td>Middleware работает на уровне HTTP-сервера, до того как Nest вообще определил, какой обработчик вызывать</td></tr>
+        <tr><td>Фильтры в самом конце</td><td>Они ловят исключения всего, что было выше, — включая сами guard-ы и пайпы</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Перевод на Laravel.</strong> Middleware соответствует глобальному middleware, guard — <code>Gate</code> или <code>Policy</code>, pipe — <code>FormRequest</code>, interceptor — middleware с кодом до и после <code>$next($request)</code>, exception filter — <code>Handler::render()</code>. Главное отличие: в Laravel всё это конвейер middleware, а в Nest — четыре разных типа с собственным порядком.</div>
   </div>
 </div>
 
@@ -1339,12 +1424,12 @@ Exception filters   ← если было исключение</div>
     <table class="data-table">
       <thead><tr><th>Scope</th><th>Время жизни</th><th>Нюанс</th></tr></thead>
       <tbody>
-        <tr><td><code>DEFAULT</code></td><td>Синглтон на всё приложение</td><td>По умолчанию</td></tr>
-        <tr><td><code>REQUEST</code></td><td>Новый экземпляр на каждый запрос</td><td>Медленнее, и scope <strong>поднимается вверх</strong> по цепочке зависимостей</td></tr>
-        <tr><td><code>TRANSIENT</code></td><td>Новый экземпляр на каждое внедрение</td><td>—</td></tr>
+        <tr><td><code>DEFAULT</code></td><td>Один экземпляр на всё приложение</td><td>Действует по умолчанию, объявлять не нужно</td></tr>
+        <tr><td><code>REQUEST</code></td><td>Свой экземпляр на каждый входящий запрос; после обработки собирается сборщиком мусора</td><td>Документация прямо предупреждает, что такие провайдеры влияют на производительность, и советует без необходимости их не брать</td></tr>
+        <tr><td><code>TRANSIENT</code></td><td>Свой экземпляр у каждого, кто его внедряет — потребители не делят один объект</td><td>В отличие от <code>REQUEST</code>, вверх не поднимается: синглтон получит собственный экземпляр transient-провайдера, но сам останется синглтоном</td></tr>
       </tbody>
     </table>
-    <div class="pitfall"><strong>REQUEST-scope заразен.</strong> Если провайдер с этим scope внедрён в синглтон, синглтон тоже становится request-scoped — и дальше вверх по всей цепочке. Незаметно превращает всё приложение в пересоздаваемое на каждый запрос.</div>
+    <div class="pitfall"><strong>REQUEST-scope поднимается по цепочке.</strong> В документации это названо «bubbles up»: если контроллер зависит от request-scoped сервиса, контроллер тоже становится request-scoped. И так дальше вверх — незаметно всё приложение начинает пересоздаваться на каждый запрос.</div>
   </div>
 
   <div class="subsection">
