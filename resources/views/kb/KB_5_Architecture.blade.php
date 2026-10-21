@@ -861,9 +861,9 @@ ul.bullets strong{color:var(--text);}
 │   Сервис заказов (одна транзакция БД)           │
 │                                                 │
 │  BEGIN                                          │
-│    INSERT INTO orders   (id, total, ...)     │
+│    INSERT INTO orders   (id, total, ...)        │
 │    INSERT INTO outbox   (event_type,            │
-│                          payload, ...)        │
+│                          payload, ...)          │
 │  COMMIT                                         │
 │                                                 │
 └──────────┬──────────────────────────────────────┘

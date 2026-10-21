@@ -360,7 +360,7 @@ node -p <span class="c-str">"process.versions"</span>
     <div class="subsection-title"><i data-lucide="git-compare"></i> Главное отличие, из которого следует всё остальное</div>
     <div class="diagram">PHP-FPM                              Node.js
 
-запрос → форкнутый процесс          запрос ─┐
+запрос → форкнутый процесс           запрос ─┐
          ↓                           запрос ─┼→ ОДИН процесс
       выполнение                     запрос ─┤   живёт неделями
          ↓                           запрос ─┘

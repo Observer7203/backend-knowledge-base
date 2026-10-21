@@ -1,11 +1,11 @@
 /* ============================================================
    KB Design System — в стилистике документации NestJS
    Токены взяты с docs.nestjs.com и nestjs.com:
-   Manrope / Inconsolata, акцент #ea2845, мягкие большие тени.
+   Manrope / JetBrains Mono, акцент #ea2845, мягкие большие тени.
    Подключается ПОСЛЕ инлайновых стилей страницы и переопределяет их.
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inconsolata:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 /* ---------- Светлая тема (по умолчанию) ---------- */
 :root {
@@ -64,7 +64,10 @@
   --content-w:      980px;
 
   --font:           'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --font-mono:      'Inconsolata', 'Geist Mono', Consolas, Monaco, monospace;
+  /* Моноширинный обязан содержать кириллицу: у Inconsolata её нет,
+     из-за чего русский текст в схемах брался из запасного шрифта
+     с другой шириной символа и колонки разъезжались. */
+  --font-mono:      'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* Схема Schedule_Daily — чтобы страница перекрасилась вместе со всеми */
   --bd: var(--border); --tx: var(--text); --tx2: var(--text2); --tx3: var(--text3);
@@ -419,7 +422,9 @@ pre code {
   border: 1px solid var(--border) !important;
   border-radius: var(--radius) !important;
   padding: 18px 20px !important;
-  font-size: 12.5px !important; line-height: 1.6 !important;
+  font-size: 12.5px !important;
+  /* плотная строка, иначе вертикали псевдографики не смыкаются */
+  line-height: 1.25 !important;
   color: var(--text2) !important;
   white-space: pre; overflow-x: auto; margin-bottom: 18px !important;
 }
