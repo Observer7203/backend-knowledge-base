@@ -272,6 +272,55 @@ grep -E "error|warning" app.log <span class="c-comment"># -E регулярка,
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="apple"></i> grep на macOS: почему примеры из интернета не работают</div>
+    <p class="text">В macOS предустановлен <strong>BSD grep</strong>, а подавляющее большинство примеров в сети написано под <strong>GNU grep</strong> из Linux. Команды выглядят одинаково, но часть ключей у BSD отсутствует — и строка, которая у автора статьи работала, на Mac падает с ошибкой.</p>
+<pre><code>$ grep --version
+grep (BSD grep, GNU compatible) 2.6.0-FreeBSD   <span class="c-comment"># macOS</span>
+grep (GNU grep) 3.11                            <span class="c-comment"># Linux</span></code></pre>
+    <p class="text">Чаще всего спотыкаются об один ключ — <code>-P</code>, то есть регулярные выражения в стиле Perl. Именно он стоит почти во всех однострочниках с <code>\d</code>, <code>\w</code> и <code>\s</code>:</p>
+<pre><code>$ grep -oP <span class="c-str">'\d+'</span> app.log
+grep: invalid option -- P
+usage: grep [-abcdDEFGHhIiJLlMmnOopqRSsUVvwXxZz] ...</code></pre>
+    <table class="data-table">
+      <thead><tr><th>Ключ</th><th>На macOS</th><th>Что делать</th></tr></thead>
+      <tbody>
+        <tr><td><code>-P</code> (Perl-регулярки)</td><td>Нет, ошибка <code>invalid option</code></td><td>Переписать на <code>-E</code> или поставить GNU-версию</td></tr>
+        <tr><td><code>-E</code> (расширенные)</td><td>Есть</td><td>Основной рабочий вариант</td></tr>
+        <tr><td><code>-i -r -n -c -v -w -o</code></td><td>Есть</td><td>Работают одинаково</td></tr>
+        <tr><td><code>-A -B -C</code> (контекст)</td><td>Есть</td><td>Работают</td></tr>
+        <tr><td><code>--include</code>, <code>--exclude</code></td><td>Есть</td><td>Работают</td></tr>
+      </tbody>
+    </table>
+    <p class="text">Если ключ <code>-P</code> нужен ради <code>\d</code> и подобных сокращений, их почти всегда можно заменить на переносимые классы POSIX — они работают и на Mac, и на Linux:</p>
+<pre><code><span class="c-comment"># было (GNU, на macOS упадёт)</span>
+grep -oP <span class="c-str">'\d+'</span> app.log
+grep -oP <span class="c-str">'\w+@\w+'</span> users.txt
+
+<span class="c-comment"># стало (работает везде)</span>
+grep -oE <span class="c-str">'[[:digit:]]+'</span> app.log
+grep -oE <span class="c-str">'[[:alnum:]_]+@[[:alnum:]_]+'</span> users.txt</code></pre>
+    <table class="data-table">
+      <thead><tr><th>Сокращение Perl</th><th>Класс POSIX</th><th>Что означает</th></tr></thead>
+      <tbody>
+        <tr><td><code>\d</code></td><td><code>[[:digit:]]</code></td><td>Цифра</td></tr>
+        <tr><td><code>\w</code></td><td><code>[[:alnum:]_]</code></td><td>Буква, цифра или подчёркивание</td></tr>
+        <tr><td><code>\s</code></td><td><code>[[:space:]]</code></td><td>Пробел, табуляция, перенос строки</td></tr>
+        <tr><td><code>\b</code></td><td><code>-w</code> у самого grep</td><td>Граница слова</td></tr>
+      </tbody>
+    </table>
+    <p class="text">Второй путь — поставить настоящий GNU grep через Homebrew. Он встанет рядом, под именем <code>ggrep</code>, чтобы не ломать системные скрипты:</p>
+<pre><code>brew install grep
+
+ggrep -oP <span class="c-str">'\d+'</span> app.log      <span class="c-comment"># GNU-версия, -P работает</span>
+grep  -oP <span class="c-str">'\d+'</span> app.log      <span class="c-comment"># системный BSD, по-прежнему ошибка</span></code></pre>
+    <p class="text">Можно сделать GNU-версию основной, добавив её каталог в начало <code>PATH</code> — тогда <code>grep</code> будет означать GNU grep:</p>
+<pre><code><span class="c-comment"># в ~/.zshrc</span>
+export PATH=<span class="c-str">"/opt/homebrew/opt/grep/libexec/gnubin:$PATH"</span></code></pre>
+    <div class="pitfall"><strong>Подменять системный grep стоит осознанно.</strong> Часть скриптов в системе рассчитывает на поведение BSD-версии. Безопаснее оставить <code>ggrep</code> отдельной командой, а в своих скриптах писать переносимо — на <code>-E</code> и классах POSIX. Тогда они одинаково пойдут и на Mac, и на сервере с Linux.</div>
+    <div class="remember-box"><strong>Та же история с другими утилитами.</strong> На macOS BSD-версии у <code>sed</code>, <code>awk</code>, <code>date</code>, <code>xargs</code>. Самое заметное: <code>sed -i</code> на Mac требует аргумент — <code>sed -i '' 's/a/b/' file</code>, иначе получите «invalid command code». GNU-версии ставятся тем же способом: <code>brew install gnu-sed</code> даёт <code>gsed</code>.</div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="file-search"></i> find — поиск файлов</div>
 <pre><code>find . -name "*.php"                  <span class="c-comment"># по имени, с текущей папки</span>
 find . -iname "*.PHP"                 <span class="c-comment"># -iname без учёта регистра</span>
@@ -323,15 +372,123 @@ du -sh * | sort -rh | head -10   <span class="c-comment"># топ-10 тяжёл�
 
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="network"></i> Сеть</div>
-<pre><code>curl https://api.example.com          <span class="c-comment"># GET-запрос</span>
-curl -I https://example.com           <span class="c-comment"># -I только заголовки</span>
-curl -X POST -d '{"a":1}' -H "Content-Type: application/json" URL
-curl -o file.zip URL                  <span class="c-comment"># -o сохранить в файл</span>
-
-ping example.com                      <span class="c-comment"># доступен ли хост</span>
+<pre><code>ping example.com                      <span class="c-comment"># доступен ли хост</span>
 lsof -i :8000                         <span class="c-comment"># кто занял порт 8000</span>
 netstat -tulpn | grep 80              <span class="c-comment"># что слушает 80 порт (Linux)</span></code></pre>
     <div class="remember-box"><code>lsof -i :порт</code> — первое, что запускают при «Address already in use».</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="terminal"></i> curl: флаги, которые реально используют</div>
+    <p class="text">Без флагов <code>curl URL</code> делает обычный GET и вываливает тело в терминал. Всё остальное поведение задаётся ключами, и почти всегда их комбинируют: типичная строка из скрипта выглядит как <code>curl -sS -f -L URL</code>. Разберём по группам.</p>
+
+    <table class="data-table">
+      <thead><tr><th>Флаг</th><th>Что делает</th><th>Когда нужен</th></tr></thead>
+      <tbody>
+        <tr><td colspan="3"><strong>Запрос</strong></td></tr>
+        <tr><td><code>-X МЕТОД</code></td><td>Задать метод: POST, PUT, DELETE, PATCH</td><td>Когда нужен не GET. С <code>-d</code> метод POST подставляется сам</td></tr>
+        <tr><td><code>-d 'данные'</code></td><td>Тело запроса. Автоматически включает POST</td><td>Отправка JSON или формы</td></tr>
+        <tr><td><code>-d @file.json</code></td><td>Тело из файла</td><td>Большой JSON не влезает в строку</td></tr>
+        <tr><td><code>-H 'Заголовок: значение'</code></td><td>Добавить заголовок. Можно повторять</td><td><code>Content-Type</code>, <code>Authorization</code>, <code>X-API-Key</code></td></tr>
+        <tr><td><code>-G</code></td><td>Переносит <code>-d</code> в строку запроса</td><td>GET с параметрами, которые нужно экранировать</td></tr>
+        <tr><td><code>-u user:pass</code></td><td>Базовая авторизация</td><td>Простая защита, FTP</td></tr>
+        <tr><td><code>-T файл</code></td><td>Загрузить файл на сервер (PUT или FTP)</td><td>Выкладка файла без формы</td></tr>
+
+        <tr><td colspan="3"><strong>Вывод</strong></td></tr>
+        <tr><td><code>-o файл</code></td><td>Сохранить тело в указанный файл</td><td>Скачивание</td></tr>
+        <tr><td><code>-O</code></td><td>Сохранить под именем из URL</td><td>Быстро скачать архив</td></tr>
+        <tr><td><code>-s</code></td><td>Тихо: без индикатора прогресса</td><td>Скрипты, конвейеры. Иначе прогресс попадёт в вывод</td></tr>
+        <tr><td><code>-S</code></td><td>Показывать ошибки даже в тихом режиме</td><td>Всегда в паре: <code>-sS</code></td></tr>
+        <tr><td><code>-i</code></td><td>Показать заголовки ответа вместе с телом</td><td>Посмотреть, что вернул сервер</td></tr>
+        <tr><td><code>-I</code></td><td>Только заголовки, запрос методом HEAD</td><td>Проверить код ответа и редирект, не качая тело</td></tr>
+        <tr><td><code>-v</code></td><td>Подробный лог: запрос, ответ, рукопожатие TLS</td><td>Разбор «почему не работает»</td></tr>
+        <tr><td><code>-w 'формат'</code></td><td>Напечатать служебные значения после ответа</td><td>Код ответа, время, размер — для проверок</td></tr>
+
+        <tr><td colspan="3"><strong>Поведение</strong></td></tr>
+        <tr><td><code>-L</code></td><td>Идти по редиректам</td><td>Без него на 301 получите пустое тело</td></tr>
+        <tr><td><code>-f</code></td><td>Вернуть ненулевой код выхода при ошибке HTTP</td><td>В скриптах: иначе 500 считается успехом</td></tr>
+        <tr><td><code>-k</code></td><td>Не проверять TLS-сертификат</td><td>Самоподписанный сертификат на тестовом стенде</td></tr>
+        <tr><td><code>--connect-timeout N</code></td><td>Сколько ждать установки соединения</td><td>Чтобы скрипт не висел на мёртвом хосте</td></tr>
+        <tr><td><code>--max-time N</code></td><td>Общий предел на всю операцию</td><td>Страховка в конвейерах и cron</td></tr>
+        <tr><td><code>--retry N</code></td><td>Повторить при сетевой ошибке</td><td>Ненадёжный канал</td></tr>
+        <tr><td><code>--compressed</code></td><td>Попросить сжатый ответ и распаковать</td><td>Большие JSON-ответы</td></tr>
+        <tr><td><code>-A 'строка'</code></td><td>Свой User-Agent</td><td>Сервер отвечает по-разному разным клиентам</td></tr>
+        <tr><td><code>-c / -b файл</code></td><td>Сохранить и отправить cookies</td><td>Сценарий с логином</td></tr>
+      </tbody>
+    </table>
+
+    <div class="remember-box"><strong>Откуда берутся «склеенные» флаги.</strong> Односимвольные ключи можно писать слитно: <code>-sk</code> это то же самое, что <code>-s -k</code> — тихий режим плюс отключённая проверка сертификата. Так же читаются <code>-sS</code>, <code>-sSL</code>, <code>-fsSL</code>. Последнее встречается в инструкциях по установке: тихо, падать при ошибке, показывать её, идти по редиректам.</div>
+
+    <div class="pitfall"><strong><code>-k</code> отключает защиту, а не чинит сертификат.</strong> Он говорит curl: «не проверяй, кому принадлежит сертификат» — то есть снимает защиту от подмены. На тестовом стенде это нормально, в проде и в скриптах, которые ходят в чужие API, — нет. Правильное решение: подложить корневой сертификат через <code>--cacert</code> или починить цепочку на сервере.</div>
+
+    <p class="text">Типовые вызовы, которые стоит помнить наизусть:</p>
+<pre><code><span class="c-comment"># Обычный GET</span>
+curl https://api.example.com/users
+
+<span class="c-comment"># Только код ответа — удобно в проверках</span>
+curl -s -o /dev/null -w <span class="c-str">'%{http_code}\n'</span> https://example.com
+
+<span class="c-comment"># POST с JSON</span>
+curl -X POST https://api.example.com/orders \
+  -H <span class="c-str">'Content-Type: application/json'</span> \
+  -H <span class="c-str">'Authorization: Bearer TOKEN'</span> \
+  -d <span class="c-str">'{"total":"100.00"}'</span>
+
+<span class="c-comment"># Тело из файла — когда JSON большой</span>
+curl -X POST https://api.example.com/orders \
+  -H <span class="c-str">'Content-Type: application/json'</span> \
+  -d @order.json
+
+<span class="c-comment"># Форма, как её шлёт браузер</span>
+curl -X POST https://example.com/login \
+  -d <span class="c-str">'email=a@b.com'</span> -d <span class="c-str">'password=secret'</span>
+
+<span class="c-comment"># Загрузка файла формой</span>
+curl -F <span class="c-str">'file=@photo.jpg'</span> -F <span class="c-str">'title=Фото'</span> https://example.com/upload
+
+<span class="c-comment"># Скачать с продолжением и редиректами</span>
+curl -L -C - -O https://example.com/big.zip
+
+<span class="c-comment"># Диагностика: весь обмен целиком</span>
+curl -v https://example.com 2&gt;&amp;1 | head -40
+
+<span class="c-comment"># Замер времени ответа</span>
+curl -s -o /dev/null -w <span class="c-str">'dns=%{time_namelookup} connect=%{time_connect} total=%{time_total}\n'</span> https://example.com</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="braces"></i> jq: читаемый JSON вместо простыни</div>
+    <p class="text">API отвечает одной длинной строкой без переносов — читать её в терминале невозможно. <code>jq</code> форматирует JSON и умеет доставать из него нужное. Ставится одной командой: <code>brew install jq</code> на macOS, <code>apt install jq</code> на Debian и Ubuntu.</p>
+<pre><code><span class="c-comment"># Просто отформатировать — точка означает «весь документ»</span>
+curl -s https://api.example.com/users | jq
+
+<span class="c-comment"># Достать одно поле</span>
+curl -s https://api.example.com/user/1 | jq <span class="c-str">'.email'</span>
+<span class="c-comment"># "ivan@example.com"  — в кавычках, это JSON-строка</span>
+
+<span class="c-comment"># -r убирает кавычки: нужно, когда значение идёт в переменную</span>
+TOKEN=$(curl -s -X POST https://api.example.com/login \
+  -d <span class="c-str">'{"email":"a@b.com","password":"secret"}'</span> \
+  -H <span class="c-str">'Content-Type: application/json'</span> | jq -r <span class="c-str">'.token'</span>)
+
+<span class="c-comment"># Перебрать массив и оставить только нужные поля</span>
+curl -s https://api.example.com/users | jq <span class="c-str">'.[] | {id, email}'</span>
+
+<span class="c-comment"># Сколько элементов пришло</span>
+curl -s https://api.example.com/users | jq <span class="c-str">'length'</span>
+
+<span class="c-comment"># Фильтр по условию</span>
+curl -s https://api.example.com/orders | jq <span class="c-str">'.[] | select(.total > 1000)'</span>
+
+<span class="c-comment"># Вложенное поле и значения по умолчанию, если его нет</span>
+curl -s https://api.example.com/user/1 | jq <span class="c-str">'.profile.city // "не указан"'</span>
+
+<span class="c-comment"># Собрать плоскую строку для отчёта</span>
+curl -s https://api.example.com/users | jq -r <span class="c-str">'.[] | "\(.id)\t\(.email)"'</span></code></pre>
+    <div class="remember-box"><strong>Связка, которую пишут чаще всего:</strong> <code>curl -sS URL | jq</code>. Тихий режим убирает индикатор прогресса, который иначе попал бы в конвейер и сломал разбор, <code>-S</code> оставляет сообщения об ошибках, а <code>jq</code> приводит ответ в читаемый вид.</div>
+    <div class="pitfall"><strong>Если jq ругается на разбор</strong> — почти всегда сервер вернул не JSON. Самое частое: HTML страницы ошибки или редирект, который вы не прошли. Посмотрите, что пришло на самом деле: <code>curl -i URL | head -20</code>. Второй по частоте случай — забытый <code>-s</code>, и в конвейер попал индикатор прогресса.</div>
+    <p class="text">Если ставить <code>jq</code> некуда, минимальное форматирование есть в самом Python:</p>
+<pre><code>curl -s https://api.example.com/users | python3 -m json.tool</code></pre>
   </div>
 </div>
 
