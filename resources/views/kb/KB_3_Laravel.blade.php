@@ -134,6 +134,7 @@ ul.bullets strong{color:var(--text);}
   <a class="nav-item active" onclick="showSection('overview',this)"><i data-lucide="info"></i> О разделе</a>
 
   <div class="nav-group-label">Ядро</div>
+  <a class="nav-item" onclick="showSection('install',this)">Установка и зависимости</a>
   <a class="nav-item" onclick="showSection('arch-concepts',this)"><i data-lucide="columns-3"></i> Architecture Concepts</a>
   <div class="nav-subgroup">
     <a class="nav-subitem" onclick="showSub('arch-concepts','arch-intro',this)">Introduction</a>
@@ -375,6 +376,149 @@ ul.bullets strong{color:var(--text);}
 
 @endverbatim
 @verbatim
+<div id="sec-install" class="section">
+  <div class="section-title">Установка и зависимости</div>
+
+  <div class="subsection">
+    <div class="subsection-title">Что должно быть на машине</div>
+    <p class="text">Laravel — это пакет Composer, а не отдельная программа. Поэтому ставят не «Laravel», а связку: интерпретатор PHP нужной версии, менеджер пакетов Composer и, если во фронтенде есть сборка, Node с npm. Всё остальное фреймворк подтянет сам.</p>
+    <table class="data-table">
+      <thead><tr><th>Что</th><th>Версия</th><th>Зачем</th></tr></thead>
+      <tbody>
+        <tr><td><strong>PHP</strong></td><td><code>8.3</code> и выше для Laravel 13</td><td>Требование записано в <code>composer.json</code> самого фреймворка: <code>"php": "^8.3"</code></td></tr>
+        <tr><td><strong>Composer</strong></td><td>2.x</td><td>Ставит сам фреймворк и все пакеты</td></tr>
+        <tr><td><strong>Node и npm</strong></td><td>Текущая LTS</td><td>Сборка CSS и JavaScript через Vite. Чистому API не нужен</td></tr>
+        <tr><td><strong>База данных</strong></td><td>SQLite идёт из коробки</td><td>MySQL или PostgreSQL ставят отдельно, когда нужны</td></tr>
+      </tbody>
+    </table>
+    <p class="text">Расширения PHP, которые фреймворк требует явно — они почти всегда уже включены в сборках для разработки:</p>
+<pre><code><span class="c-comment"># из composer.json фреймворка</span>
+ext-ctype  ext-filter  ext-hash  ext-mbstring  ext-openssl  ext-session  ext-tokenizer
+
+<span class="c-comment"># проверить, что всё на месте</span>
+php -m | grep -E <span class="c-str">'ctype|filter|hash|mbstring|openssl|session|tokenizer'</span>
+
+<span class="c-comment"># версия PHP и Composer</span>
+php -v
+composer --version</code></pre>
+    <div class="pitfall"><strong>Отдельно ставят то, что нужно драйверу базы.</strong> Для MySQL это <code>pdo_mysql</code>, для PostgreSQL — <code>pdo_pgsql</code>, для SQLite — <code>pdo_sqlite</code>. Их нет в списке выше, потому что фреймворк не знает заранее, какую базу вы возьмёте. Симптом отсутствия: <code>could not find driver</code> при первой же миграции.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Установка PHP и Composer</div>
+    <p class="text">Если PHP и Composer ещё не стоят, официальная документация предлагает скрипт, который ставит сразу всё — интерпретатор, Composer и установщик Laravel:</p>
+<pre><code><span class="c-comment"># macOS</span>
+/bin/bash -c <span class="c-str">"$(curl -fsSL https://php.new/install/mac/8.5)"</span>
+
+<span class="c-comment"># Linux</span>
+/bin/bash -c <span class="c-str">"$(curl -fsSL https://php.new/install/linux/8.5)"</span></code></pre>
+    <p class="text">После него терминал нужно перезапустить. На macOS есть и привычный путь через Homebrew, если вы предпочитаете управлять версиями сами:</p>
+<pre><code>brew install php composer
+brew install node          <span class="c-comment"># если нужен фронтенд</span>
+
+<span class="c-comment"># несколько версий PHP рядом</span>
+brew install php@8.3 php@8.4
+brew link --overwrite --force php@8.3</code></pre>
+    <div class="remember-box"><strong>Для macOS есть третий путь — Herd.</strong> Это готовая среда разработки: внутри уже лежат PHP, Nginx и команды <code>php</code>, <code>composer</code>, <code>laravel</code>, <code>node</code>, <code>npm</code>. Любой проект в каталоге <code>~/Herd</code> автоматически доступен по адресу вида <code>имя-папки.test</code>, без ручной настройки веб-сервера. Платная версия добавляет локальные MySQL, PostgreSQL и Redis.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Создание проекта</div>
+    <p class="text">Два равноценных способа. Первый — через установщик Laravel, он задаёт вопросы о стартовом наборе и тестовом фреймворке:</p>
+<pre><code>composer global require laravel/installer   <span class="c-comment"># один раз на машину</span>
+
+laravel new example-app</code></pre>
+    <p class="text">Второй — напрямую через Composer, без установщика. Удобен, когда нужна конкретная версия или установка идёт в скрипте:</p>
+<pre><code>composer create-project laravel/laravel example-app
+
+<span class="c-comment"># конкретная ветка</span>
+composer create-project laravel/laravel:^13.0 example-app</code></pre>
+    <p class="text">Дальше — установка фронтенд-зависимостей и запуск. В Laravel 13 есть готовый скрипт <code>dev</code>, который поднимает сразу три процесса: веб-сервер, обработчик очередей и Vite.</p>
+<pre><code>cd example-app
+npm install &amp;&amp; npm run build
+composer run dev</code></pre>
+    <p class="text">Приложение открывается на <code>http://localhost:8000</code>. Если фронтенд не нужен, достаточно обычного сервера:</p>
+<pre><code>php artisan serve                      <span class="c-comment"># http://127.0.0.1:8000</span>
+php artisan serve --port=8080          <span class="c-comment"># другой порт</span></code></pre>
+    <div class="pitfall"><strong>Если порт занят.</strong> Сообщение <code>Address already in use</code> означает, что на 8000 уже кто-то висит — часто это ваш же прошлый <code>artisan serve</code>, не закрытый в другом окне. Найти владельца: <code>lsof -i :8000</code>, затем <code>kill</code> по номеру процесса.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Что происходит при установке и что настроить сразу</div>
+    <p class="text">Установщик копирует <code>.env.example</code> в <code>.env</code> и генерирует ключ приложения. Если вы клонируете чужой репозиторий, этих шагов не произойдёт — файла <code>.env</code> в репозитории нет и быть не должно, поэтому их делают руками:</p>
+<pre><code>cp .env.example .env
+php artisan key:generate</code></pre>
+    <div class="pitfall"><strong>Без <code>APP_KEY</code> приложение не поднимется.</strong> Ошибка звучит как <code>No application encryption key has been specified</code>. Ключ используется для шифрования сессий и cookie, поэтому фреймворк отказывается работать без него. Второе следствие: если поменять ключ на рабочем проекте, все существующие сессии и зашифрованные значения станут нечитаемыми.</div>
+    <p class="text">По умолчанию приложение настроено на SQLite: файл <code>database/database.sqlite</code> создаётся при установке, и миграции по нему уже прогнаны. Для разработки этого достаточно. Переход на MySQL — это правка <code>.env</code> и запуск миграций:</p>
+<pre><code>DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=laravel
+DB_USERNAME=root
+DB_PASSWORD=</code></pre>
+<pre><code>php artisan migrate            <span class="c-comment"># создать таблицы</span>
+php artisan migrate --seed     <span class="c-comment"># и наполнить тестовыми данными</span></code></pre>
+    <div class="pitfall"><strong>Базу данных Laravel не создаёт.</strong> Миграции наполняют уже существующую схему. Если её нет, вы получите <code>Unknown database 'laravel'</code> — сначала <code>CREATE DATABASE laravel;</code>, потом миграции. С SQLite проще: достаточно пустого файла, <code>touch database/database.sqlite</code>.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Клонирование существующего проекта</div>
+    <p class="text">Порядок отличается от создания нового: каталог <code>vendor</code> и файл <code>.env</code> в репозиторий не попадают, поэтому их восстанавливают локально.</p>
+<pre><code>git clone git@github.com:user/project.git
+cd project
+
+composer install           <span class="c-comment"># строго по composer.lock, без обновления версий</span>
+cp .env.example .env
+php artisan key:generate
+
+touch database/database.sqlite   <span class="c-comment"># если проект на SQLite</span>
+php artisan migrate --seed
+
+npm install &amp;&amp; npm run build     <span class="c-comment"># если есть фронтенд</span>
+php artisan serve</code></pre>
+    <div class="remember-box"><strong><code>install</code> против <code>update</code>.</strong> <code>composer install</code> ставит ровно те версии, что записаны в <code>composer.lock</code> — у всех в команде и на сервере окружение получается одинаковым. <code>composer update</code> ищет более свежие версии в рамках ограничений и переписывает <code>lock</code>. На рабочем сервере выполняют только <code>install</code>.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Пакеты, которые ставят почти в каждый проект</div>
+    <table class="data-table">
+      <thead><tr><th>Пакет</th><th>Зачем</th><th>Команда</th></tr></thead>
+      <tbody>
+        <tr><td>Laravel Sanctum</td><td>Токены для API и авторизация SPA</td><td><code>composer require laravel/sanctum</code></td></tr>
+        <tr><td>Laravel Horizon</td><td>Панель и метрики очередей на Redis</td><td><code>composer require laravel/horizon</code></td></tr>
+        <tr><td>Laravel Telescope</td><td>Отладка: запросы, SQL, джобы, письма</td><td><code>composer require laravel/telescope --dev</code></td></tr>
+        <tr><td>Laravel Pint</td><td>Форматирование кода по стандарту</td><td>Входит в состав новых проектов</td></tr>
+        <tr><td>Debugbar</td><td>Панель с запросами прямо на странице</td><td><code>composer require barryvdh/laravel-debugbar --dev</code></td></tr>
+        <tr><td>IDE Helper</td><td>Подсказки редактора для фасадов и моделей</td><td><code>composer require barryvdh/laravel-ide-helper --dev</code></td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong>Флаг <code>--dev</code> не косметика.</strong> Он кладёт пакет в <code>require-dev</code>, и на сервере с <code>composer install --no-dev</code> тот не установится. Telescope и Debugbar в продакшене — это и лишняя нагрузка, и утечка данных: они пишут содержимое запросов, включая заголовки с токенами.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Проверка, что всё поднялось</div>
+<pre><code>php artisan about            <span class="c-comment"># версии, драйверы, окружение одним экраном</span>
+php artisan route:list       <span class="c-comment"># какие маршруты зарегистрированы</span>
+php artisan migrate:status   <span class="c-comment"># какие миграции применены</span>
+php artisan tinker           <span class="c-comment"># консоль с загруженным приложением</span></code></pre>
+    <div class="remember-box"><code>php artisan about</code> — первое, что стоит выполнить в незнакомом проекте. Он за один экран показывает версию фреймворка и PHP, драйверы кэша, сессий, очередей и почты, а также включено ли кэширование конфигурации и маршрутов.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Что спросят по этой теме</div>
+    <table class="data-table">
+      <thead><tr><th>Вопрос</th><th>Короткий ответ</th></tr></thead>
+      <tbody>
+        <tr><td>Чем <code>composer install</code> отличается от <code>update</code>?</td><td><code>install</code> ставит версии из <code>composer.lock</code>, <code>update</code> ищет более свежие и переписывает lock. На сервере только <code>install</code></td></tr>
+        <tr><td>Зачем нужен <code>APP_KEY</code>?</td><td>Шифрование сессий и cookie. Без него приложение не стартует, при смене на рабочем проекте — ломаются сессии и зашифрованные данные</td></tr>
+        <tr><td>Почему <code>.env</code> не хранят в репозитории?</td><td>В нём доступы. Плюс значения отличаются на каждой машине и сервере</td></tr>
+        <tr><td>Что делать после клонирования проекта?</td><td><code>composer install</code>, копия <code>.env</code>, <code>key:generate</code>, миграции, при необходимости сборка фронтенда</td></tr>
+        <tr><td>Какая минимальная версия PHP у Laravel 13?</td><td>8.3 — записано в <code>composer.json</code> фреймворка</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
 <div id="sec-arch-concepts" class="section">
   <div class="section-title">Architecture Concepts — четыре опоры фреймворка</div>
 
