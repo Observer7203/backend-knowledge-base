@@ -296,6 +296,7 @@ ul.bullets strong{color:var(--text);}
   </div>
 
   <div class="nav-group-label">Безопасность</div>
+  <a class="nav-item" onclick="showSection('auth-choice',this)">Аутентификация: выбор инструмента</a>
   <a class="nav-item" onclick="showSection('auth',this)"><i data-lucide="key"></i> Auth, Gates &amp; Policies</a>
   <div class="nav-subgroup">
     <a class="nav-subitem" onclick="showSub('auth','auth-purpose',this)">Назначение</a>
@@ -495,75 +496,7 @@ php artisan serve</code></pre>
     <div class="pitfall"><strong>Флаг <code>--dev</code> не косметика.</strong> Он кладёт пакет в <code>require-dev</code>, и на сервере с <code>composer install --no-dev</code> тот не установится. Telescope и Debugbar в продакшене — это и лишняя нагрузка, и утечка данных: они пишут содержимое запросов, включая заголовки с токенами.</div>
   </div>
 
-  <div class="subsection">
-    <div class="subsection-title">Пакеты авторизации и быстрая настройка проекта</div>
-    <p class="text">Готовой «авторизации» в Laravel из коробки нет — есть несколько пакетов, каждый под свою задачу. Чаще всего ставят два: Sanctum для токенов API и Socialite для входа через внешние сервисы.</p>
-<pre><code><span class="c-comment"># Токены API и аутентификация SPA</span>
-composer require laravel/sanctum
-
-<span class="c-comment"># Вход через Google, GitHub, VK и другие провайдеры</span>
-composer require laravel/socialite
-
-<span class="c-comment"># Ссылка из public/storage на storage/app/public —
-# без неё загруженные файлы не отдаются по URL</span>
-php artisan storage:link
-
-<span class="c-comment"># Создать таблицы, включая personal_access_tokens из Sanctum</span>
-php artisan migrate</code></pre>
-    <div class="remember-box"><strong>Для Sanctum есть команда короче.</strong> В документации основным способом указан <code>php artisan install:api</code>: он ставит сам пакет, создаёт файл <code>routes/api.php</code>, подключает его и публикует миграции — то есть заменяет связку <code>composer require</code> плюс ручная правка маршрутов. Отдельный <code>composer require laravel/sanctum</code> нужен, когда маршруты API у вас уже настроены и нужен только пакет.</div>
-    <div class="pitfall"><strong><code>storage:link</code> делают один раз и забывают.</strong> Это символическая ссылка, и в репозиторий она не попадает. После клонирования проекта или первого деплоя её нужно создать заново, иначе все загруженные картинки отдают 404. На сервере с запретом символических ссылок используют <code>php artisan storage:link --relative</code>.</div>
-
-    <p class="text">Минимальный порядок для свежего проекта, где нужен API с токенами и загрузка файлов:</p>
-<pre><code>php artisan install:api                       <span class="c-comment"># Sanctum плюс routes/api.php</span>
-composer require laravel/socialite            <span class="c-comment"># если нужен вход через соцсети</span>
-php artisan storage:link                      <span class="c-comment"># публичный доступ к загрузкам</span>
-php artisan migrate                           <span class="c-comment"># таблицы, включая токены</span>
-php artisan serve</code></pre>
-  </div>
-
-  <div class="subsection">
-    <div class="subsection-title">Чем отличаются Breeze, Fortify, Sanctum, Socialite и Passport</div>
-    <p class="text">Это самая частая путаница: названия стоят рядом в документации, но решают разные задачи. Разделить их проще всего по вопросу «что именно даёт пакет».</p>
-    <table class="data-table">
-      <thead><tr><th>Пакет</th><th>Что даёт</th><th>Когда брать</th></tr></thead>
-      <tbody>
-        <tr><td><strong>Стартовый набор</strong><br><span style="opacity:.7">раньше Breeze</span></td><td>Готовые страницы, маршруты и контроллеры: регистрация, вход, сброс пароля, подтверждение почты. Код копируется в проект и становится вашим</td><td>Начинаете новый проект и нужен рабочий вход «прямо сейчас» с интерфейсом</td></tr>
-        <tr><td><strong>Fortify</strong></td><td>Та же логика входа и регистрации, но <em>без</em> интерфейса — только маршруты и обработчики. Интерфейс пишете сами</td><td>Нужна стандартная логика аутентификации, но свой дизайн или свой фронтенд</td></tr>
-        <tr><td><strong>Sanctum</strong></td><td>Токены API и аутентификация SPA через сессионные cookie. Страниц входа не создаёт</td><td>Мобильное приложение, сторонний клиент по токену или SPA на том же домене</td></tr>
-        <tr><td><strong>Socialite</strong></td><td>Вход через внешних провайдеров: Google, GitHub и прочие. Обмен кода на профиль пользователя</td><td>Кнопка «Войти через Google» вместо пароля</td></tr>
-        <tr><td><strong>Passport</strong></td><td>Полноценный сервер OAuth 2.0: выдаёт токены сторонним приложениям, поддерживает гранты и scope</td><td>Вы сами — провайдер авторизации для чужих приложений</td></tr>
-      </tbody>
-    </table>
-
-    <div class="info-box warning"><strong>Про Breeze отдельно.</strong> В документации Laravel 13 его уже нет. Официальные стартовые наборы теперь называются по фронтенду — React, Svelte, Vue и Livewire, — и все они используют Fortify для аутентификации. Breeze остаётся в множестве проектов на Laravel 10 и 11, поэтому название встречается постоянно, но в новый проект на 13 его не ставят: набор выбирается при <code>laravel new</code>.</div>
-
-    <p class="text">Главное различие, которое и путают: <strong>стартовый набор отвечает за вход человека через браузер, Sanctum — за доступ программы к вашему API.</strong> Они не заменяют друг друга и спокойно работают вместе: пользователь заходит на сайт через форму из набора, а мобильное приложение того же сервиса ходит по токену Sanctum.</p>
-
-    <div class="diagram">человек в браузере                 программа или мобильное приложение
-   │                                   │
-   форма входа                         запрос с токеном
-   из стартового набора                Authorization: Bearer ...
-   │                                   │
-   сессия в cookie                     Sanctum проверяет токен
-   │                                   │
-   └──────────── один и тот же User ───┘</div>
-
-    <table class="data-table">
-      <thead><tr><th>Задача</th><th>Что ставить</th></tr></thead>
-      <tbody>
-        <tr><td>Классический сайт с формой входа</td><td>Стартовый набор при создании проекта</td></tr>
-        <tr><td>API для мобильного приложения</td><td>Sanctum, токены</td></tr>
-        <tr><td>SPA на том же домене</td><td>Sanctum в режиме cookie-аутентификации</td></tr>
-        <tr><td>Вход через Google или GitHub</td><td>Socialite, обычно вместе с набором</td></tr>
-        <tr><td>Своя вёрстка, но стандартная логика входа</td><td>Fortify</td></tr>
-        <tr><td>Выдавать токены чужим приложениям</td><td>Passport</td></tr>
-      </tbody>
-    </table>
-
-    <div class="pitfall"><strong>Не используйте токены API для собственного SPA.</strong> В документации это сказано прямо: для первого лица предназначен режим с сессионными cookie. Токен, положенный в <code>localStorage</code>, достаётся любым XSS, тогда как cookie с флагом <code>HttpOnly</code> недоступна скриптам и дополнительно защищена проверкой CSRF.</div>
-
-    <div class="remember-box"><strong>Аналогия для понимания.</strong> Стартовый набор — это готовая дверь с замком и табличкой. Fortify — замок без двери: механизм есть, внешний вид делаете сами. Sanctum — пропуск для тех, кто приходит не через дверь, а по служебному входу. Socialite — турникет, который пускает по чужому пропуску, выданному Google. Passport — вы сами печатаете пропуска для других организаций.</div>
-  </div>
+  <div class="info-box primary"><strong>Пакеты авторизации вынесены отдельно.</strong> Команды установки Sanctum и Socialite, разбор стартовых наборов и выбор между ними — в разделе <strong>Аутентификация: выбор инструмента</strong>.</div>
 
   <div class="subsection">
     <div class="subsection-title">Проверка, что всё поднялось</div>
@@ -9781,6 +9714,131 @@ php artisan migrate</code></pre>
 
 @endverbatim
 @verbatim
+<div id="sec-auth-choice" class="section">
+  <div class="section-title">Аутентификация: выбор инструмента</div>
+  <div class="info-box primary"><strong>О чём раздел.</strong> Здесь — какой пакет ставить под задачу и чем они отличаются. Как устроены сами механизмы внутри: guards, providers, gates и policies — в разделе <strong>Auth, Gates &amp; Policies</strong>.</div>
+
+  <div class="subsection">
+    <div class="subsection-title">Пакеты авторизации и быстрая настройка проекта</div>
+    <p class="text">Готовой «авторизации» в Laravel из коробки нет — есть несколько пакетов, каждый под свою задачу. Чаще всего ставят два: Sanctum для токенов API и Socialite для входа через внешние сервисы.</p>
+<pre><code><span class="c-comment"># Токены API и аутентификация SPA</span>
+composer require laravel/sanctum
+
+<span class="c-comment"># Вход через Google, GitHub, VK и другие провайдеры</span>
+composer require laravel/socialite
+
+<span class="c-comment"># Ссылка из public/storage на storage/app/public —
+# без неё загруженные файлы не отдаются по URL</span>
+php artisan storage:link
+
+<span class="c-comment"># Создать таблицы, включая personal_access_tokens из Sanctum</span>
+php artisan migrate</code></pre>
+    <div class="remember-box"><strong>Для Sanctum есть команда короче.</strong> В документации основным способом указан <code>php artisan install:api</code>: он ставит сам пакет, создаёт файл <code>routes/api.php</code>, подключает его и публикует миграции — то есть заменяет связку <code>composer require</code> плюс ручная правка маршрутов. Отдельный <code>composer require laravel/sanctum</code> нужен, когда маршруты API у вас уже настроены и нужен только пакет.</div>
+    <div class="pitfall"><strong><code>storage:link</code> делают один раз и забывают.</strong> Это символическая ссылка, и в репозиторий она не попадает. После клонирования проекта или первого деплоя её нужно создать заново, иначе все загруженные картинки отдают 404. На сервере с запретом символических ссылок используют <code>php artisan storage:link --relative</code>.</div>
+
+    <p class="text">Минимальный порядок для свежего проекта, где нужен API с токенами и загрузка файлов:</p>
+<pre><code>php artisan install:api                       <span class="c-comment"># Sanctum плюс routes/api.php</span>
+composer require laravel/socialite            <span class="c-comment"># если нужен вход через соцсети</span>
+php artisan storage:link                      <span class="c-comment"># публичный доступ к загрузкам</span>
+php artisan migrate                           <span class="c-comment"># таблицы, включая токены</span>
+php artisan serve</code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Чем отличаются Breeze, Fortify, Sanctum, Socialite и Passport</div>
+    <p class="text">Это самая частая путаница: названия стоят рядом в документации, но решают разные задачи. Разделить их проще всего по вопросу «что именно даёт пакет».</p>
+    <table class="data-table">
+      <thead><tr><th>Пакет</th><th>Что даёт</th><th>Когда брать</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Стартовый набор</strong><br><span style="opacity:.7">раньше Breeze</span></td><td>Готовые страницы, маршруты и контроллеры: регистрация, вход, сброс пароля, подтверждение почты. Код копируется в проект и становится вашим</td><td>Начинаете новый проект и нужен рабочий вход «прямо сейчас» с интерфейсом</td></tr>
+        <tr><td><strong>Fortify</strong></td><td>Та же логика входа и регистрации, но <em>без</em> интерфейса — только маршруты и обработчики. Интерфейс пишете сами</td><td>Нужна стандартная логика аутентификации, но свой дизайн или свой фронтенд</td></tr>
+        <tr><td><strong>Sanctum</strong></td><td>Токены API и аутентификация SPA через сессионные cookie. Страниц входа не создаёт</td><td>Мобильное приложение, сторонний клиент по токену или SPA на том же домене</td></tr>
+        <tr><td><strong>Socialite</strong></td><td>Вход через внешних провайдеров: Google, GitHub и прочие. Обмен кода на профиль пользователя</td><td>Кнопка «Войти через Google» вместо пароля</td></tr>
+        <tr><td><strong>Passport</strong></td><td>Полноценный сервер OAuth 2.0: выдаёт токены сторонним приложениям, поддерживает гранты и scope</td><td>Вы сами — провайдер авторизации для чужих приложений</td></tr>
+      </tbody>
+    </table>
+
+    <div class="info-box warning"><strong>Про Breeze отдельно.</strong> В документации Laravel 13 его уже нет. Официальные стартовые наборы теперь называются по фронтенду — React, Svelte, Vue и Livewire, — и все они используют Fortify для аутентификации. Breeze остаётся в множестве проектов на Laravel 10 и 11, поэтому название встречается постоянно, но в новый проект на 13 его не ставят: набор выбирается при <code>laravel new</code>.</div>
+
+    <p class="text">Главное различие, которое и путают: <strong>стартовый набор отвечает за вход человека через браузер, Sanctum — за доступ программы к вашему API.</strong> Они не заменяют друг друга и спокойно работают вместе: пользователь заходит на сайт через форму из набора, а мобильное приложение того же сервиса ходит по токену Sanctum.</p>
+
+    <div class="diagram">человек в браузере                 программа или мобильное приложение
+   │                                   │
+   форма входа                         запрос с токеном
+   из стартового набора                Authorization: Bearer ...
+   │                                   │
+   сессия в cookie                     Sanctum проверяет токен
+   │                                   │
+   └──────────── один и тот же User ───┘</div>
+
+    <table class="data-table">
+      <thead><tr><th>Задача</th><th>Что ставить</th></tr></thead>
+      <tbody>
+        <tr><td>Классический сайт с формой входа</td><td>Стартовый набор при создании проекта</td></tr>
+        <tr><td>API для мобильного приложения</td><td>Sanctum, токены</td></tr>
+        <tr><td>SPA на том же домене</td><td>Sanctum в режиме cookie-аутентификации</td></tr>
+        <tr><td>Вход через Google или GitHub</td><td>Socialite, обычно вместе с набором</td></tr>
+        <tr><td>Своя вёрстка, но стандартная логика входа</td><td>Fortify</td></tr>
+        <tr><td>Выдавать токены чужим приложениям</td><td>Passport</td></tr>
+      </tbody>
+    </table>
+
+    <div class="pitfall"><strong>Не используйте токены API для собственного SPA.</strong> В документации это сказано прямо: для первого лица предназначен режим с сессионными cookie. Токен, положенный в <code>localStorage</code>, достаётся любым XSS, тогда как cookie с флагом <code>HttpOnly</code> недоступна скриптам и дополнительно защищена проверкой CSRF.</div>
+
+    <div class="remember-box"><strong>Аналогия для понимания.</strong> Стартовый набор — это готовая дверь с замком и табличкой. Fortify — замок без двери: механизм есть, внешний вид делаете сами. Sanctum — пропуск для тех, кто приходит не через дверь, а по служебному входу. Socialite — турникет, который пускает по чужому пропуску, выданному Google. Passport — вы сами печатаете пропуска для других организаций.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Breeze против Sanctum: разбор частого сравнения</div>
+    <p class="text">Это сравнение постоянно встречается в статьях и постах, и само по себе оно сбивает с толку: пакеты сопоставляют так, будто надо выбрать один из двух. На деле они отвечают на разные вопросы, и выбор «или-или» возникает редко.</p>
+    <table class="data-table">
+      <thead><tr><th></th><th>Breeze и пришедшие ему на смену наборы</th><th>Sanctum</th></tr></thead>
+      <tbody>
+        <tr><td>Что это</td><td>Стартовый набор: готовый код страниц и маршрутов</td><td>Пакет аутентификации без интерфейса</td></tr>
+        <tr><td>Что появляется в проекте</td><td>Страницы входа, регистрации, сброса пароля и подтверждения почты</td><td>Таблица токенов и способ проверять запросы</td></tr>
+        <tr><td>Кого аутентифицирует</td><td>Человека в браузере</td><td>Программу: мобильное приложение, сторонний клиент, SPA</td></tr>
+        <tr><td>Чем подтверждается личность</td><td>Сессия в cookie</td><td>Токен в заголовке либо та же сессия — для своего SPA</td></tr>
+        <tr><td>Нужен ли фронтенд</td><td>Идёт в комплекте</td><td>Пишете сами или его вообще нет</td></tr>
+        <tr><td>Код после установки</td><td>Ваш: можно править как угодно</td><td>Остаётся в vendor, вы его не трогаете</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Как выбрать на практике.</strong> Обычный сайт, где человек заходит через форму, — стартовый набор. API для мобильного приложения или стороннего клиента — Sanctum. Современная связка «Laravel как бэкенд плюс React или Vue отдельным приложением» — чаще всего оба: набор даёт страницы входа и логику регистрации, Sanctum закрывает запросы к API.</div>
+    <div class="info-box warning"><strong>Поправка на версию.</strong> Многие такие сравнения написаны во времена Laravel 10 и 11, когда Breeze был основным стартовым набором. В Laravel 13 его в документации нет: наборы называются React, Svelte, Vue и Livewire, а логику входа в них обеспечивает Fortify. Смысл сравнения остался прежним, изменилось только название левой колонки.</div>
+    <div class="pitfall"><strong>Чего в таком сравнении обычно не хватает.</strong> Из того, что Sanctum «для API», часто делают вывод, что для своего SPA нужны токены. Документация говорит обратное: для приложения первого лица предназначен режим с сессионными cookie, а токены — для сторонних клиентов и мобильных приложений. Разница существенная: токен в <code>localStorage</code> забирает любой XSS, cookie с <code>HttpOnly</code> скриптам недоступна.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Сценарии: что ставить под конкретную задачу</div>
+    <table class="data-table">
+      <thead><tr><th>Проект</th><th>Набор инструментов</th><th>Почему так</th></tr></thead>
+      <tbody>
+        <tr><td>Админка или сайт на Blade</td><td>Стартовый набор Livewire</td><td>Страницы входа готовы, фронтенд на PHP, отдельное приложение не нужно</td></tr>
+        <tr><td>Бэкенд для мобильного приложения</td><td>Sanctum, токены</td><td>Клиент хранит токен и шлёт его в заголовке. Сессий и cookie нет</td></tr>
+        <tr><td>React или Vue на том же домене</td><td>Sanctum в режиме cookie</td><td>Личность подтверждается сессией, работает защита от CSRF</td></tr>
+        <tr><td>React на отдельном поддомене</td><td>Sanctum в режиме cookie плюс настройка CORS</td><td>Домен верхнего уровня должен совпадать, cookie настраивается на <code>.example.com</code></td></tr>
+        <tr><td>Сайт плюс мобильное приложение</td><td>Набор и Sanctum вместе</td><td>Человек заходит через форму, приложение — по токену. Пользователь один и тот же</td></tr>
+        <tr><td>Вход через Google вместо пароля</td><td>Socialite плюс набор</td><td>Socialite отдаёт профиль, дальше вход обычными средствами фреймворка</td></tr>
+        <tr><td>Своя вёрстка, стандартная логика</td><td>Fortify</td><td>Маршруты и обработчики есть, интерфейс делаете сами</td></tr>
+        <tr><td>Выдаёте доступ чужим приложениям</td><td>Passport</td><td>Нужен полноценный OAuth 2.0 с грантами и scope</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Что спросят по этой теме</div>
+    <table class="data-table">
+      <thead><tr><th>Вопрос</th><th>Короткий ответ</th></tr></thead>
+      <tbody>
+        <tr><td>Чем аутентификация отличается от авторизации?</td><td>Первая отвечает «кто это», вторая — «что ему можно». В Laravel за первое отвечают guards и providers, за второе — gates и policies</td></tr>
+        <tr><td>Breeze или Sanctum?</td><td>Вопрос поставлен неверно: первый даёт страницы входа для человека, второй — проверку запросов от программы. В реальных проектах часто оба</td></tr>
+        <tr><td>Как аутентифицировать своё SPA?</td><td>Sanctum в режиме сессионных cookie, не токенами. Токены — для сторонних и мобильных клиентов</td></tr>
+        <tr><td>Чем Sanctum отличается от Passport?</td><td>Sanctum — простые токены и SPA. Passport — полноценный сервер OAuth 2.0, нужен, когда вы выдаёте доступ чужим приложениям</td></tr>
+        <tr><td>Где хранить токен на клиенте?</td><td>Для своего приложения токен лучше не использовать вовсе. Если он нужен — в памяти приложения, а не в <code>localStorage</code>, который читается при XSS</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
 <div id="sec-auth" class="section">
   <div class="section-title">Auth, Gates и Policies</div>
   <div class="subsection" id="auth-purpose">
