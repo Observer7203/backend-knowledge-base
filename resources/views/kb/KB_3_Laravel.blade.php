@@ -6106,6 +6106,107 @@ $table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'author_id'</
   </div>
 
   <div class="subsection">
+    <div class="subsection-title">Модификаторы колонок: полный справочник</div>
+    <p class="text">Модификатор — это вызов, который дописывается к колонке и уточняет её поведение. Полный список взят из <code>ColumnDefinition</code> исходников фреймворка; в скобках указана база, если модификатор работает не везде.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Основные, нужны почти всегда</div>
+    <table class="data-table">
+      <thead><tr><th>Модификатор</th><th>Что делает</th></tr></thead>
+      <tbody>
+        <tr><td><code>-&gt;nullable()</code></td><td>Колонка может быть <code>NULL</code></td></tr>
+        <tr><td><code>-&gt;default($value)</code></td><td>Значение по умолчанию</td></tr>
+        <tr><td><code>-&gt;unique()</code></td><td>Уникальный индекс, повторы запрещены</td></tr>
+        <tr><td><code>-&gt;index()</code></td><td>Обычный индекс для быстрого поиска</td></tr>
+        <tr><td><code>-&gt;primary()</code></td><td>Первичный ключ</td></tr>
+        <tr><td><code>-&gt;unsigned()</code></td><td>Только неотрицательные числа, для целых (MySQL)</td></tr>
+        <tr><td><code>-&gt;useCurrent()</code></td><td>По умолчанию <code>CURRENT_TIMESTAMP</code>, для <code>timestamp</code></td></tr>
+        <tr><td><code>-&gt;useCurrentOnUpdate()</code></td><td>Обновляет время при каждом <code>UPDATE</code> (MySQL)</td></tr>
+        <tr><td><code>-&gt;comment('...')</code></td><td>Комментарий к колонке (MySQL, PostgreSQL)</td></tr>
+        <tr><td><code>-&gt;change()</code></td><td>Изменить существующую колонку, внутри <code>Schema::table</code></td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong><code>change()</code> переписывает определение целиком.</strong> При изменении колонки нужно заново перечислить все модификаторы, которые должны остаться. Чего в новом определении нет — то будет снято: забыли повторить <code>nullable()</code>, и колонка станет <code>NOT NULL</code>; забыли <code>default()</code> — значение по умолчанию исчезнет. Это самая частая причина, по которой «безобидная» миграция изменения типа ломает данные.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Порядок и формат</div>
+    <table class="data-table">
+      <thead><tr><th>Модификатор</th><th>Что делает</th></tr></thead>
+      <tbody>
+        <tr><td><code>-&gt;after('column')</code></td><td>Поставить колонку после указанной (MySQL)</td></tr>
+        <tr><td><code>-&gt;first()</code></td><td>Поставить колонку первой (MySQL)</td></tr>
+        <tr><td><code>-&gt;charset('utf8mb4')</code></td><td>Кодировка колонки (MySQL)</td></tr>
+        <tr><td><code>-&gt;collation('...')</code></td><td>Правила сравнения и сортировки строк</td></tr>
+        <tr><td><code>-&gt;invisible()</code></td><td>Колонка не попадает в <code>SELECT *</code> (MySQL)</td></tr>
+        <tr><td><code>-&gt;type('...')</code></td><td>Задать тип колонки явно</td></tr>
+      </tbody>
+    </table>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Автоинкремент и вычисляемые колонки</div>
+    <table class="data-table">
+      <thead><tr><th>Модификатор</th><th>Что делает</th></tr></thead>
+      <tbody>
+        <tr><td><code>-&gt;autoIncrement()</code></td><td>Автоинкремент для целых</td></tr>
+        <tr><td><code>-&gt;from(1000)</code>, <code>-&gt;startingValue(1000)</code></td><td>С какого числа начинать нумерацию (MySQL, PostgreSQL)</td></tr>
+        <tr><td><code>-&gt;storedAs('expr')</code></td><td>Вычисляемая колонка, значение хранится на диске</td></tr>
+        <tr><td><code>-&gt;virtualAs('expr')</code></td><td>Вычисляемая колонка, значение считается при чтении</td></tr>
+        <tr><td><code>-&gt;generatedAs()</code>, <code>-&gt;always()</code></td><td>Identity-колонка (PostgreSQL)</td></tr>
+        <tr><td><code>-&gt;persisted()</code></td><td>Сохранять вычисляемую колонку (SQL Server)</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Где вычисляемые колонки выручают.</strong> <code>storedAs</code> считает значение один раз при записи и занимает место, зато по нему можно построить индекс. <code>virtualAs</code> не занимает места, но считается при каждом чтении. Типичный пример — <code>total</code>, выведенный из количества и цены: вместо того чтобы поддерживать его в коде и рисковать расхождением, его выводит сама база.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Специальные индексы и редкие модификаторы</div>
+    <table class="data-table">
+      <thead><tr><th>Модификатор</th><th>Что делает</th></tr></thead>
+      <tbody>
+        <tr><td><code>-&gt;fulltext()</code></td><td>Полнотекстовый индекс для поиска по тексту</td></tr>
+        <tr><td><code>-&gt;spatialIndex()</code></td><td>Индекс для геоданных</td></tr>
+        <tr><td><code>-&gt;vectorIndex()</code></td><td>Индекс для векторов</td></tr>
+        <tr><td><code>-&gt;instant()</code></td><td><code>ALGORITHM=INSTANT</code> для операции с колонкой (MySQL)</td></tr>
+        <tr><td><code>-&gt;lock('none')</code></td><td>Режим блокировки при изменении схемы (MySQL)</td></tr>
+        <tr><td><code>-&gt;using('expr')</code></td><td>Выражение приведения типа при <code>change()</code> (PostgreSQL)</td></tr>
+      </tbody>
+    </table>
+    <div class="info-box warning"><strong>Последние три — для больших боевых таблиц.</strong> Изменение схемы на таблице с миллионами строк по умолчанию перестраивает её целиком и держит блокировку, то есть приложение в это время не пишет. <code>instant()</code> и <code>lock('none')</code> просят MySQL выполнить операцию, не блокируя запись, — работает не для всех изменений, но когда работает, экономит окно простоя. Учтите, что <code>using()</code> появился не в самой первой версии ветки 13: в <code>13.6</code> его ещё нет, в <code>13.38</code> уже есть.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Короткие формы вместо модификатора</div>
+    <p class="text">Для беззнаковых целых отдельный модификатор не нужен — есть готовые методы. Результат совпадает дословно, но читается короче.</p>
+<pre><code>$table-&gt;<span class="c-fn">integer</span>(<span class="c-str">'price'</span>)-&gt;<span class="c-fn">unsigned</span>();   <span class="c-comment">// можно и так</span>
+$table-&gt;<span class="c-fn">unsignedInteger</span>(<span class="c-str">'price'</span>);       <span class="c-comment">// но принято так</span>
+
+<span class="c-comment"># обе строки дают одно и то же</span>
+`price` int unsigned not null</code></pre>
+    <table class="data-table">
+      <thead><tr><th>Вместо этого</th><th>Пишут так</th></tr></thead>
+      <tbody>
+        <tr><td><code>tinyInteger(...)-&gt;unsigned()</code></td><td><code>unsignedTinyInteger(...)</code></td></tr>
+        <tr><td><code>smallInteger(...)-&gt;unsigned()</code></td><td><code>unsignedSmallInteger(...)</code></td></tr>
+        <tr><td><code>mediumInteger(...)-&gt;unsigned()</code></td><td><code>unsignedMediumInteger(...)</code></td></tr>
+        <tr><td><code>integer(...)-&gt;unsigned()</code></td><td><code>unsignedInteger(...)</code></td></tr>
+        <tr><td><code>bigInteger(...)-&gt;unsigned()</code></td><td><code>unsignedBigInteger(...)</code></td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong>Деньги целым числом — отдельное решение, а не ошибка.</strong> Хранить цену в копейках как <code>unsignedInteger</code> допустимо и даже распространено: целые складываются точно. Но тогда всё приложение обязано помнить про множитель сто, иначе где-нибудь выведется цена в сто раз меньше. Альтернатива — <code>decimal(12, 2)</code> с приведением <code>'price' =&gt; 'decimal:2'</code>. Недопустим только <code>float</code>.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Порядок вызовов в цепочке</div>
+    <p class="text">Между собой модификаторы колонки порядком не связаны: грамматика собирает их в фиксированной последовательности независимо от того, как они записаны. А вот <code>constrained()</code> обрывает цепочку — он возвращает уже не колонку, а описание внешнего ключа. Всё, что вызвано после него, относится к ключу, и модификатор колонки там просто теряется.</p>
+<pre><code><span class="c-comment">// правильно: сначала колонка, потом ключ</span>
+$table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'category_id'</span>)-&gt;<span class="c-fn">nullable</span>()-&gt;<span class="c-fn">constrained</span>()-&gt;<span class="c-fn">nullOnDelete</span>();
+
+<span class="c-comment">// ошибка: nullable после constrained молча не сработает</span>
+$table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'category_id'</span>)-&gt;<span class="c-fn">constrained</span>()-&gt;<span class="c-fn">nullable</span>()-&gt;<span class="c-fn">nullOnDelete</span>();</code></pre>
+<pre><code><span class="c-comment"># первый вариант</span>
+`category_id` bigint unsigned null
+... foreign key (`category_id`) references `categories` (`id`) on delete set null
+
+<span class="c-comment"># второй вариант — колонка осталась NOT NULL, а ключ требует set null</span>
+`category_id` bigint unsigned not null
+... foreign key (`category_id`) references `categories` (`id`) on delete set null</code></pre>
+    <div class="pitfall"><strong>Ошибки при сборке миграции не будет.</strong> <code>ForeignKeyDefinition</code> наследуется от <code>Fluent</code>, поэтому любой неизвестный вызов на нём просто записывается как атрибут и игнорируется. Миграция соберётся, SQL сгенерируется, и упадёт уже база — на попытке навесить <code>SET NULL</code> на колонку <code>NOT NULL</code>. Правило простое: всё про колонку — до <code>constrained()</code>, всё про ключ — после.</div>
+
+    <div class="remember-box"><strong>Типичные замечания к миграции, которые следуют отсюда.</strong> <code>nullable()</code> вместе с <code>cascadeOnDelete()</code> противоречат друг другу: колонка допускает пустоту, но удаление родителя не обнуляет ссылку, а сносит строку — почти всегда имелся в виду <code>nullOnDelete()</code>. Отдельный <code>-&gt;index()</code> рядом с <code>constrained()</code> на MySQL избыточен, потому что InnoDB заводит индекс под внешний ключ сам, — но на PostgreSQL он как раз нужен. И <code>constrained('category')</code> в единственном числе сошлётся на таблицу <code>category</code>, которой нет: по соглашению таблица модели <code>Category</code> называется <code>categories</code>, и тогда аргумент не нужен вовсе.</div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title">Метод constrained подробно: что он делает за вас</div>
     <p class="text"><code>constrained()</code> — это сокращение. Полная запись внешнего ключа состоит из трёх частей: какую колонку связываем, на какую колонку чужой таблицы она ссылается и что это за таблица. Метод берёт на себя две последние, догадываясь о них по имени колонки.</p>
 <pre><code><span class="c-comment">// полная форма</span>
