@@ -6085,6 +6085,100 @@ $post-&gt;<span class="c-fn">update</span>([<span class="c-str">'status'</span> 
   </div>
 
   <div class="subsection">
+    <div class="subsection-title">Перечисление как отдельный файл: где лежит и как подключается</div>
+    <p class="text">Перечисление — такой же тип, как класс, поэтому живёт в собственном файле: одно перечисление на файл, имя файла совпадает с именем типа. Отдельной настройки для этого не нужно, достаточно положить файл туда, где его найдёт автозагрузка.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Куда кладёт команда</div>
+    <p class="text">Здесь есть неочевидное поведение, из-за которого файл нередко оказывается не там, где ожидали. Папку команда выбирает сама, и зависит это от того, существует ли она на момент вызова:</p>
+    <table class="data-table">
+      <thead><tr><th>Что вызвали</th><th>Куда попадёт файл</th><th>Пространство имён</th></tr></thead>
+      <tbody>
+        <tr><td><code>make:enum OrderStatus</code>, папки <code>app/Enums</code> нет</td><td><code>app/OrderStatus.php</code></td><td><code>App</code></td></tr>
+        <tr><td><code>make:enum OrderStatus</code>, папка <code>app/Enums</code> есть</td><td><code>app/Enums/OrderStatus.php</code></td><td><code>App\Enums</code></td></tr>
+        <tr><td><code>make:enum OrderStatus</code>, есть <code>app/Enumerations</code></td><td><code>app/Enumerations/OrderStatus.php</code></td><td><code>App\Enumerations</code></td></tr>
+        <tr><td><code>make:enum Enums/OrderStatus</code></td><td><code>app/Enums/OrderStatus.php</code> всегда</td><td><code>App\Enums</code></td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Как сделать один раз и забыть.</strong> Первое перечисление создайте с явным путём — <code>php artisan make:enum Enums/OrderStatus --string</code>. Папка появится, и дальше команда будет класть туда всё сама, уже без префикса. Проверить, куда именно лёг файл, проще всего по выводу команды: она печатает полный путь вида <code>Enum [app/Enums/OrderStatus.php] created successfully</code>.</div>
+<pre><code>php artisan make:enum Enums/OrderStatus --string   <span class="c-comment"># значения-строки</span>
+php artisan make:enum Enums/HttpCode --int         <span class="c-comment"># значения-числа</span>
+php artisan make:enum Enums/Direction              <span class="c-comment"># без значений, спросит тип</span>
+php artisan make:enum Enums/OrderStatus --force    <span class="c-comment"># перезаписать существующий</span></code></pre>
+    <p class="text">Заготовка создаётся пустой — случаи дописываете сами:</p>
+<pre><code><span class="c-comment">// app/Enums/OrderStatus.php — то, что создала команда</span>
+<span class="c-key">namespace</span> <span class="c-type">App\Enums</span>;
+
+<span class="c-key">enum</span> <span class="c-type">OrderStatus</span>: <span class="c-key">string</span>
+{
+    <span class="c-comment">//</span>
+}</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Почему файл подхватывается без регистрации</div>
+    <p class="text">В <code>composer.json</code> прописано соответствие пространства имён и папки по стандарту PSR-4:</p>
+<pre><code><span class="c-str">"autoload"</span>: {
+    <span class="c-str">"psr-4"</span>: {
+        <span class="c-str">"App\\"</span>: <span class="c-str">"app/"</span>
+    }
+}</code></pre>
+    <p class="text">Автозагрузчик не держит список файлов — он вычисляет путь из имени класса. Встретив <code>App\Enums\OrderStatus</code>, он отбрасывает префикс <code>App\</code>, подставляет <code>app/</code> и ищет <code>app/Enums/OrderStatus.php</code>. Поэтому новый файл работает сразу, без <code>composer dump-autoload</code>: эта команда нужна только когда классы ищутся по списку, то есть для <code>classmap</code> и <code>files</code>.</p>
+    <div class="pitfall"><strong>Путь и пространство имён обязаны совпадать.</strong> Файл <code>app/Enums/OrderStatus.php</code> с объявлением <code>namespace App\Models;</code> автозагрузчик не найдёт никогда — он будет искать его в <code>app/Models</code>. Ошибка выглядит как <code>Class "App\Enums\OrderStatus" not found</code> и чаще всего возникает после ручного переноса файла в другую папку, когда строку <code>namespace</code> забыли поправить. То же касается регистра: на macOS файловая система регистр обычно игнорирует, и <code>orderstatus.php</code> будет работать локально, но на сервере с Linux — нет.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Вложенные папки и группировка</div>
+    <p class="text">Вложенная папка — это вложенное пространство имён, один к одному. Когда перечислений становится много, их раскладывают по доменам:</p>
+    <div class="diagram">app/Enums/
+  OrderStatus.php          -> App\Enums\OrderStatus
+  PaymentMethod.php        -> App\Enums\PaymentMethod
+  Billing/
+    InvoiceStatus.php      -> App\Enums\Billing\InvoiceStatus
+    Currency.php           -> App\Enums\Billing\Currency</div>
+    <div class="remember-box"><strong>Про имена.</strong> Суффикс <code>Enum</code> в имени не нужен: <code>OrderStatus</code> читается лучше, чем <code>OrderStatusEnum</code>, а тип и так виден по объявлению. Имя пишется как у класса, в единственном числе — перечисление описывает одно значение, а не их набор. Главное — выбрать одно соглашение в начале проекта: переименование позже затрагивает все места, где стоит <code>use</code>.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Как подключается в коде</div>
+<pre><code><span class="c-comment">// в модели</span>
+<span class="c-key">use</span> <span class="c-type">App\Enums\OrderStatus</span>;
+
+<span class="c-key">protected function</span> <span class="c-fn">casts</span>(): <span class="c-key">array</span>
+{
+    <span class="c-key">return</span> [<span class="c-str">'status'</span> =&gt; <span class="c-type">OrderStatus</span>::<span class="c-key">class</span>];
+}
+
+<span class="c-comment">// в FormRequest</span>
+<span class="c-str">'status'</span> =&gt; [<span class="c-str">'required'</span>, <span class="c-type">Rule</span>::<span class="c-fn">enum</span>(<span class="c-type">OrderStatus</span>::<span class="c-key">class</span>)],
+
+<span class="c-comment">// в миграции, как значение по умолчанию</span>
+$table-&gt;<span class="c-fn">string</span>(<span class="c-str">'status'</span>)-&gt;<span class="c-fn">default</span>(<span class="c-type">OrderStatus</span>::<span class="c-type">PendingPayment</span>-&gt;<span class="c-key">value</span>);
+
+<span class="c-comment">// как тип параметра — подсказка IDE и проверка на входе</span>
+<span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">Order</span> $order, <span class="c-type">OrderStatus</span> $next): <span class="c-type">Order</span></code></pre>
+    <div class="pitfall"><strong>Перечисление без типа тоже можно привести в модели, но хранится оно иначе.</strong> У <code>enum Direction { case Up; case Down; }</code> значений нет, поэтому в базу уходит <strong>имя случая</strong> — <code>'Up'</code>. У перечисления с типом (<code>enum OrderStatus: string</code>) уходит значение — <code>'pending_payment'</code>. Для колонок в базе почти всегда берут вариант со значением: имя случая привязано к коду и меняется при переименовании, а значение — часть данных и должно пережить правку кода.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Общее поведение для нескольких перечислений</div>
+    <p class="text">Когда у каждого перечисления появляются одни и те же вспомогательные методы, их выносят в трейт, а общий контракт — в интерфейс. Перечисления умеют и то, и другое, как обычные классы.</p>
+<pre><code><span class="c-comment">// app/Enums/Concerns/HasValues.php</span>
+<span class="c-key">namespace</span> <span class="c-type">App\Enums\Concerns</span>;
+
+<span class="c-key">trait</span> <span class="c-type">HasValues</span>
+{
+    <span class="c-comment">// ['pending_payment', 'paid', ...] — для правил валидации и выпадающих списков</span>
+    <span class="c-key">public static function</span> <span class="c-fn">values</span>(): <span class="c-key">array</span>
+    {
+        <span class="c-key">return</span> <span class="c-fn">array_column</span>(<span class="c-key">self</span>::<span class="c-fn">cases</span>(), <span class="c-str">'value'</span>);
+    }
+}</code></pre>
+<pre><code><span class="c-key">use</span> <span class="c-type">App\Enums\Concerns\HasValues</span>;
+
+<span class="c-key">enum</span> <span class="c-type">OrderStatus</span>: <span class="c-key">string</span>
+{
+    <span class="c-key">use</span> <span class="c-type">HasValues</span>;
+
+    <span class="c-key">case</span> <span class="c-type">PendingPayment</span> = <span class="c-str">'pending_payment'</span>;
+    <span class="c-comment">// ...</span>
+}</code></pre>
+    <div class="pitfall"><strong>Свойств у перечисления быть не может.</strong> Методы, константы, интерфейсы и трейты — да, а вот <code>private $something</code> внутри <code>enum</code> вызовет ошибку разбора: случаи существуют в единственном экземпляре, и хранить в них изменяемое состояние негде. Всё, что выглядит как свойство, делается методом с <code>match</code> по <code>$this</code>.</div>
+    <div class="remember-box">Что именно писать внутри перечисления и как связать его с колонкой в базе — выше, в подразделах про выбор между <code>enum</code> и строкой и про статусы заказа.</div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title">Разбор на практике: статусы заказа цифрового товара</div>
     <p class="text">Магазин внутриигровых предметов и аккаунтов — хороший пример того, где статусов много и каждый что-то значит для денег. Отличие от обычной розницы в том, что деньги удерживаются до подтверждения покупателем, поэтому статус определяет не только надпись в интерфейсе, но и момент выплаты продавцу.</p>
 <pre><code><span class="c-comment">// app/Enums/OrderStatus.php</span>
@@ -11857,7 +11951,7 @@ php artisan make:model Order -m</code></pre>
     <span class="c-key">public function</span> <span class="c-fn">product</span>() { <span class="c-key">return</span> $this-&gt;<span class="c-fn">belongsTo</span>(<span class="c-type">Product</span>::<span class="c-key">class</span>); }
 }</code></pre>
     <p class="text">Колонка <code>status</code> у заказа — строка, а не <code>enum</code> в миграции, и это осознанный выбор: новый статус добавляется правкой PHP-файла, без <code>ALTER TABLE</code> на рабочей таблице. Чтобы при этом не сверять строки в коде, список статусов описывают перечислением и привязывают его к модели:</p>
-<pre><code>php artisan make:enum OrderStatus --string</code></pre>
+<pre><code>php artisan make:enum Enums/OrderStatus --string</code></pre>
 <pre><code><span class="c-comment">// app/Enums/OrderStatus.php</span>
 <span class="c-key">namespace</span> <span class="c-type">App\Enums</span>;
 
