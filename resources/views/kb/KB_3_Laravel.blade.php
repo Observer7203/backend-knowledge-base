@@ -6106,6 +6106,105 @@ $table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'author_id'</
   </div>
 
   <div class="subsection">
+    <div class="subsection-title">Метод constrained подробно: что он делает за вас</div>
+    <p class="text"><code>constrained()</code> — это сокращение. Полная запись внешнего ключа состоит из трёх частей: какую колонку связываем, на какую колонку чужой таблицы она ссылается и что это за таблица. Метод берёт на себя две последние, догадываясь о них по имени колонки.</p>
+<pre><code><span class="c-comment">// полная форма</span>
+$table-&gt;<span class="c-fn">unsignedBigInteger</span>(<span class="c-str">'user_id'</span>);
+$table-&gt;<span class="c-fn">foreign</span>(<span class="c-str">'user_id'</span>)-&gt;<span class="c-fn">references</span>(<span class="c-str">'id'</span>)-&gt;<span class="c-fn">on</span>(<span class="c-str">'users'</span>);
+
+<span class="c-comment">// то же самое одной строкой</span>
+$table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'user_id'</span>)-&gt;<span class="c-fn">constrained</span>();</code></pre>
+    <p class="text">У метода три необязательных аргумента — таблица, колонка и имя ограничения:</p>
+<pre><code><span class="c-fn">constrained</span>($table = <span class="c-key">null</span>, $column = <span class="c-key">null</span>, $indexName = <span class="c-key">null</span>)
+
+$table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'user_id'</span>)-&gt;<span class="c-fn">constrained</span>();                      <span class="c-comment">// угадает users и id</span>
+$table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'author_id'</span>)-&gt;<span class="c-fn">constrained</span>(<span class="c-str">'users'</span>);             <span class="c-comment">// таблица задана явно</span>
+$table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'post_id'</span>)-&gt;<span class="c-fn">constrained</span>(<span class="c-str">'posts'</span>, <span class="c-str">'id'</span>);         <span class="c-comment">// и таблица, и колонка</span>
+$table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'post_id'</span>)-&gt;<span class="c-fn">constrained</span>(indexName: <span class="c-str">'fk_comments_post'</span>);</code></pre>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Как именно угадывается таблица</div>
+    <p class="text">Правило простое: от имени колонки отбрасывается хвост <code>_id</code>, а остаток переводится во множественное число. Именно остаток, а не смысл — метод не знает, что автор это пользователь.</p>
+    <table class="data-table">
+      <thead><tr><th>Колонка</th><th>На какую таблицу сошлётся</th><th>Верно ли это</th></tr></thead>
+      <tbody>
+        <tr><td><code>user_id</code></td><td><code>users</code></td><td>Да</td></tr>
+        <tr><td><code>post_id</code></td><td><code>posts</code></td><td>Да</td></tr>
+        <tr><td><code>category_id</code></td><td><code>categories</code></td><td>Да, множественное число берётся по правилам английского</td></tr>
+        <tr><td><code>author_id</code></td><td><code>authors</code></td><td>Нет, если авторы лежат в <code>users</code>: таблицу надо указать явно</td></tr>
+        <tr><td><code>parent_id</code></td><td><code>parents</code></td><td>Нет, для ссылки на себя таблицу указывают: <code>constrained('categories')</code></td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong>Отбрасывается не только <code>_id</code>.</strong> Отсекается подчёркивание вместе с именем колонки-ссылки, а она по умолчанию <code>id</code>. Если вторым аргументом передать другую колонку, правило изменится: у <code>author_uuid</code> с <code>constrained(column: 'uuid')</code> останется <code>author</code>, и ссылка уйдёт на <code>authors</code>. Проверять догадку в уме не нужно — достаточно посмотреть на SQL через <code>php artisan migrate --pretend</code>.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Что получается в базе</div>
+    <p class="text">Цепочка превращается в два выражения: колонка создаётся вместе с таблицей, а ограничение навешивается отдельной командой.</p>
+<pre><code><span class="c-comment">// миграция</span>
+<span class="c-type">Schema</span>::<span class="c-fn">create</span>(<span class="c-str">'posts'</span>, <span class="c-key">function</span> (<span class="c-type">Blueprint</span> $table) {
+    $table-&gt;<span class="c-fn">id</span>();
+    $table-&gt;<span class="c-fn">string</span>(<span class="c-str">'title'</span>);
+    $table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'user_id'</span>)-&gt;<span class="c-fn">constrained</span>()-&gt;<span class="c-fn">cascadeOnDelete</span>();
+});</code></pre>
+<pre><code><span class="c-comment"># что уйдёт в MySQL</span>
+create table `posts` (
+  `id` bigint unsigned not null auto_increment primary key,
+  `title` varchar(255) not null,
+  `user_id` bigint unsigned not null
+)
+
+alter table `posts`
+  add constraint `posts_user_id_foreign`
+  foreign key (`user_id`) references `users` (`id`) on delete cascade</code></pre>
+    <div class="remember-box"><strong>Имя ограничения собирается по шаблону.</strong> Таблица, колонка и слово <code>foreign</code> через подчёркивание, всё строчными: <code>posts_user_id_foreign</code>. Знать это нужно, когда читаешь сообщение об ошибке целостности — там фигурирует именно это имя. Третий аргумент <code>indexName</code> нужен редко, в основном когда сгенерированное имя не влезает в ограничение MySQL на 64 символа, а такое случается у длинных имён таблиц.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Действия при изменении родителя</div>
+    <p class="text">Про <code>cascadeOnDelete</code>, <code>restrictOnDelete</code> и <code>nullOnDelete</code> сказано выше. Такая же четвёрка есть и на обновление ключа: <code>cascadeOnUpdate</code>, <code>restrictOnUpdate</code>, <code>nullOnUpdate</code>, <code>noActionOnUpdate</code>. Применяют их редко, потому что первичные ключи обычно не меняют, но если ключ составной или натуральный — пригождается.</p>
+<pre><code>$table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'user_id'</span>)-&gt;<span class="c-fn">constrained</span>()
+      -&gt;<span class="c-fn">cascadeOnUpdate</span>()      <span class="c-comment">// поменялся id родителя — поменяется и ссылка</span>
+      -&gt;<span class="c-fn">restrictOnDelete</span>();   <span class="c-comment">// а удалить родителя со строками нельзя</span>
+
+<span class="c-comment">// то же через общий метод, если нужно значение, которого нет среди сокращений</span>
+$table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'user_id'</span>)-&gt;<span class="c-fn">constrained</span>()-&gt;<span class="c-fn">onDelete</span>(<span class="c-str">'set null'</span>);</code></pre>
+    <p class="text">Без указания действия база использует <code>no action</code>: удалить родителя, у которого есть потомки, не получится — придёт ошибка целостности.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Когда имя колонки берут из модели</div>
+<pre><code><span class="c-comment">// колонку и таблицу возьмёт у модели: user_id и users</span>
+$table-&gt;<span class="c-fn">foreignIdFor</span>(<span class="c-type">User</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">constrained</span>();
+
+<span class="c-comment">// если у модели ключ не целый, а UUID или ULID,
+// колонка создастся нужного типа сама</span>
+$table-&gt;<span class="c-fn">foreignUuid</span>(<span class="c-str">'user_id'</span>)-&gt;<span class="c-fn">constrained</span>();
+$table-&gt;<span class="c-fn">foreignUlid</span>(<span class="c-str">'user_id'</span>)-&gt;<span class="c-fn">constrained</span>();</code></pre>
+    <p class="text"><code>foreignIdFor()</code> удобен тем, что переименование таблицы в модели не придётся повторять в миграции. Обратная сторона — миграция начинает зависеть от кода модели, который со временем меняется, а миграция должна описывать схему на момент своего написания. Поэтому в новых проектах его берут, а в долгоживущих чаще пишут имя колонки строкой.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Добавление ключа в существующую таблицу и откат</div>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">up</span>(): <span class="c-key">void</span>
+{
+    <span class="c-type">Schema</span>::<span class="c-fn">table</span>(<span class="c-str">'posts'</span>, <span class="c-key">function</span> (<span class="c-type">Blueprint</span> $table) {
+        <span class="c-comment">// nullable здесь не для красоты — см. ловушку ниже</span>
+        $table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'category_id'</span>)-&gt;<span class="c-fn">nullable</span>()-&gt;<span class="c-fn">constrained</span>();
+    });
+}
+
+<span class="c-key">public function</span> <span class="c-fn">down</span>(): <span class="c-key">void</span>
+{
+    <span class="c-type">Schema</span>::<span class="c-fn">table</span>(<span class="c-str">'posts'</span>, <span class="c-key">function</span> (<span class="c-type">Blueprint</span> $table) {
+        <span class="c-comment">// снимает ограничение и удаляет колонку — две операции одним вызовом</span>
+        $table-&gt;<span class="c-fn">dropConstrainedForeignId</span>(<span class="c-str">'category_id'</span>);
+    });
+}</code></pre>
+<pre><code><span class="c-comment"># что уйдёт в базу при откате</span>
+alter table `posts` drop foreign key `posts_category_id_foreign`
+alter table `posts` drop `category_id`</code></pre>
+    <div class="remember-box"><strong>Про <code>dropConstrainedForeignId</code>.</strong> В руководствах обычно пишут пару вызовов — <code>dropForeign(['category_id'])</code> и следом <code>dropColumn('category_id')</code>. Это работает и делает ровно то же самое, но один метод короче и не даёт забыть первую половину: удалить колонку, не сняв ограничение, база не позволит. Порядок важен именно такой — сначала ключ, потом колонка.</div>
+
+    <div class="pitfall"><strong>Внешний ключ в непустую таблицу без <code>nullable</code> не встанет.</strong> Новая колонка <code>NOT NULL</code> получает в существующих строках значение по умолчанию — для целого это ноль. Строки с родителем <code>0</code> в таблице <code>categories</code> нет, и база откажется создавать ограничение. Поэтому колонку добавляют либо <code>nullable</code>, либо в три приёма: добавить колонку, заполнить её данными, и только потом отдельной миграцией навесить ключ.</div>
+    <div class="pitfall"><strong>Порядок миграций определяется датой в имени файла.</strong> Таблица, на которую ссылаются, должна быть создана раньше. Когда модели создают подряд через <code>make:model -m</code>, порядок получается верным сам собой, но при ручном переименовании файлов или переносе миграции между ветками он ломается, и <code>migrate</code> падает на создании ключа.</div>
+    <div class="pitfall"><strong>В SQLite ключ нельзя удалить по имени.</strong> Вызов <code>dropForeign('posts_category_id_foreign')</code> со строкой выбросит <code>RuntimeException: This database driver does not support dropping foreign keys by name</code>. Передавайте массив колонок — <code>dropForeign(['category_id'])</code>, — тогда Laravel пересоберёт таблицу.</div>
+    <div class="pitfall"><strong>Индекс под внешний ключ создаётся не везде.</strong> MySQL с InnoDB заводит его автоматически, а PostgreSQL — нет. Колонка со ссылкой почти всегда участвует в выборках вида «все заказы пользователя», поэтому на PostgreSQL к ней добавляют <code>-&gt;index()</code> явно, иначе такие запросы и каскадное удаление идут полным перебором.</div>
+    <div class="info-box warning"><strong>Чего ждать от <code>php artisan migrate</code> в выводе.</strong> В руководствах по этой теме часто показывают результат вроде <code>"Foreign key 'posts_user_id_foreign' created on table 'posts'"</code> — такой строки artisan не печатает. На самом деле выводится <code>Running migrations.</code> и по строке на файл: имя миграции, время выполнения и <code>DONE</code>. Увидеть конкретный SQL можно только через <code>migrate --pretend</code>, а проверить созданные ключи — через <code>php artisan db:table posts</code>.</div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title">Дерево в одной таблице: категории и parent_id</div>
     <p class="text">Классическая задача: у категории могут быть подкатегории любой вложенности. Решается ссылкой таблицы на саму себя — колонкой <code>parent_id</code>, где лежит идентификатор родителя.</p>
 <pre><code><span class="c-type">Schema</span>::<span class="c-fn">create</span>(<span class="c-str">'categories'</span>, <span class="c-key">function</span> (<span class="c-type">Blueprint</span> $table) {
