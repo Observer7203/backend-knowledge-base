@@ -6000,6 +6000,91 @@ php artisan make:resource <span class="c-type">Api/V1/PostResource</span>       
   </div>
 
   <div class="subsection">
+    <div class="subsection-title">Статусы: enum в миграции или string плюс PHP-перечисление</div>
+    <p class="text">Когда у колонки заранее известен набор значений — <code>draft</code> и <code>published</code>, <code>new</code> и <code>paid</code>, — возникает выбор: закрепить список в схеме базы через <code>enum()</code> или хранить обычную строку, а список держать в коде. В современном Laravel почти всегда выбирают второе, и ниже разобрано почему.</p>
+    <table class="data-table">
+      <thead><tr><th>Критерий</th><th><code>enum</code> в миграции</th><th><code>string</code> плюс PHP-перечисление</th></tr></thead>
+      <tbody>
+        <tr><td>Как объявляют</td><td><code>$table-&gt;enum('status', ['draft', 'published'])</code></td><td><code>$table-&gt;string('status')</code></td></tr>
+        <tr><td>Добавить новое значение</td><td>Миграция с <code>ALTER TABLE</code> по всей таблице</td><td>Одна строка в PHP-файле, базу не трогаем</td></tr>
+        <tr><td>Контроль на уровне базы</td><td>Есть: постороннее значение не запишется</td><td>Нет: база примет любую строку, следит приложение</td></tr>
+        <tr><td>Перенос между СУБД</td><td>Работает везде, но реализуется по-разному</td><td>Одинаково везде</td></tr>
+        <tr><td>Место и размер индекса</td><td>На MySQL чуть компактнее</td><td>Чуть больше, на практике незаметно</td></tr>
+        <tr><td>Где описан список значений</td><td>В миграции, то есть в истории изменений схемы</td><td>В одном файле перечисления, видно из любого места кода</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Что <code>enum()</code> создаёт на самом деле.</strong> Настоящий тип <code>ENUM</code> получается только на MySQL и MariaDB. На PostgreSQL и SQL Server Laravel создаёт обычную строковую колонку с ограничением <code>CHECK</code>, на SQLite — то же самое: <code>varchar check ("status" in ('draft', 'published'))</code>. То есть запрет на постороннее значение работает во всех базах, просто механизм разный, а выигрыш по месту остаётся только у MySQL. Распространённое утверждение «в SQLite <code>enum</code> не поддерживается» неточно: поддерживается, но через проверку, а не через отдельный тип.</div>
+
+    <p class="text">Рекомендуемый подход: в базе строка, в коде перечисление PHP (появились в версии 8.1), между ними — приведение типа в модели.</p>
+<pre><code><span class="c-comment">// 1. Миграция: обычная строковая колонка</span>
+$table-&gt;<span class="c-fn">string</span>(<span class="c-str">'status'</span>)-&gt;<span class="c-fn">default</span>(<span class="c-str">'draft'</span>);
+$table-&gt;<span class="c-fn">index</span>(<span class="c-str">'status'</span>);   <span class="c-comment">// если по статусу фильтруют</span></code></pre>
+<pre><code><span class="c-comment">// 2. app/Enums/PostStatus.php</span>
+<span class="c-key">namespace</span> <span class="c-type">App\Enums</span>;
+
+<span class="c-comment">// : string — это backed enum, у каждого случая есть строковое значение,
+// именно оно и лежит в базе</span>
+<span class="c-key">enum</span> <span class="c-type">PostStatus</span>: <span class="c-key">string</span>
+{
+    <span class="c-key">case</span> <span class="c-type">Draft</span> = <span class="c-str">'draft'</span>;
+    <span class="c-key">case</span> <span class="c-type">Published</span> = <span class="c-str">'published'</span>;
+
+    <span class="c-comment">// перечисление может нести и поведение</span>
+    <span class="c-key">public function</span> <span class="c-fn">label</span>(): <span class="c-key">string</span>
+    {
+        <span class="c-key">return match</span>($this) {
+            <span class="c-key">self</span>::<span class="c-type">Draft</span>     =&gt; <span class="c-str">'Черновик'</span>,
+            <span class="c-key">self</span>::<span class="c-type">Published</span> =&gt; <span class="c-str">'Опубликован'</span>,
+        };
+    }
+}</code></pre>
+<pre><code><span class="c-comment">// 3. app/Models/Post.php — приведение типа</span>
+<span class="c-key">use</span> <span class="c-type">App\Enums\PostStatus</span>;
+
+<span class="c-key">protected function</span> <span class="c-fn">casts</span>(): <span class="c-key">array</span>
+{
+    <span class="c-key">return</span> [
+        <span class="c-str">'status'</span> =&gt; <span class="c-type">PostStatus</span>::<span class="c-key">class</span>,
+    ];
+}</code></pre>
+    <p class="text">После этого <code>$post-&gt;status</code> возвращает не строку, а объект перечисления: доступны <code>-&gt;value</code>, <code>-&gt;name</code>, собственные методы вроде <code>label()</code>, и сравнение идёт по случаю, а не по тексту. Про приведение типов подробнее — в разделе <strong>Eloquent ORM</strong>, подраздел про <code>$casts</code>.</p>
+<pre><code><span class="c-comment">// сравнение вместо сверки строк — опечатку поймает IDE, а не прод</span>
+<span class="c-key">if</span> ($post-&gt;status === <span class="c-type">PostStatus</span>::<span class="c-type">Published</span>) { <span class="c-comment">/* ... */</span> }
+
+<span class="c-comment">// в запрос можно передать сам случай: Laravel подставит его value</span>
+<span class="c-type">Post</span>::<span class="c-fn">where</span>(<span class="c-str">'status'</span>, <span class="c-type">PostStatus</span>::<span class="c-type">Published</span>)-&gt;<span class="c-fn">get</span>();
+
+<span class="c-comment">// запись — тоже случаем, не строкой</span>
+$post-&gt;<span class="c-fn">update</span>([<span class="c-str">'status'</span> =&gt; <span class="c-type">PostStatus</span>::<span class="c-type">Published</span>]);
+
+<span class="c-comment">// валидация формы: допустимы только случаи перечисления</span>
+<span class="c-key">use</span> <span class="c-type">Illuminate\Validation\Rule</span>;
+
+<span class="c-str">'status'</span> =&gt; [<span class="c-str">'required'</span>, <span class="c-type">Rule</span>::<span class="c-fn">enum</span>(<span class="c-type">PostStatus</span>::<span class="c-key">class</span>)],
+<span class="c-comment">// можно сузить набор для конкретной формы:
+// Rule::enum(PostStatus::class)-&gt;only([PostStatus::Draft])</span>
+
+<span class="c-comment">// в фабрике</span>
+<span class="c-str">'status'</span> =&gt; <span class="c-fn">fake</span>()-&gt;<span class="c-fn">randomElement</span>(<span class="c-type">PostStatus</span>::<span class="c-fn">cases</span>()),</code></pre>
+    <div class="remember-box"><strong>Главный выигрыш.</strong> Понадобился статус <code>archived</code> — добавляете один <code>case</code> в <code>PostStatus.php</code>, и всё. С <code>enum</code> в миграции пришлось бы писать миграцию с <code>ALTER TABLE</code>, которая на большой таблице выполняется долго и может держать блокировку, то есть деплой превращается в отдельное мероприятие. Контроль значений при этом не теряется: его обеспечивают правило валидации на входе и само перечисление в коде — просто он переехал из базы в приложение.</div>
+
+    <div class="pitfall"><strong>Значение, которого нет в перечислении, ломает чтение модели.</strong> При приведении Laravel вызывает <code>PostStatus::from($value)</code>, а этот метод на неизвестной строке выбрасывает <code>ValueError</code>. Значит, статус, вписанный в базу руками, или <code>case</code>, удалённый из перечисления при живых строках в таблице, обрушат не запись, а именно чтение — причём в произвольном месте приложения. Удаляя или переименовывая случай, обновляйте существующие строки миграцией.</div>
+    <div class="pitfall"><strong>Сортировка по <code>ENUM</code> в MySQL идёт не по алфавиту.</strong> Внутри MySQL хранит номер значения в объявленном списке, и <code>ORDER BY status</code> сортирует по этому номеру. Иногда это удобно, но результат неочевиден и меняется, если список переобъявить в другом порядке. У строковой колонки сортировка обычная, по тексту.</div>
+    <div class="pitfall"><strong>Правило валидации не покрывает запись в обход формы.</strong> У строковой колонки база не мешает сохранить любое значение, поэтому сидеры, консольные команды и импорт данных способны занести мусор, который потом свалится при чтении. Если данные приходят из внешнего источника, приводите их к случаю перечисления явно — через <code>PostStatus::tryFrom($value)</code>, который на неизвестной строке вернёт <code>null</code>, а не исключение.</div>
+
+    <p class="text">Когда <code>enum</code> в миграции всё-таки уместен:</p>
+    <table class="data-table">
+      <thead><tr><th>Ситуация</th><th>Почему</th></tr></thead>
+      <tbody>
+        <tr><td>Список значений не изменится никогда</td><td><code>['male', 'female']</code>, тип документа, две валюты — менять нечего, и жёсткий запрет в схеме только на пользу</td></tr>
+        <tr><td>В ту же базу пишут приложения не на Laravel</td><td>Проверка нужна там, где её нельзя обойти, — на стороне СУБД, потому что на чужой код правила валидации Laravel не распространяются</td></tr>
+        <tr><td>Прямой доступ к базе у аналитиков или администраторов</td><td><code>UPDATE</code> руками не пройдёт мимо проверки и не оставит значение, на котором потом упадёт чтение модели</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Короткий ответ на вопрос «что выбрать».</strong> По умолчанию — <code>string</code> в миграции и перечисление PHP с приведением в модели: набор значений меняется правкой одного файла, код читается по именам случаев, работает одинаково на любой базе. <code>enum</code> в схеме берут, когда гарантия нужна именно на уровне базы: список окончательный или в базу пишет кто-то кроме вашего приложения.</div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title">Модификаторы и внешние ключи</div>
 <pre><code>$table-&gt;<span class="c-fn">string</span>(<span class="c-str">'sku'</span>)-&gt;<span class="c-fn">unique</span>();              <span class="c-comment">// уникальность на уровне базы</span>
 $table-&gt;<span class="c-fn">string</span>(<span class="c-str">'image'</span>)-&gt;<span class="c-fn">nullable</span>();          <span class="c-comment">// разрешить NULL</span>
@@ -11268,6 +11353,30 @@ php artisan make:model Order -m</code></pre>
     <span class="c-key">public function</span> <span class="c-fn">user</span>()    { <span class="c-key">return</span> $this-&gt;<span class="c-fn">belongsTo</span>(<span class="c-type">User</span>::<span class="c-key">class</span>); }
     <span class="c-key">public function</span> <span class="c-fn">product</span>() { <span class="c-key">return</span> $this-&gt;<span class="c-fn">belongsTo</span>(<span class="c-type">Product</span>::<span class="c-key">class</span>); }
 }</code></pre>
+    <p class="text">Колонка <code>status</code> у заказа — строка, а не <code>enum</code> в миграции, и это осознанный выбор: новый статус добавляется правкой PHP-файла, без <code>ALTER TABLE</code> на рабочей таблице. Чтобы при этом не сверять строки в коде, список статусов описывают перечислением и привязывают его к модели:</p>
+<pre><code>php artisan make:enum OrderStatus --string</code></pre>
+<pre><code><span class="c-comment">// app/Enums/OrderStatus.php</span>
+<span class="c-key">namespace</span> <span class="c-type">App\Enums</span>;
+
+<span class="c-key">enum</span> <span class="c-type">OrderStatus</span>: <span class="c-key">string</span>
+{
+    <span class="c-key">case</span> <span class="c-type">New</span>      = <span class="c-str">'new'</span>;
+    <span class="c-key">case</span> <span class="c-type">Paid</span>     = <span class="c-str">'paid'</span>;
+    <span class="c-key">case</span> <span class="c-type">Shipped</span>  = <span class="c-str">'shipped'</span>;
+    <span class="c-key">case</span> <span class="c-type">Canceled</span> = <span class="c-str">'canceled'</span>;
+}</code></pre>
+<pre><code><span class="c-comment">// app/Models/Order.php — приведение типа</span>
+<span class="c-key">use</span> <span class="c-type">App\Enums\OrderStatus</span>;
+
+<span class="c-key">protected function</span> <span class="c-fn">casts</span>(): <span class="c-type">array</span>
+{
+    <span class="c-key">return</span> [
+        <span class="c-str">'total'</span>  =&gt; <span class="c-str">'decimal:2'</span>,
+        <span class="c-str">'status'</span> =&gt; <span class="c-type">OrderStatus</span>::<span class="c-key">class</span>,
+    ];
+}</code></pre>
+    <p class="text">После этого <code>$order-&gt;status === OrderStatus::Paid</code> вместо сравнения с <code>'paid'</code>, а в правилах запроса на оплату — <code>Rule::enum(OrderStatus::class)</code> вместо перечисления строк через <code>in:</code>.</p>
+    <div class="remember-box">Сравнение <code>enum</code> в миграции и строки с перечислением, что <code>enum()</code> создаёт в разных СУБД и чем грозит значение, которого в перечислении нет, — в разделе <strong>Миграции, модели, сидеры</strong>.</div>
 <pre><code>php artisan migrate            <span class="c-comment"># применить</span>
 php artisan migrate:status     <span class="c-comment"># что уже применено</span></code></pre>
     <p class="text">Если в проекте есть категории с вложенностью, таблица ссылается сама на себя через <code>parent_id</code>. Тут два правила, которые нарушают чаще всего: колонка обязана быть <code>nullable</code>, потому что у корневых категорий родителя нет, и её тип должен совпадать с типом <code>id</code> — то есть <code>BIGINT UNSIGNED</code>, что и даёт <code>foreignId()</code>. Отдельной колонки со списком детей быть не должно: дети вычисляются запросом, а в модели описываются отношением <code>children</code>.</p>
