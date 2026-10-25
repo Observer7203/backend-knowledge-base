@@ -6930,6 +6930,31 @@ php artisan migrate:fresh --seed           <span class="c-comment"># перес�
 
     <p class="text"><strong>Что это.</strong> Casts — простое указание типов для атрибутов модели. В массиве <code>$casts</code> перечисляете, к какому типу приводить каждое поле. Laravel <strong>автоматически преобразует данные при получении из БД и обратно при сохранении</strong>.</p>
 
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Зачем касты, если типы уже заданы в миграции</div>
+    <p class="text">Это разные вещи, которые легко спутать. <strong>Миграция определяет, как значение хранится в базе. Каст определяет, каким типом PHP оно придёт в код.</strong> База про типы PHP ничего не знает и отдаёт то, что умеет отдавать драйвер, — в основном строки и целые числа.</p>
+    <p class="text">Вот что реально приходит из MySQL без каста. Таблица с колонками <code>decimal(12,2)</code>, <code>int</code>, <code>tinyint(1)</code>, <code>json</code> и <code>datetime</code>:</p>
+<pre><code><span class="c-comment"># типы PHP в значениях, полученных запросом</span>
+id         integer  1
+price      string   '100.50'
+qty        integer  7
+is_active  integer  1
+meta       string   '{"a": 1}'
+paid_at    string   '2026-10-24 09:54:18'</code></pre>
+    <table class="data-table">
+      <thead><tr><th>Колонка в базе</th><th>Без каста в PHP</th><th>С кастом</th></tr></thead>
+      <tbody>
+        <tr><td><code>datetime</code></td><td>Строка <code>'2026-10-24 09:54:18'</code></td><td><code>Carbon</code>: <code>diffForHumans()</code>, <code>addDay()</code> — каст <code>datetime</code></td></tr>
+        <tr><td><code>tinyint(1)</code></td><td>Число <code>1</code> или <code>0</code></td><td><code>true</code> или <code>false</code> — каст <code>boolean</code></td></tr>
+        <tr><td><code>json</code></td><td>Строка <code>'{"a": 1}'</code></td><td>Массив — каст <code>array</code>, или <code>Collection</code></td></tr>
+        <tr><td><code>varchar</code> со статусом</td><td>Строка <code>'paid'</code></td><td><code>OrderStatus::Paid</code> — каст классом перечисления</td></tr>
+        <tr><td><code>varchar</code> с паролем</td><td>Сохранится как есть, в открытом виде</td><td>Хешируется при записи — каст <code>hashed</code></td></tr>
+        <tr><td><code>decimal(12,2)</code></td><td><strong>Строка</strong> <code>'100.50'</code>, а не число</td><td>Строка с гарантированной точностью — каст <code>decimal:2</code></td></tr>
+        <tr><td><code>int</code>, <code>varchar</code> с текстом</td><td>Уже <code>int</code> и <code>string</code></td><td>Каст не нужен, он ничего не добавит</td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong>Цена из <code>decimal</code> приходит строкой, и это не ошибка драйвера.</strong> У <code>DECIMAL</code> нет точного соответствия среди типов PHP: <code>float</code> потерял бы копейки, поэтому MySQL отдаёт значение строкой как есть. Отсюда два следствия. Первое: <code>$product-&gt;price</code> без каста — это <code>'100.50'</code>, и строгое сравнение <code>=== 100.50</code> не сработает. Второе: каст <code>'price' =&gt; 'decimal:2'</code> тоже возвращает строку, а не число, — он приводит значение к нужному числу знаков, не теряя точности. Каст <code>float</code> на деньгах — ошибка: он как раз возвращает тип, который для денег не годится.</div>
+    <div class="remember-box"><strong>Почему в стандартной модели <code>User</code> стоят именно <code>datetime</code> и <code>hashed</code>.</strong> Оба каста действительно что-то делают: первый превращает строку в <code>Carbon</code>, второй хеширует пароль при записи. Причём <code>hashed</code> сначала проверяет <code>Hash::isHashed()</code> — уже хешированное значение не хешируется второй раз, иначе пароль ломался бы при каждом повторном сохранении модели. Для полей вроде <code>sku</code> или <code>qty</code> каст не нужен: строка и так строка, целое и так целое.</div>
+
     <p class="text"><strong>Как это выглядит:</strong></p>
 <pre><code><span class="c-key">class</span> <span class="c-type">User</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
 {
@@ -6939,7 +6964,8 @@ php artisan migrate:fresh --seed           <span class="c-comment"># перес�
         <span class="c-str">'paid_at'</span>    =&gt; <span class="c-str">'datetime'</span>,     <span class="c-comment">// строка в БД → Carbon</span>
         <span class="c-str">'settings'</span>   =&gt; <span class="c-str">'object'</span>,       <span class="c-comment">// JSON → stdClass</span>
         <span class="c-str">'age'</span>        =&gt; <span class="c-str">'integer'</span>,      <span class="c-comment">// всегда int</span>
-        <span class="c-str">'price'</span>      =&gt; <span class="c-str">'float'</span>,        <span class="c-comment">// всегда float</span>
+        <span class="c-str">'rating'</span>     =&gt; <span class="c-str">'float'</span>,        <span class="c-comment">// всегда float</span>
+        <span class="c-str">'price'</span>      =&gt; <span class="c-str">'decimal:2'</span>,    <span class="c-comment">// деньги — не float</span>
         <span class="c-str">'tags'</span>       =&gt; <span class="c-str">'collection'</span>,   <span class="c-comment">// JSON → Collection</span>
         <span class="c-str">'created_at'</span> =&gt; <span class="c-str">'timestamp'</span>,    <span class="c-comment">// дата → Unix timestamp</span>
     ];
