@@ -6575,6 +6575,70 @@ alter table `comments` add constraint `comments_author_id_foreign`
   </div>
 
   <div class="subsection">
+    <div class="subsection-title">Поле или отдельная таблица: на примере SKU</div>
+    <p class="text">Вопрос «не сделать ли из этого отдельную модель» возникает почти к каждому полю. Ответ даёт одно правило: <strong>значение остаётся колонкой, пока у строки оно одно и у него нет собственных свойств.</strong> Как только значений становится несколько или у каждого появляются свои атрибуты — нужна таблица.</p>
+    <table class="data-table">
+      <thead><tr><th>Признак</th><th>Колонка</th><th>Отдельная таблица</th></tr></thead>
+      <tbody>
+        <tr><td>Сколько значений у строки</td><td>Ровно одно</td><td>Может быть несколько</td></tr>
+        <tr><td>Есть ли у значения свои поля</td><td>Нет, это просто строка или число</td><td>Да: остаток, цена, срок, статус</td></tr>
+        <tr><td>Нужно ли искать по значению отдельно</td><td>Хватает индекса на колонке</td><td>Нужны свои выборки и связи</td></tr>
+        <tr><td>Что даёт вынос</td><td>Ничего, кроме лишнего <code>join</code></td><td>Убирает дублирование общих данных</td></tr>
+      </tbody>
+    </table>
+
+    <p class="text">Артикул — классический случай, когда выносить не надо. В каталоге, где каждая строка это отдельный товар со своим названием, ценой и картинкой, у товара ровно один артикул, и наружу он уходит той же строкой:</p>
+<pre><code><span class="c-type">Schema</span>::<span class="c-fn">create</span>(<span class="c-str">'products'</span>, <span class="c-key">function</span> (<span class="c-type">Blueprint</span> $table) {
+    $table-&gt;<span class="c-fn">id</span>();
+    $table-&gt;<span class="c-fn">string</span>(<span class="c-str">'sku'</span>)-&gt;<span class="c-fn">unique</span>();        <span class="c-comment">// STEAM-TOPUP-500, KEY-GTA5</span>
+    $table-&gt;<span class="c-fn">string</span>(<span class="c-str">'name'</span>);
+    $table-&gt;<span class="c-fn">decimal</span>(<span class="c-str">'price'</span>, <span class="c-num">12</span>, <span class="c-num">2</span>);
+    $table-&gt;<span class="c-fn">timestamps</span>();
+});</code></pre>
+    <div class="remember-box"><strong><code>unique()</code> здесь работает и как ограничение, и как индекс.</strong> Повтор артикула база не пропустит, а поиск по нему пойдёт по индексу — отдельный <code>index()</code> добавлять не нужно. Имя ограничения собирается так же, как у внешних ключей: <code>products_sku_unique</code>.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Когда артикул всё-таки становится сущностью</div>
+    <p class="text">Когда у одного товара появляются варианты. Футболка одна, а продаются <code>NIKE-RED-M</code>, <code>NIKE-RED-L</code>, <code>NIKE-BLACK-M</code>: у каждого свой цвет, размер и остаток, иногда и своя цена. Держать это строками в <code>products</code> нельзя — описание и фотографии продублируются трижды и со временем разойдутся.</p>
+<pre><code><span class="c-comment">// общее у всех вариантов</span>
+<span class="c-type">Schema</span>::<span class="c-fn">create</span>(<span class="c-str">'products'</span>, <span class="c-key">function</span> (<span class="c-type">Blueprint</span> $table) {
+    $table-&gt;<span class="c-fn">id</span>();
+    $table-&gt;<span class="c-fn">string</span>(<span class="c-str">'name'</span>);
+    $table-&gt;<span class="c-fn">text</span>(<span class="c-str">'description'</span>);
+    $table-&gt;<span class="c-fn">timestamps</span>();
+});
+
+<span class="c-comment">// своё у каждого варианта</span>
+<span class="c-type">Schema</span>::<span class="c-fn">create</span>(<span class="c-str">'product_variants'</span>, <span class="c-key">function</span> (<span class="c-type">Blueprint</span> $table) {
+    $table-&gt;<span class="c-fn">id</span>();
+    $table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'product_id'</span>)-&gt;<span class="c-fn">constrained</span>()-&gt;<span class="c-fn">cascadeOnDelete</span>();
+    $table-&gt;<span class="c-fn">string</span>(<span class="c-str">'sku'</span>)-&gt;<span class="c-fn">unique</span>();
+    $table-&gt;<span class="c-fn">string</span>(<span class="c-str">'color'</span>);
+    $table-&gt;<span class="c-fn">string</span>(<span class="c-str">'size'</span>);
+    $table-&gt;<span class="c-fn">decimal</span>(<span class="c-str">'price'</span>, <span class="c-num">12</span>, <span class="c-num">2</span>);
+    $table-&gt;<span class="c-fn">unsignedInteger</span>(<span class="c-str">'stock'</span>)-&gt;<span class="c-fn">default</span>(<span class="c-num">0</span>);
+
+    <span class="c-comment">// одинаковой пары цвет-размер у одного товара быть не должно</span>
+    $table-&gt;<span class="c-fn">unique</span>([<span class="c-str">'product_id'</span>, <span class="c-str">'color'</span>, <span class="c-str">'size'</span>]);
+    $table-&gt;<span class="c-fn">timestamps</span>();
+});</code></pre>
+    <div class="pitfall"><strong>Цена и остаток обязаны переехать в вариант целиком.</strong> Если оставить <code>price</code> и в <code>products</code>, и в <code>product_variants</code>, появятся два источника правды: одна часть кода возьмёт цену товара, другая — цену варианта, и расхождение всплывёт в чеке. Поле, которое у вариантов различается, в родительской таблице остаться не может.</div>
+    <div class="remember-box"><strong>Два разных ограничения уникальности.</strong> <code>unique()</code> на <code>sku</code> запрещает повтор артикула во всей таблице — это и нужно, артикул уникален глобально. А составной <code>unique(['product_id', 'color', 'size'])</code> запрещает повтор сочетания внутри одного товара: два красных M у одной футболки. В базе это два отдельных индекса, <code>product_variants_sku_unique</code> и <code>product_variants_product_id_color_size_unique</code>.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Признаки, что выносить пора</div>
+    <table class="data-table">
+      <thead><tr><th>Что видно в схеме</th><th>О чём это говорит</th></tr></thead>
+      <tbody>
+        <tr><td>Колонки с номерами: <code>phone_1</code>, <code>phone_2</code>, <code>phone_3</code></td><td>Значений у строки несколько, и третьего всегда не хватает</td></tr>
+        <tr><td>Список значений в одной колонке через запятую</td><td>Искать по нему можно только через <code>LIKE</code>, связать нельзя</td></tr>
+        <tr><td>У большинства строк колонка пустая</td><td>Признак относится не ко всем, а к подвиду — его и выносят</td></tr>
+        <tr><td>Одни и те же описания и картинки дублируются в нескольких строках</td><td>Строки на самом деле варианты одной сущности</td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong>Преждевременная нормализация стоит дороже, чем кажется.</strong> Каждый вынесенный уровень — это связь в модели, <code>with()</code> в каждой выборке, ещё одна фабрика, ещё один ресурс для API и лишнее соединение в каждом запросе списка. Пока у строки одно значение без своих свойств, таблица не даёт ничего. Обратный переход, если варианты всё-таки появятся, — обычная миграция: создать таблицу, перенести данные запросом, удалить переехавшие колонки. Это делается за один раз и не требует переписывать проект.</div>
+    <div class="remember-box"><strong>Как ответить на этот вопрос за минуту.</strong> Спросите себя: может ли у одной строки быть два таких значения одновременно, и есть ли у самого значения что-то кроме него самого. Два «нет» — колонка. Хотя бы одно «да» — таблица. Для артикула в каталоге, где строка каталога и есть товар, оба ответа «нет», и <code>string('sku')-&gt;unique()</code> закрывает задачу полностью.</div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title">Команды и откат</div>
     <table class="data-table">
       <thead><tr><th>Команда</th><th>Что делает</th><th>Безопасна на проде</th></tr></thead>
