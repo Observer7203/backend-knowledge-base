@@ -6205,6 +6205,77 @@ alter table `posts` drop `category_id`</code></pre>
   </div>
 
   <div class="subsection">
+    <div class="subsection-title">ON DELETE CASCADE против SET NULL: что выбрать</div>
+    <p class="text">Оба варианта решают одну задачу — не оставить в базе ссылку на строку, которой больше нет. Разница в том, что происходит с дочерними строками: каскад их удаляет, обнуление оставляет, стирая только ссылку. Выбор определяется одним вопросом: имеет ли дочерняя строка смысл без родителя.</p>
+    <table class="data-table">
+      <thead><tr><th>Поведение</th><th><code>ON DELETE CASCADE</code></th><th><code>ON DELETE SET NULL</code></th></tr></thead>
+      <tbody>
+        <tr><td>Что с дочерними строками</td><td>Удаляются вместе с родителем</td><td>Остаются, во внешнем ключе становится <code>NULL</code></td></tr>
+        <tr><td>Запись в Laravel</td><td><code>-&gt;cascadeOnDelete()</code></td><td><code>-&gt;nullOnDelete()</code></td></tr>
+        <tr><td>Требование к колонке</td><td>Любая</td><td>Обязательно <code>nullable</code></td></tr>
+        <tr><td>Как обеспечивается целостность</td><td>Висячих ссылок нет, потому что нет самих строк</td><td>Висячих ссылок нет, потому что ссылка пустая</td></tr>
+        <tr><td>Что усложняется в коде</td><td>Ничего в выборках, но данные уходят безвозвратно</td><td>Каждая выборка и каждый <code>join</code> должны учитывать <code>NULL</code></td></tr>
+        <tr><td>Когда уместно</td><td>Дочерняя строка без родителя бессмысленна</td><td>Дочерняя строка самоценна и живёт дальше</td></tr>
+        <tr><td>Примеры</td><td>Комментарии у поста, позиции заказа, токены пользователя</td><td>Товар без категории, заказ без менеджера, статья без рубрики</td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong>Размер базы — не тот критерий, по которому это выбирают.</strong> В сравнениях иногда пишут, что каскад «уменьшает базу», а обнуление «увеличивает». Формально так и есть, но решение принимают не по объёму, а по смыслу данных: удалив заказы вместе с пользователем, вы потеряете историю продаж, и сэкономленные мегабайты тут ни при чём.</div>
+
+    <p class="text">Синтаксис отличается только хвостом ограничения — его и путают в таблицах сравнения:</p>
+<pre><code><span class="c-comment">// миграция</span>
+$table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'post_id'</span>)-&gt;<span class="c-fn">constrained</span>()-&gt;<span class="c-fn">cascadeOnDelete</span>();
+$table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'author_id'</span>)-&gt;<span class="c-fn">nullable</span>()-&gt;<span class="c-fn">constrained</span>(<span class="c-str">'users'</span>)-&gt;<span class="c-fn">nullOnDelete</span>();</code></pre>
+<pre><code><span class="c-comment"># что уходит в базу</span>
+alter table `comments` add constraint `comments_post_id_foreign`
+  foreign key (`post_id`) references `posts` (`id`) on delete cascade
+
+alter table `comments` add constraint `comments_author_id_foreign`
+  foreign key (`author_id`) references `users` (`id`) on delete set null</code></pre>
+    <div class="pitfall"><strong><code>SET NULL</code> на колонке <code>NOT NULL</code> не создастся.</strong> База не может выполнить действие, которое сама же запрещает, и отвечает ошибкой вида <code>Column 'author_id' cannot be NOT NULL: needed in a foreign key constraint</code>. Поэтому <code>nullable()</code> в цепочке с <code>nullOnDelete()</code> обязателен — и в модели эту колонку тоже придётся считать необязательной.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Главное для Laravel: каскад проходит мимо Eloquent</div>
+    <p class="text">Это не особенность фреймворка, а следствие того, где выполняется действие. <code>ON DELETE CASCADE</code> отрабатывает внутри базы, в рамках того же оператора <code>DELETE</code>. Приложение о нём не знает: PHP-код для дочерних строк не выполняется вообще.</p>
+    <table class="data-table">
+      <thead><tr><th>Что не произойдёт при каскаде в базе</th><th>Чем это грозит</th></tr></thead>
+      <tbody>
+        <tr><td>События <code>deleting</code> и <code>deleted</code> у дочерней модели</td><td>Наблюдатели и слушатели молчат, логика очистки не запускается</td></tr>
+        <tr><td>Удаление связанных файлов в хранилище</td><td>Записи нет, а картинки и вложения остались занимать место</td></tr>
+        <tr><td>Чистка кеша и поискового индекса</td><td>Поиск продолжает отдавать удалённые записи</td></tr>
+        <tr><td>Срабатывание триггеров в MySQL</td><td>Каскадные действия внешнего ключа триггеры не активируют</td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong>С <code>SoftDeletes</code> каскад не сработает никогда.</strong> Мягкое удаление — это не <code>DELETE</code>, а <code>UPDATE</code>, который проставляет <code>deleted_at</code>. Оператора удаления база не видит, ограничение не срабатывает, и дочерние строки остаются полностью живыми и видимыми. Получается расхождение: родитель в приложении «удалён», а его потомки продолжают отдаваться в списках. Если в проекте мягкое удаление, каскад делают в коде, а не в схеме.</div>
+
+    <p class="text">Вариант на уровне приложения — удалять потомков в событии родителя. Тогда события, наблюдатели и очистка файлов отработают:</p>
+<pre><code><span class="c-comment">// app/Models/Post.php</span>
+<span class="c-key">protected static function</span> <span class="c-fn">booted</span>(): <span class="c-key">void</span>
+{
+    <span class="c-key">static</span>::<span class="c-fn">deleting</span>(<span class="c-key">function</span> (<span class="c-type">Post</span> $post) {
+        <span class="c-comment">// each, а не delete() на запросе: события нужны у каждой строки</span>
+        $post-&gt;<span class="c-fn">comments</span>()-&gt;<span class="c-fn">each</span>(<span class="c-key">fn</span> ($comment) =&gt; $comment-&gt;<span class="c-fn">delete</span>());
+    });
+}</code></pre>
+    <div class="pitfall"><strong>Массовое удаление событий не вызывает.</strong> <code>Post::where('created_at', '&lt;', $date)-&gt;delete()</code> уходит в базу одним запросом, минуя модели: ни <code>deleting</code>, ни наблюдатели не сработают, и обработчик выше не выполнится. Тот же эффект у <code>truncate()</code>. Если логика очистки живёт в событиях, удалять нужно по строкам — через <code>each()</code> или <code>cursor()</code>, — а тяжёлую чистку выносить в очередь.</div>
+    <div class="remember-box"><strong>Как это сочетают на практике.</strong> Ограничение в схеме оставляют как страховку от висячих ссылок, а осмысленную очистку делают в коде. Тогда даже удаление строки руками через консоль базы не оставит мусора, а штатный путь через приложение подчистит файлы и кеш.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Третий вариант, про который забывают</div>
+    <p class="text">Кроме «удалить» и «обнулить» есть «запретить». Часто это и есть правильный ответ: удаление товара, на который ссылаются заказы, должно не проходить молча, а падать с ошибкой, которую обработает приложение.</p>
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>SQL</th><th>Смысл</th></tr></thead>
+      <tbody>
+        <tr><td><code>cascadeOnDelete()</code></td><td><code>on delete cascade</code></td><td>Удалить потомков</td></tr>
+        <tr><td><code>nullOnDelete()</code></td><td><code>on delete set null</code></td><td>Обнулить ссылку, строки оставить</td></tr>
+        <tr><td><code>restrictOnDelete()</code></td><td><code>on delete restrict</code></td><td>Запретить удаление родителя немедленно</td></tr>
+        <tr><td><code>noActionOnDelete()</code></td><td><code>on delete no action</code></td><td>Тоже запретить; значение по умолчанию, если действие не указано</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Чем <code>restrict</code> отличается от <code>no action</code>.</strong> В MySQL ничем: обе проверки срабатывают сразу. В PostgreSQL разница есть — <code>NO ACTION</code> можно отложить до конца транзакции через <code>DEFERRABLE INITIALLY DEFERRED</code>, и тогда внутри транзакции разрешено временно нарушить связь, лишь бы к коммиту всё сошлось. С <code>RESTRICT</code> так нельзя, проверка всегда немедленная.</div>
+
+    <div class="pitfall"><strong>Каскад идёт по цепочке целиком.</strong> Если у пользователя каскад на заказы, а у заказа — на позиции, удаление одного пользователя снесёт все три уровня одним оператором. В коде этого не видно, тестами ловится плохо, а на большой таблице такое удаление надолго держит блокировки. Прежде чем ставить каскад, проследите цепочку до конца.</div>
+    <div class="remember-box"><strong>Правило выбора одной строкой.</strong> Данные принадлежат родителю и без него не нужны — <code>cascadeOnDelete</code>. Данные самоценны и должны пережить родителя — <code>nullOnDelete</code> плюс <code>nullable</code>. Родителя с потомками вообще нельзя удалять — <code>restrictOnDelete</code>. Сомневаетесь — берите <code>restrict</code>: запрет всегда можно ослабить, а удалённые строки не вернуть.</div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title">Дерево в одной таблице: категории и parent_id</div>
     <p class="text">Классическая задача: у категории могут быть подкатегории любой вложенности. Решается ссылкой таблицы на саму себя — колонкой <code>parent_id</code>, где лежит идентификатор родителя.</p>
 <pre><code><span class="c-type">Schema</span>::<span class="c-fn">create</span>(<span class="c-str">'categories'</span>, <span class="c-key">function</span> (<span class="c-type">Blueprint</span> $table) {
