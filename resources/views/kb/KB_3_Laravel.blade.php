@@ -227,6 +227,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('api-resources','ar-wrapping',this)">Wrapping (обёртка data)</a>
     <a class="nav-subitem" onclick="showSub('api-resources','ar-status',this)">Кастомный статус и заголовки</a>
   </div>
+  <a class="nav-item" onclick="showSection('migrations',this)">Миграции, модели, сидеры</a>
   <a class="nav-item" onclick="showSection('eloquent',this)"><i data-lucide="database"></i> Eloquent (базовое)</a>
   <div class="nav-subgroup">
     <a class="nav-subitem" onclick="showSub('eloquent','el-purpose',this)">Назначение</a>
@@ -315,6 +316,7 @@ ul.bullets strong{color:var(--text);}
   <a class="nav-item" onclick="showSection('octane',this)"><i data-lucide="rocket"></i> Octane / long-running</a>
 
   <div class="nav-group-label">Применение</div>
+  <a class="nav-item" onclick="showSection('project',this)">Проект: сборка по шагам</a>
   <a class="nav-item" onclick="showSection('practice',this)"><i data-lucide="hammer"></i> Практика</a>
   <a class="nav-item" onclick="showSection('pitfalls',this)"><i data-lucide="alert-octagon"></i> Подводные камни</a>
   <a class="nav-item" onclick="showSection('interview',this)"><i data-lucide="brain"></i> Вопросник</a>
@@ -5954,6 +5956,104 @@ php artisan make:resource <span class="c-type">Api/V1/PostResource</span>       
 
 @endverbatim
 @verbatim
+<div id="sec-migrations" class="section">
+  <div class="section-title">Миграции, модели и сидеры</div>
+  <div class="info-box primary"><strong>Зачем это нужно.</strong> Миграции — это схема базы в виде кода под контролем версий. Вместо «зайди в phpMyAdmin и добавь колонку» в репозитории лежит файл, который применяется одинаково у всех в команде и на сервере. Практический проход по шагам — в разделе <strong>Проект: сборка по шагам</strong>.</div>
+
+  <div class="subsection">
+    <div class="subsection-title">Генерация: какие флаги что создают</div>
+    <p class="text">Одна команда может создать сразу несколько файлов. Флаги комбинируются, поэтому обычно пишут не <code>make:model</code>, а сразу нужный набор:</p>
+    <table class="data-table">
+      <thead><tr><th>Команда</th><th>Что создаст</th></tr></thead>
+      <tbody>
+        <tr><td><code>make:model Product</code></td><td>Только модель</td></tr>
+        <tr><td><code>make:model Product -m</code></td><td>Модель и миграцию</td></tr>
+        <tr><td><code>make:model Product -mf</code></td><td>Плюс фабрику</td></tr>
+        <tr><td><code>make:model Product -ms</code></td><td>Плюс сидер</td></tr>
+        <tr><td><code>make:model Product -mc</code></td><td>Плюс контроллер</td></tr>
+        <tr><td><code>make:model Product -mcr</code></td><td>Контроллер сразу ресурсный</td></tr>
+        <tr><td><code>make:model Product -a</code></td><td>Всё сразу: миграция, фабрика, сидер, контроллер, запрос, политика</td></tr>
+        <tr><td><code>make:migration add_sku_to_products_table</code></td><td>Отдельная миграция для изменения существующей таблицы</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Имя миграции определяет заготовку.</strong> По шаблону <code>create_products_table</code> Laravel создаёт заготовку с <code>Schema::create</code>, а по <code>add_sku_to_products_table</code> — с <code>Schema::table</code> для изменения существующей. Поэтому имя пишут по-английски и по правилам, даже если проект на русском.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Типы колонок, которые нужны чаще всего</div>
+    <table class="data-table">
+      <thead><tr><th>Метод</th><th>Что получится</th><th>Когда</th></tr></thead>
+      <tbody>
+        <tr><td><code>id()</code></td><td>Автоинкремент, первичный ключ</td><td>Почти всегда первая строка</td></tr>
+        <tr><td><code>string('name', 255)</code></td><td><code>VARCHAR</code></td><td>Короткий текст</td></tr>
+        <tr><td><code>text('body')</code></td><td><code>TEXT</code></td><td>Длинный текст без ограничения</td></tr>
+        <tr><td><code>integer</code>, <code>bigInteger</code></td><td>Целые</td><td>Счётчики, количества</td></tr>
+        <tr><td><code>decimal('price', 12, 2)</code></td><td>Точное число</td><td><strong>Деньги — только так</strong></td></tr>
+        <tr><td><code>boolean('is_active')</code></td><td>Флаг</td><td>Да или нет</td></tr>
+        <tr><td><code>json('meta')</code></td><td>JSON</td><td>Произвольная структура</td></tr>
+        <tr><td><code>timestamps()</code></td><td><code>created_at</code> и <code>updated_at</code></td><td>Почти всегда</td></tr>
+        <tr><td><code>softDeletes()</code></td><td><code>deleted_at</code></td><td>Мягкое удаление</td></tr>
+        <tr><td><code>foreignId('user_id')</code></td><td>Колонка под внешний ключ</td><td>Связь с другой таблицей</td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong>Деньги в <code>float</code> — ошибка, которая всплывает не сразу.</strong> Числа с плавающей точкой не представляют десятичные дроби точно, поэтому копейки начинают теряться при суммировании. Для сумм берут <code>decimal</code> с явной точностью, а в модели добавляют приведение <code>'price' =&gt; 'decimal:2'</code>.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Модификаторы и внешние ключи</div>
+<pre><code>$table-&gt;<span class="c-fn">string</span>(<span class="c-str">'sku'</span>)-&gt;<span class="c-fn">unique</span>();              <span class="c-comment">// уникальность на уровне базы</span>
+$table-&gt;<span class="c-fn">string</span>(<span class="c-str">'image'</span>)-&gt;<span class="c-fn">nullable</span>();          <span class="c-comment">// разрешить NULL</span>
+$table-&gt;<span class="c-fn">string</span>(<span class="c-str">'status'</span>)-&gt;<span class="c-fn">default</span>(<span class="c-str">'new'</span>);      <span class="c-comment">// значение по умолчанию</span>
+$table-&gt;<span class="c-fn">index</span>([<span class="c-str">'status'</span>, <span class="c-str">'created_at'</span>]);       <span class="c-comment">// составной индекс</span></code></pre>
+    <p class="text">Внешний ключ описывают одной цепочкой. <code>constrained()</code> сам догадывается о таблице по имени колонки: <code>user_id</code> означает <code>users</code>.</p>
+<pre><code>$table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'user_id'</span>)-&gt;<span class="c-fn">constrained</span>()-&gt;<span class="c-fn">cascadeOnDelete</span>();
+$table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'product_id'</span>)-&gt;<span class="c-fn">constrained</span>()-&gt;<span class="c-fn">restrictOnDelete</span>();
+$table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'author_id'</span>)-&gt;<span class="c-fn">constrained</span>(<span class="c-str">'users'</span>);   <span class="c-comment">// имя не угадывается — указываем</span></code></pre>
+    <table class="data-table">
+      <thead><tr><th>Поведение при удалении родителя</th><th>Что произойдёт</th><th>Пример</th></tr></thead>
+      <tbody>
+        <tr><td><code>cascadeOnDelete()</code></td><td>Удалить и дочерние строки</td><td>Удалили пользователя — ушли его заказы</td></tr>
+        <tr><td><code>restrictOnDelete()</code></td><td>Запретить удаление родителя</td><td>Товар нельзя удалить, пока он в заказах</td></tr>
+        <tr><td><code>nullOnDelete()</code></td><td>Обнулить ссылку</td><td>Удалили категорию — товар остался без неё</td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong>В SQLite внешние ключи по умолчанию могут не проверяться.</strong> Проект соберётся локально, а на MySQL или PostgreSQL та же вставка упадёт с нарушением целостности. Если база разработки отличается от боевой, проверяйте такие места отдельно.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Команды и откат</div>
+    <table class="data-table">
+      <thead><tr><th>Команда</th><th>Что делает</th><th>Безопасна на проде</th></tr></thead>
+      <tbody>
+        <tr><td><code>migrate</code></td><td>Применить неприменённые</td><td>Да</td></tr>
+        <tr><td><code>migrate --pretend</code></td><td>Показать SQL, ничего не выполняя</td><td>Да</td></tr>
+        <tr><td><code>migrate:status</code></td><td>Что применено, что нет</td><td>Да</td></tr>
+        <tr><td><code>migrate:rollback</code></td><td>Откатить последнюю партию</td><td>С осторожностью</td></tr>
+        <tr><td><code>migrate:rollback --step=1</code></td><td>Откатить одну миграцию</td><td>С осторожностью</td></tr>
+        <tr><td><code>migrate:fresh</code></td><td><strong>Удалить все таблицы</strong> и создать заново</td><td>Нет, потеря данных</td></tr>
+        <tr><td><code>migrate:refresh</code></td><td>Откатить всё и применить снова</td><td>Нет</td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong>Откат работает только если написан метод <code>down()</code>.</strong> В заготовке он есть, но при ручной правке про него забывают — и <code>rollback</code> либо падает, либо оставляет базу в половинчатом состоянии. На рабочем сервере откат вообще редко применяют: безопаснее написать новую миграцию, которая исправляет предыдущую.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Фабрики и сидеры</div>
+    <p class="text">Фабрика описывает, как выглядит один правдоподобный объект. Сидер решает, сколько их создать и в каком сочетании. Вместе они дают наполненную базу одной командой — это нужно и для разработки, и для тестов.</p>
+<pre><code>php artisan make:factory ProductFactory --model=Product
+php artisan make:seeder ProductSeeder</code></pre>
+<pre><code><span class="c-comment">// связанные данные создаются цепочкой</span>
+<span class="c-type">User</span>::<span class="c-fn">factory</span>()
+    -&gt;<span class="c-fn">count</span>(<span class="c-num">10</span>)
+    -&gt;<span class="c-fn">has</span>(<span class="c-type">Order</span>::<span class="c-fn">factory</span>()-&gt;<span class="c-fn">count</span>(<span class="c-num">3</span>))
+    -&gt;<span class="c-fn">create</span>();                       <span class="c-comment">// 10 пользователей, у каждого 3 заказа</span></code></pre>
+<pre><code>php artisan db:seed                        <span class="c-comment"># запустить DatabaseSeeder</span>
+php artisan db:seed --class=ProductSeeder  <span class="c-comment"># конкретный</span>
+php artisan migrate:fresh --seed           <span class="c-comment"># пересоздать и наполнить</span></code></pre>
+    <div class="remember-box"><strong>Зачем это на практике.</strong> Фабрики избавляют от ручного заполнения форм при проверке интерфейса и дают тестам предсказуемые данные. В тестах их вызывают напрямую: <code>Product::factory()->create(['price' => '100.00'])</code> создаёт именно тот объект, который нужен конкретной проверке.</div>
+  </div>
+</div>
+
 <div id="sec-eloquent" class="section">
   <div class="section-title">Eloquent — базовое</div>
   <div class="subsection" id="el-purpose">
@@ -10914,6 +11014,250 @@ php artisan migrate
 
 @endverbatim
 @verbatim
+<div id="sec-project" class="section">
+  <div class="section-title">Проект: сборка по шагам</div>
+  <div class="info-box primary"><strong>О чём раздел.</strong> Сквозной путь от пустого каталога до работающего API с регистрацией, входом по токену и своими таблицами. Команды идут подряд, в том порядке, в котором их выполняют. Теория по каждому шагу — в тематических разделах, ссылки по ходу.</div>
+
+  <div class="subsection">
+    <div class="subsection-title">Шаг 1. Создание проекта и первый запуск</div>
+<pre><code>laravel new laravel-ch
+cd laravel-ch
+
+<span class="c-comment"># или без установщика</span>
+composer create-project laravel/laravel laravel-ch</code></pre>
+    <p class="text">Установщик сам копирует <code>.env</code> и генерирует ключ приложения. По умолчанию проект настроен на SQLite: файл <code>database/database.sqlite</code> уже создан, базовые миграции прогнаны. Проверяем, что всё поднялось:</p>
+<pre><code>php artisan about            <span class="c-comment"># версии и драйверы одним экраном</span>
+php artisan serve            <span class="c-comment"># http://127.0.0.1:8000</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Шаг 2. Ссылка на хранилище</div>
+    <p class="text">Загруженные файлы лежат в <code>storage/app/public</code>, а отдаёт их веб-сервер из <code>public</code>. Связывает эти два места символическая ссылка:</p>
+<pre><code>php artisan storage:link</code></pre>
+    <div class="pitfall"><strong>Делается один раз и не попадает в репозиторий.</strong> После клонирования проекта на другой машине или при первом деплое команду выполняют заново — иначе все загруженные картинки отдают 404. Если хостинг запрещает символические ссылки, помогает <code>php artisan storage:link --relative</code>.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Шаг 3. API и Sanctum</div>
+    <p class="text">В свежем проекте нет файла <code>routes/api.php</code> — его создаёт команда установки API. Она же ставит Sanctum и публикует миграцию таблицы токенов:</p>
+<pre><code>php artisan install:api</code></pre>
+<pre><code><span class="c-comment"># что произойдёт</span>
+  - Installing laravel/sanctum: Extracting archive
+  INFO  Published API routes file.
+  INFO  Running migrations.
+    ..._create_personal_access_tokens_table .......... DONE
+  INFO  API scaffolding installed. Please add the
+        [Laravel\Sanctum\HasApiTokens] trait to your User model.</code></pre>
+    <p class="text">Последняя строка — не пожелание, а обязательный шаг. Без трейта у модели не будет метода <code>createToken</code>:</p>
+<pre><code><span class="c-comment">// app/Models/User.php</span>
+<span class="c-key">use</span> <span class="c-type">Laravel\Sanctum\HasApiTokens</span>;
+
+<span class="c-key">class</span> <span class="c-type">User</span> <span class="c-key">extends</span> <span class="c-type">Authenticatable</span> <span class="c-key">implements</span> <span class="c-type">MustVerifyEmail</span>
+{
+    <span class="c-key">use</span> <span class="c-type">HasFactory</span>, <span class="c-type">Notifiable</span>, <span class="c-type">HasApiTokens</span>;
+}</code></pre>
+    <div class="pitfall"><strong>Забыли трейт — получите <code>Call to undefined method App\Models\User::createToken()</code>.</strong> Ошибка вылезает не при установке, а позже, при первой попытке выдать токен, поэтому связь с пропущенным шагом неочевидна.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Шаг 4. Контроллер регистрации и входа</div>
+<pre><code>php artisan make:controller Api/AuthController</code></pre>
+    <p class="text">Регистрация проверяет данные, создаёт пользователя и поднимает событие <code>Registered</code> — именно оно отправляет письмо с подтверждением адреса:</p>
+<pre><code><span class="c-comment">// app/Http/Controllers/Api/AuthController.php</span>
+<span class="c-key">public function</span> <span class="c-fn">register</span>(<span class="c-type">Request</span> $request): <span class="c-type">JsonResponse</span>
+{
+    $request-&gt;<span class="c-fn">validate</span>([
+        <span class="c-str">'name'</span>     =&gt; [<span class="c-str">'required'</span>, <span class="c-str">'string'</span>, <span class="c-str">'max:255'</span>],
+        <span class="c-str">'email'</span>    =&gt; [<span class="c-str">'required'</span>, <span class="c-str">'string'</span>, <span class="c-str">'email'</span>, <span class="c-str">'max:255'</span>, <span class="c-str">'unique:'</span>.<span class="c-type">User</span>::<span class="c-key">class</span>],
+        <span class="c-str">'password'</span> =&gt; [<span class="c-str">'required'</span>, <span class="c-str">'confirmed'</span>, <span class="c-type">Rules\Password</span>::<span class="c-fn">defaults</span>()],
+    ]);
+
+    $user = <span class="c-type">User</span>::<span class="c-fn">create</span>([
+        <span class="c-str">'name'</span>     =&gt; $request-&gt;name,
+        <span class="c-str">'email'</span>    =&gt; $request-&gt;email,
+        <span class="c-str">'password'</span> =&gt; <span class="c-type">Hash</span>::<span class="c-fn">make</span>($request-&gt;password),
+    ]);
+
+    <span class="c-fn">event</span>(<span class="c-key">new</span> <span class="c-type">Registered</span>($user));   <span class="c-comment">// письмо с подтверждением</span>
+
+    <span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">json</span>([
+        <span class="c-str">'user'</span>     =&gt; $user,
+        <span class="c-str">'status'</span>   =&gt; <span class="c-str">'registered'</span>,
+        <span class="c-str">'verified'</span> =&gt; <span class="c-key">false</span>,
+    ], <span class="c-num">201</span>);
+}</code></pre>
+    <p class="text">Вход проверяет учётные данные и выдаёт токен. Токен имеет смысл выдавать только подтверждённому пользователю:</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">login</span>(<span class="c-type">Request</span> $request): <span class="c-type">JsonResponse</span>
+{
+    $request-&gt;<span class="c-fn">validate</span>([
+        <span class="c-str">'email'</span>    =&gt; [<span class="c-str">'required'</span>, <span class="c-str">'email'</span>],
+        <span class="c-str">'password'</span> =&gt; [<span class="c-str">'required'</span>],
+    ]);
+
+    <span class="c-key">if</span> (! <span class="c-type">Auth</span>::<span class="c-fn">attempt</span>($request-&gt;<span class="c-fn">only</span>(<span class="c-str">'email'</span>, <span class="c-str">'password'</span>))) {
+        <span class="c-comment">// 401, а не 200: клиент должен отличать отказ от успеха по коду</span>
+        <span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">json</span>([<span class="c-str">'message'</span> =&gt; <span class="c-str">'Invalid login details'</span>], <span class="c-num">401</span>);
+    }
+
+    $user = <span class="c-type">User</span>::<span class="c-fn">where</span>(<span class="c-str">'email'</span>, $request-&gt;email)-&gt;<span class="c-fn">firstOrFail</span>();
+
+    <span class="c-key">if</span> ($user-&gt;email_verified_at === <span class="c-key">null</span>) {
+        <span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">json</span>([<span class="c-str">'verified'</span> =&gt; <span class="c-key">false</span>], <span class="c-num">403</span>);
+    }
+
+    <span class="c-key">return</span> <span class="c-fn">response</span>()-&gt;<span class="c-fn">json</span>([
+        <span class="c-str">'user_token'</span> =&gt; $user-&gt;<span class="c-fn">createToken</span>(<span class="c-str">'auth_token'</span>)-&gt;plainTextToken,
+        <span class="c-str">'token_type'</span> =&gt; <span class="c-str">'Bearer'</span>,
+        <span class="c-str">'verified'</span>   =&gt; <span class="c-key">true</span>,
+    ]);
+}</code></pre>
+    <div class="pitfall"><strong>Во многих руководствах по этой теме неверный код ответа.</strong> При неудачном входе там возвращают <code>200</code> с полем вроде <code>"status": "failed"</code>. Так делать не стоит: клиент обязан отличать отказ от успеха по коду, а не по содержимому тела. Неверные учётные данные — это <code>401</code>, неподтверждённая почта — <code>403</code>. Отдельно встречается опечатка <code>stus</code> вместо <code>status</code> — она кочует из статьи в статью.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Шаг 5. Маршруты API</div>
+<pre><code><span class="c-comment">// routes/api.php</span>
+<span class="c-key">use</span> <span class="c-type">App\Http\Controllers\Api\AuthController</span>;
+
+<span class="c-type">Route</span>::<span class="c-fn">post</span>(<span class="c-str">'/register'</span>, [<span class="c-type">AuthController</span>::<span class="c-key">class</span>, <span class="c-str">'register'</span>]);
+<span class="c-type">Route</span>::<span class="c-fn">post</span>(<span class="c-str">'/login'</span>,    [<span class="c-type">AuthController</span>::<span class="c-key">class</span>, <span class="c-str">'login'</span>]);
+
+<span class="c-comment">// Ссылка из письма: подпись проверяет middleware signed</span>
+<span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/email/verify/{id}/{hash}'</span>, [<span class="c-type">AuthController</span>::<span class="c-key">class</span>, <span class="c-str">'verifyEmail'</span>])
+    -&gt;<span class="c-fn">middleware</span>([<span class="c-str">'signed'</span>, <span class="c-str">'throttle:6,1'</span>])
+    -&gt;<span class="c-fn">name</span>(<span class="c-str">'verification.verify'</span>);
+
+<span class="c-comment">// Всё, что требует токена</span>
+<span class="c-type">Route</span>::<span class="c-fn">middleware</span>(<span class="c-str">'auth:sanctum'</span>)-&gt;<span class="c-fn">group</span>(<span class="c-key">function</span> () {
+    <span class="c-type">Route</span>::<span class="c-fn">get</span>(<span class="c-str">'/user'</span>, <span class="c-key">fn</span> (<span class="c-type">Request</span> $request) =&gt; $request-&gt;<span class="c-fn">user</span>());
+});</code></pre>
+    <div class="remember-box">Маршруты из <code>routes/api.php</code> автоматически получают префикс <code>/api</code>. То есть <code>Route::post('/login')</code> доступен как <code>POST /api/login</code>. Проверить полный список: <code>php artisan route:list</code>.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Шаг 6. Проверка через curl</div>
+<pre><code><span class="c-comment"># Регистрация</span>
+curl -sS -X POST http://127.0.0.1:8000/api/register \
+  -H <span class="c-str">'Content-Type: application/json'</span> \
+  -H <span class="c-str">'Accept: application/json'</span> \
+  -d <span class="c-str">'{"name":"user","email":"user@example.com","password":"secret123","password_confirmation":"secret123"}'</span> | jq
+
+<span class="c-comment"># Вход: сохраняем токен в переменную</span>
+TOKEN=$(curl -sS -X POST http://127.0.0.1:8000/api/login \
+  -H <span class="c-str">'Content-Type: application/json'</span> -H <span class="c-str">'Accept: application/json'</span> \
+  -d <span class="c-str">'{"email":"user@example.com","password":"secret123"}'</span> | jq -r <span class="c-str">'.user_token'</span>)
+
+<span class="c-comment"># Защищённый маршрут</span>
+curl -sS http://127.0.0.1:8000/api/user \
+  -H <span class="c-str">"Authorization: Bearer $TOKEN"</span> \
+  -H <span class="c-str">'Accept: application/json'</span> | jq</code></pre>
+    <div class="pitfall"><strong>Заголовок <code>Accept: application/json</code> обязателен.</strong> Без него Laravel при ошибке валидации отдаёт не JSON, а редирект или HTML-страницу — и <code>jq</code> спотыкается на разборе. Это же причина загадочных ответов при проверке API из терминала.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Шаг 7. Свои таблицы: модели и миграции</div>
+    <p class="text">Флаг <code>-m</code> создаёт модель вместе с миграцией — два файла одной командой:</p>
+<pre><code>php artisan make:model Product -m
+php artisan make:model Order -m</code></pre>
+<pre><code>  INFO  Model [app/Models/Product.php] created successfully.
+  INFO  Migration [database/migrations/..._create_products_table.php] created successfully.</code></pre>
+    <p class="text">Созданная миграция пустая — в ней только идентификатор и метки времени. Колонки описываем сами:</p>
+<pre><code><span class="c-comment">// database/migrations/..._create_products_table.php</span>
+<span class="c-key">public function</span> <span class="c-fn">up</span>(): <span class="c-type">void</span>
+{
+    <span class="c-type">Schema</span>::<span class="c-fn">create</span>(<span class="c-str">'products'</span>, <span class="c-key">function</span> (<span class="c-type">Blueprint</span> $table) {
+        $table-&gt;<span class="c-fn">id</span>();
+        $table-&gt;<span class="c-fn">string</span>(<span class="c-str">'sku'</span>)-&gt;<span class="c-fn">unique</span>();
+        $table-&gt;<span class="c-fn">string</span>(<span class="c-str">'name'</span>);
+        $table-&gt;<span class="c-fn">string</span>(<span class="c-str">'type'</span>)-&gt;<span class="c-fn">nullable</span>();
+        <span class="c-comment">// деньги — только decimal: float теряет копейки</span>
+        $table-&gt;<span class="c-fn">decimal</span>(<span class="c-str">'price'</span>, <span class="c-num">12</span>, <span class="c-num">2</span>);
+        $table-&gt;<span class="c-fn">string</span>(<span class="c-str">'currency'</span>, <span class="c-num">3</span>)-&gt;<span class="c-fn">default</span>(<span class="c-str">'KZT'</span>);
+        $table-&gt;<span class="c-fn">string</span>(<span class="c-str">'image'</span>)-&gt;<span class="c-fn">nullable</span>();
+        $table-&gt;<span class="c-fn">timestamps</span>();
+    });
+}</code></pre>
+<pre><code><span class="c-comment">// database/migrations/..._create_orders_table.php</span>
+<span class="c-type">Schema</span>::<span class="c-fn">create</span>(<span class="c-str">'orders'</span>, <span class="c-key">function</span> (<span class="c-type">Blueprint</span> $table) {
+    $table-&gt;<span class="c-fn">id</span>();
+    <span class="c-comment">// внешний ключ: тип колонки и связь одной строкой</span>
+    $table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'user_id'</span>)-&gt;<span class="c-fn">constrained</span>()-&gt;<span class="c-fn">cascadeOnDelete</span>();
+    $table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'product_id'</span>)-&gt;<span class="c-fn">constrained</span>()-&gt;<span class="c-fn">restrictOnDelete</span>();
+    $table-&gt;<span class="c-fn">unsignedInteger</span>(<span class="c-str">'quantity'</span>)-&gt;<span class="c-fn">default</span>(<span class="c-num">1</span>);
+    $table-&gt;<span class="c-fn">decimal</span>(<span class="c-str">'total'</span>, <span class="c-num">12</span>, <span class="c-num">2</span>);
+    $table-&gt;<span class="c-fn">string</span>(<span class="c-str">'status'</span>)-&gt;<span class="c-fn">default</span>(<span class="c-str">'new'</span>);
+    $table-&gt;<span class="c-fn">timestamps</span>();
+});</code></pre>
+    <p class="text">Модель по умолчанию пустая. Чтобы массовое заполнение работало, перечисляем разрешённые поля и описываем связи:</p>
+<pre><code><span class="c-comment">// app/Models/Product.php</span>
+<span class="c-key">class</span> <span class="c-type">Product</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-key">protected</span> $fillable = [<span class="c-str">'sku'</span>, <span class="c-str">'name'</span>, <span class="c-str">'type'</span>, <span class="c-str">'price'</span>, <span class="c-str">'currency'</span>, <span class="c-str">'image'</span>];
+
+    <span class="c-key">protected function</span> <span class="c-fn">casts</span>(): <span class="c-type">array</span>
+    {
+        <span class="c-key">return</span> [<span class="c-str">'price'</span> =&gt; <span class="c-str">'decimal:2'</span>];
+    }
+
+    <span class="c-key">public function</span> <span class="c-fn">orders</span>()
+    {
+        <span class="c-key">return</span> $this-&gt;<span class="c-fn">hasMany</span>(<span class="c-type">Order</span>::<span class="c-key">class</span>);
+    }
+}</code></pre>
+<pre><code><span class="c-comment">// app/Models/Order.php</span>
+<span class="c-key">class</span> <span class="c-type">Order</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-key">protected</span> $fillable = [<span class="c-str">'user_id'</span>, <span class="c-str">'product_id'</span>, <span class="c-str">'quantity'</span>, <span class="c-str">'total'</span>, <span class="c-str">'status'</span>];
+
+    <span class="c-key">public function</span> <span class="c-fn">user</span>()    { <span class="c-key">return</span> $this-&gt;<span class="c-fn">belongsTo</span>(<span class="c-type">User</span>::<span class="c-key">class</span>); }
+    <span class="c-key">public function</span> <span class="c-fn">product</span>() { <span class="c-key">return</span> $this-&gt;<span class="c-fn">belongsTo</span>(<span class="c-type">Product</span>::<span class="c-key">class</span>); }
+}</code></pre>
+<pre><code>php artisan migrate            <span class="c-comment"># применить</span>
+php artisan migrate:status     <span class="c-comment"># что уже применено</span></code></pre>
+    <div class="pitfall"><strong>Порядок миграций важен.</strong> Файлы выполняются по дате в имени. Если <code>orders</code> ссылается на <code>products</code>, таблица продуктов должна создаваться раньше — иначе внешний ключ не на что навесить. При создании моделей подряд порядок получается верным сам собой, но при ручном переименовании файлов его легко нарушить.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Шаг 8. Тестовые данные</div>
+<pre><code>php artisan make:factory ProductFactory --model=Product
+php artisan make:seeder ProductSeeder</code></pre>
+<pre><code><span class="c-comment">// database/factories/ProductFactory.php</span>
+<span class="c-key">public function</span> <span class="c-fn">definition</span>(): <span class="c-type">array</span>
+{
+    <span class="c-key">return</span> [
+        <span class="c-str">'sku'</span>      =&gt; $this-&gt;faker-&gt;<span class="c-fn">unique</span>()-&gt;<span class="c-fn">bothify</span>(<span class="c-str">'SKU-####'</span>),
+        <span class="c-str">'name'</span>     =&gt; $this-&gt;faker-&gt;<span class="c-fn">words</span>(<span class="c-num">3</span>, <span class="c-key">true</span>),
+        <span class="c-str">'price'</span>    =&gt; $this-&gt;faker-&gt;<span class="c-fn">randomFloat</span>(<span class="c-num">2</span>, <span class="c-num">100</span>, <span class="c-num">50000</span>),
+        <span class="c-str">'currency'</span> =&gt; <span class="c-str">'KZT'</span>,
+    ];
+}</code></pre>
+<pre><code><span class="c-comment">// database/seeders/ProductSeeder.php</span>
+<span class="c-key">public function</span> <span class="c-fn">run</span>(): <span class="c-type">void</span>
+{
+    <span class="c-type">Product</span>::<span class="c-fn">factory</span>()-&gt;<span class="c-fn">count</span>(<span class="c-num">20</span>)-&gt;<span class="c-fn">create</span>();
+}</code></pre>
+<pre><code>php artisan db:seed --class=ProductSeeder
+php artisan migrate:fresh --seed     <span class="c-comment"># пересоздать всё и наполнить</span></code></pre>
+    <div class="pitfall"><strong><code>migrate:fresh</code> удаляет все таблицы.</strong> На рабочем сервере это потеря данных без вопросов и подтверждений. Команда предназначена только для локальной разработки.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title">Шаг 9. Что делать дальше</div>
+    <table class="data-table">
+      <thead><tr><th>Шаг</th><th>Команда</th><th>Где разобрано</th></tr></thead>
+      <tbody>
+        <tr><td>Контроллер ресурса для товаров</td><td><code>php artisan make:controller Api/ProductController --api --model=Product</code></td><td>Controllers</td></tr>
+        <tr><td>Проверка входных данных</td><td><code>php artisan make:request StoreProductRequest</code></td><td>Validation &amp; FormRequest</td></tr>
+        <tr><td>Формат ответа API</td><td><code>php artisan make:resource ProductResource</code></td><td>API Resources</td></tr>
+        <tr><td>Права на действия</td><td><code>php artisan make:policy OrderPolicy --model=Order</code></td><td>Auth, Gates &amp; Policies</td></tr>
+        <tr><td>Фоновая обработка заказа</td><td><code>php artisan make:job ProcessOrder</code></td><td>Queues</td></tr>
+        <tr><td>Тесты</td><td><code>php artisan make:test ProductApiTest</code></td><td>Тестирование — отдельный модуль</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Порядок, который экономит время.</strong> Сначала миграция и модель со связями, потом сидер с тестовыми данными, и только после этого контроллеры. Когда в базе уже есть на чём проверять, ошибки в контроллере видно сразу, а не после ручного заполнения таблиц через <code>tinker</code>.</div>
+  </div>
+</div>
+
 <div id="sec-practice" class="section">
   <div class="section-title">Практика: фича заказа от запроса до доставки</div>
   <div class="subsection">
