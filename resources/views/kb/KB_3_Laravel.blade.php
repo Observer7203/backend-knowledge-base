@@ -6021,6 +6021,62 @@ $table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'author_id'</
   </div>
 
   <div class="subsection">
+    <div class="subsection-title">Дерево в одной таблице: категории и parent_id</div>
+    <p class="text">Классическая задача: у категории могут быть подкатегории любой вложенности. Решается ссылкой таблицы на саму себя — колонкой <code>parent_id</code>, где лежит идентификатор родителя.</p>
+<pre><code><span class="c-type">Schema</span>::<span class="c-fn">create</span>(<span class="c-str">'categories'</span>, <span class="c-key">function</span> (<span class="c-type">Blueprint</span> $table) {
+    $table-&gt;<span class="c-fn">id</span>();
+    $table-&gt;<span class="c-fn">string</span>(<span class="c-str">'title'</span>);
+
+    <span class="c-comment">// nullable обязателен: у корневых категорий родителя нет</span>
+    $table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'parent_id'</span>)
+          -&gt;<span class="c-fn">nullable</span>()
+          -&gt;<span class="c-fn">constrained</span>(<span class="c-str">'categories'</span>)   <span class="c-comment">// ссылка на свою же таблицу</span>
+          -&gt;<span class="c-fn">cascadeOnDelete</span>();           <span class="c-comment">// удалили родителя — ушли и потомки</span>
+
+    $table-&gt;<span class="c-fn">timestamps</span>();
+});</code></pre>
+
+    <div class="pitfall"><strong>Колонки со списком детей быть не должно.</strong> Дети категории — это все строки, у которых <code>parent_id</code> равен её <code>id</code>, то есть значение вычисляемое. Если дополнительно хранить их перечень в отдельном поле, одни и те же данные окажутся в двух местах и рано или поздно разойдутся: ребёнка перенесли в другую категорию, <code>parent_id</code> обновился, а список в родителе остался старым. В базе хранят только ссылку вверх, вниз ходят запросом.</div>
+
+    <div class="pitfall"><strong>Тип <code>parent_id</code> обязан совпадать с типом <code>id</code>.</strong> Метод <code>id()</code> создаёт <code>BIGINT UNSIGNED</code>, поэтому и ссылка должна быть такой же. Если написать <code>$table-&gt;integer('parent_id')</code>, база откажется создавать внешний ключ: типы по обе стороны связи не совпадают. Метод <code>foreignId()</code> как раз и создаёт <code>BIGINT UNSIGNED</code>, поэтому с ним эта ошибка не возникает.</div>
+
+    <p class="text">В модели связь описывают двумя методами — вверх и вниз. Это не колонки, а отношения: они выполняют запрос в момент обращения.</p>
+<pre><code><span class="c-comment">// app/Models/Category.php</span>
+<span class="c-key">class</span> <span class="c-type">Category</span> <span class="c-key">extends</span> <span class="c-type">Model</span>
+{
+    <span class="c-key">protected</span> $fillable = [<span class="c-str">'title'</span>, <span class="c-str">'parent_id'</span>];
+
+    <span class="c-comment">// родитель: одна категория или null у корневой</span>
+    <span class="c-key">public function</span> <span class="c-fn">parent</span>()
+    {
+        <span class="c-key">return</span> $this-&gt;<span class="c-fn">belongsTo</span>(<span class="c-type">Category</span>::<span class="c-key">class</span>, <span class="c-str">'parent_id'</span>);
+    }
+
+    <span class="c-comment">// дети: по-английски children, не childs</span>
+    <span class="c-key">public function</span> <span class="c-fn">children</span>()
+    {
+        <span class="c-key">return</span> $this-&gt;<span class="c-fn">hasMany</span>(<span class="c-type">Category</span>::<span class="c-key">class</span>, <span class="c-str">'parent_id'</span>);
+    }
+}</code></pre>
+    <div class="remember-box"><strong>Про название.</strong> Множественное число от <code>child</code> — <code>children</code>, формы <code>childs</code> в английском нет. Имя метода попадает в код по всему проекту и в ключи JSON-ответов API, поэтому опечатку потом правят везде сразу. В Laravel имя отношения ничем не ограничено, фреймворк не подскажет — следит за этим только сам разработчик.</div>
+
+    <p class="text">Как этим пользоваться:</p>
+<pre><code><span class="c-comment">// только корневые категории</span>
+<span class="c-type">Category</span>::<span class="c-fn">whereNull</span>(<span class="c-str">'parent_id'</span>)-&gt;<span class="c-fn">get</span>();
+
+<span class="c-comment">// корневые сразу с детьми — один дополнительный запрос вместо N</span>
+<span class="c-type">Category</span>::<span class="c-fn">whereNull</span>(<span class="c-str">'parent_id'</span>)-&gt;<span class="c-fn">with</span>(<span class="c-str">'children'</span>)-&gt;<span class="c-fn">get</span>();
+
+<span class="c-comment">// два уровня вложенности</span>
+<span class="c-type">Category</span>::<span class="c-fn">whereNull</span>(<span class="c-str">'parent_id'</span>)-&gt;<span class="c-fn">with</span>(<span class="c-str">'children.children'</span>)-&gt;<span class="c-fn">get</span>();
+
+<span class="c-comment">// есть ли вообще потомки, без их загрузки</span>
+<span class="c-type">Category</span>::<span class="c-fn">withCount</span>(<span class="c-str">'children'</span>)-&gt;<span class="c-fn">get</span>();</code></pre>
+    <div class="pitfall"><strong>Глубину такой связью не обойти.</strong> Запись <code>children.children</code> задаёт ровно два уровня: для произвольной вложенности пришлось бы продолжать цепочку бесконечно. Если дерево глубокое, берут рекурсивное отношение или материализованный путь — колонку вида <code>1/4/17</code> с цепочкой предков, по которой поддерево достаётся одним запросом с <code>LIKE</code>.</div>
+    <div class="pitfall"><strong>Защита от петли.</strong> База не помешает назначить категорию родителем самой себе или замкнуть цепочку из трёх. Обход такого дерева уйдёт в бесконечный цикл. Проверку делают в приложении: новый <code>parent_id</code> не должен совпадать с собственным <code>id</code> и не должен быть среди потомков.</div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title">Команды и откат</div>
     <table class="data-table">
       <thead><tr><th>Команда</th><th>Что делает</th><th>Безопасна на проде</th></tr></thead>
@@ -11214,6 +11270,11 @@ php artisan make:model Order -m</code></pre>
 }</code></pre>
 <pre><code>php artisan migrate            <span class="c-comment"># применить</span>
 php artisan migrate:status     <span class="c-comment"># что уже применено</span></code></pre>
+    <p class="text">Если в проекте есть категории с вложенностью, таблица ссылается сама на себя через <code>parent_id</code>. Тут два правила, которые нарушают чаще всего: колонка обязана быть <code>nullable</code>, потому что у корневых категорий родителя нет, и её тип должен совпадать с типом <code>id</code> — то есть <code>BIGINT UNSIGNED</code>, что и даёт <code>foreignId()</code>. Отдельной колонки со списком детей быть не должно: дети вычисляются запросом, а в модели описываются отношением <code>children</code>.</p>
+<pre><code>php artisan make:model Category -m</code></pre>
+<pre><code>$table-&gt;<span class="c-fn">foreignId</span>(<span class="c-str">'parent_id'</span>)-&gt;<span class="c-fn">nullable</span>()
+      -&gt;<span class="c-fn">constrained</span>(<span class="c-str">'categories'</span>)-&gt;<span class="c-fn">cascadeOnDelete</span>();</code></pre>
+    <div class="remember-box">Подробный разбор — дерево в одной таблице, загрузка потомков без запроса на каждую ветку и защита от петли — в разделе <strong>Миграции, модели, сидеры</strong>.</div>
     <div class="pitfall"><strong>Порядок миграций важен.</strong> Файлы выполняются по дате в имени. Если <code>orders</code> ссылается на <code>products</code>, таблица продуктов должна создаваться раньше — иначе внешний ключ не на что навесить. При создании моделей подряд порядок получается верным сам собой, но при ручном переименовании файлов его легко нарушить.</div>
   </div>
 
