@@ -6085,6 +6085,148 @@ $post-&gt;<span class="c-fn">update</span>([<span class="c-str">'status'</span> 
   </div>
 
   <div class="subsection">
+    <div class="subsection-title">Разбор на практике: статусы заказа цифрового товара</div>
+    <p class="text">Магазин внутриигровых предметов и аккаунтов — хороший пример того, где статусов много и каждый что-то значит для денег. Отличие от обычной розницы в том, что деньги удерживаются до подтверждения покупателем, поэтому статус определяет не только надпись в интерфейсе, но и момент выплаты продавцу.</p>
+<pre><code><span class="c-comment">// app/Enums/OrderStatus.php</span>
+<span class="c-key">namespace</span> <span class="c-type">App\Enums</span>;
+
+<span class="c-key">enum</span> <span class="c-type">OrderStatus</span>: <span class="c-key">string</span>
+{
+    <span class="c-key">case</span> <span class="c-type">PendingPayment</span> = <span class="c-str">'pending_payment'</span>;  <span class="c-comment">// ждём оплату</span>
+    <span class="c-key">case</span> <span class="c-type">Paid</span>           = <span class="c-str">'paid'</span>;             <span class="c-comment">// оплачено, проверка на фрод</span>
+    <span class="c-key">case</span> <span class="c-type">Processing</span>     = <span class="c-str">'processing'</span>;       <span class="c-comment">// продавец уведомлён</span>
+    <span class="c-key">case</span> <span class="c-type">Delivering</span>     = <span class="c-str">'delivering'</span>;       <span class="c-comment">// товар передаётся</span>
+    <span class="c-key">case</span> <span class="c-type">Verifying</span>      = <span class="c-str">'verifying'</span>;        <span class="c-comment">// проверка, деньги на холде</span>
+    <span class="c-key">case</span> <span class="c-type">Completed</span>      = <span class="c-str">'completed'</span>;        <span class="c-comment">// закрыто, выплата продавцу</span>
+    <span class="c-key">case</span> <span class="c-type">Cancelled</span>      = <span class="c-str">'cancelled'</span>;        <span class="c-comment">// отменено до оплаты</span>
+    <span class="c-key">case</span> <span class="c-type">Refunded</span>       = <span class="c-str">'refunded'</span>;         <span class="c-comment">// деньги вернулись покупателю</span>
+    <span class="c-key">case</span> <span class="c-type">Disputed</span>       = <span class="c-str">'disputed'</span>;         <span class="c-comment">// арбитраж поддержки</span>
+}</code></pre>
+    <div class="remember-box"><strong>Имя случая и его значение — разные вещи.</strong> Имя (<code>PendingPayment</code>) живёт только в коде и пишется как класс. Значение (<code>'pending_payment'</code>) уходит в базу и в JSON ответа API, поэтому его меняют уже миграцией с <code>UPDATE</code>. В PHP-проектах значения принято писать строчными через подчёркивание; верхний регистр тоже работает, но важно выбрать одно написание в начале и не смешивать — иначе в таблице окажутся и <code>PAID</code>, и <code>paid</code>, а это для базы два разных значения.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Список статусов — это ещё не всё</div>
+    <p class="text">Перечисление само по себе не мешает перевести отменённый заказ сразу в «завершён». Чтобы статус не менялся как попало, рядом описывают разрешённые переходы. Основной путь линейный:</p>
+    <div class="diagram">pending_payment -> paid -> processing -> delivering -> verifying -> completed</div>
+    <p class="text">Остальные статусы — ответвления от него:</p>
+    <table class="data-table">
+      <thead><tr><th>Из какого статуса</th><th>Куда можно</th><th>Что происходит</th></tr></thead>
+      <tbody>
+        <tr><td><code>pending_payment</code></td><td><code>paid</code>, <code>cancelled</code></td><td>Оплатили либо истёк срок брони</td></tr>
+        <tr><td><code>paid</code></td><td><code>processing</code>, <code>refunded</code></td><td>Фрод-проверка пропустила или отклонила</td></tr>
+        <tr><td><code>processing</code></td><td><code>delivering</code>, <code>refunded</code></td><td>Продавец взялся или не вышел на связь</td></tr>
+        <tr><td><code>delivering</code></td><td><code>verifying</code>, <code>disputed</code></td><td>Передали товар либо что-то пошло не так</td></tr>
+        <tr><td><code>verifying</code></td><td><code>completed</code>, <code>disputed</code></td><td>Покупатель принял товар или открыл спор</td></tr>
+        <tr><td><code>disputed</code></td><td><code>completed</code>, <code>refunded</code></td><td>Поддержка решила в чью-то пользу</td></tr>
+        <tr><td><code>completed</code>, <code>cancelled</code>, <code>refunded</code></td><td>Никуда</td><td>Конечные состояния, заказ закрыт</td></tr>
+      </tbody>
+    </table>
+<pre><code><span class="c-comment">// перечисление может хранить и правила переходов</span>
+<span class="c-key">public function</span> <span class="c-fn">allowedNext</span>(): <span class="c-key">array</span>
+{
+    <span class="c-key">return match</span>($this) {
+        <span class="c-key">self</span>::<span class="c-type">PendingPayment</span> =&gt; [<span class="c-key">self</span>::<span class="c-type">Paid</span>, <span class="c-key">self</span>::<span class="c-type">Cancelled</span>],
+        <span class="c-key">self</span>::<span class="c-type">Paid</span>           =&gt; [<span class="c-key">self</span>::<span class="c-type">Processing</span>, <span class="c-key">self</span>::<span class="c-type">Refunded</span>],
+        <span class="c-key">self</span>::<span class="c-type">Processing</span>     =&gt; [<span class="c-key">self</span>::<span class="c-type">Delivering</span>, <span class="c-key">self</span>::<span class="c-type">Refunded</span>],
+        <span class="c-key">self</span>::<span class="c-type">Delivering</span>     =&gt; [<span class="c-key">self</span>::<span class="c-type">Verifying</span>, <span class="c-key">self</span>::<span class="c-type">Disputed</span>],
+        <span class="c-key">self</span>::<span class="c-type">Verifying</span>      =&gt; [<span class="c-key">self</span>::<span class="c-type">Completed</span>, <span class="c-key">self</span>::<span class="c-type">Disputed</span>],
+        <span class="c-key">self</span>::<span class="c-type">Disputed</span>       =&gt; [<span class="c-key">self</span>::<span class="c-type">Completed</span>, <span class="c-key">self</span>::<span class="c-type">Refunded</span>],
+        <span class="c-comment">// конечные состояния никуда не ведут</span>
+        <span class="c-key">self</span>::<span class="c-type">Completed</span>,
+        <span class="c-key">self</span>::<span class="c-type">Cancelled</span>,
+        <span class="c-key">self</span>::<span class="c-type">Refunded</span>       =&gt; [],
+    };
+}
+
+<span class="c-key">public function</span> <span class="c-fn">canMoveTo</span>(<span class="c-key">self</span> $next): <span class="c-key">bool</span>
+{
+    <span class="c-key">return</span> <span class="c-fn">in_array</span>($next, $this-&gt;<span class="c-fn">allowedNext</span>(), <span class="c-key">true</span>);
+}
+
+<span class="c-key">public function</span> <span class="c-fn">isFinal</span>(): <span class="c-key">bool</span>
+{
+    <span class="c-key">return</span> $this-&gt;<span class="c-fn">allowedNext</span>() === [];
+}
+
+<span class="c-key">public function</span> <span class="c-fn">label</span>(): <span class="c-key">string</span>
+{
+    <span class="c-key">return match</span>($this) {
+        <span class="c-key">self</span>::<span class="c-type">PendingPayment</span> =&gt; <span class="c-str">'Ожидает оплаты'</span>,
+        <span class="c-key">self</span>::<span class="c-type">Paid</span>           =&gt; <span class="c-str">'Оплачен'</span>,
+        <span class="c-key">self</span>::<span class="c-type">Processing</span>     =&gt; <span class="c-str">'В обработке'</span>,
+        <span class="c-key">self</span>::<span class="c-type">Delivering</span>     =&gt; <span class="c-str">'Передаётся'</span>,
+        <span class="c-key">self</span>::<span class="c-type">Verifying</span>      =&gt; <span class="c-str">'На проверке'</span>,
+        <span class="c-key">self</span>::<span class="c-type">Completed</span>      =&gt; <span class="c-str">'Завершён'</span>,
+        <span class="c-key">self</span>::<span class="c-type">Cancelled</span>      =&gt; <span class="c-str">'Отменён'</span>,
+        <span class="c-key">self</span>::<span class="c-type">Refunded</span>       =&gt; <span class="c-str">'Возврат'</span>,
+        <span class="c-key">self</span>::<span class="c-type">Disputed</span>       =&gt; <span class="c-str">'Спор'</span>,
+    };
+}</code></pre>
+    <div class="remember-box"><strong>Почему <code>match</code>, а не массив-константа.</strong> <code>match</code> проверяет полноту на этапе выполнения: добавили новый случай и забыли дописать ветку — получите <code>UnhandledMatchError</code> сразу, на первом же заказе с этим статусом. Массив промолчит и вернёт <code>null</code>, а ошибка всплывёт где-то дальше, уже без следов причины.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Где проверять переход</div>
+    <p class="text">Смена статуса обычно тянет за собой деньги, уведомления и запись в историю. Если менять поле напрямую из разных мест, рано или поздно какой-то путь пройдёт мимо проверки. Поэтому переход делают одной точкой входа.</p>
+<pre><code><span class="c-comment">// app/Actions/ChangeOrderStatus.php</span>
+<span class="c-key">class</span> <span class="c-type">ChangeOrderStatus</span>
+{
+    <span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">Order</span> $order, <span class="c-type">OrderStatus</span> $next): <span class="c-type">Order</span>
+    {
+        <span class="c-key">if</span> (! $order-&gt;status-&gt;<span class="c-fn">canMoveTo</span>($next)) {
+            <span class="c-key">throw new</span> <span class="c-type">DomainException</span>(
+                <span class="c-str">"Переход {$order-&gt;status-&gt;value} -&gt; {$next-&gt;value} запрещён"</span>
+            );
+        }
+
+        <span class="c-key">return</span> <span class="c-type">DB</span>::<span class="c-fn">transaction</span>(<span class="c-key">function</span> () <span class="c-key">use</span> ($order, $next) {
+            <span class="c-comment">// перечитываем строку с блокировкой: lockForUpdate — метод запроса,
+            // не модели, поэтому заказ достаём заново</span>
+            $order = <span class="c-type">Order</span>::<span class="c-fn">whereKey</span>($order-&gt;<span class="c-fn">getKey</span>())
+                -&gt;<span class="c-fn">lockForUpdate</span>()
+                -&gt;<span class="c-fn">firstOrFail</span>();
+
+            <span class="c-comment">// проверяем ещё раз: за время ожидания статус мог измениться</span>
+            <span class="c-key">if</span> (! $order-&gt;status-&gt;<span class="c-fn">canMoveTo</span>($next)) {
+                <span class="c-key">throw new</span> <span class="c-type">DomainException</span>(<span class="c-str">'Статус уже изменён другим запросом'</span>);
+            }
+
+            $order-&gt;<span class="c-fn">update</span>([<span class="c-str">'status'</span> =&gt; $next]);
+            $order-&gt;statusChanges()-&gt;<span class="c-fn">create</span>([<span class="c-str">'to'</span> =&gt; $next, <span class="c-str">'at'</span> =&gt; <span class="c-fn">now</span>()]);
+
+            <span class="c-key">if</span> ($next === <span class="c-type">OrderStatus</span>::<span class="c-type">Completed</span>) {
+                <span class="c-type">PayoutSeller</span>::<span class="c-fn">dispatch</span>($order);   <span class="c-comment">// снимаем холд</span>
+            }
+
+            <span class="c-key">return</span> $order;
+        });
+    }
+}</code></pre>
+    <div class="pitfall"><strong>Гонка на смене статуса стоит денег.</strong> Покупатель нажал «принять», а поддержка в ту же секунду закрыла спор возвратом — без блокировки строки оба перехода пройдут проверку по старому значению, и выплата уйдёт продавцу вместе с возвратом покупателю. Отсюда <code>lockForUpdate</code> внутри транзакции: второй запрос подождёт и увидит уже новый статус, на котором переход не пройдёт.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Как это ложится на базу и выборки</div>
+<pre><code>$table-&gt;<span class="c-fn">string</span>(<span class="c-str">'status'</span>)-&gt;<span class="c-fn">default</span>(<span class="c-type">OrderStatus</span>::<span class="c-type">PendingPayment</span>-&gt;<span class="c-key">value</span>);
+$table-&gt;<span class="c-fn">index</span>([<span class="c-str">'status'</span>, <span class="c-str">'created_at'</span>]);   <span class="c-comment">// списки всегда фильтруют и сортируют</span></code></pre>
+<pre><code><span class="c-comment">// активные сделки — всё, что не закрыто</span>
+<span class="c-type">Order</span>::<span class="c-fn">whereNotIn</span>(<span class="c-str">'status'</span>, [
+    <span class="c-type">OrderStatus</span>::<span class="c-type">Completed</span>,
+    <span class="c-type">OrderStatus</span>::<span class="c-type">Cancelled</span>,
+    <span class="c-type">OrderStatus</span>::<span class="c-type">Refunded</span>,
+])-&gt;<span class="c-fn">get</span>();
+
+<span class="c-comment">// требуют внимания поддержки</span>
+<span class="c-type">Order</span>::<span class="c-fn">where</span>(<span class="c-str">'status'</span>, <span class="c-type">OrderStatus</span>::<span class="c-type">Disputed</span>)-&gt;<span class="c-fn">get</span>();
+
+<span class="c-comment">// просроченная бронь — кандидаты на автоотмену</span>
+<span class="c-type">Order</span>::<span class="c-fn">where</span>(<span class="c-str">'status'</span>, <span class="c-type">OrderStatus</span>::<span class="c-type">PendingPayment</span>)
+    -&gt;<span class="c-fn">where</span>(<span class="c-str">'created_at'</span>, <span class="c-str">'&lt;'</span>, <span class="c-fn">now</span>()-&gt;<span class="c-fn">subMinutes</span>(<span class="c-num">15</span>))
+    -&gt;<span class="c-fn">get</span>();
+
+<span class="c-comment">// в запросе на смену статуса допустимы только переходы из текущего</span>
+<span class="c-str">'status'</span> =&gt; [<span class="c-str">'required'</span>, <span class="c-type">Rule</span>::<span class="c-fn">enum</span>(<span class="c-type">OrderStatus</span>::<span class="c-key">class</span>)
+    -&gt;<span class="c-fn">only</span>($order-&gt;status-&gt;<span class="c-fn">allowedNext</span>())],</code></pre>
+    <div class="pitfall"><strong>Не выводите прогресс из порядка случаев.</strong> Соблазн посчитать «этап 3 из 6» по позиции случая в перечислении заканчивается тем, что кто-то переставит строки местами или вставит новый статус в середину — и прогресс поедет. Если нужен номер шага, задайте его отдельным методом, где он написан явно.</div>
+    <div class="remember-box"><strong>Что именно даёт перечисление в этой задаче.</strong> Девять строк в базе превращаются в тип: опечатка <code>'proccessing'</code> не пройдёт дальше IDE, набор допустимых переходов описан в одном файле рядом со статусами, а выплата продавцу привязана к конкретному случаю, а не к совпадению строк. Сравнение <code>enum</code> в миграции со строкой, ловушки приведения и поведение при неизвестном значении — выше, в подразделе про выбор между ними.</div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title">Модификаторы и внешние ключи</div>
 <pre><code>$table-&gt;<span class="c-fn">string</span>(<span class="c-str">'sku'</span>)-&gt;<span class="c-fn">unique</span>();              <span class="c-comment">// уникальность на уровне базы</span>
 $table-&gt;<span class="c-fn">string</span>(<span class="c-str">'image'</span>)-&gt;<span class="c-fn">nullable</span>();          <span class="c-comment">// разрешить NULL</span>
