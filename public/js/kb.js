@@ -61,6 +61,10 @@
   /* нормализация: регистр и ё/е, чтобы «ёлка» находилась по «елка» */
   function norm(s) { return (s || '').toLowerCase().replace(/ё/g, 'е'); }
 
+  /* Совпадение ищется в трёх местах, и они не равноценны. Название раздела
+     и подраздела — то, что человек и имел в виду. Слово из текста раздела —
+     слабый сигнал: оно встречается в десятках мест, поэтому такие попадания
+     уходят в самый низ списка. */
   function search(query) {
     var q = norm(query).trim();
     if (q.length < 2 || !kbIndex) return [];
@@ -70,10 +74,11 @@
 
     kbIndex.forEach(function (mod) {
       var modTitle = mod.title || mod.slug;
-      var modHit = norm(modTitle).indexOf(q) !== -1;
+      /* разделы текущей страницы поднимаем: обычно ищут здесь же */
+      var far = mod.slug === here ? 0 : 3;
 
       /* сам модуль как результат */
-      if (modHit) {
+      if (norm(modTitle).indexOf(q) !== -1) {
         hits.push({
           kind: 'module', slug: mod.slug, title: modTitle,
           label: modTitle, sub: 'Раздел базы',
@@ -83,13 +88,37 @@
 
       (mod.sections || []).forEach(function (sec) {
         var pos = norm(sec.label).indexOf(q);
-        if (pos === -1) return;
-        hits.push({
-          kind: 'section', slug: mod.slug, id: sec.id,
-          label: sec.label, sub: modTitle,
-          /* разделы текущей страницы — выше, совпадение с начала — выше */
-          score: (mod.slug === here ? 0 : 3) + (pos === 0 ? 0 : 1)
+        var subHit = false;
+
+        /* 1. название раздела */
+        if (pos !== -1) {
+          hits.push({
+            kind: 'section', slug: mod.slug, id: sec.id,
+            label: sec.label, sub: modTitle,
+            score: 3 + far + (pos === 0 ? 0 : 1)
+          });
+        }
+
+        /* 2. названия подразделов — переход сразу к нужному месту */
+        (sec.subs || []).forEach(function (s) {
+          var p = norm(s.label).indexOf(q);
+          if (p === -1) return;
+          subHit = true;
+          hits.push({
+            kind: 'sub', slug: mod.slug, id: sec.id, anchor: s.id,
+            label: s.label, sub: modTitle + ' · ' + sec.label,
+            score: 4 + far + (p === 0 ? 0 : 1)
+          });
         });
+
+        /* 3. слова из тела раздела: заголовки подразделов и имена из кода */
+        if (pos === -1 && !subHit && sec.terms && sec.terms.indexOf(q) !== -1) {
+          hits.push({
+            kind: 'section', slug: mod.slug, id: sec.id,
+            label: sec.label, sub: modTitle + ' · упоминание в тексте',
+            score: 20 + far
+          });
+        }
       });
     });
 
@@ -99,14 +128,31 @@
     return hits.slice(0, 12);
   }
 
+  /* адрес результата: модуль, раздел или конкретный подраздел */
+  function hitHref(h) {
+    if (h.kind === 'module') return '/' + h.slug;
+    if (h.kind === 'sub') return '/' + h.slug + '#sub-' + h.anchor;
+    return '/' + h.slug + '#sec-' + h.id;
+  }
+
   function openHit(hit) {
     if (hit.kind === 'module') { location.href = '/' + hit.slug; return; }
-    if (hit.slug === currentSlug() && typeof window.showSection === 'function') {
-      /* уже на нужной странице — просто переключаем раздел */
-      var link = document.querySelector('.sidebar .nav-item[onclick*="\'' + hit.id + '\'"]');
-      if (link) { link.click(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+
+    /* уже на нужной странице — переключаем без перезагрузки */
+    if (hit.slug === currentSlug()) {
+      var sel = hit.kind === 'sub'
+        ? '.sidebar .nav-subitem[onclick*="\'' + hit.anchor + '\'"]'
+        : '.sidebar .nav-item[onclick*="\'' + hit.id + '\'"]';
+      var link = document.querySelector(sel);
+      if (link) {
+        link.click();
+        /* у подраздела свой скролл к якорю, наверх его тащить не надо */
+        if (hit.kind !== 'sub') window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
     }
-    location.href = '/' + hit.slug + '#sec-' + hit.id;
+
+    location.href = hitHref(hit);
   }
 
   function wireSearch(input) {
@@ -150,7 +196,7 @@
       }
       box.innerHTML = hits.map(function (h, i) {
         return '<a class="kb-suggest-item" role="option" data-i="' + i + '" href="' +
-          (h.kind === 'module' ? '/' + h.slug : '/' + h.slug + '#sec-' + h.id) + '">' +
+          hitHref(h) + '">' +
           '<span class="kb-suggest-label">' + mark(h.label, q) + '</span>' +
           '<span class="kb-suggest-sub">' + escapeHtml(h.sub) + '</span></a>';
       }).join('');
@@ -241,6 +287,16 @@
 
   /* ---------- переход по ссылке вида /KB_21_NodeJS_NestJS#sec-io ---------- */
   function openFromHash() {
+    /* подраздел: /KB_3_Laravel#sub-el-casts — открываем и прокручиваем к нему */
+    var s = /^#sub-(.+)$/.exec(location.hash || '');
+    if (s) {
+      var subLink = document.querySelector('.sidebar .nav-subitem[onclick*="\'' + s[1] + '\'"]');
+      if (!subLink) return;
+      subLink.click();
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+      return;
+    }
+
     var m = /^#sec-(.+)$/.exec(location.hash || '');
     if (!m) return;
     var link = document.querySelector('.sidebar .nav-item[onclick*="\'' + m[1] + '\'"]');
