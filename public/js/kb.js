@@ -61,10 +61,9 @@
   /* нормализация: регистр и ё/е, чтобы «ёлка» находилась по «елка» */
   function norm(s) { return (s || '').toLowerCase().replace(/ё/g, 'е'); }
 
-  /* Совпадение ищется в трёх местах, и они не равноценны. Название раздела
-     и подраздела — то, что человек и имел в виду. Слово из текста раздела —
-     слабый сигнал: оно встречается в десятках мест, поэтому такие попадания
-     уходят в самый низ списка. */
+  /* Здесь ищутся только названия: модулей, разделов и подразделов. Этот
+     индекс маленький и лежит в памяти, поэтому список появляется мгновенно.
+     Поиск по тексту — отдельный запрос на сервер, см. askServer. */
   function search(query) {
     var q = norm(query).trim();
     if (q.length < 2 || !kbIndex) return [];
@@ -88,7 +87,6 @@
 
       (mod.sections || []).forEach(function (sec) {
         var pos = norm(sec.label).indexOf(q);
-        var subHit = false;
 
         /* 1. название раздела */
         if (pos !== -1) {
@@ -103,7 +101,6 @@
         (sec.subs || []).forEach(function (s) {
           var p = norm(s.label).indexOf(q);
           if (p === -1) return;
-          subHit = true;
           hits.push({
             kind: 'sub', slug: mod.slug, id: sec.id, anchor: s.id,
             label: s.label, sub: modTitle + ' · ' + sec.label,
@@ -111,14 +108,6 @@
           });
         });
 
-        /* 3. слова из тела раздела: заголовки подразделов и имена из кода */
-        if (pos === -1 && !subHit && sec.terms && sec.terms.indexOf(q) !== -1) {
-          hits.push({
-            kind: 'section', slug: mod.slug, id: sec.id,
-            label: sec.label, sub: modTitle + ' · упоминание в тексте',
-            score: 20 + far
-          });
-        }
       });
     });
 
@@ -194,11 +183,22 @@
         box.classList.add('open');
         return;
       }
+      var group = false;
       box.innerHTML = hits.map(function (h, i) {
-        return '<a class="kb-suggest-item" role="option" data-i="' + i + '" href="' +
+        var head = '';
+        /* результаты из текста идут отдельной группой, чтобы их не путали
+           с точным совпадением по названию */
+        if (h.kind === 'text' && !group) {
+          group = true;
+          head = '<div class="kb-suggest-group">В тексте разделов</div>';
+        }
+        return head +
+          '<a class="kb-suggest-item" role="option" data-i="' + i + '" href="' +
           hitHref(h) + '">' +
           '<span class="kb-suggest-label">' + mark(h.label, q) + '</span>' +
-          '<span class="kb-suggest-sub">' + escapeHtml(h.sub) + '</span></a>';
+          '<span class="kb-suggest-sub">' + escapeHtml(h.sub) + '</span>' +
+          (h.snippet ? '<span class="kb-suggest-snip">' + mark(h.snippet, q) + '</span>' : '') +
+          '</a>';
       }).join('');
       place();
       box.classList.add('open');
@@ -215,10 +215,59 @@
       nodes[i].scrollIntoView({ block: 'nearest' });
     }
 
+    /* Полнотекстовый поиск: текста в базе несколько мегабайт, в браузер его
+       тянуть незачем, поэтому по нему ищет сервер. Запрос уходит с задержкой,
+       чтобы не дёргать его на каждую букву. */
+    var textTimer = null, textSeq = 0;
+
+    function askServer(q, local) {
+      clearTimeout(textTimer);
+      var seq = ++textSeq;
+
+      textTimer = setTimeout(function () {
+        fetch('/kb-search?q=' + encodeURIComponent(q), { credentials: 'same-origin' })
+          .then(function (r) { return r.ok ? r.json() : []; })
+          .catch(function () { return []; })
+          .then(function (rows) {
+            /* пока ждали ответ, запрос успел смениться */
+            if (seq !== textSeq || input.value.trim() !== q) return;
+            /* пользователь уже ходит по списку стрелками — не выдёргиваем выбор */
+            if (active !== -1) return;
+
+            var seen = {};
+            local.forEach(function (h) { if (h.id) seen[h.slug + '#' + h.id] = true; });
+
+            var extra = [];
+            (rows || []).forEach(function (r) {
+              if (seen[r.slug + '#' + r.id]) return;
+              extra.push({
+                kind: 'text', slug: r.slug, id: r.id,
+                label: r.label, sub: r.module, snippet: r.snippet
+              });
+            });
+
+            render(local.concat(extra), q);
+          });
+      }, 160);
+    }
+
     function run() {
       var q = input.value.trim();
       if (q.length < 2) { hide(); return; }
-      loadIndex(function () { render(search(q), q); });
+      loadIndex(function () {
+        var local = search(q);
+        /* названия находятся мгновенно; если их нет — ждём ответ сервера,
+           чтобы не показывать «ничего не найдено» раньше времени */
+        if (local.length) {
+          render(local, q);
+        } else {
+          box.innerHTML = '<div class="kb-suggest-empty">Ищу в тексте разделов…</div>';
+          items = [];
+          place();
+          box.classList.add('open');
+        }
+        askServer(q, local);
+      });
     }
 
     input.addEventListener('input', run);

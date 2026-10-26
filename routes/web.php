@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\KbPageController;
+use App\Http\Controllers\KbSearchController;
 use App\Http\Middleware\KbLayoutChecker;
 use Illuminate\Support\Facades\Route;
 
@@ -8,6 +9,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [KbPageController::class, 'home'])
     ->middleware(KbLayoutChecker::class)
     ->name('kb.home');
+
+// Поиск по тексту разделов: отвечает выпадающему списку в шапке
+Route::get('/kb-search', KbSearchController::class)->name('kb.search');
 
 // KB-страница по slug (slug соответствует полю slug в таблице modules)
 Route::get('/{slug}', [KbPageController::class, 'show'])

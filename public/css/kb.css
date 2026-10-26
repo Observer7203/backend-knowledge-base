@@ -549,6 +549,29 @@ pre code {
 .kb-suggest-label b { color: var(--primary); font-weight: 800; }
 .kb-suggest-sub { font-size: 11.5px; color: var(--text3); }
 
+/* кусок текста вокруг найденного слова — у результатов полнотекстового поиска */
+.kb-suggest-snip {
+  margin-top: 2px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.kb-suggest-snip b { color: var(--primary); font-weight: 700; }
+
+/* подпись группы: «в тексте разделов» */
+.kb-suggest-group {
+  padding: 8px 12px 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+
 .kb-suggest-empty {
   padding: 14px 12px;
   font-size: 13px;
