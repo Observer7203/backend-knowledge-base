@@ -67,3 +67,5 @@ Homestead.yaml
 
 # Индекс поиска генерируется командой kb:search-index
 /public/search-index.json
+/public/search-index.*.json
+/storage/app/kb-search-text*.ndjson

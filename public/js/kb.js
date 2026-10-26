@@ -7,6 +7,70 @@
   var ACCENT_KEY = 'kb-accent';
   var root = document.documentElement;
 
+  /* ---------- язык ---------- */
+  /* Определяем по адресу: английская версия живёт под /en. Отдельного
+     состояния не держим — язык задаёт страница, а не настройка браузера. */
+  var LANG = /^\/en(\/|$)/.test(location.pathname) ? 'en' : 'ru';
+
+  var STRINGS = {
+    ru: {
+      search:    'Поиск по разделу',
+      empty:     'Ничего не найдено',
+      pending:   'Ищу в тексте разделов…',
+      inText:    'В тексте разделов',
+      module:    'Раздел базы',
+      toc:       'На этой странице',
+      menu:      'Меню',
+      themeOn:   'Светлая тема',
+      themeOff:  'Тёмная тема',
+      accentOn:  'Красный акцент',
+      accentOff: 'Синий акцент',
+      langTo:    'Switch to English'
+    },
+    en: {
+      search:    'Search this module',
+      empty:     'Nothing found',
+      pending:   'Searching the body text…',
+      inText:    'In section text',
+      module:    'Knowledge base module',
+      toc:       'On this page',
+      menu:      'Menu',
+      themeOn:   'Light theme',
+      themeOff:  'Dark theme',
+      accentOn:  'Red accent',
+      accentOff: 'Blue accent',
+      langTo:    'Переключить на русский'
+    }
+  };
+
+  var T = STRINGS[LANG];
+
+  /* Страница на английском адресе, но с русским текстом: перевод этого
+     модуля ещё не написан, контроллер отдал оригинал. Предупреждаем, иначе
+     выглядит как сломанный переключатель. */
+  function noticeIfUntranslated() {
+    if (LANG !== 'en' || (root.getAttribute('lang') || 'ru') !== 'ru') return;
+
+    var bar = document.createElement('div');
+    bar.className = 'kb-untranslated';
+    bar.textContent = 'This module has not been translated yet — showing the Russian text.';
+    document.body.insertBefore(bar, document.body.firstChild);
+    document.body.classList.add('kb-has-notice');
+    /* высота зависит от переноса строки на узком экране — меряем по факту */
+    root.style.setProperty('--kb-notice-h', bar.offsetHeight + 'px');
+
+    /* ссылка «на главную» в русском блейде ведёт на русский хаб — возвращаем
+       пользователя туда, откуда он пришёл */
+    var back = document.querySelector('.sidebar-back');
+    if (back) back.setAttribute('href', '/en');
+  }
+
+  /* тот же адрес на другом языке */
+  function otherLangUrl() {
+    var p = location.pathname;
+    return LANG === 'en' ? (p.replace(/^\/en/, '') || '/') : ('/en' + (p === '/' ? '' : p));
+  }
+
   /* ---------- тема ---------- */
   function current() { return root.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'; }
 
@@ -19,7 +83,7 @@
     try { localStorage.setItem(ACCENT_KEY, accent); } catch (e) {}
     var btn = document.getElementById('kb-accent');
     if (btn) {
-      btn.title = accent === 'blue' ? 'Красный акцент' : 'Синий акцент';
+      btn.title = accent === 'blue' ? T.accentOn : T.accentOff;
       btn.setAttribute('aria-label', btn.title);
     }
   }
@@ -30,7 +94,7 @@
     var btn = document.getElementById('kb-theme');
     if (btn) {
       btn.textContent = theme === 'dark' ? '☀' : '☾';
-      btn.title = theme === 'dark' ? 'Светлая тема' : 'Тёмная тема';
+      btn.title = theme === 'dark' ? T.themeOn : T.themeOff;
       btn.setAttribute('aria-label', btn.title);
     }
   }
@@ -41,14 +105,19 @@
 
   function currentSlug() {
     var p = location.pathname.replace(/^\/+|\/+$/g, '');
-    return p || '';
+    /* на английской версии адрес начинается с en/ — сам slug идёт дальше */
+    return p.replace(/^en\/?/, '') || '';
   }
+
+  /* все внутренние ссылки остаются в текущем языке */
+  function langPath(slug) { return (LANG === 'en' ? '/en/' : '/') + slug; }
 
   function loadIndex(then) {
     if (kbIndex) { then(kbIndex); return; }
     if (indexLoading) { setTimeout(function () { loadIndex(then); }, 120); return; }
     indexLoading = true;
-    fetch('/search-index.json', { credentials: 'same-origin' })
+    fetch(LANG === 'en' ? '/search-index.en.json' : '/search-index.json',
+          { credentials: 'same-origin' })
       .then(function (r) { return r.ok ? r.json() : []; })
       .catch(function () { return []; })
       .then(function (data) {
@@ -80,7 +149,7 @@
       if (norm(modTitle).indexOf(q) !== -1) {
         hits.push({
           kind: 'module', slug: mod.slug, title: modTitle,
-          label: modTitle, sub: 'Раздел базы',
+          label: modTitle, sub: T.module,
           score: norm(modTitle).indexOf(q) === 0 ? 0 : 2
         });
       }
@@ -119,13 +188,13 @@
 
   /* адрес результата: модуль, раздел или конкретный подраздел */
   function hitHref(h) {
-    if (h.kind === 'module') return '/' + h.slug;
-    if (h.kind === 'sub') return '/' + h.slug + '#sub-' + h.anchor;
-    return '/' + h.slug + '#sec-' + h.id;
+    if (h.kind === 'module') return langPath(h.slug);
+    if (h.kind === 'sub') return langPath(h.slug) + '#sub-' + h.anchor;
+    return langPath(h.slug) + '#sec-' + h.id;
   }
 
   function openHit(hit) {
-    if (hit.kind === 'module') { location.href = '/' + hit.slug; return; }
+    if (hit.kind === 'module') { location.href = langPath(hit.slug); return; }
 
     /* уже на нужной странице — переключаем без перезагрузки */
     if (hit.slug === currentSlug()) {
@@ -178,7 +247,7 @@
     function render(hits, q) {
       items = hits;
       if (!hits.length) {
-        box.innerHTML = '<div class="kb-suggest-empty">Ничего не найдено</div>';
+        box.innerHTML = '<div class="kb-suggest-empty">' + T.empty + '</div>';
         place();
         box.classList.add('open');
         return;
@@ -190,7 +259,7 @@
            с точным совпадением по названию */
         if (h.kind === 'text' && !group) {
           group = true;
-          head = '<div class="kb-suggest-group">В тексте разделов</div>';
+          head = '<div class="kb-suggest-group">' + T.inText + '</div>';
         }
         return head +
           '<a class="kb-suggest-item" role="option" data-i="' + i + '" href="' +
@@ -225,7 +294,8 @@
       var seq = ++textSeq;
 
       textTimer = setTimeout(function () {
-        fetch('/kb-search?q=' + encodeURIComponent(q), { credentials: 'same-origin' })
+        fetch('/kb-search?q=' + encodeURIComponent(q) + (LANG === 'en' ? '&lang=en' : ''),
+              { credentials: 'same-origin' })
           .then(function (r) { return r.ok ? r.json() : []; })
           .catch(function () { return []; })
           .then(function (rows) {
@@ -261,7 +331,7 @@
         if (local.length) {
           render(local, q);
         } else {
-          box.innerHTML = '<div class="kb-suggest-empty">Ищу в тексте разделов…</div>';
+          box.innerHTML = '<div class="kb-suggest-empty">' + T.pending + '</div>';
           items = [];
           place();
           box.classList.add('open');
@@ -484,7 +554,7 @@
     var bar = document.createElement('header');
     bar.id = 'kb-topbar';
     bar.innerHTML =
-      '<a class="kb-brand" href="/">' +
+      '<a class="kb-brand" href="' + (LANG === 'en' ? '/en' : '/') + '">' +
         '<span class="kb-logo">' +
           '<img src="/img/logo-mark-96.png" alt="" class="kb-logo-light" width="34" height="34">' +
           '<img src="/img/logo-mark-dark-96.png" alt="" class="kb-logo-dark" width="34" height="34">' +
@@ -495,13 +565,15 @@
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
              'stroke-linecap="round"><circle cx="11" cy="11" r="7"></circle>' +
              '<path d="M21 21l-4.3-4.3"></path></svg>' +
-        '<input type="search" id="kb-search-input" placeholder="Поиск по разделу" ' +
+        '<input type="search" id="kb-search-input" placeholder="' + T.search + '" ' +
                'autocomplete="off" spellcheck="false">' +
         '<kbd>/</kbd>' +
       '</div>' +
+      '<a id="kb-lang" href="' + otherLangUrl() + '" title="' + T.langTo + '">' +
+        (LANG === 'en' ? 'RU' : 'EN') + '</a>' +
       '<button id="kb-accent" type="button"><span class="kb-dot"></span></button>' +
       '<button id="kb-theme" type="button"></button>' +
-      '<button id="kb-burger" type="button" aria-label="Меню">' +
+      '<button id="kb-burger" type="button" aria-label="' + T.menu + '">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
              'stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>' +
       '</button>';
@@ -527,6 +599,7 @@
     openFromHash();
     applyTheme(current());
     applyAccent(currentAccent());
+    noticeIfUntranslated();
   }
 
   if (document.readyState === 'loading') {

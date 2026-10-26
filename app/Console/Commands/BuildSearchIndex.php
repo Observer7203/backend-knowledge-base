@@ -21,7 +21,8 @@ use Illuminate\Support\Facades\File;
 class BuildSearchIndex extends Command
 {
     protected $signature = 'kb:search-index
-        {--path=search-index.json : куда писать, относительно public/}
+        {--locale=ru : язык базы: ru или en}
+        {--path= : куда писать, относительно public/; по умолчанию зависит от языка}
         {--with-private : включить закрытые модули (только для локальной работы)}';
 
     protected $description = 'Строит public/search-index.json по опубликованным модулям';
@@ -38,14 +39,26 @@ class BuildSearchIndex extends Command
     ];
 
     /** Текст разделов для серверного поиска, относительно storage/. */
-    private const CORPUS_FILE = 'app/kb-search-text.ndjson';
+    private const CORPUS_FILE = 'app/kb-search-text%s.ndjson';
 
     public function handle(): int
     {
+        $locale = (string) $this->option('locale');
+
+        if (! in_array($locale, ['ru', 'en'], true)) {
+            $this->error('неизвестный язык: ' . $locale);
+
+            return self::FAILURE;
+        }
+
+        $suffix = $locale === 'ru' ? '' : '.' . $locale;
+        $target = $this->option('path') ?: 'search-index' . $suffix . '.json';
+
         $index = [];
         $skipped = [];
         $corpus = [];
         $private = $this->option('with-private') ? [] : array_flip(self::PRIVATE_SLUGS);
+        $titles = trans('kb.modules', [], $locale);
 
         foreach (Module::orderBy('sort_order')->get() as $module) {
             if (isset($private[$module->slug])) {
@@ -53,16 +66,20 @@ class BuildSearchIndex extends Command
                 continue;
             }
 
-            $view = str_replace('.', '/', $module->file ?? '') . '.blade.php';
+            $view = $this->viewPath($module->file ?? '', $locale);
             $path = resource_path('views/' . $view);
 
+            // для перевода индексируем только то, что переведено:
+            // иначе поиск по-английски выдавал бы русский текст
             if (! is_file($path)) {
-                $skipped[] = $module->slug . ' (нет файла ' . $view . ')';
+                $skipped[] = $module->slug . ($locale === 'ru'
+                    ? ' (нет файла ' . $view . ')'
+                    : ' (ещё не переведён)');
                 continue;
             }
 
             $html = File::get($path);
-            $title = $this->plain($module->title ?? $module->slug);
+            $title = $this->plain($titles[$module->slug]['title'] ?? $module->title ?? $module->slug);
 
             $index[] = [
                 'slug'     => $module->slug,
@@ -74,7 +91,7 @@ class BuildSearchIndex extends Command
             $corpus[] = ['slug' => $module->slug, 'title' => $title, 'html' => $html];
         }
 
-        $out = public_path($this->option('path'));
+        $out = public_path($target);
         File::put($out, json_encode($index, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
         $sections = array_sum(array_map(fn ($m) => count($m['sections']), $index));
@@ -84,9 +101,9 @@ class BuildSearchIndex extends Command
         ));
 
         $this->info(sprintf('%s: %d модулей, %d разделов, %d подразделов, %d КБ',
-            $this->option('path'), count($index), $sections, $subs, (int) (filesize($out) / 1024)));
+            $target, count($index), $sections, $subs, (int) (filesize($out) / 1024)));
 
-        $this->writeCorpus($corpus, $index);
+        $this->writeCorpus($corpus, $index, $suffix);
 
         foreach ($skipped as $s) {
             $this->warn('пропущен ' . $s);
@@ -102,7 +119,7 @@ class BuildSearchIndex extends Command
      * не разбирается целиком, поэтому поиск не зависит от общего объёма.
      * Лежит вне public: отдавать три мегабайта текста в браузер незачем.
      */
-    private function writeCorpus(array $corpus, array $index): void
+    private function writeCorpus(array $corpus, array $index, string $suffix): void
     {
         $labels = [];
         foreach ($index as $mod) {
@@ -111,7 +128,8 @@ class BuildSearchIndex extends Command
             }
         }
 
-        $out = storage_path(self::CORPUS_FILE);
+        $file = sprintf(self::CORPUS_FILE, $suffix);
+        $out = storage_path($file);
         File::ensureDirectoryExists(dirname($out));
 
         $handle = fopen($out, 'w');
@@ -147,7 +165,7 @@ class BuildSearchIndex extends Command
         fclose($handle);
 
         $this->info(sprintf('%s: %d разделов, %d КБ',
-            self::CORPUS_FILE, $rows, (int) (filesize($out) / 1024)));
+            $file, $rows, (int) (filesize($out) / 1024)));
     }
 
     /**
@@ -244,6 +262,22 @@ class BuildSearchIndex extends Command
         return $out;
     }
 
+
+    /**
+     * Где лежит blade модуля для нужного языка:
+     * kb.KB_3_Laravel -> kb/KB_3_Laravel.blade.php, для en — kb/en/KB_3_Laravel.blade.php
+     */
+    private function viewPath(string $view, string $locale): string
+    {
+        $parts = explode('.', $view);
+        $name = array_pop($parts);
+
+        if ($locale !== 'ru') {
+            $parts[] = $locale;
+        }
+
+        return implode('/', [...$parts, $name]) . '.blade.php';
+    }
 
     /** HTML → читаемая строка в одну линию. */
     private function plain(string $html): string

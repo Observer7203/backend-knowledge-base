@@ -17,7 +17,7 @@ use Illuminate\Http\Request;
  */
 class KbSearchController extends Controller
 {
-    private const CORPUS = 'app/kb-search-text.ndjson';
+    private const CORPUS = 'app/kb-search-text%s.ndjson';
 
     /** Сколько результатов отдаём: больше в выпадающий список не влезет. */
     private const LIMIT = 10;
@@ -36,7 +36,11 @@ class KbSearchController extends Controller
         // несколько слов — требуем все, иначе запрос из двух слов
         // выдаёт всё подряд по самому частому из них
         $words = preg_split('/\s+/u', $query, -1, PREG_SPLIT_NO_EMPTY) ?: [];
-        $path = storage_path(self::CORPUS);
+
+        // у каждого языка свой корпус: английский поиск не должен
+        // выдавать русский текст и наоборот
+        $locale = $request->query('lang') === 'en' ? 'en' : 'ru';
+        $path = storage_path(sprintf(self::CORPUS, $locale === 'ru' ? '' : '.' . $locale));
 
         if (! is_file($path) || $words === []) {
             return response()->json([]);
@@ -74,9 +78,12 @@ class KbSearchController extends Controller
 
         usort($hits, fn ($a, $b) => $a['score'] <=> $b['score'] ?: $a['pos'] <=> $b['pos']);
 
+        $prefix = $locale === 'ru' ? '' : '/' . $locale;
+
         $hits = array_map(
             fn ($h) => ['slug' => $h['slug'], 'id' => $h['id'], 'label' => $h['label'],
-                        'module' => $h['module'], 'snippet' => $h['snippet']],
+                        'module' => $h['module'], 'snippet' => $h['snippet'],
+                        'url' => $prefix . '/' . $h['slug']],
             array_slice($hits, 0, self::LIMIT)
         );
 
