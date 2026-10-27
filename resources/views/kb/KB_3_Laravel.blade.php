@@ -210,6 +210,7 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('validation','val-scope',this)">Что FormRequest описывает</a>
     <a class="nav-subitem" onclick="showSub('validation','val-three-levels',this)">Три уровня проверки</a>
     <a class="nav-subitem" onclick="showSub('validation','val-formrequest',this)">Компоненты FormRequest</a>
+    <a class="nav-subitem" onclick="showSub('validation','val-arrays',this)">Массивы: звёздочка и distinct</a>
     <a class="nav-subitem" onclick="showSub('validation','val-compare',this)">FormRequest vs inline vs Validator::make</a>
     <a class="nav-subitem" onclick="showSub('validation','val-practice',this)">Практика: пример кода</a>
     <a class="nav-subitem" onclick="showSub('validation','val-store-update',this)">Store vs Update Request</a>
@@ -5324,6 +5325,66 @@ App\Http\Requests\StorePostRequest      ← твой класс
         <li>В Action их не используют — контроллер извлекает данные, Action работает с примитивами. Так Action переиспользуемый и тестируемый.</li>
       </ul>
     </div>
+  </div>
+
+  <div class="subsection" id="val-arrays">
+    <div class="subsection-title"><i data-lucide="brackets"></i> Правила для массивов: что означает звёздочка</div>
+    <p class="text"><strong>Звёздочка — подстановка вместо индекса элемента.</strong> Запись <code>items.*.sku</code> читается как «поле <code>sku</code> внутри каждого элемента массива <code>items</code>». Правило применяется к каждому элементу по отдельности, а сколько их придёт, заранее знать не нужно: валидатор сам раскрывает звёздочку по фактическому количеству.</p>
+    <p class="text">Уровней получается три, и у каждого своя задача:</p>
+    <table class="data-table">
+      <thead><tr><th>Ключ правила</th><th>К чему относится</th><th>Типичные правила</th></tr></thead>
+      <tbody>
+        <tr><td><code>items</code></td><td>Сам массив целиком</td><td><code>required</code>, <code>array</code>, <code>min:1</code>, <code>max:50</code></td></tr>
+        <tr><td><code>items.*</code></td><td>Каждый элемент как единое значение</td><td><code>array</code>, <code>string</code>, <code>distinct</code></td></tr>
+        <tr><td><code>items.*.sku</code></td><td>Поле внутри каждого элемента</td><td><code>required</code>, <code>exists</code>, <code>integer</code></td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong><code>min</code> и <code>max</code> на самом массиве считают элементы, а не значение.</strong> У <code>'items' =&gt; 'max:3'</code> смысл «не больше трёх позиций», и в ответе придёт <code>The items field must not have more than 3 items</code>. То же правило на <code>items.*.quantity</code> означало бы уже «не больше трёх штук» — одно и то же слово про разные вещи, и перепутать их легко.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Ошибки приходят с номером позиции</div>
+    <p class="text">Звёздочка раскрывается и в ключах ошибок — вместо неё подставляется индекс. Это и нужно клиенту, чтобы подсветить конкретную строку формы, а не весь список.</p>
+<pre><code><span class="c-comment">// пришло: вторая позиция с нулевым количеством</span>
+[
+  [<span class="c-str">'sku'</span> =&gt; <span class="c-str">'A'</span>, <span class="c-str">'quantity'</span> =&gt; <span class="c-num">1</span>],
+  [<span class="c-str">'sku'</span> =&gt; <span class="c-str">'B'</span>, <span class="c-str">'quantity'</span> =&gt; <span class="c-num">0</span>],
+]
+
+<span class="c-comment"># что в ответе 422</span>
+items.1.quantity: The items.1.quantity field must be at least 1.</code></pre>
+    <p class="text">Свои формулировки и человекочитаемые имена задаются с той же звёздочкой:</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">messages</span>(): <span class="c-key">array</span>
+{
+    <span class="c-key">return</span> [
+        <span class="c-str">'items.*.sku.required'</span> =&gt; <span class="c-str">'Артикул обязателен в каждой позиции.'</span>,
+        <span class="c-str">'items.*.sku.distinct'</span> =&gt; <span class="c-str">'Этот товар уже добавлен в заказ.'</span>,
+    ];
+}
+
+<span class="c-key">public function</span> <span class="c-fn">attributes</span>(): <span class="c-key">array</span>
+{
+    <span class="c-key">return</span> [<span class="c-str">'items.*.sku'</span> =&gt; <span class="c-str">'артикул позиции'</span>];
+}</code></pre>
+    <div class="remember-box">Ключ сообщения остаётся со звёздочкой, а ключ ошибки в ответе — с индексом: правило <code>items.*.sku.required</code> даст ошибку под ключом <code>items.0.sku</code>. Одно сообщение покрывает все позиции сразу.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">distinct: запрет повторов внутри массива</div>
+    <p class="text"><code>distinct</code> проверяет значение не само по себе, а относительно остальных элементов того же массива: такого значения не должно встретиться больше одного раза. На <code>items.*.sku</code> это читается как «один и тот же артикул не может попасть в заказ дважды».</p>
+<pre><code><span class="c-str">'items.*.sku'</span> =&gt; [<span class="c-str">'required'</span>, <span class="c-str">'string'</span>, <span class="c-str">'exists:products,sku'</span>, <span class="c-str">'distinct'</span>],</code></pre>
+<pre><code><span class="c-comment"># пришли две позиции с одинаковым артикулом — ошибка на обеих</span>
+items.0.sku: The items.0.sku field has a duplicate value.
+items.1.sku: The items.1.sku field has a duplicate value.</code></pre>
+    <div class="remember-box"><strong>Зачем это заказу.</strong> Две позиции с одним артикулом — неоднозначность: то ли клиент хотел две строки, то ли одну с количеством два. Считать за него нельзя, а сложить молча — значит изменить то, что он прислал. Правильнее отказать на входе и дать внятное сообщение: количество меняется в существующей позиции.</div>
+    <table class="data-table">
+      <thead><tr><th>Запись</th><th>Что считает повтором</th></tr></thead>
+      <tbody>
+        <tr><td><code>distinct</code></td><td>Нестрогое сравнение: <code>'1'</code> и <code>1</code> — повтор, <code>'KEY-A'</code> и <code>'key-a'</code> — нет</td></tr>
+        <tr><td><code>distinct:strict</code></td><td>Строгое сравнение с учётом типа: <code>'1'</code> и <code>1</code> уже не повтор</td></tr>
+        <tr><td><code>distinct:ignore_case</code></td><td>Регистр не учитывается: <code>'KEY-A'</code> и <code>'key-a'</code> — повтор</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box">Правило работает и на плоских массивах: <code>'tags.*' =&gt; 'distinct'</code> запретит один и тот же тег дважды, ошибка придёт под ключом <code>tags.0</code>.</div>
+
+    <div class="pitfall"><strong>Лишние поля внутри элементов отбрасываются молча.</strong> Если в позиции придёт ещё и <code>price</code>, а правила на него нет, валидация пройдёт, и <code>validated()</code> вернёт <code>[['sku' =&gt; 'A', 'quantity' =&gt; 1]]</code> — без цены. Это то же поведение, что и на верхнем уровне, просто внутри массива его замечают позже.</div>
+    <div class="pitfall"><strong>Если лишние поля нужно именно запрещать</strong>, есть <code>'items.*' =&gt; 'array:sku,quantity'</code> — элемент может содержать только перечисленные ключи. Но сообщение при отказе приходит обманчивое: <code>The items.0 field must be an array</code>, хотя массивом элемент как раз является, а дело в постороннем ключе. Без своего текста в <code>messages()</code> этот ответ уведёт отладку не туда.</div>
   </div>
 
   <div class="subsection" id="val-compare">
