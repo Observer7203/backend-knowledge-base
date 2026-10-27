@@ -5087,6 +5087,60 @@ php artisan db:show --views --types
     <p class="text">Принципиально важный аспект &mdash; взаимодействие транзакций с побочными эффектами (отправка email, диспетчер job в очередь, вызов внешнего API). Без специальных мер побочный эффект сработает до commit транзакции, и при rollback в БД ничего не сохранится, но почта уже отправлена. Для разрешения этой коллизии существует механизм <code>DB::afterCommit</code> и свойство <code>$afterCommit</code> на job-классах.</p>
   </div>
 
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="git-compare"></i> Транзакция и create — не альтернативы</div>
+    <p class="text">Вопрос «почему <code>DB::transaction</code>, а не просто <code>create</code>» возникает оттого, что их воспринимают как два способа сделать одно и то же. Это разные уровни: <code>create</code> выполняет запись, транзакция задаёт границы, внутри которых несколько записей считаются одной операцией.</p>
+    <p class="text"><strong>Один <code>create</code> транзакции не требует.</strong> Это один <code>INSERT</code>, и база выполняет его атомарно сама: он либо прошёл целиком, либо не прошёл вовсе. Оборачивать единственный запрос в <code>DB::transaction</code> бессмысленно — добавятся только <code>BEGIN</code> и <code>COMMIT</code>.</p>
+    <p class="text">Необходимость появляется там, где запросов несколько. Размещение заказа — ровно такой случай:</p>
+<pre><code>INSERT orders           <span class="c-comment">-- 1. сам заказ</span>
+INSERT order_items x N  <span class="c-comment">-- 2. позиции</span>
+UPDATE orders total     <span class="c-comment">-- 3. посчитанная сумма</span></code></pre>
+    <p class="text">Допустим, на втором шаге что-то пошло не так: оборвалось соединение с базой, упал контейнер, обнаружилась ошибка в коде. Разница видна сразу:</p>
+<pre><code><span class="c-comment">// без транзакции: первый запрос уже зафиксирован</span>
+$order = <span class="c-type">Order</span>::<span class="c-fn">create</span>([...]);      <span class="c-comment">// сохранён</span>
+$order-&gt;items()-&gt;<span class="c-fn">createMany</span>($items);   <span class="c-comment">// упало здесь</span>
+
+<span class="c-comment">// в базе остался заказ без позиций, с суммой 0 и статусом «создан»,
+// а клиент получил 500 и считает, что заказа нет</span></code></pre>
+<pre><code><span class="c-comment">// с транзакцией: откатывается всё, будто ничего и не было</span>
+<span class="c-key">return</span> <span class="c-type">DB</span>::<span class="c-fn">transaction</span>(<span class="c-key">function</span> () <span class="c-key">use</span> ($user, $items) {
+    $order = <span class="c-type">Order</span>::<span class="c-fn">create</span>([...]);
+    $order-&gt;items()-&gt;<span class="c-fn">createMany</span>($items);
+    $order-&gt;<span class="c-fn">update</span>([<span class="c-str">'total'</span> =&gt; $total]);
+
+    <span class="c-key">return</span> $order;
+});</code></pre>
+    <div class="pitfall"><strong>Мусорные строки опаснее, чем выглядят.</strong> Заказ без позиций не просто занимает место: он попадёт в списки, в выгрузки, в отчёты по выручке с нулевой суммой, а служба поддержки увидит оплаченный с точки зрения клиента заказ, по которому нечего отгружать. Дальше такие строки находят месяцами и чистят вручную, потому что отличить их от настоящих уже нельзя.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Тест, который это проверяет</div>
+    <p class="text">Откат — не то, во что стоит верить на слово: отсутствие транзакции никак не проявляется, пока всё идёт хорошо. Поэтому на него пишут отдельный тест, который нарочно ломает второй шаг и смотрит, не осталось ли следов от первого.</p>
+<pre><code><span class="c-key">public function</span> <span class="c-fn">test_nothing_is_saved_when_creating_items_fails</span>(): <span class="c-key">void</span>
+{
+    $user = <span class="c-type">User</span>::<span class="c-fn">factory</span>()-&gt;<span class="c-fn">create</span>();
+    <span class="c-type">Product</span>::<span class="c-fn">factory</span>()-&gt;<span class="c-fn">create</span>([<span class="c-str">'sku'</span> =&gt; <span class="c-str">'KEY-GTA5'</span>]);
+
+    <span class="c-comment">// ломаем второй шаг: слушатель события модели бросает исключение
+    // прямо перед вставкой позиции</span>
+    <span class="c-type">Event</span>::<span class="c-fn">listen</span>(<span class="c-str">'eloquent.creating: '</span> . <span class="c-type">OrderItem</span>::<span class="c-key">class</span>, <span class="c-key">fn</span> () =&gt;
+        <span class="c-key">throw new</span> <span class="c-type">RuntimeException</span>(<span class="c-str">'сбой при создании позиции'</span>)
+    );
+
+    $this-&gt;<span class="c-fn">expectException</span>(<span class="c-type">RuntimeException</span>::<span class="c-key">class</span>);
+
+    <span class="c-key">try</span> {
+        <span class="c-fn">app</span>(<span class="c-type">PlaceOrder</span>::<span class="c-key">class</span>)-&gt;<span class="c-fn">handle</span>($user, [
+            [<span class="c-str">'sku'</span> =&gt; <span class="c-str">'KEY-GTA5'</span>, <span class="c-str">'quantity'</span> =&gt; <span class="c-num">1</span>],
+        ]);
+    } <span class="c-key">finally</span> {
+        <span class="c-comment">// главное: заказ с первого шага не должен остаться</span>
+        $this-&gt;<span class="c-fn">assertDatabaseCount</span>(<span class="c-str">'orders'</span>, <span class="c-num">0</span>);
+        $this-&gt;<span class="c-fn">assertDatabaseCount</span>(<span class="c-str">'order_items'</span>, <span class="c-num">0</span>);
+    }
+}</code></pre>
+    <div class="info-box success"><strong>Почему проверка в <code>finally</code>.</strong> Метод обязан пробросить исключение дальше — контроллер должен узнать о сбое. Но проверить базу нужно всё равно, а после выброшенного исключения обычный код в тесте уже не выполнится. Блок <code>finally</code> отрабатывает в любом случае, и ожидание исключения через <code>expectException</code> при этом сохраняется.</div>
+    <div class="pitfall"><strong>Такой тест бесполезен на базе в памяти без поддержки отката.</strong> Проверяйте, что тестовое подключение использует движок с транзакциями: у SQLite он есть, а у MySQL с таблицами MyISAM — нет, и тест пройдёт зелёным при отсутствующей транзакции. Если в наборе тестов используется трейт <code>RefreshDatabase</code>, он сам оборачивает каждый тест в транзакцию — вложенная транзакция внутри превратится в точку сохранения, и это рабочий сценарий, откат сработает.</div>
+  </div>
+
   <!-- ─── 2. ПЕРЕЧЕНЬ КОМПОНЕНТОВ ─── -->
   <div class="subsection">
     <div class="subsection-title"><i data-lucide="list"></i> Перечень механизмов</div>

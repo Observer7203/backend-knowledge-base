@@ -4043,6 +4043,7 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
   <div class="subsection" id="as-practice">
     <div class="subsection-title"><i data-lucide="hammer"></i> Практика: PlaceOrder Action с транзакцией + Event</div>
     <p class="text">Полный пример реальной бизнес-операции: разместить заказ. Валидация в FormRequest, тонкий контроллер, вся логика в Action, транзакция БД, событие для side-effects.</p>
+    <div class="remember-box"><strong>Почему здесь транзакция, а не просто <code>create</code>.</strong> Это не альтернативы: один <code>create</code> атомарен сам по себе, и оборачивать его незачем. Транзакция нужна потому, что запросов тут несколько — заказ, позиции, сумма, — и без неё сбой на втором шаге оставит в базе заказ без позиций. Разбор с примером теста на откат — в модуле <strong>Eloquent Advanced</strong>, раздел «Транзакции».</div>
 
 <pre><code><span class="c-comment">// 1. FormRequest — только валидация</span>
 <span class="c-key">class</span> <span class="c-type">StoreOrderRequest</span> <span class="c-key">extends</span> <span class="c-type">FormRequest</span>
