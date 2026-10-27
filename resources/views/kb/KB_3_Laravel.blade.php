@@ -207,6 +207,8 @@ ul.bullets strong{color:var(--text);}
     <a class="nav-subitem" onclick="showSub('validation','val-purpose',this)">Зачем нужна валидация</a>
     <a class="nav-subitem" onclick="showSub('validation','val-what',this)">Что валидируют</a>
     <a class="nav-subitem" onclick="showSub('validation','val-lifecycle',this)">Место в цикле запроса</a>
+    <a class="nav-subitem" onclick="showSub('validation','val-scope',this)">Что FormRequest описывает</a>
+    <a class="nav-subitem" onclick="showSub('validation','val-three-levels',this)">Три уровня проверки</a>
     <a class="nav-subitem" onclick="showSub('validation','val-formrequest',this)">Компоненты FormRequest</a>
     <a class="nav-subitem" onclick="showSub('validation','val-compare',this)">FormRequest vs inline vs Validator::make</a>
     <a class="nav-subitem" onclick="showSub('validation','val-practice',this)">Практика: пример кода</a>
@@ -4979,6 +4981,111 @@ php artisan make:controller <span class="c-type">Api/V1/PostController</span>   
     <div class="remember-box">
       <strong>Ключевое:</strong> валидация происходит <em>до</em> начала выполнения контроллера, на этапе разрешения зависимостей в контейнере. Это удобно — в контроллере вы уже уверены в корректности данных. Технически это достигается тем, что <code>FormRequest</code> реализует интерфейс <code>ValidatesWhenResolved</code>, и контейнер после создания вызывает у него метод <code>validateResolved()</code>.
     </div>
+  </div>
+
+  <div class="subsection" id="val-scope">
+    <div class="subsection-title"><i data-lucide="git-branch"></i> Что FormRequest описывает, а что нет</div>
+    <p class="text">Частое недопонимание: кажется, что <code>FormRequest</code> перечисляет поля, которые окажутся в базе. Это не так. <strong>Он описывает контракт входа — что клиенту вообще разрешено прислать, — и проверяет это до того, как запустится контроллер.</strong> То, что пользователь выбирает и заполняет, действительно в нём; то, что сохраняется в строку таблицы, — нет.</p>
+    <table class="data-table">
+      <thead><tr><th>Часть</th><th>На какой вопрос отвечает</th><th>Пример для заказа</th></tr></thead>
+      <tbody>
+        <tr><td><code>FormRequest</code></td><td>Что приходит от клиента?</td><td><code>sku</code> и <code>quantity</code>, больше ничего</td></tr>
+        <tr><td><strong>Action</strong></td><td>Что сохраняем в базу?</td><td><code>user_id</code> из токена, цена из <code>products</code>, посчитанный <code>total</code>, <code>status</code> со значением по умолчанию</td></tr>
+        <tr><td><strong>Resource</strong></td><td>Что отдаём клиенту в ответ?</td><td><code>id</code>, позиции, <code>total</code>, <code>status</code></td></tr>
+      </tbody>
+    </table>
+    <div class="diagram">клиент шлёт JSON
+      │
+      v
+StoreOrderRequest проверяет данные по rules()
+      │
+      ├── не прошло -> Laravel сам отвечает 422 со списком ошибок,
+      │                контроллер не запускается вообще
+      │
+      └── прошло ---> контроллер получает validated():
+                      только проверенные поля, лишнее отброшено</div>
+
+    <p class="text">На коде это выглядит так. В запросе — только то, что выбирает человек:</p>
+<pre><code><span class="c-comment">// app/Http/Requests/StoreOrderRequest.php</span>
+<span class="c-key">public function</span> <span class="c-fn">rules</span>(): <span class="c-key">array</span>
+{
+    <span class="c-key">return</span> [
+        <span class="c-str">'items'</span>              =&gt; [<span class="c-str">'required'</span>, <span class="c-str">'array'</span>, <span class="c-str">'min:1'</span>],
+        <span class="c-str">'items.*.sku'</span>       =&gt; [<span class="c-str">'required'</span>, <span class="c-str">'string'</span>, <span class="c-str">'exists:products,sku'</span>],
+        <span class="c-str">'items.*.quantity'</span>  =&gt; [<span class="c-str">'required'</span>, <span class="c-str">'integer'</span>, <span class="c-str">'min:1'</span>, <span class="c-str">'max:100'</span>],
+    ];
+}</code></pre>
+    <p class="text">Остальное появляется уже в Action — из источников, до которых клиент не дотягивается:</p>
+<pre><code><span class="c-comment">// app/Actions/PlaceOrder.php</span>
+<span class="c-key">public function</span> <span class="c-fn">handle</span>(<span class="c-type">User</span> $user, <span class="c-key">array</span> $items): <span class="c-type">Order</span>
+{
+    <span class="c-comment">// цену берём из базы, а не из запроса</span>
+    $products = <span class="c-type">Product</span>::<span class="c-fn">whereIn</span>(<span class="c-str">'sku'</span>, <span class="c-fn">array_column</span>($items, <span class="c-str">'sku'</span>))
+        -&gt;<span class="c-fn">get</span>()-&gt;<span class="c-fn">keyBy</span>(<span class="c-str">'sku'</span>);
+
+    $total = <span class="c-fn">collect</span>($items)-&gt;<span class="c-fn">sum</span>(
+        <span class="c-key">fn</span> ($line) =&gt; $products[$line[<span class="c-str">'sku'</span>]]-&gt;price * $line[<span class="c-str">'quantity'</span>]
+    );
+
+    <span class="c-key">return</span> <span class="c-type">Order</span>::<span class="c-fn">create</span>([
+        <span class="c-str">'user_id'</span> =&gt; $user-&gt;id,                      <span class="c-comment">// из токена, не из тела</span>
+        <span class="c-str">'total'</span>   =&gt; $total,                         <span class="c-comment">// посчитали сами</span>
+        <span class="c-str">'status'</span>  =&gt; <span class="c-type">OrderStatus</span>::<span class="c-type">PendingPayment</span>,    <span class="c-comment">// задаёт код</span>
+    ]);
+}</code></pre>
+    <div class="remember-box"><strong>Правило, по которому поле попадает в <code>rules()</code>.</strong> Спросите: может ли клиент соврать в этом поле без последствий для нас? Количество и артикул — пусть присылает, их всё равно проверят правила и база. Цену, идентификатор пользователя и статус клиент присылать не должен вовсе: подделав их, он купил бы товар за рубль или выставил заказу «оплачено». Поэтому таких полей в правилах нет, и попасть в приложение они не могут.</div>
+
+    <div class="pitfall"><strong>Поля без правила не доходят до контроллера.</strong> <code>validated()</code> возвращает только те поля, для которых правило написано. Пришёл <code>"price": 1</code> или <code>"status": "delivered"</code>, а в <code>rules()</code> их нет — в <code>validated()</code> их не будет, и до Action они не дойдут. Это не побочный эффект, а основная защита от mass assignment на границе HTTP: обратите внимание, что <code>$request-&gt;all()</code> отдал бы их как есть, поэтому передавать в модель нужно именно <code>validated()</code>.</div>
+    <div class="pitfall"><strong>Обратная сторона того же механизма.</strong> Добавили колонку в таблицу, вписали её в <code>$fillable</code>, а значение не сохраняется — почти всегда забыто правило в <code>rules()</code>. Поле просто отсекается на входе, причём молча: ошибки не будет, потому что лишних полей валидация не считает ошибкой, она их отбрасывает.</div>
+    <div class="remember-box"><strong>Отсечь — не значит проверить по смыслу.</strong> <code>validated()</code> гарантирует только то, что поле описано правилом и правило прошло. Что <code>sku</code> существует в каталоге, проверяет <code>exists</code>; что цена именно та, не проверяет никто — её поэтому и читают из базы. Валидация отвечает за форму данных, а за их смысл отвечает код, который с ними работает.</div>
+  </div>
+
+  <div class="subsection" id="val-three-levels">
+    <div class="subsection-title"><i data-lucide="shield-check"></i> Три уровня проверки: кто, можно ли, что прислал</div>
+    <p class="text">В <code>authorize()</code> действительно возвращают булево значение, и срабатывает он до <code>rules()</code>. Но проверка там должна быть ровно одна: <strong>имеет ли этот пользователь право выполнять это действие</strong>. Всё остальное проверяется на других уровнях, и каждый отвечает своим кодом ответа.</p>
+    <table class="data-table">
+      <thead><tr><th>Где</th><th>На какой вопрос отвечает</th><th>Код при отказе</th></tr></thead>
+      <tbody>
+        <tr><td>Middleware <code>auth:sanctum</code></td><td>Пользователь вообще вошёл?</td><td><code>401</code></td></tr>
+        <tr><td><code>authorize()</code></td><td>Этому пользователю можно делать это?</td><td><code>403</code></td></tr>
+        <tr><td><code>rules()</code></td><td>Он прислал корректные данные?</td><td><code>422</code></td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Про <code>401</code> отдельно.</strong> Этот код приходит, когда запрос ожидает JSON: в ответе будет <code>{"message": "Unauthenticated."}</code>. Обычный запрос из браузера вместо кода получит переадресацию на страницу входа — фреймворк смотрит на заголовки и решает, что уместнее.</div>
+
+    <p class="text">Что писать в <code>authorize()</code> на практике:</p>
+<pre><code><span class="c-comment">// Создание заказа: заказывать может любой вошедший,
+// а это уже проверил middleware — проверять нечего</span>
+<span class="c-key">public function</span> <span class="c-fn">authorize</span>(): <span class="c-key">bool</span>
+{
+    <span class="c-key">return true</span>;
+}
+
+<span class="c-comment">// Если заказывать разрешено только с подтверждённой почтой —
+// вот это как раз сюда</span>
+<span class="c-key">public function</span> <span class="c-fn">authorize</span>(): <span class="c-key">bool</span>
+{
+    <span class="c-key">return</span> $this-&gt;<span class="c-fn">user</span>()-&gt;<span class="c-fn">hasVerifiedEmail</span>();
+}
+
+<span class="c-comment">// Отмена заказа: отменить можно только свой</span>
+<span class="c-key">public function</span> <span class="c-fn">authorize</span>(): <span class="c-key">bool</span>
+{
+    <span class="c-key">return</span> $this-&gt;<span class="c-fn">user</span>()-&gt;id === $this-&gt;<span class="c-fn">route</span>(<span class="c-str">'order'</span>)-&gt;user_id;
+}</code></pre>
+    <div class="pitfall"><strong>Последний пример — не формальность.</strong> Без него любой вошедший пользователь отменит чужой заказ, просто подставив другой идентификатор в адрес. Проверка принадлежности — самая частая и самая нужная вещь в <code>authorize()</code>; <code>$this-&gt;route('order')</code> вернёт уже загруженную модель, если в маршруте используется привязка <code>{order}</code>.</div>
+    <div class="pitfall"><strong><code>hasVerifiedEmail()</code> появляется не сам по себе.</strong> Метод даёт трейт <code>Illuminate\Auth\MustVerifyEmail</code>, а работает он, когда модель <code>User</code> объявлена как <code>implements MustVerifyEmail</code>. В стандартной заготовке Laravel эта строка закомментирована, поэтому вызов на нетронутой модели упадёт с «метод не найден».</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Чего в authorize() быть не должно</div>
+    <table class="data-table">
+      <thead><tr><th>Проверка</th><th>Где ей место</th><th>Почему</th></tr></thead>
+      <tbody>
+        <tr><td>Пользователь вошёл?</td><td>Middleware</td><td>Иначе <code>$this-&gt;user()</code> окажется <code>null</code> и упадёт сам метод, а клиент получит <code>500</code> вместо <code>401</code></td></tr>
+        <tr><td>Артикул существует, количество больше нуля</td><td><code>rules()</code></td><td>Это форма данных. Клиенту нужен <code>422</code> с указанием поля, а не глухое «запрещено»</td></tr>
+        <tr><td>Товар есть на складе, хватает денег</td><td>Action</td><td>Это бизнес-правило, а не право доступа. Оно меняется вместе с логикой и должно быть покрыто тестами Action</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Когда проверок прав станет много.</strong> Отмена, просмотр, возврат — и в каждом запросе повторяется одна и та же логика принадлежности. Тогда её выносят в политику, а в <code>authorize()</code> остаётся одна строка: <code>return $this-&gt;user()-&gt;can('cancel', $this-&gt;route('order'));</code>. Ради одного создания заказа политику заводить рано — это как раз тот случай, когда абстракция появляется раньше, чем повторение.</div>
   </div>
 
   <div class="subsection" id="val-formrequest">
