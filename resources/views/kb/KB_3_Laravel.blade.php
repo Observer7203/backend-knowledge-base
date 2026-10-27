@@ -5909,6 +5909,25 @@ php artisan make:resource <span class="c-type">Api/V1/PostResource</span>       
       <strong>Почему это критично.</strong> Если писать <code>'author' =&gt; new UserResource($this-&gt;author)</code> — на каждый Post будет отдельный SELECT к users (проблема N+1). <code>whenLoaded</code> исключает случай — если разработчик забыл <code>-&gt;with('author')</code>, поле просто не попадёт в JSON, а не сделает N запросов.
     </div>
 
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Три состояния связи, которые видит клиент</div>
+    <p class="text">Связь даёт не два исхода, а три, и путают обычно второй с третьим. Ниже — настоящий вывод для заказа с двумя связями: <code>items</code> и <code>coupon</code>.</p>
+<pre><code><span class="c-comment">// в ресурсе</span>
+<span class="c-str">'items'</span>  =&gt; <span class="c-type">ItemResource</span>::<span class="c-fn">collection</span>($this-&gt;<span class="c-fn">whenLoaded</span>(<span class="c-str">'items'</span>)),
+<span class="c-str">'coupon'</span> =&gt; <span class="c-key">new</span> <span class="c-type">CouponResource</span>($this-&gt;<span class="c-fn">whenLoaded</span>(<span class="c-str">'coupon'</span>)),</code></pre>
+<pre><code><span class="c-comment"># 1. связи не загружены — ключей нет вообще</span>
+{"id":1,"total":500}
+
+<span class="c-comment"># 2. загружен только items</span>
+{"id":1,"total":500,"items":[{"sku":"KEY-GTA5","qty":2}]}
+
+<span class="c-comment"># 3. загружены обе, но купона у заказа нет</span>
+{"id":1,"total":500,"items":[{"sku":"KEY-GTA5","qty":2}],"coupon":null}</code></pre>
+    <div class="remember-box"><strong>Разница между «нет ключа» и <code>null</code> содержательная.</strong> Отсутствие ключа означает «мы эти данные не запрашивали», а <code>null</code> — «запрашивали, у объекта их нет». Для клиента это разные вещи: в первом случае нужно сходить за связью отдельным запросом, во втором ходить незачем. Поэтому нельзя считать, что поле всегда присутствует: на фронтенде проверка должна быть на наличие ключа, а не только на пустоту значения.</div>
+    <div class="pitfall"><strong>Если ключ должен быть всегда.</strong> Когда у клиента нет возможности догрузить связь, а разные формы ответа ему неудобны, связь загружают принудительно и <code>whenLoaded</code> не используют: <code>$order-&gt;loadMissing('items')</code> в контроллере либо <code>with('items')</code> в запросе. Выбор тут не между «правильно и неправильно», а между гибким ответом и предсказуемой формой.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Почему вложение работает именно так</div>
+    <p class="text">Полезно знать механику, потому что из неё следует одна ловушка в тестах. <code>whenLoaded</code> для незагруженной связи возвращает не <code>null</code>, а особый объект-метку <code>MissingValue</code>. Дальше <code>ItemResource::collection()</code> оборачивает эту метку как есть, а убирает ключ уже внешний ресурс — на шаге, который идёт <strong>после</strong> <code>toArray()</code>.</p>
+    <div class="pitfall"><strong>Не проверяйте ресурс через <code>toArray()</code>.</strong> Этот метод возвращает сырой массив, где вместо отсутствующей связи лежит метка, и очистку он не выполняет. На незагруженной связи прямой вызов <code>(new OrderResource($order))-&gt;toArray($request)</code> не просто вернёт лишнее, а упадёт с <code>Call to a member function first() on null</code>. В тестах проверяйте либо ответ целиком через <code>$this-&gt;getJson(...)-&gt;assertJson(...)</code>, либо <code>resolve($request)</code> — он и выполняет фильтрацию.</div>
     <p class="text"><strong>Другие условные методы:</strong></p>
     <ul style="line-height:1.9;margin:6px 0 0 20px;color:var(--text2)">
       <li><code>whenNotNull($this-&gt;phone)</code> — включить если не null.</li>
