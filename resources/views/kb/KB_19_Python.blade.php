@@ -720,6 +720,42 @@ price = <span class="c-num">1234.5678</span>
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="combine"></i> Четыре способа подставить значение — и чем они отличаются</div>
+    <p class="text">Способов встретится четыре, и выглядят они взаимозаменяемыми. На деле первые три дают строку, а четвёртый строку не создаёт вовсе.</p>
+<pre><code>text = <span class="c-str">'привет'</span>
+
+<span class="c-comment"># 1. f-строка — основной способ</span>
+<span class="c-fn">print</span>(f<span class="c-str">"Он зашёл в чат и написал: {text}!"</span>)
+<span class="c-comment"># Он зашёл в чат и написал: привет!</span>
+
+<span class="c-comment"># 2. метод .format()</span>
+<span class="c-fn">print</span>(<span class="c-str">"Скажи мне {} ещё раз."</span>.<span class="c-fn">format</span>(text))
+<span class="c-comment"># Скажи мне привет ещё раз.</span>
+
+<span class="c-comment"># 3. сложение через +</span>
+<span class="c-fn">print</span>(<span class="c-str">"Она ответила: "</span> + text)
+<span class="c-comment"># Она ответила: привет</span>
+
+<span class="c-comment"># 4. перечисление через запятую в print()</span>
+<span class="c-fn">print</span>(<span class="c-str">"Новое сообщение:"</span>, text, <span class="c-str">"всем"</span>)
+<span class="c-comment"># Новое сообщение: привет всем</span></code></pre>
+    <table class="data-table">
+      <thead><tr><th>Способ</th><th>Что получается</th><th>Когда уместен</th></tr></thead>
+      <tbody>
+        <tr><td><code>f"..."</code></td><td><code>str</code></td><td>Всегда, если текст известен в момент написания кода</td></tr>
+        <tr><td><code>.format()</code></td><td><code>str</code></td><td>Когда шаблон приходит извне: из настроек, из файла переводов, из базы</td></tr>
+        <tr><td><code>+</code></td><td><code>str</code></td><td>Две-три части, и все уже строки. Для длинной сборки нечитаемо</td></tr>
+        <tr><td><code>print(a, b)</code></td><td><code>None</code></td><td>Только для вывода на экран. Строки на выходе нет</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Четвёртый способ стоит особняком.</strong> Это не сборка строки, а несколько аргументов функции: <code>print</code> сам печатает их подряд, вставляя пробел между соседними. Результата в переменную не положить — <code>print</code> возвращает <code>None</code>. Разделитель меняется параметром: <code>print("a", "b", sep=" | ")</code> напечатает <code>a | b</code>, а <code>end=""</code> уберёт перевод строки в конце.</div>
+    <div class="pitfall"><strong>Сложение требует, чтобы обе части были строками.</strong> Выражение <code>"сообщений: " + 5</code> завершится ошибкой <code>TypeError: can only concatenate str (not "int") to str</code> — неявного приведения, как в PHP, в Python нет. Пришлось бы писать <code>str(5)</code>, и это ещё одна причина предпочитать f-строку: внутри <code>{}</code> преобразование выполняется само.</div>
+    <div class="remember-box"><strong>Почему <code>.format()</code> не исчез совсем.</strong> f-строка вычисляется там, где написана, и шаблоном быть не может: её нельзя сохранить в настройках и подставить значения позже. А <code>"Привет, {name}!"</code> — обычная строка, её можно хранить где угодно и применить к данным в нужный момент: <code>template.format(name=user.name)</code>. Для переводимых сообщений берут именно этот способ.</div>
+    <div class="pitfall"><strong>В логах — ни то, ни другое.</strong> Там пишут <code>logger.info("user %s вошёл", name)</code> с подстановкой через <code>%s</code> и отдельными аргументами: сообщение собирается, только если уровень логирования включён. f-строка собралась бы всегда, даже когда запись будет отброшена. Подробнее — в разделе <strong>Логирование</strong>.</div>
+    <div class="remember-box">Когда частей много, ни один из четырёх способов не подходит — берут <code>"".join(parts)</code> или <code>", ".join(names)</code>: склейка списка одним вызовом вместо цепочки плюсов.</div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="wrench"></i> Основные методы <code>str</code></div>
     <table class="data-table">
       <tr><th>Метод</th><th>Что делает</th><th>Пример</th></tr>
@@ -1785,7 +1821,7 @@ merged = [{**u, **<span class="c-fn">next</span>((o <span class="c-key">for</spa
         <span class="c-key">return</span> <span class="c-fn">f</span><span class="c-str">"Hi, I'm {self.name}"</span>
 
 user = <span class="c-type">User</span>(<span class="c-str">"Alice"</span>, <span class="c-num">30</span>)
-user.<span class="c-fn">greet</span>()                    <span class="c-comment"># "Hi, I'm Alice"
+user.<span class="c-fn">greet</span>()                    <span class="c-comment"># "Hi, I'm Alice"</span>
 user.name                       <span class="c-comment"># "Alice"</span>
 user.role                       <span class="c-comment"># "guest" (из class-атрибута)</span></code></pre>
 
@@ -4975,7 +5011,7 @@ s == s[::-<span class="c-num">1</span>]
 
 <span class="c-comment"># Уникальные + отсортированные + сохранить порядок первых вхождений</span>
 <span class="c-key">from</span> collections <span class="c-key">import</span> OrderedDict
-<span class="c-fn">list</span>(<span class="c-fn">OrderedDict</span>.<span class="c-fn">fromkeys</span>([<span class="c-num">3</span>, <span class="c-num">1</span>, <span class="c-num">3</span>, <span class="c-num">2</span>, <span class="c-num">1</span>]))   <span class="c-comment"># [3, 1, 2]
+<span class="c-fn">list</span>(<span class="c-fn">OrderedDict</span>.<span class="c-fn">fromkeys</span>([<span class="c-num">3</span>, <span class="c-num">1</span>, <span class="c-num">3</span>, <span class="c-num">2</span>, <span class="c-num">1</span>]))   <span class="c-comment"># [3, 1, 2]</span>
 
 <span class="c-comment"># Инициализация словаря значениями по умолчанию</span>
 <span class="c-key">from</span> collections <span class="c-key">import</span> defaultdict
