@@ -397,6 +397,49 @@ age: <span class="c-type">int</span> = <span class="c-num">30</span></code></pre
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="keyboard"></i> <code>input()</code> — чтение по одной строке</div>
+    <p class="text">Один вызов <code>input()</code> читает ровно одну строку — до перевода строки — и возвращает её <strong>всегда как <code>str</code></strong>, даже если там одни цифры. Поэтому для чисел результат сразу оборачивают в <code>int()</code>. Если на вход подано несколько строк, вызовы разбирают их по очереди: первый — первую, второй — вторую.</p>
+<pre><code><span class="c-comment"># на вход подано:
+# 3
+# 6200
+# 2150</span>
+
+count  = <span class="c-fn">int</span>(<span class="c-fn">input</span>())   <span class="c-comment"># 3</span>
+price1 = <span class="c-fn">int</span>(<span class="c-fn">input</span>())   <span class="c-comment"># 6200</span>
+price2 = <span class="c-fn">int</span>(<span class="c-fn">input</span>())   <span class="c-comment"># 2150</span>
+
+<span class="c-fn">print</span>(count, price1, price2)   <span class="c-comment"># 3 6200 2150</span></code></pre>
+    <p class="text">В интерактивном запуске программа на каждом <code>input()</code> останавливается и ждёт ввода с клавиатуры. Когда ввод подаётся из файла или через конвейер, ожидания нет — строки просто разбираются подряд. Для кода разницы никакой: читается следующая непрочитанная строка.</p>
+    <div class="remember-box"><strong>Перевод строки <code>input()</code> убирает, пробелы оставляет.</strong> Строка <code>"  42  "</code> вернётся как <code>'  42  '</code> целиком. Для <code>int()</code> это неважно — он сам обрезает пробелы по краям, — а вот при сравнении строк пробелы выйдут боком, поэтому текстовый ввод обычно сразу пропускают через <code>.strip()</code>.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Когда чисел несколько</div>
+<pre><code><span class="c-comment"># 1. количество задано первой строкой, дальше по числу в строке</span>
+n = <span class="c-fn">int</span>(<span class="c-fn">input</span>())
+prices = [<span class="c-fn">int</span>(<span class="c-fn">input</span>()) <span class="c-key">for</span> _ <span class="c-key">in</span> <span class="c-fn">range</span>(n)]
+<span class="c-fn">print</span>(<span class="c-fn">sum</span>(prices))
+
+<span class="c-comment"># 2. несколько чисел в одной строке через пробел: "6200 2150 11800"</span>
+a, b, c = <span class="c-fn">map</span>(<span class="c-fn">int</span>, <span class="c-fn">input</span>().<span class="c-fn">split</span>())
+prices = <span class="c-fn">list</span>(<span class="c-fn">map</span>(<span class="c-fn">int</span>, <span class="c-fn">input</span>().<span class="c-fn">split</span>()))   <span class="c-comment"># когда их неизвестно сколько</span>
+
+<span class="c-comment"># 3. весь ввод разом, без оглядки на то, как он разбит на строки</span>
+<span class="c-key">import</span> sys
+nums = <span class="c-fn">list</span>(<span class="c-fn">map</span>(<span class="c-fn">int</span>, sys.stdin.<span class="c-fn">read</span>().<span class="c-fn">split</span>()))</code></pre>
+    <div class="remember-box"><strong>Про <code>split()</code> без аргументов.</strong> Он режет по любому количеству пробелов и переводов строк сразу и выбрасывает пустые куски. Поэтому третий способ разбирает ввод одинаково, как бы он ни был разложен по строкам: <code>3 / 6200 2150 / 11800</code> даст тот же список, что и четыре отдельные строки.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Две ошибки, на которых падает такой код</div>
+    <table class="data-table">
+      <thead><tr><th>Что произошло</th><th>Исключение</th></tr></thead>
+      <tbody>
+        <tr><td>В строке не число: пустая строка, буквы, запятая вместо точки</td><td><code>ValueError: invalid literal for int() with base 10: 'abc'</code></td></tr>
+        <tr><td>Вызовов <code>input()</code> больше, чем строк во вводе</td><td><code>EOFError: EOF when reading a line</code></td></tr>
+      </tbody>
+    </table>
+    <div class="pitfall"><strong><code>EOFError</code> почти всегда означает рассогласование с форматом ввода.</strong> Лишний <code>input()</code>, неверно понятое количество строк, или первая строка прочитана дважды. Отлаживать это удобнее третьим способом: прочитать всё сразу в список и работать с индексами — тогда видно, сколько значений пришло на самом деле.</div>
+    <div class="remember-box"><strong>Дробные числа — через <code>float()</code>, не <code>int()</code>.</strong> <code>int("3.5")</code> завершится той же <code>ValueError</code>: функция не округляет текст, а требует целое. Нужно либо <code>float(input())</code>, либо <code>int(float(input()))</code>, если дробную часть действительно надо отбросить.</div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="edit-3"></i> Комментарии</div>
 <pre><code><span class="c-comment"># Однострочный (как // в PHP)</span>
 
