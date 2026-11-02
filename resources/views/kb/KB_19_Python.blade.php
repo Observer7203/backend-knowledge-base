@@ -845,6 +845,17 @@ name.<span class="c-fn">split</span>()       <span class="c-comment"># ['Data', 
 
 <span class="c-str">"a  b"</span>.<span class="c-fn">split</span>(<span class="c-str">" "</span>)   <span class="c-comment"># ['a', '', 'b'] — два пробела подряд</span></code></pre>
     Для разбора текста на слова берут <code>split()</code> без аргумента. Явный разделитель нужен там, где он не пробел: <code>"a,b".split(",")</code>.</div>
+
+    <div class="pitfall"><strong><code>in</code> у строк ищет подстроку, а не слово.</strong> Проверка проходит, даже если найденный кусок — часть другого слова, и это легко принять за совпадение по смыслу:
+<pre><code>names = <span class="c-str">"Data Sciencee Academy"</span>      <span class="c-comment"># опечатка: лишняя e</span>
+
+<span class="c-str">"science"</span> <span class="c-key">in</span> names.<span class="c-fn">lower</span>()        <span class="c-comment"># True — хотя слова "science" тут нет</span>
+<span class="c-str">"car"</span> <span class="c-key">in</span> <span class="c-str">"scar"</span>                    <span class="c-comment"># True</span>
+<span class="c-str">"ate"</span> <span class="c-key">in</span> <span class="c-str">"water"</span>                   <span class="c-comment"># True</span></code></pre>
+    Когда нужно именно слово целиком, строку сначала разбивают и ищут в списке — там сравнение идёт по элементам:
+<pre><code><span class="c-str">"science"</span> <span class="c-key">in</span> names.<span class="c-fn">lower</span>().<span class="c-fn">split</span>()   <span class="c-comment"># False</span>
+<span class="c-str">"academy"</span> <span class="c-key">in</span> names.<span class="c-fn">lower</span>().<span class="c-fn">split</span>()   <span class="c-comment"># True</span></code></pre>
+    И про <code>lower()</code> в этой записи: <code>in</code> различает регистр, поэтому <code>"science" in names</code> без приведения даст <code>False</code>. Приводить нужно обе стороны — искомое тоже пишут строчными.</div>
     <div class="subsection-title" style="margin-top:14px;font-size:14px">strip: аргумент — это набор символов, а не подстрока</div>
     <p class="text">Без аргумента <code>strip()</code> снимает пробельное с обоих краёв: пробелы, табуляцию, перевод строки. Середину не трогает никогда. <code>lstrip()</code> работает только слева, <code>rstrip()</code> — справа.</p>
 <pre><code>s = <span class="c-str">"  привет  "</span>
