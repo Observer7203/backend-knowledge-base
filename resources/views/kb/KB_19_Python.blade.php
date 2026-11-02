@@ -969,6 +969,9 @@ status = <span class="c-str">"adult"</span> <span class="c-key">if</span> age &g
     <span class="c-key">if</span> item.is_stop:
         <span class="c-key">break</span>
     <span class="c-fn">process</span>(item)</code></pre>
+
+    <div class="remember-box"><strong>Три аргумента <code>range</code>: откуда, докуда, через сколько.</strong> Третий — шаг: <code>range(1, 11, 2)</code> даёт <code>1, 3, 5, 7, 9</code>, то есть каждое второе число. Отрицательный шаг считает назад: <code>range(10, 0, -2)</code> даёт <code>10, 8, 6, 4, 2</code>.</div>
+    <div class="pitfall"><strong>Верхняя граница не включается — никогда.</strong> <code>range(1, 11)</code> это числа с 1 по 10, а не по 11; <code>range(1, 11, 2)</code> заканчивается на 9, потому что 11 за границей. Так же устроены и срезы: <code>s[0:5]</code> берёт символы с нулевого по четвёртый. Правило одно на весь язык, и запомнить его проще так: второе число — это не последний элемент, а место, до которого доходим.</div>
   </div>
 
   <div class="subsection">
