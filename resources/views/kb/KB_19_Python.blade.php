@@ -482,7 +482,9 @@ nums = <span class="c-fn">list</span>(<span class="c-fn">map</span>(<span class=
       <tr><td><code>%</code> (mod)</td><td><code>%</code></td><td>Так же</td></tr>
       <tr><td>—</td><td><code>in</code></td><td><code>"a" in ["a", "b"]</code> → <code>True</code>. Работает для list/dict/str/set</td></tr>
       <tr><td>—</td><td><code>is</code></td><td>Сравнение по идентичности (тот же объект). <code>a is None</code> — правильная проверка на None</td></tr>
+      <tr><td><code>^</code> (xor)</td><td><code>^</code></td><td>Побитовое исключающее ИЛИ, <strong>не возведение в степень</strong>. Как и в PHP</td></tr>
     </table>
+    <div class="pitfall"><strong><code>x ^ 2</code> — это не «x в квадрате».</strong> Крышка пришла из математической записи, но в Python, как и в PHP, она означает побитовое исключающее ИЛИ. Ошибка тихая: код выполняется и возвращает числа, просто не те. <code>[x ^ 2 for x in [1, 2, 3, 4, 5]]</code> даёт <code>[3, 0, 1, 6, 7]</code>, тогда как <code>[x ** 2 for x in ...]</code> даёт <code>[1, 4, 9, 16, 25]</code>. Проверить легко на тройке: <code>3 ^ 2</code> это <code>0b11</code> против <code>0b10</code>, то есть 1, а <code>3 ** 2</code> это 9. Степень — всегда <code>**</code>.</div>
   </div>
 
   <div class="subsection">
@@ -1286,6 +1288,13 @@ users = [{<span class="c-str">"name"</span>: <span class="c-str">"Bob"</span>, <
 <span class="c-fn">list</span>(<span class="c-fn">filter</span>(<span class="c-key">lambda</span> u: u[<span class="c-str">"age"</span>] &gt;= <span class="c-num">18</span>, users))
 <span class="c-comment"># Питоничнее — comprehension:</span>
 [u <span class="c-key">for</span> u <span class="c-key">in</span> users <span class="c-key">if</span> u[<span class="c-str">"age"</span>] &gt;= <span class="c-num">18</span>]</code></pre>
+
+    <div class="remember-box"><strong>Сама по себе lambda ничего не обходит.</strong> Это просто функция без имени — её нужно к чему-то применить. Чтобы получить новый список из старого, её передают в <code>map</code> либо вообще обходятся без неё:
+<pre><code>nums = [<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>, <span class="c-num">4</span>, <span class="c-num">5</span>]
+
+<span class="c-fn">list</span>(<span class="c-fn">map</span>(<span class="c-key">lambda</span> x: x ** <span class="c-num">2</span>, nums))   <span class="c-comment"># [1, 4, 9, 16, 25]</span>
+[x ** <span class="c-num">2</span> <span class="c-key">for</span> x <span class="c-key">in</span> nums]              <span class="c-comment"># то же самое, и читается лучше</span></code></pre>
+    Обход делает <code>map</code> или само включение, а lambda лишь говорит, что сделать с каждым элементом. И <code>map</code> возвращает ленивый объект — чтобы увидеть список, его оборачивают в <code>list()</code>.</div>
 
     <div class="info-box primary">
       <strong>Правило:</strong> lambda хорош для <em>одноразовой</em> функции-выражения. Если логика в 2+ строки — делай <code>def</code>. Читаемость важнее краткости.
