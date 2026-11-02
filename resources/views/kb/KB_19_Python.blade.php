@@ -1373,6 +1373,31 @@ emails = [user.email <span class="c-key">for</span> user <span class="c-key">in<
 
 <span class="c-comment"># if/else в expression — тернарник (тогда if НЕ фильтр, а часть выражения)</span>
 labels = [<span class="c-str">"adult"</span> <span class="c-key">if</span> u.age &gt;= <span class="c-num">18</span> <span class="c-key">else</span> <span class="c-str">"minor"</span> <span class="c-key">for</span> u <span class="c-key">in</span> users]</code></pre>
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Тот же цикл и то же включение, строка в строку</div>
+    <p class="text">Проще всего понять включение, положив рядом цикл, который оно заменяет. Слева привычная запись, справа — она же одной строкой:</p>
+<pre><code>num = [<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>, <span class="c-num">4</span>, <span class="c-num">5</span>]
+
+<span class="c-comment"># обычный цикл</span>
+a = []                        <span class="c-comment"># 1. завели пустой список</span>
+<span class="c-key">for</span> i <span class="c-key">in</span> num:                <span class="c-comment"># 2. идём по элементам</span>
+    <span class="c-key">if</span> i % <span class="c-num">2</span> == <span class="c-num">1</span>:            <span class="c-comment"># 3. отбираем нечётные</span>
+        a.<span class="c-fn">append</span>(i ** <span class="c-num">2</span>)      <span class="c-comment"># 4. кладём квадрат</span>
+<span class="c-fn">print</span>(a)                      <span class="c-comment"># [1, 9, 25]</span>
+
+<span class="c-comment"># то же самое включением</span>
+a = [i ** <span class="c-num">2</span> <span class="c-key">for</span> i <span class="c-key">in</span> num <span class="c-key">if</span> i % <span class="c-num">2</span> == <span class="c-num">1</span>]
+<span class="c-fn">print</span>(a)                      <span class="c-comment"># [1, 9, 25]</span></code></pre>
+    <table class="data-table">
+      <thead><tr><th>В цикле</th><th>Во включении</th></tr></thead>
+      <tbody>
+        <tr><td><code>a = []</code> и <code>a.append(...)</code></td><td>Сами квадратные скобки — список собирается сам</td></tr>
+        <tr><td><code>for i in num:</code></td><td><code>for i in num</code> — без двоеточия и отступов</td></tr>
+        <tr><td><code>if i % 2 == 1:</code></td><td><code>if i % 2 == 1</code> в конце</td></tr>
+        <tr><td><code>a.append(i ** 2)</code></td><td><code>i ** 2</code> в начале</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong>Читается не слева направо.</strong> Выражение <code>i ** 2</code> стоит первым, а выполняется последним. Порядок такой: сначала <code>for</code> берёт очередной элемент, потом <code>if</code> решает, годится ли он, и только потом считается то, что в начале. Поэтому вслух это звучит как «квадрат каждого <code>i</code> — из <code>num</code> — если <code>i</code> нечётное».</div>
+    <div class="pitfall"><strong>Скобки — часть конструкции, а не оформление.</strong> Кусок <code>i ** 2 for i in num</code> сам по себе не выражение, Python ответит <code>SyntaxError</code>. В квадратных скобках получится список, в круглых — генератор, который считает значения по мере обхода и списком не является. Именно скобки заменяют собой <code>a = []</code> и <code>append</code> из цикла.</div>
 
     <div class="info-box success">
       <strong>Правило:</strong> comprehension короче, быстрее и питоничнее чем <code>map()</code>/<code>filter()</code>. В новом коде — только comprehensions. <code>map</code>/<code>filter</code> остались в лямбда-мире функционального программирования.
