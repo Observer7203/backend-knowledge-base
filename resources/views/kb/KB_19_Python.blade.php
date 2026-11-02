@@ -836,6 +836,38 @@ price = <span class="c-num">1234.5678</span>
     </table>
 
     <p class="text"><strong>Все методы возвращают НОВУЮ строку</strong> — str immutable. <code>s.upper()</code> не меняет <code>s</code>, а возвращает новую.</p>
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">strip: аргумент — это набор символов, а не подстрока</div>
+    <p class="text">Без аргумента <code>strip()</code> снимает пробельное с обоих краёв: пробелы, табуляцию, перевод строки. Середину не трогает никогда. <code>lstrip()</code> работает только слева, <code>rstrip()</code> — справа.</p>
+<pre><code>s = <span class="c-str">"  привет  "</span>
+
+s.<span class="c-fn">strip</span>()      <span class="c-comment"># "привет"</span>
+s.<span class="c-fn">lstrip</span>()     <span class="c-comment"># "привет  "</span>
+s.<span class="c-fn">rstrip</span>()     <span class="c-comment"># "  привет"</span>
+
+<span class="c-str">"  a  b  "</span>.<span class="c-fn">strip</span>()   <span class="c-comment"># "a  b" — внутренние пробелы остались</span></code></pre>
+    <div class="pitfall"><strong>А вот с аргументом начинается самое неочевидное.</strong> Строка в скобках — это <em>множество символов</em>, каждый из которых будет сниматься с краёв в любом порядке и сколько угодно раз. Это не «убрать такой хвост»:
+<pre><code><span class="c-str">"test.txt"</span>.<span class="c-fn">strip</span>(<span class="c-str">".txt"</span>)          <span class="c-comment"># "es"  — а не "test"</span>
+<span class="c-str">"commerce.com"</span>.<span class="c-fn">strip</span>(<span class="c-str">".com"</span>)      <span class="c-comment"># "erce"</span>
+<span class="c-str">"mississippi"</span>.<span class="c-fn">strip</span>(<span class="c-str">"mips"</span>)       <span class="c-comment"># ""  — съело всю строку</span></code></pre>
+    В первом примере с конца сняты <code>t</code>, <code>x</code>, <code>t</code>, точка, а потом с начала — <code>t</code> и ещё раз <code>t</code>, потому что все эти буквы есть в наборе. Остаток — <code>es</code>.</div>
+    <div class="remember-box"><strong>Если нужно убрать именно хвост или начало,</strong> есть отдельные методы, появившиеся в Python 3.9: <code>removesuffix</code> и <code>removeprefix</code>. Они работают с подстрокой целиком и ничего не откусывают сверх неё:
+<pre><code><span class="c-str">"commerce.com"</span>.<span class="c-fn">removesuffix</span>(<span class="c-str">".com"</span>)   <span class="c-comment"># "commerce"</span>
+<span class="c-str">"test_user.py"</span>.<span class="c-fn">removeprefix</span>(<span class="c-str">"test_"</span>)  <span class="c-comment"># "user.py"</span></code></pre>
+    Если подстроки нет, строка возвращается без изменений — проверять заранее не нужно.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">title и capitalize: похожи, но делают разное</div>
+<pre><code>s = <span class="c-str">"hello world FROM python"</span>
+
+s.<span class="c-fn">title</span>()        <span class="c-comment"># "Hello World From Python" — каждое слово с большой</span>
+s.<span class="c-fn">capitalize</span>()   <span class="c-comment"># "Hello world from python" — только первая буква строки</span></code></pre>
+    <p class="text">Оба приводят остальные буквы к нижнему регистру, поэтому <code>"HELLO WORLD".title()</code> даст <code>"Hello World"</code>, а не оставит капс.</p>
+    <div class="pitfall"><strong><code>title()</code> считает границей слова любой не-буквенный символ</strong> — в том числе апостроф и дефис. Для имён и фамилий это сразу выходит боком:
+<pre><code><span class="c-str">"john's book"</span>.<span class="c-fn">title</span>()      <span class="c-comment"># "John'S Book"  — лишняя заглавная S</span>
+<span class="c-str">"o'neil"</span>.<span class="c-fn">title</span>()           <span class="c-comment"># "O'Neil"       — тут повезло</span>
+<span class="c-str">"mcdonald"</span>.<span class="c-fn">title</span>()         <span class="c-comment"># "Mcdonald"     — а нужно McDonald</span>
+<span class="c-str">"van der berg"</span>.<span class="c-fn">title</span>()     <span class="c-comment"># "Van Der Berg" — приставки должны остаться строчными</span></code></pre>
+    Поэтому для человеческих имён <code>title()</code> не годится: имена не подчиняются простому правилу «каждое слово с заглавной». Для заголовков и подписей в интерфейсе — вполне.</div>
+    <div class="remember-box">И то, и другое возвращает <strong>новую</strong> строку. Вызов сам по себе ничего не меняет: <code>s.title()</code> отдельной строкой — пустая операция, результат нужно присвоить.</div>
   </div>
 
   <div class="subsection">
@@ -850,6 +882,19 @@ s[<span class="c-num">6</span>:]                   <span class="c-comment"># "wo
 s[::-<span class="c-num">1</span>]                 <span class="c-comment"># "dlrow olleh" — reverse</span>
 s[::<span class="c-num">2</span>]                  <span class="c-comment"># "hlowrd" — каждый второй</span>
 <span class="c-fn">len</span>(s)                 <span class="c-comment"># 11</span></code></pre>
+
+    <div class="remember-box"><strong>Как считать границы.</strong> <code>name[0:4]</code> — это символы с нулевого по третий: начало входит, конец нет. Длина куска всегда равна «конец минус начало», здесь <code>4 - 0 = 4</code> символа. Ноль в начале можно опустить: <code>name[:4]</code> — то же самое.</div>
+<pre><code>name = <span class="c-str">"Alexander"</span>
+
+name[<span class="c-num">0</span>:<span class="c-num">4</span>]     <span class="c-comment"># "Alex"       — 4 символа, четвёртый не вошёл</span>
+name[<span class="c-num">4</span>:]      <span class="c-comment"># "ander"      — с четвёртого до конца</span>
+name[-<span class="c-num">3</span>:]     <span class="c-comment"># "der"        — последние три</span></code></pre>
+    <div class="pitfall"><strong>Срез за границей не падает, а индекс падает.</strong> Это частый источник недоумения: обращение к одному символу требует, чтобы он существовал, а срез просто обрежет по длине.
+<pre><code>name[<span class="c-num">0</span>:<span class="c-num">100</span>]   <span class="c-comment"># "Alexander" — обрезало по длине</span>
+name[<span class="c-num">50</span>:<span class="c-num">60</span>]   <span class="c-comment"># ""          — пустая строка, ошибки нет</span>
+name[<span class="c-num">50</span>]      <span class="c-comment"># IndexError: string index out of range</span></code></pre>
+    Поэтому <code>text[:100]</code> — безопасный способ взять «первые сто символов, сколько есть»: проверять длину заранее не нужно. А вот <code>text[99]</code> нужно либо проверять, либо ловить исключение.</div>
+    <div class="remember-box">Срезы работают одинаково для строк, списков и кортежей: <code>nums[0:4]</code> вернёт новый список из первых четырёх элементов. Исходный объект при этом не меняется.</div>
   </div>
 
   <div class="subsection">
