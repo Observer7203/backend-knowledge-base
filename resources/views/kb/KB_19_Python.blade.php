@@ -385,6 +385,22 @@ age: <span class="c-type">int</span> = <span class="c-num">30</span></code></pre
       <li>Нет объявления типа обязательно — можно опционально через <code>:</code> (type hints).</li>
       <li>Констант в языке нет — только конвенция <code>UPPER_CASE</code>. Реальную неизменяемость даёт только <code>Final[int]</code> из <code>typing</code> (проверяется mypy, но не runtime).</li>
     </ul>
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Переменная хранит, print показывает</div>
+    <p class="text">Это две разные вещи, и их легко смешать. <strong>Переменная — место в памяти, где значение остаётся.</strong> <code>print</code> ничего не хранит: он пишет в вывод и возвращает <code>None</code>. Чтобы что-то напечатать, переменная не обязательна — печатать можно сразу выражение:</p>
+<pre><code><span class="c-comment"># переменной нет, и это рабочий код</span>
+<span class="c-fn">print</span>(<span class="c-fn">int</span>(<span class="c-fn">input</span>()) * <span class="c-num">2</span>)      <span class="c-comment"># ввели 6200 -> 12400</span></code></pre>
+    <p class="text">Но значение после этого потеряно. Обратиться к нему второй раз уже не к чему, а повторный <code>input()</code> прочитает <em>следующую</em> строку, а не ту же самую:</p>
+<pre><code><span class="c-comment"># на входе одна строка: 6200</span>
+<span class="c-fn">print</span>(<span class="c-fn">int</span>(<span class="c-fn">input</span>()))      <span class="c-comment"># 6200</span>
+<span class="c-fn">print</span>(<span class="c-fn">int</span>(<span class="c-fn">input</span>()))      <span class="c-comment"># EOFError: строк больше нет</span></code></pre>
+    <p class="text">Переменная нужна ровно там, где значение требуется <strong>больше одного раза</strong>: сравнить, посчитать, напечатать ещё раз:</p>
+<pre><code>price = <span class="c-fn">int</span>(<span class="c-fn">input</span>())      <span class="c-comment"># прочитали один раз</span>
+
+<span class="c-fn">print</span>(price)                 <span class="c-comment"># 6200</span>
+<span class="c-fn">print</span>(price * <span class="c-num">2</span>)             <span class="c-comment"># 12400</span>
+<span class="c-fn">print</span>(<span class="c-str">"дорого"</span> <span class="c-key">if</span> price &gt; <span class="c-num">5000</span> <span class="c-key">else</span> <span class="c-str">"дёшево"</span>)</code></pre>
+    <div class="remember-box"><strong>Короткое правило.</strong> Значение нужно один раз и сразу на экран — можно без переменной. Нужно дважды или позже — переменная обязательна. И наоборот: присвоить результат <code>print</code> бессмысленно, <code>x = print("текст")</code> положит в <code>x</code> значение <code>None</code>, а не напечатанную строку.</div>
+
   </div>
 
   <div class="subsection">
