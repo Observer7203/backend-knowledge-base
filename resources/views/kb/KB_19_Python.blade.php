@@ -1377,6 +1377,26 @@ labels = [<span class="c-str">"adult"</span> <span class="c-key">if</span> u.age
     <div class="info-box success">
       <strong>Правило:</strong> comprehension короче, быстрее и питоничнее чем <code>map()</code>/<code>filter()</code>. В новом коде — только comprehensions. <code>map</code>/<code>filter</code> остались в лямбда-мире функционального программирования.
     </div>
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">map против filter на одном и том же условии</div>
+    <p class="text">Разницу видно лучше всего, если дать обоим одну и ту же функцию-сравнение. <strong><code>map</code> возвращает то, что вернула функция, по элементу на каждый вход. <code>filter</code> возвращает сами элементы — те, на которых функция дала истину.</strong></p>
+<pre><code>nums = [<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>, <span class="c-num">4</span>, <span class="c-num">5</span>, <span class="c-num">6</span>]
+
+<span class="c-fn">list</span>(<span class="c-fn">map</span>(<span class="c-key">lambda</span> x: x &gt; <span class="c-num">3</span>, nums))
+<span class="c-comment"># [False, False, False, True, True, True]   — шесть булевых</span>
+
+<span class="c-fn">list</span>(<span class="c-fn">filter</span>(<span class="c-key">lambda</span> x: x &gt; <span class="c-num">3</span>, nums))
+<span class="c-comment"># [4, 5, 6]                                 — три числа</span></code></pre>
+    <table class="data-table">
+      <thead><tr><th></th><th><code>map</code></th><th><code>filter</code></th></tr></thead>
+      <tbody>
+        <tr><td>Что попадает в результат</td><td>Значение, которое вернула функция</td><td>Исходный элемент, функция в результат не идёт</td></tr>
+        <tr><td>Сколько элементов</td><td>Ровно столько же, сколько на входе</td><td>Столько же или меньше</td></tr>
+        <tr><td>Зачем нужен</td><td>Преобразовать каждый</td><td>Отобрать нужные</td></tr>
+        <tr><td>На сравнении даёт</td><td>Булевы значения</td><td>Значения, прошедшие проверку</td></tr>
+      </tbody>
+    </table>
+    <div class="remember-box"><strong><code>filter</code> смотрит только на истинность.</strong> Что именно вернула функция, он не сохраняет: достаточно, чтобы значение было «истинным». Поэтому работает и так: <code>filter(lambda x: x % 2, nums)</code> оставит нечётные, хотя остаток — это <code>0</code> или <code>1</code>, а не <code>True</code>/<code>False</code>. Есть и особая форма — <code>filter(None, items)</code> выбрасывает все «пустые» значения: <code>[0, 1, '', 'a', [], [2]]</code> превратится в <code>[1, 'a', [2]]</code>.</div>
+    <div class="remember-box"><strong>Comprehension делает оба дела сразу</strong> и потому заменяет связку из двух вызовов: <code>[x * 10 for x in nums if x &gt; 3]</code> — часть до <code>for</code> это <code>map</code>, часть после <code>if</code> это <code>filter</code>. Результат <code>[40, 50, 60]</code>, без вложенных скобок и без <code>list()</code> вокруг.</div>
   </div>
 
   <div class="subsection">
