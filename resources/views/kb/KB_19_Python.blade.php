@@ -836,6 +836,15 @@ price = <span class="c-num">1234.5678</span>
     </table>
 
     <p class="text"><strong>Все методы возвращают НОВУЮ строку</strong> — str immutable. <code>s.upper()</code> не меняет <code>s</code>, а возвращает новую.</p>
+
+    <div class="pitfall"><strong><code>split(" ")</code> и <code>split()</code> ведут себя по-разному.</strong> С явным разделителем каждый пробел — отдельная граница, поэтому лишний пробел в начале или два подряд дают пустые строки в результате. Без аргумента такого не бывает: метод режет по любым пробельным и пустые куски выбрасывает.
+<pre><code>name = <span class="c-str">" Data Science Academy"</span>   <span class="c-comment"># пробел в начале</span>
+
+name.<span class="c-fn">split</span>(<span class="c-str">" "</span>)    <span class="c-comment"># ['', 'Data', 'Science', 'Academy'] — пустая строка впереди</span>
+name.<span class="c-fn">split</span>()       <span class="c-comment"># ['Data', 'Science', 'Academy']</span>
+
+<span class="c-str">"a  b"</span>.<span class="c-fn">split</span>(<span class="c-str">" "</span>)   <span class="c-comment"># ['a', '', 'b'] — два пробела подряд</span></code></pre>
+    Для разбора текста на слова берут <code>split()</code> без аргумента. Явный разделитель нужен там, где он не пробел: <code>"a,b".split(",")</code>.</div>
     <div class="subsection-title" style="margin-top:14px;font-size:14px">strip: аргумент — это набор символов, а не подстрока</div>
     <p class="text">Без аргумента <code>strip()</code> снимает пробельное с обоих краёв: пробелы, табуляцию, перевод строки. Середину не трогает никогда. <code>lstrip()</code> работает только слева, <code>rstrip()</code> — справа.</p>
 <pre><code>s = <span class="c-str">"  привет  "</span>
