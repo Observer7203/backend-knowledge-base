@@ -185,6 +185,7 @@ ol.numbered strong{color:var(--text);}
   <div class="nav-group-label">Для PHP-разработчика</div>
   <a class="nav-item" onclick="showSection('python-vs-php',this)"><i data-lucide="git-compare-arrows"></i> Python vs PHP — мосты</a>
   <a class="nav-item" onclick="showSection('interview',this)"><i data-lucide="brain"></i> Частые вопросы</a>
+  <a class="nav-item" onclick="showSection('test-review',this)"><i data-lucide="clipboard-check"></i> Разбор теста: 30 вопросов</a>
 </div>
 
 <div class="main">
@@ -5805,6 +5806,369 @@ jobs:
 
   <div class="remember-box">
     <strong>Финальный итог по KB_19:</strong> для PHP-разработчика Python — за 2-4 недели становится продуктивным. Стек 2026: <code>uv</code> + <code>ruff</code> + <code>mypy</code> + <code>FastAPI</code> + <code>SQLAlchemy 2 async</code> + <code>Pydantic</code> + <code>pytest</code> + <code>httpx</code> + <code>Docker</code>. Django — если нужен сайт с админкой. AI/ML — отдельная тропа (PyTorch, LangChain, Anthropic SDK).
+  </div>
+</div>
+
+<div id="sec-test-review" class="section">
+  <div class="section-title">Разбор теста: 30 вопросов</div>
+
+  <div class="info-box primary">
+    <strong>Как устроен разбор.</strong> Каждый вопрос идёт с ответом и объяснением, почему он такой. Все примеры с кодом прогнаны, ответы не из головы: там, где вывод неочевиден, он скопирован из запуска. Вопросы сгруппированы по темам, а не по порядку в тесте, — так видно, какие из них проверяют одно и то же.
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="type"></i> Переменные и присваивание</div>
+
+    <div class="card">
+      <h3>10. Какая команда выводит на экран слово Almaty?</h3>
+      <p class="text"><strong>Ответ:</strong> <code>print("Almaty")</code>.</p>
+      <p class="text">Слово нужно взять в кавычки: без них <code>print(Almaty)</code> Python примет за имя переменной и ответит <code>NameError</code>. Кавычки одинарные или двойные — разницы нет.</p>
+    </div>
+
+    <div class="card">
+      <h3>11. Что произойдёт, если использовать переменную до её объявления?</h3>
+<pre><code><span class="c-fn">print</span>(x)
+x = <span class="c-num">10</span></code></pre>
+      <p class="text"><strong>Ответ:</strong> <code>NameError: name 'x' is not defined</code>.</p>
+      <p class="text">Python выполняет строки сверху вниз, и на момент <code>print</code> имени <code>x</code> ещё не существует. Присваивание ниже роли не играет — это не объявление заранее, как в некоторых языках, а обычная операция, до которой дело не дошло.</p>
+    </div>
+
+    <div class="card">
+      <h3>12. Что выведет программа?</h3>
+<pre><code>a = <span class="c-num">12</span>
+b = <span class="c-num">8</span>
+c = a
+a = b
+b = c
+<span class="c-fn">print</span>(a, b)</code></pre>
+      <p class="text"><strong>Ответ:</strong> <code>8 12</code>.</p>
+      <p class="text">Это обмен значений через временную переменную. <code>c</code> запоминает старое <code>a</code>, то есть 12. Потом <code>a</code> становится восьмёркой, а <code>b</code> получает сохранённую двенадцать. Третья переменная нужна именно для того, чтобы старое значение не потерялось.</p>
+      <div class="remember-box">В Python для этого есть короткая запись без временной переменной: <code>a, b = b, a</code>. Правая часть вычисляется целиком до присваивания, поэтому обмен проходит верно.</div>
+    </div>
+
+    <div class="card">
+      <h3>13. Каким будет результат?</h3>
+<pre><code>a = <span class="c-num">3</span>
+b = <span class="c-num">5</span>
+a = b
+b = a
+<span class="c-fn">print</span>(a, b)</code></pre>
+      <p class="text"><strong>Ответ:</strong> <code>5 5</code>.</p>
+      <p class="text">Тот же обмен, но без временной переменной — и поэтому сломанный. После <code>a = b</code> значение 3 потеряно навсегда: <code>a</code> стало пятёркой. Следующая строка <code>b = a</code> присваивает <code>b</code> то, что сейчас лежит в <code>a</code>, то есть ту же пятёрку. Сравните с вопросом 12: там третья переменная и спасает.</p>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="quote"></i> Строки</div>
+
+    <div class="card">
+      <h3>29. Как создать пустую строку?</h3>
+      <p class="text"><strong>Ответ:</strong> <code>s = ""</code> (или <code>''</code>, или <code>str()</code>).</p>
+      <p class="text">Пустая строка — это просто кавычки без содержимого. Она не <code>None</code>: это полноценная строка нулевой длины, <code>len("") == 0</code>. В условии она считается ложью, поэтому <code>if s:</code> для пустой строки не сработает.</p>
+    </div>
+
+    <div class="card">
+      <h3>30. Как объединить две строки?</h3>
+      <p class="text"><strong>Ответ:</strong> оператором <code>+</code>: <code>"Data" + " " + "Science"</code>.</p>
+<pre><code>a, b = <span class="c-str">"Data"</span>, <span class="c-str">"Science"</span>
+
+a + <span class="c-str">" "</span> + b              <span class="c-comment"># "Data Science"</span>
+f<span class="c-str">"{a} {b}"</span>                <span class="c-comment"># то же, и чаще всего предпочтительнее</span>
+<span class="c-str">" "</span>.<span class="c-fn">join</span>([a, b])           <span class="c-comment"># когда частей много</span></code></pre>
+      <p class="text">Плюс требует, чтобы обе части были строками: <code>"сумма: " + 5</code> даст <code>TypeError</code>, нужен <code>str(5)</code> или f-строка.</p>
+    </div>
+
+    <div class="card">
+      <h3>16. Каков вывод?</h3>
+<pre><code>string = <span class="c-str">"my name is x"</span>
+<span class="c-key">for</span> i <span class="c-key">in</span> string.<span class="c-fn">split</span>():
+    <span class="c-fn">print</span>(i, end=<span class="c-str">", "</span>)</code></pre>
+      <p class="text"><strong>Ответ:</strong> <code>my, name, is, x, </code> — одной строкой, с запятой и пробелом в самом конце.</p>
+      <p class="text">Две детали. Первая: <code>split()</code> без аргумента режет по пробелам и даёт четыре слова. Вторая: <code>end=", "</code> заменяет перевод строки, который <code>print</code> ставит по умолчанию, на запятую с пробелом — поэтому всё печатается в одну строку, а после последнего слова запятая всё равно остаётся.</p>
+    </div>
+
+    <div class="card">
+      <h3>24. Каким будет результат?</h3>
+<pre><code>a = [<span class="c-str">'1'</span>, <span class="c-str">'2'</span>, <span class="c-str">'3'</span>, <span class="c-str">'4'</span>, <span class="c-str">'5'</span>]
+s = <span class="c-str">''</span>.<span class="c-fn">join</span>(a[<span class="c-num">1</span>:<span class="c-num">3</span>]) * <span class="c-num">2</span>
+<span class="c-fn">print</span>(s)</code></pre>
+      <p class="text"><strong>Ответ:</strong> <code>2323</code>.</p>
+      <p class="text">По шагам: срез <code>a[1:3]</code> берёт элементы с первого по второй, то есть <code>['2', '3']</code> — третий не входит. <code>''.join(...)</code> склеивает их без разделителя в строку <code>'23'</code>. Умножение строки на число повторяет её, отсюда <code>'2323'</code>. Важно, что это именно строка: <code>'23' * 2</code> не равно сорока шести.</p>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="list"></i> Списки и вложенные циклы</div>
+
+    <div class="card">
+      <h3>14. Чему равна L2?</h3>
+<pre><code>L1 = [<span class="c-num">2</span>, <span class="c-num">3</span>, <span class="c-num">4</span>]
+L2 = L1[:]
+L1[<span class="c-num">0</span>] = <span class="c-num">24</span></code></pre>
+      <p class="text"><strong>Ответ:</strong> <code>L2 == [2, 3, 4]</code> — без изменений.</p>
+      <p class="text">Срез <code>[:]</code> создаёт <strong>новый</strong> список с теми же элементами, поэтому изменение <code>L1</code> на <code>L2</code> не влияет. Если бы было написано <code>L2 = L1</code>, обе переменные указывали бы на один список, и <code>L2</code> стал бы <code>[24, 3, 4]</code>.</p>
+      <div class="pitfall">Копия здесь поверхностная: элементы не копируются, а переиспользуются. Для плоского списка чисел разницы нет, а вот у списка списков внутренние списки останутся общими — тогда нужен <code>copy.deepcopy</code>.</div>
+    </div>
+
+    <div class="card">
+      <h3>25. Каков вывод?</h3>
+<pre><code>l = [[<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>], [<span class="c-num">4</span>, <span class="c-num">5</span>, <span class="c-num">6</span>]]
+s = [<span class="c-num">0</span>, <span class="c-num">0</span>]
+<span class="c-key">for</span> i <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-fn">len</span>(l)):
+    <span class="c-key">for</span> j <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-fn">len</span>(l[i])):
+        l[i][j] += <span class="c-num">10</span>
+        s[i] += l[i][j]
+<span class="c-fn">print</span>(s)</code></pre>
+      <p class="text"><strong>Ответ:</strong> <code>[36, 45]</code>.</p>
+      <p class="text">Обе строки тела находятся <em>внутри</em> внутреннего цикла, поэтому накопление идёт по каждому элементу, а не по последнему. Первая строка списка превращается в <code>[11, 12, 13]</code>, их сумма 36. Вторая — в <code>[14, 15, 16]</code>, сумма 45.</p>
+      <div class="remember-box">Если бы <code>s[i] += l[i][j]</code> стояло на уровень левее, то есть в внешнем цикле, оно сработало бы по разу на строку и прибавило только последний элемент: получилось бы <code>[13, 16]</code>. В Python отступ — это и есть граница блока, здесь он решает ответ.</div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="braces"></i> Словари и множества</div>
+
+    <div class="card">
+      <h3>1. Что выведет <code>print(d[4])</code>?</h3>
+<pre><code>d = {<span class="c-num">1</span>: <span class="c-str">"a"</span>, <span class="c-num">2</span>: <span class="c-str">"b"</span>, <span class="c-num">3</span>: <span class="c-str">"c"</span>}
+<span class="c-fn">print</span>(d[<span class="c-num">4</span>])</code></pre>
+      <p class="text"><strong>Ответ:</strong> ничего не выведет — программа упадёт с <code>KeyError: 4</code>.</p>
+      <p class="text">Ключа 4 в словаре нет, а квадратные скобки требуют, чтобы ключ существовал. Это не то же самое, что у списка: там обращение за границу даёт <code>IndexError</code>, но смысл тот же — обращение к тому, чего нет.</p>
+      <div class="remember-box">Когда отсутствие ключа — нормальная ситуация, берут <code>d.get(4)</code>: вернёт <code>None</code> вместо ошибки. Второй аргумент задаёт своё значение по умолчанию: <code>d.get(4, "нет")</code>. Проверить наличие можно через <code>if 4 in d</code>.</div>
+    </div>
+
+    <div class="card">
+      <h3>2. Что должно быть уникальным в словаре?</h3>
+      <p class="text"><strong>Ответ:</strong> ключи. Значения повторяться могут сколько угодно.</p>
+<pre><code>{<span class="c-str">"a"</span>: <span class="c-num">1</span>, <span class="c-str">"b"</span>: <span class="c-num">1</span>}      <span class="c-comment"># нормально: значения одинаковые</span>
+{<span class="c-str">"a"</span>: <span class="c-num">1</span>, <span class="c-str">"a"</span>: <span class="c-num">2</span>}      <span class="c-comment"># {'a': 2} — второй ключ затёр первый, без ошибки</span></code></pre>
+      <p class="text">Повтор ключа не вызывает ошибку — просто побеждает последнее значение. Ещё одно требование: ключ должен быть хешируемым, то есть неизменяемым. Строка, число и кортеж подходят, список — нет.</p>
+    </div>
+
+    <div class="card">
+      <h3>27. Какая функция выдаёт количество элементов множества?</h3>
+      <p class="text"><strong>Ответ:</strong> <code>len()</code>.</p>
+      <p class="text">Это общая функция для всех коллекций: работает одинаково со строкой, списком, кортежем, словарём и множеством. У множества она вернёт число уникальных элементов — дубликатов там просто не бывает.</p>
+    </div>
+
+    <div class="card">
+      <h3>28. Какие утверждения относятся к множеству (set)?</h3>
+      <table class="data-table">
+        <thead><tr><th>Утверждение</th><th>Верно?</th></tr></thead>
+        <tbody>
+          <tr><td>Хранит только уникальные элементы</td><td>Да — повторы отбрасываются при добавлении</td></tr>
+          <tr><td>Не хранит порядок</td><td>Да, порядок не гарантируется и на него нельзя полагаться</td></tr>
+          <tr><td>Элементы доступны по индексу</td><td>Нет, <code>s[0]</code> даст <code>TypeError</code></td></tr>
+          <tr><td>Можно добавлять и удалять элементы</td><td>Да, через <code>add</code> и <code>discard</code>; неизменяемый вариант — <code>frozenset</code></td></tr>
+          <tr><td>Элементы должны быть хешируемыми</td><td>Да, список внутрь множества не положить</td></tr>
+          <tr><td>Поддерживает операции объединения и пересечения</td><td>Да: <code>|</code>, <code>&amp;</code>, <code>-</code></td></tr>
+        </tbody>
+      </table>
+      <div class="pitfall">Пустое множество создаётся только через <code>set()</code>. Запись <code>{}</code> даёт пустой <strong>словарь</strong> — фигурные скобки по умолчанию достаются ему.</div>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="function-square"></i> Функции, циклы, генераторы</div>
+
+    <div class="card">
+      <h3>15. Каков результат?</h3>
+<pre><code><span class="c-key">def</span> <span class="c-fn">func</span>(x):
+    <span class="c-key">return</span> x + <span class="c-num">1</span>
+
+y = <span class="c-fn">func</span>(<span class="c-num">3</span>) * <span class="c-fn">func</span>(<span class="c-num">4</span>)
+<span class="c-fn">print</span>(y)</code></pre>
+      <p class="text"><strong>Ответ:</strong> <code>20</code>.</p>
+      <p class="text">Функция вызывается дважды, независимо: <code>func(3)</code> даёт 4, <code>func(4)</code> даёт 5, произведение 20. Частая ошибка — посчитать <code>3 * 4</code> и прибавить единицу.</p>
+    </div>
+
+    <div class="card">
+      <h3>20. Каким будет результат?</h3>
+<pre><code><span class="c-key">def</span> <span class="c-fn">factorial</span>(n):
+    rez = <span class="c-num">1</span>
+    <span class="c-key">for</span> i <span class="c-key">in</span> <span class="c-fn">range</span>(<span class="c-num">1</span>, n + <span class="c-num">1</span>):
+        rez *= i
+    <span class="c-key">return</span> rez
+
+<span class="c-fn">print</span>(<span class="c-fn">factorial</span>(<span class="c-num">3</span>) + <span class="c-fn">factorial</span>(<span class="c-num">5</span>))</code></pre>
+      <p class="text"><strong>Ответ:</strong> <code>126</code>.</p>
+      <p class="text">Это обычный факториал: <code>3! = 6</code>, <code>5! = 120</code>, сумма 126. Обратите внимание на <code>range(1, n + 1)</code> — единица прибавлена именно потому, что верхняя граница не включается, иначе цикл не дошёл бы до самого <code>n</code>.</p>
+    </div>
+
+    <div class="card">
+      <h3>21. Каким будет результат?</h3>
+<pre><code>n = <span class="c-num">9871</span>
+length = <span class="c-num">0</span>
+<span class="c-key">while True</span>:
+    length += <span class="c-num">1</span>
+    n //= <span class="c-num">10</span>
+    <span class="c-key">if</span> n == <span class="c-num">0</span>:
+        <span class="c-key">break</span>
+<span class="c-fn">print</span>(length)</code></pre>
+      <p class="text"><strong>Ответ:</strong> <code>4</code>.</p>
+      <p class="text">Код считает количество цифр. Целочисленное деление <code>//= 10</code> отбрасывает последнюю цифру: 9871 → 987 → 98 → 9 → 0. Каждый проход увеличивает счётчик, всего их четыре. Обычное деление <code>/</code> здесь не подошло бы: оно даёт дробное число, и до нуля цикл не дошёл бы никогда.</p>
+    </div>
+
+    <div class="card">
+      <h3>22. Переменные a и b содержат 3 и 2. Какую строку написать, чтобы вернуть пользователю сумму?</h3>
+      <p class="text"><strong>Ответ:</strong> <code>print(a + b)</code> — выведет <code>5</code>.</p>
+      <p class="text">Ловушки здесь две. <code>print("a + b")</code> напечатает текст «a + b», потому что в кавычках это просто строка. <code>print(a, b)</code> напечатает <code>3 2</code> — два числа через пробел, а не их сумму.</p>
+    </div>
+
+    <div class="card">
+      <h3>23. Какая функция выводит количество объектов с заданным значением в списке?</h3>
+      <p class="text"><strong>Ответ:</strong> <code>count()</code>.</p>
+      <table class="data-table">
+        <thead><tr><th>Метод</th><th>Что делает</th></tr></thead>
+        <tbody>
+          <tr><td><code>append(x)</code></td><td>Добавляет элемент в конец</td></tr>
+          <tr><td><code>insert(i, x)</code></td><td>Вставляет элемент на позицию <code>i</code></td></tr>
+          <tr><td><code>count(x)</code></td><td>Сколько раз <code>x</code> встречается — это и есть ответ</td></tr>
+          <tr><td><code>index(x)</code></td><td>Позицию первого вхождения, а не количество</td></tr>
+        </tbody>
+      </table>
+      <div class="pitfall">Для подсчёта <em>всех</em> значений сразу <code>count</code> в цикле не годится: каждый вызов проходит список заново. Там берут <code>Counter</code> из <code>collections</code>.</div>
+    </div>
+
+    <div class="card">
+      <h3>26. Какой оператор создаёт генератор?</h3>
+      <p class="text"><strong>Ответ:</strong> <code>yield</code>.</p>
+<pre><code><span class="c-key">def</span> <span class="c-fn">numbers</span>():
+    <span class="c-key">yield</span> <span class="c-num">1</span>
+    <span class="c-key">yield</span> <span class="c-num">2</span>
+
+<span class="c-fn">numbers</span>()        <span class="c-comment"># &lt;generator object&gt; — тело ещё не выполнялось</span>
+<span class="c-fn">list</span>(<span class="c-fn">numbers</span>())  <span class="c-comment"># [1, 2]</span></code></pre>
+      <p class="text">Достаточно одного <code>yield</code> в теле, чтобы функция перестала быть обычной: вызов больше не выполняет её, а возвращает генератор. Значения считаются по одному, по мере обхода. Второй способ получить генератор — выражение в круглых скобках: <code>(x ** 2 for x in nums)</code>.</p>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="grid-3x3"></i> NumPy</div>
+
+    <div class="card">
+      <h3>3. Как создать массив? <code>a = [1,2,3]</code>, <code>m = np.___(a)</code></h3>
+      <p class="text"><strong>Ответ:</strong> <code>np.array(a)</code>.</p>
+<pre><code><span class="c-key">import</span> numpy <span class="c-key">as</span> np
+
+m = np.<span class="c-fn">array</span>([<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>])   <span class="c-comment"># array([1, 2, 3]) — тип ndarray</span></code></pre>
+      <p class="text"><code>np.array</code> принимает готовый список и делает из него массив. Не путайте с <code>np.arange</code> — та генерирует последовательность сама, как встроенный <code>range</code>, и списка на вход не ждёт.</p>
+    </div>
+
+    <div class="card">
+      <h3>4. Найти <em>позицию</em> минимального числа: <code>print(r.___())</code></h3>
+      <p class="text"><strong>Ответ:</strong> <code>r.argmin()</code>.</p>
+<pre><code>r = np.random.<span class="c-fn">randint</span>(<span class="c-num">0</span>, <span class="c-num">50</span>, <span class="c-num">10</span>)
+<span class="c-comment"># [44 47  0  3  3 39  9 19 21 36]</span>
+
+r.<span class="c-fn">min</span>()            <span class="c-comment"># 0 — само значение</span>
+r.<span class="c-fn">argmin</span>()         <span class="c-comment"># 2 — индекс, в котором оно лежит</span>
+r[r.<span class="c-fn">argmin</span>()]      <span class="c-comment"># 0 — обратно к значению</span></code></pre>
+      <p class="text">Приставка <code>arg</code> как раз и означает «не значение, а его позиция»: так же устроены <code>argmax</code> и <code>argsort</code>. Вопрос проверяет именно это различие, поэтому слово «позиция» в нём выделено.</p>
+      <div class="pitfall">Если минимум встречается несколько раз, <code>argmin</code> вернёт индекс только первого. Все позиции даёт <code>np.where(r == r.min())</code>.</div>
+    </div>
+
+    <div class="card">
+      <h3>5. Как создать двухмерный массив?</h3>
+      <p class="text"><strong>Ответ:</strong> передать в <code>np.array</code> список списков — каждый вложенный список станет строкой.</p>
+<pre><code>np.<span class="c-fn">array</span>([[<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>],
+          [<span class="c-num">4</span>, <span class="c-num">5</span>, <span class="c-num">6</span>]])      <span class="c-comment"># shape (2, 3), ndim 2</span>
+
+<span class="c-comment"># готовые формы того же размера</span>
+np.<span class="c-fn">zeros</span>((<span class="c-num">2</span>, <span class="c-num">3</span>))                 <span class="c-comment"># нули</span>
+np.<span class="c-fn">ones</span>((<span class="c-num">2</span>, <span class="c-num">3</span>))                  <span class="c-comment"># единицы</span>
+np.<span class="c-fn">arange</span>(<span class="c-num">6</span>).<span class="c-fn">reshape</span>(<span class="c-num">2</span>, <span class="c-num">3</span>)       <span class="c-comment"># 0..5, разложенные в 2 на 3</span></code></pre>
+      <p class="text">Размерность проверяется атрибутами: <code>shape</code> показывает форму, <code>ndim</code> — число измерений. Вложенные списки обязаны быть одной длины, иначе массив получится не числовым, а массивом объектов.</p>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="table-2"></i> Pandas</div>
+
+    <div class="card">
+      <h3>8. Создать DataFrame: <code>pd.___({...})</code></h3>
+      <p class="text"><strong>Ответ:</strong> <code>pd.DataFrame(...)</code> — с заглавными D и F.</p>
+<pre><code><span class="c-key">import</span> pandas <span class="c-key">as</span> pd
+
+df = pd.<span class="c-type">DataFrame</span>({
+    <span class="c-str">"day"</span>:    [<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>, <span class="c-num">4</span>],
+    <span class="c-str">"amount"</span>: [<span class="c-num">20</span>, <span class="c-num">25</span>, <span class="c-num">27</span>, <span class="c-num">21</span>],
+})</code></pre>
+      <p class="text">Ключи словаря становятся названиями столбцов, списки — их содержимым. Все списки должны быть одной длины.</p>
+    </div>
+
+    <div class="card">
+      <h3>7. Считать CSV: <code>df = pd.___('MyData.csv')</code></h3>
+      <p class="text"><strong>Ответ:</strong> <code>pd.read_csv('MyData.csv')</code>.</p>
+      <p class="text">По тому же образцу названы и остальные: <code>read_excel</code>, <code>read_json</code>, <code>read_sql</code>. Обратная операция — метод уже у самого DataFrame: <code>df.to_csv('out.csv', index=False)</code>, где <code>index=False</code> убирает лишний столбец с номерами строк.</p>
+    </div>
+
+    <div class="card">
+      <h3>9. Как получить первые 5 строк?</h3>
+      <p class="text"><strong>Ответ:</strong> <code>df.head()</code> — по умолчанию ровно пять.</p>
+      <p class="text">Сколько угодно — аргументом: <code>df.head(10)</code>. С конца — <code>df.tail()</code>. Случайные строки, что часто полезнее при осмотре данных, — <code>df.sample(5)</code>.</p>
+    </div>
+
+    <div class="card">
+      <h3>6. Отфильтровать строки, где amount больше 20</h3>
+      <p class="text"><strong>Ответ:</strong> <code>df[df["amount"] &gt; 20]</code>.</p>
+<pre><code>df[df[<span class="c-str">"amount"</span>] &gt; <span class="c-num">20</span>]
+
+<span class="c-comment">#    day  amount
+#  1   2      25
+#  2   3      27
+#  3   4      21</span></code></pre>
+      <p class="text">Внутренняя часть <code>df["amount"] &gt; 20</code> сама по себе возвращает не числа, а столбец из <code>True</code> и <code>False</code>. Внешние скобки используют эту маску, чтобы оставить только строки с <code>True</code>. Исходные номера строк при этом сохраняются — нумерация идёт не заново, в выводе не хватает нулевой строки.</p>
+      <div class="pitfall">Несколько условий соединяются через <code>&amp;</code> и <code>|</code>, а не <code>and</code> и <code>or</code>, и каждое обязательно в скобках: <code>df[(df["amount"] &gt; 20) &amp; (df["day"] &lt; 4)]</code>. Без скобок приоритет операций даст неверный результат или ошибку.</div>
+    </div>
+
+    <div class="card">
+      <h3>18. Режимы merge: outer, inner, left, right</h3>
+      <p class="text"><strong>Ответ:</strong> режим определяет, какие строки останутся, когда ключ есть не в обеих таблицах. Это те же соединения, что и в SQL.</p>
+      <table class="data-table">
+        <thead><tr><th>Режим</th><th>Какие строки останутся</th><th>Пример: id слева 1,2,3 и справа 2,3,4</th></tr></thead>
+        <tbody>
+          <tr><td><code>inner</code></td><td>Только совпавшие в обеих</td><td>2, 3 — две строки. Это режим по умолчанию</td></tr>
+          <tr><td><code>left</code></td><td>Все слева плюс совпавшие справа</td><td>1, 2, 3 — у первой пустоты в правых столбцах</td></tr>
+          <tr><td><code>right</code></td><td>Все справа плюс совпавшие слева</td><td>2, 3, 4</td></tr>
+          <tr><td><code>outer</code></td><td>Все из обеих таблиц</td><td>1, 2, 3, 4 — максимум строк</td></tr>
+        </tbody>
+      </table>
+      <p class="text">Там, где пары не нашлось, в ячейках оказывается <code>NaN</code>. Отсюда практическое следствие: после <code>left</code> или <code>outer</code> стоит проверить пропуски через <code>df.isna().sum()</code>.</p>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="line-chart"></i> Графики и аномалии</div>
+
+    <div class="card">
+      <h3>17. Зачем нужна функция subplot в matplotlib?</h3>
+      <p class="text"><strong>Ответ:</strong> чтобы разместить несколько графиков в одной фигуре — сеткой из строк и столбцов.</p>
+<pre><code>fig, ax = plt.<span class="c-fn">subplots</span>(<span class="c-num">2</span>, <span class="c-num">2</span>)     <span class="c-comment"># сетка 2 на 2, четыре области</span>
+ax[<span class="c-num">0</span>][<span class="c-num">0</span>].<span class="c-fn">plot</span>(x, y)           <span class="c-comment"># рисуем в левой верхней</span></code></pre>
+      <p class="text">Без этого каждый новый вызов рисования ложился бы поверх предыдущего на одни оси. <code>subplot</code> создаёт отдельные оси, у каждой свои подписи, масштаб и легенда. Удобно, когда нужно сравнить несколько величин рядом, а не накладывать их друг на друга.</p>
+    </div>
+
+    <div class="card">
+      <h3>19. Какие задачи решают алгоритмы поиска аномалий?</h3>
+      <p class="text"><strong>Ответ:</strong> те, где нужно находить <strong>редкие, нетипичные</strong> наблюдения, а не делить данные на заранее известные классы.</p>
+      <table class="data-table">
+        <thead><tr><th>Задача</th><th>Подходит?</th></tr></thead>
+        <tbody>
+          <tr><td>Поиск мошеннических транзакций</td><td>Да — аномалия по определению редка</td></tr>
+          <tr><td>Обнаружение сбоя оборудования по датчикам</td><td>Да — отклонение от обычного режима</td></tr>
+          <tr><td>Выявление вторжений в сеть</td><td>Да — нетипичный трафик</td></tr>
+          <tr><td>Поиск выбросов в данных перед обучением модели</td><td>Да, это классическое применение</td></tr>
+          <tr><td>Разделение клиентов на сегменты</td><td>Нет, это кластеризация</td></tr>
+          <tr><td>Предсказание цены по признакам</td><td>Нет, это регрессия</td></tr>
+        </tbody>
+      </table>
+      <p class="text">Отличительная черта таких задач — сильный перекос: аномалий единицы на тысячи нормальных наблюдений. Поэтому обычная точность здесь бесполезна как метрика: модель, которая всегда отвечает «нормально», будет права в 99% случаев и при этом бессмысленна.</p>
+    </div>
+  </div>
+
+  <div class="remember-box">
+    <strong>Что из этого стоит запомнить в первую очередь.</strong> Половина вопросов проверяет не знание функций, а внимание к мелочам: включается ли верхняя граница среза, где стоит отступ, создаёт ли операция копию или ссылку, возвращает метод значение или его позицию. Такие ошибки не вызывают исключений — код работает и выдаёт неверный ответ, поэтому ловить их приходится глазами.
   </div>
 </div>
 
