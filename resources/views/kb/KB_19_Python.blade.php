@@ -172,6 +172,7 @@ ol.numbered strong{color:var(--text);}
 
   <div class="nav-group-label">ML / Data-стек</div>
   <a class="nav-item" onclick="showSection('numpy',this)"><i data-lucide="grid-3x3"></i> NumPy — фундамент</a>
+  <a class="nav-item" onclick="showSection('stats',this)"><i data-lucide="activity"></i> Дисперсия и std</a>
   <a class="nav-item" onclick="showSection('pandas',this)"><i data-lucide="table"></i> Pandas — всерьёз</a>
   <a class="nav-item" onclick="showSection('plotting',this)"><i data-lucide="line-chart"></i> matplotlib / seaborn</a>
   <a class="nav-item" onclick="showSection('jupyter',this)"><i data-lucide="notebook-pen"></i> Jupyter Notebooks</a>
@@ -4531,6 +4532,97 @@ X_test = X[test_idx]</code></pre>
 </div>
 
 <!-- ═══════════════════════════ PANDAS ═══════════════════════════ -->
+<div id="sec-stats" class="section">
+  <div class="section-title">Дисперсия и стандартное отклонение</div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="activity"></i> Зачем вообще квадрат</div>
+    <p class="text">Задача простая: одним числом описать, насколько значения разбросаны вокруг среднего. Казалось бы, достаточно сложить отклонения — но именно это и не работает.</p>
+<pre><code>checks = [<span class="c-num">3000</span>, <span class="c-num">5000</span>, <span class="c-num">7000</span>]
+mean   = <span class="c-num">5000</span>
+
+<span class="c-comment"># отклонения от среднего</span>
+-<span class="c-num">2000</span>, <span class="c-num">0</span>, +<span class="c-num">2000</span>
+
+<span class="c-comment"># их сумма</span>
+-<span class="c-num">2000</span> + <span class="c-num">0</span> + <span class="c-num">2000</span> = <span class="c-num">0</span>   <span class="c-comment"># разброс «равен нулю», хотя он очевидно есть</span></code></pre>
+    <p class="text">Так будет всегда, а не только в этом примере: сумма отклонений от среднего по определению равна нулю, потому что среднее и есть точка равновесия. Плюсы гасят минусы, и измерять нечего. Нужен способ убрать знак.</p>
+    <table class="data-table">
+      <thead><tr><th>Способ убрать знак</th><th>Что получается</th></tr></thead>
+      <tbody>
+        <tr><td>Модуль <code>|x - mean|</code></td><td>Работает и даёт понятное «среднее отклонение», но функция с изломом в нуле: её неудобно дифференцировать, а на этом держится почти вся оптимизация</td></tr>
+        <tr><td>Квадрат <code>(x - mean)²</code></td><td>Знак исчезает, функция гладкая, производная берётся легко. Этот вариант и стал стандартом</td></tr>
+      </tbody>
+    </table>
+    <p class="text">У квадрата есть и второе свойство: он непропорционально наказывает за крупные отклонения. Отклонение 10 больше отклонения 2 в пять раз, а их квадраты — <code>100</code> против <code>4</code> — уже в двадцать пять. Поэтому один аномальный чек резко поднимает дисперсию, и аномалия становится заметна.</p>
+<pre><code><span class="c-comment"># сумма квадратов отклонений</span>
+(-<span class="c-num">2000</span>)² + <span class="c-num">0</span>² + <span class="c-num">2000</span>² = <span class="c-num">8</span> <span class="c-num">000</span> <span class="c-num">000</span>
+
+<span class="c-comment"># дисперсия — это среднее из этих квадратов</span>
+<span class="c-num">8</span> <span class="c-num">000</span> <span class="c-num">000</span> / <span class="c-num">3</span> = <span class="c-num">2</span> <span class="c-num">666</span> <span class="c-num">666</span>.<span class="c-num">67</span></code></pre>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="ruler"></i> Как вернуться к понятным числам</div>
+    <p class="text">Дисперсия измеряется в квадратах единиц — «квадратных рублях», которые ни с чем не сопоставить. Поэтому из неё извлекают корень, и получается <strong>стандартное отклонение</strong>: оно снова в рублях.</p>
+<pre><code><span class="c-fn">sqrt</span>(<span class="c-num">2</span> <span class="c-num">666</span> <span class="c-num">666</span>.<span class="c-num">67</span>) = <span class="c-num">1632</span>.<span class="c-num">99</span>   <span class="c-comment"># рубли, а не квадратные рубли</span></code></pre>
+    <div class="pitfall"><strong>Стандартное отклонение — это не «среднее отклонение».</strong> Формулировка «чеки в среднем отличаются от 5000 на 1633» звучит естественно, но неверна. Среднее расстояние до среднего здесь другое:
+<pre><code>(<span class="c-num">2000</span> + <span class="c-num">0</span> + <span class="c-num">2000</span>) / <span class="c-num">3</span> = <span class="c-num">1333</span>   <span class="c-comment"># среднее абсолютное отклонение</span>
+<span class="c-fn">sqrt</span>(<span class="c-num">8000000</span> / <span class="c-num">3</span>)      = <span class="c-num">1633</span>   <span class="c-comment"># стандартное отклонение</span></code></pre>
+    Разница не случайна: корень из среднего квадрата всегда не меньше среднего модуля, потому что квадрат подтягивает крупные отклонения вверх. Правильная формулировка — «типичный масштаб разброса около 1600 рублей», без слова «в среднем».</div>
+    <div class="pitfall"><strong>Во сколько раз больше дисперсия — не во столько же раз больше разброс.</strong> Если у одного магазина дисперсия 500 000, а у другого 2 000 000, разница в дисперсиях четырёхкратная, но в рублях — только двукратная:
+<pre><code><span class="c-fn">sqrt</span>(<span class="c-num">500</span> <span class="c-num">000</span>)   =  <span class="c-num">707</span> руб.
+<span class="c-fn">sqrt</span>(<span class="c-num">2</span> <span class="c-num">000</span> <span class="c-num">000</span>) = <span class="c-num">1414</span> руб.    <span class="c-comment"># ровно в 2 раза, а не в 4</span></code></pre>
+    Для сравнения «во сколько раз» всегда берут стандартные отклонения. Дисперсии сравнивают только качественно: где больше, там и разброс больше.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="alert-triangle"></i> Делить на n или на n − 1</div>
+    <p class="text">Это не придирка к формуле, а разные величины, и выбор зависит от того, что за данные перед вами.</p>
+    <table class="data-table">
+      <thead><tr><th>Делитель</th><th>Когда</th><th>На наших чеках</th></tr></thead>
+      <tbody>
+        <tr><td><code>n</code></td><td>Данные — это вся совокупность целиком, других нет и не будет</td><td>дисперсия 2 666 667, разброс 1633</td></tr>
+        <tr><td><code>n − 1</code></td><td>Данные — выборка, по которой судят о чём-то большем</td><td>дисперсия 4 000 000, разброс 2000</td></tr>
+      </tbody>
+    </table>
+    <p class="text">Смысл поправки такой: среднее мы посчитали по этим же данным, поэтому отклонения от него выходят чуть меньше, чем были бы от истинного среднего всей совокупности. Деление на <code>n − 1</code> компенсирует это занижение. На трёх значениях разница огромная, на тысяче — незаметная.</p>
+    <div class="pitfall"><strong>Библиотеки расходятся в умолчаниях, и это ловит почти каждого.</strong> На одних и тех же данных:
+<pre><code>np.<span class="c-fn">std</span>(checks)            <span class="c-comment"># 1632.99  — numpy делит на n</span>
+pd.<span class="c-type">Series</span>(checks).<span class="c-fn">std</span>()    <span class="c-comment"># 2000.00  — pandas делит на n-1</span>
+statistics.<span class="c-fn">stdev</span>(checks)  <span class="c-comment"># 2000.00  — n-1</span>
+statistics.<span class="c-fn">pstdev</span>(checks) <span class="c-comment"># 1632.99  — n, буква p от population</span></code></pre>
+    Расхождение не ошибка, а разные умолчания: у NumPy <code>ddof=0</code>, у Pandas <code>ddof=1</code>. Приводятся друг к другу явным аргументом: <code>np.std(x, ddof=1)</code> даст 2000, а <code>s.std(ddof=0)</code> — 1633. Если числа в отчёте не сходятся с чужими, причина чаще всего именно здесь. Метод <code>describe()</code> у Pandas, кстати, тоже использует <code>n − 1</code>.</div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="code-2"></i> Как считать в коде</div>
+<pre><code><span class="c-comment"># без библиотек — чтобы видеть формулу целиком</span>
+checks = [<span class="c-num">3000</span>, <span class="c-num">5000</span>, <span class="c-num">7000</span>]
+
+mean     = <span class="c-fn">sum</span>(checks) / <span class="c-fn">len</span>(checks)
+variance = <span class="c-fn">sum</span>((c - mean) ** <span class="c-num">2</span> <span class="c-key">for</span> c <span class="c-key">in</span> checks) / <span class="c-fn">len</span>(checks)
+spread   = variance ** <span class="c-num">0.5</span>
+
+<span class="c-fn">print</span>(f<span class="c-str">"среднее {mean:.0f}, разброс {spread:.0f}"</span>)
+<span class="c-comment"># среднее 5000, разброс 1633</span></code></pre>
+<pre><code><span class="c-comment"># стандартная библиотека, без установки чего-либо</span>
+<span class="c-key">import</span> statistics <span class="c-key">as</span> st
+
+st.<span class="c-fn">mean</span>(checks)      <span class="c-comment"># 5000</span>
+st.<span class="c-fn">pvariance</span>(checks) <span class="c-comment"># 2666666.67  — вся совокупность</span>
+st.<span class="c-fn">variance</span>(checks)  <span class="c-comment"># 4000000     — выборка</span>
+st.<span class="c-fn">pstdev</span>(checks)    <span class="c-comment"># 1632.99</span>
+st.<span class="c-fn">stdev</span>(checks)     <span class="c-comment"># 2000.0</span></code></pre>
+<pre><code><span class="c-comment"># в работе с данными</span>
+df[<span class="c-str">"amount"</span>].<span class="c-fn">std</span>()        <span class="c-comment"># разброс по столбцу</span>
+df[<span class="c-str">"amount"</span>].<span class="c-fn">describe</span>()   <span class="c-comment"># count, mean, std, min, квартили, max — всё сразу</span>
+df.<span class="c-fn">groupby</span>(<span class="c-str">"shop"</span>)[<span class="c-str">"amount"</span>].<span class="c-fn">agg</span>([<span class="c-str">"mean"</span>, <span class="c-str">"std"</span>])   <span class="c-comment"># по магазинам</span></code></pre>
+    <div class="remember-box"><strong>Что из этого показывают людям.</strong> В отчёте почти всегда стандартное отклонение: оно в тех же единицах, что и сами данные, и его можно сопоставить со средним. Дисперсия остаётся внутри вычислений — она удобна формулам, но не глазам. Исключение одно: когда нужно сравнить разброс величин в разных единицах, берут не их, а отношение разброса к среднему, <code>std / mean</code>: у него единиц нет вовсе.</div>
+    <div class="pitfall"><strong>Среднее и разброс врут на перекошенных данных.</strong> Один чек на миллион сдвинет среднее и раздует стандартное отклонение так, что обе цифры перестанут описывать типичного покупателя. Там, где возможны выбросы, рядом смотрят медиану и квартили: их <code>describe()</code> выдаёт тем же вызовом, и они не реагируют на единичные выбросы.</div>
+  </div>
+</div>
+
 <div id="sec-pandas" class="section">
   <div class="section-title">Pandas — от базы до реальных задач</div>
 
