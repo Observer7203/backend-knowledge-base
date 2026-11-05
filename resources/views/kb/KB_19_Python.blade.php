@@ -571,7 +571,26 @@ users.<span class="c-fn">sort</span>()                       <span class="c-comm
   </div>
 
   <div class="subsection">
-    <div class="subsection-title"><i data-lucide="lock"></i> <code>tuple</code> — упорядоченный, <em>неизменяемый</em></div>
+        <div class="pitfall"><strong>Кортеж делает запятая, а не скобки.</strong> Скобки только группируют, как в арифметике, поэтому кортеж бывает и без них, а одиночное значение в скобках кортежем не становится:
+<pre><code>x = <span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>     <span class="c-comment"># (1, 2, 3) — кортеж, скобок нет</span>
+
+(<span class="c-num">5</span>)              <span class="c-comment"># 5      — обычное число в скобках</span>
+(<span class="c-num">5</span>,)             <span class="c-comment"># (5,)   — кортеж из одного элемента</span></code></pre>
+    Отсюда и обмен значений <code>a, b = b, a</code>: справа собирается кортеж, слева он распаковывается. И отсюда же частая опечатка — лишняя запятая в конце строки превращает значение в кортеж из одного элемента, а ошибка всплывает позже и совсем в другом месте.</div>
+    <div class="remember-box"><strong>Что именно нельзя.</strong> Нельзя заменить элемент и нельзя добавить новый — у кортежа просто нет таких методов:
+<pre><code>t = (<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>)
+
+t[<span class="c-num">0</span>] = <span class="c-num">99</span>        <span class="c-comment"># TypeError: 'tuple' object does not support item assignment</span>
+t.<span class="c-fn">append</span>(<span class="c-num">4</span>)      <span class="c-comment"># AttributeError: 'tuple' object has no attribute 'append'</span>
+
+t = t + (<span class="c-num">4</span>,)     <span class="c-comment"># так можно: это не изменение, а новый кортеж</span></code></pre></div>
+    <div class="pitfall"><strong>Неизменяемость поверхностная.</strong> Защищён только сам набор ссылок: заменить элемент нельзя, а вот изменить изменяемый объект <em>внутри</em> — можно.
+<pre><code>mixed = (<span class="c-num">1</span>, [<span class="c-num">2</span>, <span class="c-num">3</span>])
+mixed[<span class="c-num">1</span>].<span class="c-fn">append</span>(<span class="c-num">4</span>)
+
+mixed                 <span class="c-comment"># (1, [2, 3, 4]) — кортеж «не менялся», а содержимое другое</span></code></pre>
+    Поэтому такой кортеж перестаёт быть надёжным ключом словаря: ключом может быть только кортеж, внутри которого всё неизменяемое. С <code>(55.75, 37.61)</code> проблем нет, а <code>(1, [2, 3])</code> в ключи уже не положить — <code>TypeError: unhashable type: 'list'</code>.</div>
+<div class="subsection-title"><i data-lucide="lock"></i> <code>tuple</code> — упорядоченный, <em>неизменяемый</em></div>
 <pre><code>coords = (<span class="c-num">55.75</span>, <span class="c-num">37.61</span>)
 x, y = coords                     <span class="c-comment"># unpacking — очень частый паттерн</span>
 
