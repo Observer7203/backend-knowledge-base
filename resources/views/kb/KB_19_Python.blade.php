@@ -890,6 +890,24 @@ s.<span class="c-fn">capitalize</span>()   <span class="c-comment"># "Hello worl
 <span class="c-str">"van der berg"</span>.<span class="c-fn">title</span>()     <span class="c-comment"># "Van Der Berg" — приставки должны остаться строчными</span></code></pre>
     Поэтому для человеческих имён <code>title()</code> не годится: имена не подчиняются простому правилу «каждое слово с заглавной». Для заголовков и подписей в интерфейсе — вполне.</div>
     <div class="remember-box">И то, и другое возвращает <strong>новую</strong> строку. Вызов сам по себе ничего не меняет: <code>s.title()</code> отдельной строкой — пустая операция, результат нужно присвоить.</div>
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Эти методы есть у строки, но не у списка</div>
+    <p class="text"><code>strip()</code>, <code>lower()</code>, <code>capitalize()</code> и остальные строковые методы принадлежат <strong>строке</strong>. На списке они не работают вовсе — не «ничего не делают», а сразу падают:</p>
+<pre><code>names = [<span class="c-str">'  Анна '</span>, <span class="c-str">'БОРИС'</span>, <span class="c-str">'вера  '</span>]
+
+names.<span class="c-fn">strip</span>()
+<span class="c-comment"># AttributeError: 'list' object has no attribute 'strip'</span></code></pre>
+    <p class="text">Список — это коробка со строками, а не строка. Обрабатывать нужно каждый элемент по отдельности, и для этого есть два способа:</p>
+<pre><code><span class="c-comment"># 1. включение — подходит для цепочки методов</span>
+clean = [n.<span class="c-fn">strip</span>().<span class="c-fn">lower</span>().<span class="c-fn">capitalize</span>() <span class="c-key">for</span> n <span class="c-key">in</span> names]
+<span class="c-comment"># ['Анна', 'Борис', 'Вера']</span>
+
+<span class="c-comment"># 2. map — когда метод ровно один</span>
+clean = <span class="c-fn">list</span>(<span class="c-fn">map</span>(<span class="c-type">str</span>.<span class="c-fn">strip</span>, names))
+<span class="c-comment"># ['Анна', 'БОРИС', 'вера'] — только пробелы, регистр не тронут</span></code></pre>
+    <div class="remember-box"><strong>Когда что брать.</strong> Для <strong>цепочки</strong> из нескольких методов включение читается заметно лучше: в <code>map</code> пришлось бы заворачивать всё в <code>lambda</code> — <code>map(lambda n: n.strip().lower().capitalize(), names)</code>. <code>map</code> хорош там, где преобразование одно и у него есть готовое имя: <code>map(str.strip, names)</code>, <code>map(int, parts)</code>.</div>
+    <div class="pitfall"><strong>Скобок после имени метода в <code>map</code> быть не должно.</strong> Туда передают саму функцию, а не результат её вызова. Запись <code>map(str.strip(), names)</code> завершится ошибкой <code>TypeError: unbound method str.strip() needs an argument</code>: Python попытался вызвать <code>strip</code> прямо сейчас, а строки, у которой его вызывать, нет.</div>
+    <div class="pitfall"><strong>Исходный список не меняется.</strong> Строки неизменяемы, поэтому и включение, и <code>map</code> создают новый список, а старый остаётся прежним. Результат нужно присвоить: строка <code>[n.strip() for n in names]</code> сама по себе ничего не исправит.</div>
+
   </div>
 
   <div class="subsection">
