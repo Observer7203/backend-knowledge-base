@@ -4541,6 +4541,91 @@ a.size                              <span class="c-comment"># 4 — общее �
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="dices"></i> <code>np.random.rand</code> — почему «random» и «rand» рядом</div>
+    <p class="text">Это не повтор и не опечатка. В записи три разных уровня:</p>
+    <table class="data-table">
+      <tr><th>Кусок</th><th>Что это</th></tr>
+      <tr><td><code>np</code></td><td>сам пакет numpy (это <code>import numpy <strong>as np</strong></code>)</td></tr>
+      <tr><td><code>random</code></td><td><strong>модуль</strong> внутри numpy — всё, что про случайные числа</td></tr>
+      <tr><td><code>rand</code></td><td><strong>функция</strong> в этом модуле — «дай равномерные числа от 0 до 1»</td></tr>
+    </table>
+    <p class="text">Читается как путь к файлу: пакет → модуль → функция. Сокращённое <code>rand</code> — это имя конкретной функции, а полное <code>random</code> — имя папки, в которой она лежит. Рядом с <code>rand</code> в той же папке живут <code>randn</code>, <code>randint</code>, <code>shuffle</code>, <code>seed</code> — все с тем же префиксом, потому что все они про случайность.</p>
+<pre><code><span class="c-key">import</span> numpy <span class="c-key">as</span> np
+
+np.random.<span class="c-fn">rand</span>(<span class="c-num">3</span>)
+<span class="c-comment"># array([0.5488, 0.7152, 0.6028]) — 3 числа из [0, 1)</span>
+
+np.random.<span class="c-fn">rand</span>(<span class="c-num">2</span>, <span class="c-num">3</span>)
+<span class="c-comment"># массив 2 на 3 — размеры передаются через запятую</span></code></pre>
+    <div class="remember-box"><code>rand(3)</code> — это <strong>форма</strong> результата, а не «число 3» и не «до трёх». Аргументы задают размеры: <code>rand(3)</code> — вектор из 3, <code>rand(2, 3)</code> — таблица 2×3, <code>rand(2, 3, 4)</code> — куб. Сами числа всегда из промежутка от 0 до 1.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Соседи по модулю</div>
+    <table class="data-table">
+      <tr><th>Вызов</th><th>Что даёт</th></tr>
+      <tr><td><code>np.random.rand(3)</code></td><td>равномерно из <code>[0, 1)</code></td></tr>
+      <tr><td><code>np.random.randn(3)</code></td><td>нормальное распределение: среднее 0, может быть <strong>отрицательным</strong></td></tr>
+      <tr><td><code>np.random.randint(0, 10, 3)</code></td><td>целые от 0 до 9</td></tr>
+      <tr><td><code>np.random.seed(42)</code></td><td>зафиксировать последовательность, чтобы результат повторялся</td></tr>
+    </table>
+
+    <div class="pitfall"><strong><code>rand</code> и <code>random</code> принимают размеры по-разному.</strong> Похожие имена, несовместимый вызов:
+<pre style="margin-top:6px"><code>np.random.<span class="c-fn">rand</span>(<span class="c-num">2</span>, <span class="c-num">3</span>)        <span class="c-comment"># ок — через запятую</span>
+np.random.<span class="c-fn">random</span>((<span class="c-num">2</span>, <span class="c-num">3</span>))    <span class="c-comment"># ок — одним кортежем</span>
+
+np.random.<span class="c-fn">random</span>(<span class="c-num">2</span>, <span class="c-num">3</span>)      <span class="c-comment"># TypeError: random() takes at most 1 positional argument</span>
+np.random.<span class="c-fn">rand</span>((<span class="c-num">2</span>, <span class="c-num">3</span>))      <span class="c-comment"># TypeError: 'tuple' object cannot be interpreted as an integer</span></code></pre>
+    </div>
+  </div>
+
+  <div class="subsection">
+    <div class="subsection-title"><i data-lucide="x-circle"></i> <code>список * 2</code> против <code>массив * 2</code></div>
+    <p class="text">Самый частый сюрприз при переходе на numpy. Один и тот же знак <code>*</code> делает две совершенно разные вещи, потому что это разные типы объектов, и каждый тип сам решает, что значит «умножить».</p>
+<pre><code>L = [<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>]              <span class="c-comment"># обычный список</span>
+A = np.<span class="c-fn">array</span>([<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>])     <span class="c-comment"># массив numpy</span>
+
+L * <span class="c-num">2</span>    <span class="c-comment"># [1, 2, 3, 1, 2, 3]  — ПОВТОРИЛ список два раза</span>
+A * <span class="c-num">2</span>    <span class="c-comment"># array([2, 4, 6])    — УМНОЖИЛ каждый элемент</span>
+
+<span class="c-fn">len</span>(L * <span class="c-num">2</span>)   <span class="c-comment"># 6 — длина изменилась</span>
+<span class="c-fn">len</span>(A * <span class="c-num">2</span>)   <span class="c-comment"># 3 — длина та же, изменились значения</span></code></pre>
+    <div class="remember-box">Для списка <code>*</code> — это <strong>повторение</strong>, как у строки: <code>"ab" * 2</code> даёт <code>"abab"</code>. Список ведёт себя как последовательность, а не как вектор чисел: ему всё равно, что внутри — числа или слова. Для массива <code>*</code> — это <strong>математика</strong>, потому что numpy знает, что внутри числа одного типа.</div>
+
+    <p class="text">То же расхождение у <code>+</code>:</p>
+<pre><code>L + [<span class="c-num">10</span>]   <span class="c-comment"># [1, 2, 3, 10]       — приклеил в конец</span>
+A + <span class="c-num">10</span>     <span class="c-comment"># array([11, 12, 13]) — прибавил к каждому</span>
+
+L + <span class="c-num">2</span>      <span class="c-comment"># TypeError: can only concatenate list (not "int") to list</span>
+L * <span class="c-num">2.5</span>    <span class="c-comment"># TypeError: can't multiply sequence by non-int of type 'float'</span></code></pre>
+    <p class="text">Эти две ошибки — хорошая подсказка: список честно говорит, что не умеет в арифметику. <code>L * 2</code> не падает только потому, что для целого числа у него есть другое, непохожее значение.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Сводка</div>
+    <table class="data-table">
+      <tr><th>Операция</th><th><code>list</code></th><th><code>ndarray</code></th></tr>
+      <tr><td><code>x * 2</code></td><td>повторить дважды</td><td>умножить каждый элемент</td></tr>
+      <tr><td><code>x * 2.5</code></td><td><code>TypeError</code></td><td>умножить каждый на 2.5</td></tr>
+      <tr><td><code>x + 2</code></td><td><code>TypeError</code></td><td>прибавить к каждому</td></tr>
+      <tr><td><code>x + y</code></td><td>склеить два списка</td><td>сложить поэлементно</td></tr>
+      <tr><td><code>x ** 2</code></td><td><code>TypeError</code></td><td>возвести каждый в квадрат</td></tr>
+      <tr><td><code>x > 2</code></td><td><code>TypeError</code></td><td><code>array([False, False, True])</code></td></tr>
+    </table>
+
+    <div class="pitfall"><strong>Как сделать «не то» намеренно.</strong> Если на самом деле нужно поведение другого типа:
+<pre style="margin-top:6px"><code><span class="c-comment"># умножить список на число, без numpy — генератор списка</span>
+[x * <span class="c-num">2</span> <span class="c-key">for</span> x <span class="c-key">in</span> L]      <span class="c-comment"># [2, 4, 6]</span>
+
+<span class="c-comment"># повторить массив, раз * занят умножением</span>
+np.<span class="c-fn">tile</span>(A, <span class="c-num">2</span>)            <span class="c-comment"># array([1, 2, 3, 1, 2, 3]) — весь массив целиком</span>
+np.<span class="c-fn">repeat</span>(A, <span class="c-num">2</span>)          <span class="c-comment"># array([1, 1, 2, 2, 3, 3]) — каждый элемент на месте</span></code></pre>
+      <code>tile</code> и <code>repeat</code> легко перепутать: первый повторяет <em>массив</em>, второй — <em>элементы</em>.
+    </div>
+
+    <div class="pitfall"><strong>Между двумя массивами <code>*</code> — это тоже поэлементно, а не скалярное произведение.</strong>
+<pre style="margin-top:6px"><code>A * np.<span class="c-fn">array</span>([<span class="c-num">10</span>, <span class="c-num">20</span>, <span class="c-num">30</span>])    <span class="c-comment"># array([10, 40, 90])</span>
+A @ np.<span class="c-fn">array</span>([<span class="c-num">10</span>, <span class="c-num">20</span>, <span class="c-num">30</span>])    <span class="c-comment"># 140 — вот это скалярное</span></code></pre>
+    </div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="zap"></i> Векторизация — главная идея</div>
 <pre><code>a = np.<span class="c-fn">array</span>([<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>, <span class="c-num">4</span>])
 
