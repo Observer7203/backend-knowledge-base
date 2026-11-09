@@ -4713,6 +4713,53 @@ a[a &lt; <span class="c-num">5</span>] = <span class="c-num">0</span>           
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="list-filter"></i> <code>x[[1, 3, 5]]</code> — выбрать строки списком индексов</div>
+    <p class="text">Внутренние скобки — это обычный список номеров. Внешние — индексация. То есть «возьми из <code>x</code> элементы с номерами 1, 3 и 5». Для матрицы элемент — это строка, поэтому получаются строки:</p>
+<pre><code>x = np.<span class="c-fn">arange</span>(<span class="c-num">42</span>).<span class="c-fn">reshape</span>(<span class="c-num">7</span>, <span class="c-num">6</span>)      <span class="c-comment"># 7 строк, 6 столбцов</span>
+
+x[[<span class="c-num">1</span>, <span class="c-num">3</span>, <span class="c-num">5</span>]]
+<span class="c-comment"># [[ 6  7  8  9 10 11]   ← строка 1</span>
+<span class="c-comment">#  [18 19 20 21 22 23]   ← строка 3</span>
+<span class="c-comment">#  [30 31 32 33 34 35]]  ← строка 5</span>
+<span class="c-comment"># shape (3, 6) — три строки по шесть чисел</span>
+
+x[[<span class="c-num">1</span>, <span class="c-num">3</span>, <span class="c-num">5</span>], :]     <span class="c-comment"># ровно то же самое, двоеточие можно не писать</span>
+
+v = np.<span class="c-fn">arange</span>(<span class="c-num">10</span>)
+v[[<span class="c-num">1</span>, <span class="c-num">3</span>, <span class="c-num">5</span>]]        <span class="c-comment"># [1 3 5] — на векторе это просто элементы</span></code></pre>
+    <p class="text">Называется это <strong>fancy indexing</strong>, или индексация массивом. В отличие от среза <code>x[1:6:2]</code>, который умеет только равномерный шаг, список задаёт номера произвольно:</p>
+<pre><code>x[[<span class="c-num">5</span>, <span class="c-num">1</span>, <span class="c-num">1</span>]]    <span class="c-comment"># порядок любой, повторы разрешены — вернёт 3 строки</span>
+x[[<span class="c-num">-1</span>]]         <span class="c-comment"># отрицательные работают — последняя строка</span>
+x[[<span class="c-num">1</span>, <span class="c-num">3</span>, <span class="c-num">99</span>]]   <span class="c-comment"># IndexError: index 99 is out of bounds for axis 0 with size 7</span></code></pre>
+    <div class="remember-box">Отсюда и берётся перемешивание выборки в ML: <code>idx = np.random.permutation(len(X))</code>, затем <code>X[idx]</code> — строки встают в новом порядке, потому что индексация списком сохраняет порядок самого списка.</div>
+
+    <div class="pitfall"><strong>1. Два списка — это ПАРЫ координат, а не подматрица.</strong> Самая частая ошибка:
+<pre style="margin-top:6px"><code>x[[<span class="c-num">1</span>, <span class="c-num">3</span>, <span class="c-num">5</span>], [<span class="c-num">0</span>, <span class="c-num">2</span>, <span class="c-num">1</span>]]
+<span class="c-comment"># [ 6 20 31] — это x[1,0], x[3,2], x[5,1]. Три ЧИСЛА, shape (3,)</span></code></pre>
+      Numpy не строит пересечение строк и столбцов, он идёт по спискам парами. Нужна именно подматрица — есть два способа:
+<pre style="margin-top:6px"><code>x[np.<span class="c-fn">ix_</span>([<span class="c-num">1</span>, <span class="c-num">3</span>, <span class="c-num">5</span>], [<span class="c-num">0</span>, <span class="c-num">2</span>])]   <span class="c-comment"># [[ 6  8]</span>
+<span class="c-comment">                                 #  [18 20]</span>
+<span class="c-comment">                                 #  [30 32]]</span>
+
+x[[<span class="c-num">1</span>, <span class="c-num">3</span>, <span class="c-num">5</span>]][:, [<span class="c-num">0</span>, <span class="c-num">2</span>]]       <span class="c-comment"># то же, в два шага: сначала строки, потом столбцы</span></code></pre>
+    </div>
+
+    <div class="pitfall"><strong>2. Выборка списком — это КОПИЯ, а срез — вид.</strong> Прямо наоборот тому, что делает срез, и об этом легко забыть:
+<pre style="margin-top:6px"><code>s = x[<span class="c-num">1</span>:<span class="c-num">6</span>:<span class="c-num">2</span>]      <span class="c-comment"># срез  — view</span>
+f = x[[<span class="c-num">1</span>, <span class="c-num">3</span>, <span class="c-num">5</span>]]   <span class="c-comment"># список — копия</span>
+
+s[<span class="c-num">0</span>, <span class="c-num">0</span>] = <span class="c-num">-999</span>     <span class="c-comment"># x[1,0] стало -999 — оригинал ИЗМЕНИЛСЯ</span>
+f[<span class="c-num">0</span>, <span class="c-num">0</span>] = <span class="c-num">-111</span>     <span class="c-comment"># x[1,0] не тронулось — оригинал ЦЕЛ</span>
+
+s.base <span class="c-key">is</span> <span class="c-key">None</span>     <span class="c-comment"># False — смотрит в чужую память</span>
+f.base <span class="c-key">is</span> <span class="c-key">None</span>     <span class="c-comment"># True  — своя память</span></code></pre>
+      Полезно в обе стороны: правки через срез незаметно портят оригинал, а правки через выборку списком незаметно пропадают. Проверить, что перед тобой, можно через <code>.base</code>.
+    </div>
+
+    <div class="pitfall"><strong>3. У обычного списка так нельзя.</strong> <code>[[1,2],[3,4],[5,6]][[0, 2]]</code> даст <code>TypeError: list indices must be integers or slices, not list</code>. Выборка по списку индексов — возможность numpy, а не Python. Без numpy это <code>[L[i] for i in [0, 2]]</code>.</div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="axis-3d"></i> Оси (axis) и агрегации</div>
     <p class="text">Ось (axis) — направление, вдоль которого агрегируем. Для 2D-матрицы: <code>axis=0</code> — по столбцам (сжимает строки), <code>axis=1</code> — по строкам (сжимает столбцы). Классическая путаница — запоминай: <em>axis = «размерность, которая исчезает»</em>.</p>
 <pre><code>a = np.<span class="c-fn">array</span>([[<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>],
