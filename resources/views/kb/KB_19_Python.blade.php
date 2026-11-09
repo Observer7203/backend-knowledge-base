@@ -714,6 +714,102 @@ d.<span class="c-fn">get</span>(<span class="c-str">"a"</span>, <span class="c-f
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="arrow-down-up"></i> Сортировка словаря — <code>sorted(d.items())</code>, а не <code>d.sort()</code></div>
+    <p class="text">У словаря <strong>нет метода <code>.sort()</code></strong>. Он есть только у списка:</p>
+<pre><code>{<span class="c-str">"b"</span>: <span class="c-num">2</span>}.<span class="c-fn">sort</span>()     <span class="c-comment"># AttributeError: 'dict' object has no attribute 'sort'</span></code></pre>
+    <p class="text">Отсортировать словарь всё равно можно, но не на месте: его пары отдают функции <code>sorted()</code>, а из результата собирают новый словарь.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Два разных инструмента</div>
+    <table class="data-table">
+      <tr><th></th><th><code>list.sort()</code></th><th><code>sorted()</code></th></tr>
+      <tr><td>Что это</td><td>метод списка</td><td>встроенная функция</td></tr>
+      <tr><td>К чему применяется</td><td>только к списку</td><td>к любому итерируемому: список, кортеж, строка, <code>dict</code>, <code>d.items()</code>, генератор</td></tr>
+      <tr><td>Оригинал</td><td>меняет на месте</td><td>не трогает</td></tr>
+      <tr><td>Возвращает</td><td><code>None</code></td><td>новый <code>list</code></td></tr>
+    </table>
+    <div class="remember-box"><code>sorted()</code> <strong>всегда</strong> возвращает список, чем бы его ни накормили. Скормил словарь — получил список, а не словарь. Поэтому в конце и нужен <code>dict(...)</code>.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Что именно отдавать в <code>sorted()</code></div>
+<pre><code>d = {<span class="c-str">"b"</span>: <span class="c-num">2</span>, <span class="c-str">"a"</span>: <span class="c-num">3</span>, <span class="c-str">"c"</span>: <span class="c-num">1</span>}
+
+<span class="c-fn">sorted</span>(d)                 <span class="c-comment"># ['a', 'b', 'c']            — только КЛЮЧИ</span>
+<span class="c-fn">sorted</span>(d.<span class="c-fn">values</span>())        <span class="c-comment"># [1, 2, 3]                  — только ЗНАЧЕНИЯ</span>
+<span class="c-fn">sorted</span>(d.<span class="c-fn">items</span>())         <span class="c-comment"># [('a', 3), ('b', 2), ('c', 1)] — ПАРЫ</span></code></pre>
+    <p class="text">Словарь при обходе отдаёт ключи — поэтому <code>sorted(d)</code> теряет значения. Если нужен словарь на выходе, сортируют <code>d.items()</code>: это пары <code>(ключ, значение)</code>, из которых <code>dict()</code> соберёт словарь обратно.</p>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Три рабочих случая</div>
+<pre><code>d = {<span class="c-str">"b"</span>: <span class="c-num">2</span>, <span class="c-str">"a"</span>: <span class="c-num">3</span>, <span class="c-str">"c"</span>: <span class="c-num">1</span>}
+
+<span class="c-comment"># 1. По ключам</span>
+<span class="c-fn">dict</span>(<span class="c-fn">sorted</span>(d.<span class="c-fn">items</span>()))
+<span class="c-comment"># {'a': 3, 'b': 2, 'c': 1}</span>
+
+<span class="c-comment"># 2. По значениям — нужен key: «по чему сравнивать»</span>
+<span class="c-fn">dict</span>(<span class="c-fn">sorted</span>(d.<span class="c-fn">items</span>(), key=<span class="c-key">lambda</span> item: item[<span class="c-num">1</span>]))
+<span class="c-comment"># {'c': 1, 'b': 2, 'a': 3}</span>
+
+<span class="c-comment"># 3. По убыванию — reverse=True</span>
+<span class="c-fn">dict</span>(<span class="c-fn">sorted</span>(d.<span class="c-fn">items</span>(), key=<span class="c-key">lambda</span> item: item[<span class="c-num">1</span>], reverse=<span class="c-key">True</span>))
+<span class="c-comment"># {'a': 3, 'b': 2, 'c': 1}</span></code></pre>
+    <p class="text">В <code>key=lambda item: item[1]</code> каждый <code>item</code> — это пара <code>("b", 2)</code>. Значит <code>item[0]</code> — ключ, <code>item[1]</code> — значение. Читается так: «сравнивай пары по их второму элементу». Вместо <code>lambda</code> можно взять <code>itemgetter(1)</code> из <code>operator</code> — то же самое, но быстрее:</p>
+<pre><code><span class="c-key">from</span> operator <span class="c-key">import</span> itemgetter
+<span class="c-fn">dict</span>(<span class="c-fn">sorted</span>(d.<span class="c-fn">items</span>(), key=<span class="c-fn">itemgetter</span>(<span class="c-num">1</span>)))</code></pre>
+    <div class="remember-box"><strong>Почему <code>dict()</code> вообще сохраняет порядок.</strong> С Python 3.7 словарь гарантированно помнит порядок вставки. До этого такой приём не работал и приходилось брать <code>OrderedDict</code>. Сейчас <code>dict(sorted(...))</code> — нормальный, общепринятый способ.</div>
+
+    <div class="pitfall"><strong>1. <code>reverse=True</code> без <code>key</code> — это по убыванию КЛЮЧЕЙ, не значений.</strong> <code>reverse</code> разворачивает тот порядок, который задал <code>key</code>; нет <code>key</code> — сравниваются ключи. На некоторых данных разницу не видно, и это сбивает:
+<pre style="margin-top:6px"><code>d = {<span class="c-str">"b"</span>: <span class="c-num">2</span>, <span class="c-str">"a"</span>: <span class="c-num">3</span>, <span class="c-str">"c"</span>: <span class="c-num">1</span>}
+
+<span class="c-fn">sorted</span>(d.<span class="c-fn">items</span>(), reverse=<span class="c-key">True</span>)                       <span class="c-comment"># [('c',1), ('b',2), ('a',3)]</span>
+<span class="c-fn">sorted</span>(d.<span class="c-fn">items</span>(), key=<span class="c-key">lambda</span> kv: kv[<span class="c-num">1</span>])          <span class="c-comment"># [('c',1), ('b',2), ('a',3)]  ← то же!</span>
+
+<span class="c-comment"># Совпало случайно: здесь ключи по убыванию и значения по возрастанию</span>
+<span class="c-comment"># дают один и тот же порядок. Другие данные — и всё расходится:</span>
+
+e = {<span class="c-str">"b"</span>: <span class="c-num">1</span>, <span class="c-str">"a"</span>: <span class="c-num">2</span>, <span class="c-str">"c"</span>: <span class="c-num">3</span>}
+
+<span class="c-fn">sorted</span>(e.<span class="c-fn">items</span>(), reverse=<span class="c-key">True</span>)                       <span class="c-comment"># [('c',3), ('b',1), ('a',2)]  ← по ключам</span>
+<span class="c-fn">sorted</span>(e.<span class="c-fn">items</span>(), key=<span class="c-key">lambda</span> kv: kv[<span class="c-num">1</span>], reverse=<span class="c-key">True</span>)
+<span class="c-comment">#                                                   [('c',3), ('a',2), ('b',1)]  ← по значениям</span></code></pre>
+      «По убыванию» — всегда вопрос «по убыванию чего». Отвечает на него <code>key</code>, а <code>reverse</code> только переворачивает.
+    </div>
+
+    <div class="pitfall"><strong>2. <code>x = lst.sort()</code> даёт <code>None</code>.</strong> Классическая ошибка: метод сортирует на месте и возвращать ему нечего.
+<pre style="margin-top:6px"><code>x = [<span class="c-num">3</span>, <span class="c-num">1</span>, <span class="c-num">2</span>]
+y = x.<span class="c-fn">sort</span>()      <span class="c-comment"># y = None, а сам x стал [1, 2, 3]</span>
+y[<span class="c-num">0</span>]             <span class="c-comment"># TypeError: 'NoneType' object is not subscriptable</span></code></pre>
+      Нужен результат отдельным объектом — <code>y = sorted(x)</code>. Нужно изменить сам список — <code>x.sort()</code> и дальше работать с <code>x</code>.
+    </div>
+
+    <div class="pitfall"><strong>3. Забыл <code>dict(...)</code> — на руках список кортежей.</strong> Выглядит похоже, ведёт себя иначе:
+<pre style="margin-top:6px"><code>s = <span class="c-fn">sorted</span>(d.<span class="c-fn">items</span>(), key=<span class="c-key">lambda</span> kv: kv[<span class="c-num">1</span>])
+s                 <span class="c-comment"># [('c', 1), ('b', 2), ('a', 3)]</span>
+s[<span class="c-str">"a"</span>]            <span class="c-comment"># TypeError: list indices must be integers or slices, not str</span>
+s.<span class="c-fn">keys</span>()          <span class="c-comment"># AttributeError: 'list' object has no attribute 'keys'</span></code></pre>
+      Если дальше нужен только обход, <code>dict()</code> и не нужен: <code>for k, v in sorted(d.items()):</code> работает напрямую.
+    </div>
+
+    <div class="pitfall"><strong>4. Проверять сортировку сравнением словарей бесполезно.</strong> У словарей <code>==</code> смотрит только на пары, порядок игнорирует:
+<pre style="margin-top:6px"><code>{<span class="c-str">"a"</span>: <span class="c-num">1</span>, <span class="c-str">"b"</span>: <span class="c-num">2</span>} == {<span class="c-str">"b"</span>: <span class="c-num">2</span>, <span class="c-str">"a"</span>: <span class="c-num">1</span>}              <span class="c-comment"># True</span>
+<span class="c-fn">list</span>({<span class="c-str">"a"</span>: <span class="c-num">1</span>, <span class="c-str">"b"</span>: <span class="c-num">2</span>}.<span class="c-fn">items</span>()) == <span class="c-fn">list</span>({<span class="c-str">"b"</span>: <span class="c-num">2</span>, <span class="c-str">"a"</span>: <span class="c-num">1</span>}.<span class="c-fn">items</span>())
+<span class="c-comment"># False — вот так порядок видно</span></code></pre>
+      В тестах порядок проверяют через <code>list(d.items())</code> или <code>list(d)</code>.
+    </div>
+
+    <div class="pitfall"><strong>5. Смешанные типы ключей не сравниваются.</strong> <code>sorted({1: "a", "b": 2})</code> даст <code>TypeError: '&lt;' not supported between instances of 'str' and 'int'</code>. Либо ключи одного типа, либо приводи в <code>key</code>: <code>key=str</code>.</div>
+
+    <div class="remember-box"><strong>Частая задача: топ-N по частоте, при равенстве — по алфавиту.</strong> <code>reverse=True</code> тут не поможет: сортировка устойчивая, и равные элементы он оставит в исходном порядке, а не разложит по алфавиту. Нужен составной ключ — минус перед числом разворачивает только его:
+<pre style="margin-top:6px"><code>w = {<span class="c-str">"py"</span>: <span class="c-num">3</span>, <span class="c-str">"go"</span>: <span class="c-num">3</span>, <span class="c-str">"php"</span>: <span class="c-num">5</span>, <span class="c-str">"js"</span>: <span class="c-num">1</span>}
+
+<span class="c-fn">sorted</span>(w.<span class="c-fn">items</span>(), key=<span class="c-key">lambda</span> kv: kv[<span class="c-num">1</span>], reverse=<span class="c-key">True</span>)
+<span class="c-comment"># [('php',5), ('py',3), ('go',3), ('js',1)]  — py перед go: порядок вставки</span>
+
+<span class="c-fn">sorted</span>(w.<span class="c-fn">items</span>(), key=<span class="c-key">lambda</span> kv: (-kv[<span class="c-num">1</span>], kv[<span class="c-num">0</span>]))
+<span class="c-comment"># [('php',5), ('go',3), ('py',3), ('js',1)]  — go перед py: по алфавиту</span></code></pre>
+      А если это именно подсчёты, всё уже сделано за тебя: <code>Counter(w).most_common(2)</code>.
+    </div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="circle"></i> <code>set</code> — множество без дубликатов</div>
 <pre><code>tags = {<span class="c-str">"php"</span>, <span class="c-str">"python"</span>, <span class="c-str">"js"</span>, <span class="c-str">"php"</span>}
 <span class="c-fn">print</span>(tags)                       <span class="c-comment"># {"php", "python", "js"} — дубликат ушёл</span>
