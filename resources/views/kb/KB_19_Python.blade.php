@@ -643,6 +643,77 @@ merged = defaults | overrides     <span class="c-comment"># справа поб�
   </div>
 
   <div class="subsection">
+    <div class="subsection-title"><i data-lucide="key"></i> <code>.get()</code> — достать значение и не упасть</div>
+    <p class="text"><code>.get()</code> — это <strong>метод словаря</strong>, а не отдельная функция. Делает он то же, что квадратные скобки: достаёт значение по ключу. Отличие ровно одно: если ключа нет, скобки бросают <code>KeyError</code> и программа падает, а <code>.get()</code> спокойно возвращает <code>None</code>.</p>
+<pre><code>d = {<span class="c-str">"Алматы"</span>: <span class="c-num">5</span>, <span class="c-str">"Астана"</span>: <span class="c-num">3</span>}
+
+d[<span class="c-str">"Алматы"</span>]            <span class="c-comment"># 5</span>
+d[<span class="c-str">"Шымкент"</span>]           <span class="c-comment"># KeyError: 'Шымкент' — программа падает</span>
+
+d.<span class="c-fn">get</span>(<span class="c-str">"Алматы"</span>)        <span class="c-comment"># 5</span>
+d.<span class="c-fn">get</span>(<span class="c-str">"Шымкент"</span>)       <span class="c-comment"># None — ключа нет, но ошибки нет</span>
+d.<span class="c-fn">get</span>(<span class="c-str">"Шымкент"</span>, <span class="c-num">0</span>)    <span class="c-comment"># 0 — ключа нет, вернул запасное значение</span></code></pre>
+    <div class="remember-box"><code>d.get(ключ, запасное)</code> читается так: «дай значение по этому ключу, а если его нет — верни запасное». Без второго аргумента запасное равно <code>None</code>.</div>
+
+    <div class="subsection-title" style="margin-top:14px;font-size:14px">Что брать в каком случае</div>
+    <table class="data-table">
+      <tr><th>Что нужно</th><th>Как</th><th>Если ключа нет</th></tr>
+      <tr><td>Ключ обязан быть, его отсутствие — баг</td><td><code>d[k]</code></td><td><code>KeyError</code>, и это правильно: падает там, где сломалось</td></tr>
+      <tr><td>Ключа может не быть, <code>None</code> устроит</td><td><code>d.get(k)</code></td><td><code>None</code></td></tr>
+      <tr><td>Ключа может не быть, нужен свой дефолт</td><td><code>d.get(k, 0)</code></td><td><code>0</code></td></tr>
+      <tr><td>Узнать именно про наличие ключа</td><td><code>k in d</code></td><td><code>False</code></td></tr>
+      <tr><td>Нет ключа — создать его со значением</td><td><code>d.setdefault(k, [])</code></td><td>добавит ключ в словарь</td></tr>
+      <tr><td>Так на каждом ключе, всегда</td><td><code>defaultdict(list)</code></td><td>создаст значение сам</td></tr>
+    </table>
+    <p class="text">Не надо подставлять <code>.get()</code> везде «чтобы не падало». Если по логике ключ обязан быть, <code>KeyError</code> — полезная ошибка: она указывает на строку, где данные пришли не те. <code>.get()</code> на этом месте превратит баг в тихий <code>None</code>, который всплывёт через десять строк в совершенно другом месте.</p>
+
+    <div class="pitfall"><strong>1. <code>.get()</code> есть только у словаря.</strong> У списка и у строки такого метода нет:
+<pre style="margin-top:6px"><code>[<span class="c-num">1</span>, <span class="c-num">2</span>, <span class="c-num">3</span>].<span class="c-fn">get</span>(<span class="c-num">0</span>)    <span class="c-comment"># AttributeError: 'list' object has no attribute 'get'</span>
+<span class="c-str">"abc"</span>.<span class="c-fn">get</span>(<span class="c-num">0</span>)        <span class="c-comment"># AttributeError: 'str' object has no attribute 'get'</span></code></pre>
+      Та же история, что со <code>strip()</code> и <code>title()</code>, которые работают со строкой, но не со списком: метод привязан к типу объекта, а не к «питону вообще».
+    </div>
+
+    <div class="pitfall"><strong>2. <code>None</code> от <code>.get()</code> не означает «ключа нет».</strong> Если <code>None</code> — допустимое значение в словаре, результат <code>.get()</code> становится неразличимым:
+<pre style="margin-top:6px"><code>d = {<span class="c-str">"a"</span>: <span class="c-key">None</span>}
+
+d.<span class="c-fn">get</span>(<span class="c-str">"a"</span>)        <span class="c-comment"># None — а ключ-то есть</span>
+d.<span class="c-fn">get</span>(<span class="c-str">"b"</span>)        <span class="c-comment"># None — а этого ключа нет</span>
+
+<span class="c-str">"a"</span> <span class="c-key">in</span> d          <span class="c-comment"># True  — вот чем их различают</span>
+<span class="c-str">"b"</span> <span class="c-key">in</span> d          <span class="c-comment"># False</span></code></pre>
+      Про наличие ключа спрашивают у <code>in</code>, а не у <code>.get()</code>.
+    </div>
+
+    <div class="pitfall"><strong>3. <code>.get()</code> ничего не создаёт.</strong> Запасное значение он только возвращает, в словарь не кладёт:
+<pre style="margin-top:6px"><code>d = {}
+d.<span class="c-fn">get</span>(<span class="c-str">"x"</span>, <span class="c-num">0</span>)          <span class="c-comment"># 0</span>
+d                      <span class="c-comment"># {} — словарь не изменился</span>
+
+d.<span class="c-fn">setdefault</span>(<span class="c-str">"x"</span>, <span class="c-num">0</span>)   <span class="c-comment"># 0</span>
+d                      <span class="c-comment"># {'x': 0} — вот этот метод ключ добавил</span></code></pre>
+      Ждать от <code>.get()</code>, что он «запомнит» дефолт, — частая ошибка. Нужно запомнить — <code>setdefault</code> или <code>defaultdict</code>.
+    </div>
+
+    <div class="pitfall"><strong>4. <code>d.get(k) or default</code> — не то же, что <code>d.get(k, default)</code>.</strong> <code>or</code> смотрит не на наличие ключа, а на правдивость значения, поэтому законные <code>0</code>, <code>""</code>, <code>[]</code> и <code>False</code> он затирает дефолтом:
+<pre style="margin-top:6px"><code>counts = {<span class="c-str">"clicks"</span>: <span class="c-num">0</span>}
+
+counts.<span class="c-fn">get</span>(<span class="c-str">"clicks"</span>, <span class="c-num">10</span>)      <span class="c-comment"># 0  — правильно, ключ есть</span>
+counts.<span class="c-fn">get</span>(<span class="c-str">"clicks"</span>) <span class="c-key">or</span> <span class="c-num">10</span>   <span class="c-comment"># 10 — неправильно: 0 — это False</span>
+
+cfg = {<span class="c-str">"prefix"</span>: <span class="c-str">""</span>}
+cfg.<span class="c-fn">get</span>(<span class="c-str">"prefix"</span>, <span class="c-str">"www"</span>)     <span class="c-comment"># ''    — правильно</span>
+cfg.<span class="c-fn">get</span>(<span class="c-str">"prefix"</span>) <span class="c-key">or</span> <span class="c-str">"www"</span>  <span class="c-comment"># 'www' — неправильно</span></code></pre>
+      Дефолт отдают вторым аргументом, а не через <code>or</code>.
+    </div>
+
+    <div class="pitfall"><strong>5. Запасное значение вычисляется всегда.</strong> Python считает аргументы до вызова метода, поэтому <code>d.get(k, heavy())</code> вызовет <code>heavy()</code> даже тогда, когда ключ на месте и результат будет выброшен:
+<pre style="margin-top:6px"><code>d = {<span class="c-str">"a"</span>: <span class="c-num">1</span>}
+d.<span class="c-fn">get</span>(<span class="c-str">"a"</span>, <span class="c-fn">heavy</span>())    <span class="c-comment"># вернёт 1, но heavy() всё равно отработал</span></code></pre>
+      Если дефолт дорогой (запрос в базу, чтение файла), ставят <code>if k in d</code> или <code>try/except KeyError</code>.
+    </div>
+  </div>
+
+  <div class="subsection">
     <div class="subsection-title"><i data-lucide="circle"></i> <code>set</code> — множество без дубликатов</div>
 <pre><code>tags = {<span class="c-str">"php"</span>, <span class="c-str">"python"</span>, <span class="c-str">"js"</span>, <span class="c-str">"php"</span>}
 <span class="c-fn">print</span>(tags)                       <span class="c-comment"># {"php", "python", "js"} — дубликат ушёл</span>
